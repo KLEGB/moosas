@@ -1,0 +1,18 @@
+MooasModel -> MooasSpace（空间/分区） -> MoosasEdge（墙体边缘） + MoosasFace（面） 
+
+
+每个MoosasSpace有以下变量：
+:floor, 楼板
+:height, 高度
+:bounds, 边缘
+:ceils, 屋顶
+:is_outer, 是否是外区
+:id, 编号
+:area_m, 面积
+:height_m, 高度（m）
+:settings 性能模拟参数集合
+
+
+内外分区算法：
+输入：MoosasSpace.bounds
+输出：MoosasSpace的多个分区，及每个分区的边界

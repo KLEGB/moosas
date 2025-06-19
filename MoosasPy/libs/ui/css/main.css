@@ -1,0 +1,33 @@
+
+#zone_params div{
+    height: 40px;
+}
+#recognize_result_stat {
+    margin-top: 400px;
+}
+#recognize_result_stat img{
+    height: 60px;
+}
+#building_tree button{
+    height: 45px;
+    width: 110px;
+}
+#building_params_table td{
+    white-space: nowrap;
+    overflow: hidden;
+    width: 200px;
+}
+#recognize_result_stat div div{
+    height: 60px;
+    margin-top: 10px;
+    text-align: center;
+    vertical-align: middle;
+}
+
+#recognize_result_stat div .col-2{
+    cursor: pointer;
+}
+
+#recognize_result_stat div .col-2:hover{
+    background-color:#28A745;
+}

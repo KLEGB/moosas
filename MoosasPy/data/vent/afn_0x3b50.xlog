@@ -1,0 +1,145 @@
+Program:  C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm_moosas\libs\vent\contam\contamx3.exe
+  Version:  3.4.0.2 release 32 bit
+  Compiler: Visual C++ 1929
+  Created:  Wed Dec 25 15:56:02 2024
+Project (_file_name):  C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm_moosas\data\vent\afn_0x3b50.prj
+cwd: C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm_moosas\libs\vent\contam
+prj arg = C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm_moosas\data\vent\afn_0x3b50.prj
+_pdrive C:, _pdir \Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm_moosas\data\vent\, _prjname afn_0x3b50, _pext .prj
+  Updated:  Wed Dec 25 15:56:02 2024
+Calling arguments (2):
+	argv[0] = contamx3.exe
+	argv[1] = C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm_moosas\data\vent\afn_0x3b50.prj
+Running ContamX 3.4.0.2 on C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm_moosas\data\vent\afn_0x3b50.prj
+
+Reading project file: C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm_moosas\data\vent\afn_0x3b50.prj
+Run Control section read successfully.
+Speices section read successfully.
+Level section read successfully.
+Day Schedule section read successfully.
+Week Schedule section read successfully.
+WindP Profile section read successfully.
+Kinetic Reaction section read successfully.
+Filter Element section read successfully.
+Filter section read successfully.
+Source/Sink Element section read successfully.
+Airflow Element section read successfully.
+Airflow Element section read successfully.
+Controls section read successfully.
+AHS section read successfully.
+Zone section read successfully.
+Zone CC section read successfully.
+Path section read successfully.
+Duct Junction section read successfully.
+Duct Junction CC section read successfully.
+Duct Segment section read successfully.
+Source/Sink section read successfully.
+Occupant Day Schedule section read successfully.
+Occupant Exposure section read successfully.
+Note section read successfully.
+Creating Envelope path lists:
+  24 envelope paths|terminals for WPC
+0 Duct Networks
+      network # 0 - jctns:
+
+  24 envelope paths|terminals|leaks for CSM/CEX
+Read PRJ : 53292 bytes allocated, 20964 freed, 32328 net
+Number of --
+      contaminants:    0
+     day schedules:    0
+    week schedules:    0
+           filters:    0
+         reactions:    0
+     wind profiles:    0
+   source elements:    0
+     flow elements:   48
+     airflow nodes:   12
+     airflow paths:   48
+      source/sinks:    0
+Airflow control --
+   cnvgSS: 1
+   tsdens: 0
+   densZP: 0
+   stackD: 0
+   dodMdt: 0
+
+Airflow Equations:
+  11 variable pressure nodes
+   1 constant pressure nodes
+  Number of equations: 12
+    Non-zero elements: 32
+Initial fill fraction: 0.222
+ Matrix Profile Analysis:
+      Average Profile: 1.18
+            Bandwidth: 3
+
++---------+---
+|**          |
+|***         |
+| ***        |
+|  **        |
+|    * *     |
+|     **     |
+|    **** *  |
+|      ***+* |
+|       **++ |
++      *++** +
+|       *+** |
+|           *|
++---------+---
+
+12 by 12 matrix, 32 non-zeroes, 6 fill
+
+ Skyline Matrix:
+     Number of rows: 11
+     Lower Triangle: 13 elements
+     Upper Triangle: 0 elements
+     Fill fraction: 0.198
+Solve nonlinear equations by Newton-Raphson with variable trust region.
+  relcnvg = 1e-05, abscnvg = 2e-06, itmax = 30
+Solve Jacobian SLAE by symmetric SKYline method.
+
+Airflow calculation data:
+ Node | source | eqn
+    1 :    1z :    1
+    2 :    2z :    2
+    3 :    3z :    3
+    4 :    4z :    4
+    5 :    5z :    5
+    6 :    6z :    6
+    7 :    7z :    7
+    8 :    8z :    8
+    9 :    9z :    9
+   10 :   10z :   10
+   11 :   11z :   11
+   12 :    0z :   12
+  [z = zone, j = junction, t = terminal]
+ Link numbers vs. path & duct numbers:
+    1 -   10:    1p    2p    3p    4p    5p    6p    7p    8p    9p   10p
+   11 -   20:   11p   12p   13p   14p   15p   16p   17p   18p   19p   20p
+   21 -   30:   21p   22p   23p   24p   25p   26p   27p   28p   29p   30p
+   31 -   40:   31p   32p   33p   34p   35p   36p   37p   38p   39p   40p
+   41 -   50:   41p   42p   43p   44p   45p   46p   47p   48p
+  [p = path, d = duct, t = terminal, l = leak]
+Arrays: 56684 bytes allocated, 23292 freed, 33392 net
+Start: 57068 bytes allocated, 23676 freed, 33392 net
+Running steady-state initialization:
+ DATE: Jan01   time: 00:00:00
+End Steady-state Initialization
+       7 calls to FillAf()
+       3 calls to luf_sky_s()
+
+       0 time steps
+       4 calls to SolveAf()
+       7 calls to FillAf()
+       3 calls to luf_sky_s()
+       3 calls to lus_sky_s()
+
+NR its. :    0    1
+JfacBins:    2    2
+
+rangeDWC: 0 lam, 0 trns, 0 turbulent
+
+End: 57068 bytes allocated, 23676 freed, 33392 net
+Final: 57068 bytes allocated, 57068 freed, 0 net
+Simulation completed successfully.

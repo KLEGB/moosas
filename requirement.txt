@@ -1,0 +1,23 @@
+beautifulsoup4==4.8.0
+colorama==0.4.6
+Cython==3.0.11
+pydot3k @ file:///D:/moosas/setup/pydot3k-1.0.17.tar.gz#sha256=3931a30bc87383c9b2c89752f6beb0d3be5a8f1065211ec9ad61df1c79d656c7
+eppy ==0.5.63
+joblib==1.4.2
+kiwisolver==1.4.8
+lxml==5.4.0
+munch==4.0.0
+networkx==3.4.2
+numpy ==1.24.4
+packaging==24.2
+pluggy==1.5.0
+pygeos==0.14
+pyparsing==3.2.1
+rdflib==7.1.4
+scikit-learn==1.5.2
+scipy==1.14.1
+six==1.17.0
+soupsieve==2.7
+threadpoolctl==3.5.0
+tinynumpy==1.2.1
+xgboost==2.1.2

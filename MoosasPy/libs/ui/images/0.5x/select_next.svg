@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <style>
+      .cls-1 {
+        stroke-dasharray: 4;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4, .cls-5, .cls-6, .cls-7, .cls-8 {
+        stroke: #82358c;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.5px;
+      }
+
+      .cls-1, .cls-3, .cls-4, .cls-6, .cls-7, .cls-8 {
+        fill: none;
+      }
+
+      .cls-2 {
+        fill: #fff;
+      }
+
+      .cls-3 {
+        stroke-dasharray: 4.3 4.3;
+      }
+
+      .cls-4 {
+        stroke-dasharray: 3.72 3.72;
+      }
+
+      .cls-5 {
+        fill: #82358c;
+      }
+
+      .cls-7 {
+        stroke-dasharray: 3.71 3.71;
+      }
+
+      .cls-8 {
+        stroke-dasharray: 3.72 3.72;
+      }
+    </style>
+  </defs>
+  <g>
+    <g>
+      <polyline class="cls-6" points="27.7 37.88 26.27 36.47 24.85 37.88"/>
+      <line class="cls-4" x1="22.21" y1="40.49" x2="7.68" y2="54.86"/>
+      <polyline class="cls-6" points="6.36 56.17 4.94 57.57 4.94 59.57"/>
+      <line class="cls-7" x1="4.94" y1="63.29" x2="4.94" y2="91.14"/>
+      <polyline class="cls-6" points="4.94 93 4.94 95 6.94 95"/>
+      <line class="cls-3" x1="11.24" y1="95" x2="43.46" y2="95"/>
+      <polyline class="cls-6" points="45.61 95 47.61 95 47.61 93"/>
+      <line class="cls-7" x1="47.61" y1="89.29" x2="47.61" y2="61.43"/>
+      <polyline class="cls-6" points="47.61 59.57 47.61 57.57 46.18 56.17"/>
+      <line class="cls-8" x1="43.54" y1="53.56" x2="29.02" y2="39.19"/>
+    </g>
+    <rect class="cls-5" x="47.61" y="57.57" width="17.57" height="37.42"/>
+    <polyline class="cls-1" points="26.27 36.47 43.84 36.47 65.17 57.57"/>
+  </g>
+  <g>
+    <polygon class="cls-2" points="56.04 36.47 34.72 57.57 34.72 95 77.35 95 77.35 57.57 56.04 36.47"/>
+    <rect class="cls-5" x="77.35" y="57.57" width="17.55" height="37.43"/>
+    <polygon class="cls-5" points="94.9 57.57 77.35 57.57 56.04 36.47 73.59 36.47 94.9 57.57"/>
+  </g>
+  <path class="cls-5" d="M17.74,18.63s-.02.01-.03.02l-10.06,11.06c-.61.6-1.59.6-2.19.01-.6-.59-.59-1.55.02-2.14l9.11-10.01L5.46,7.54c-.61-.6-.61-1.56,0-2.16.61-.59,1.59-.59,2.2,0l10.09,11.09c.61.6.61,1.56,0,2.16h0Z"/>
+  <path class="cls-5" d="M94.45,18.63s-.02.01-.03.02l-10.06,11.06c-.61.6-1.59.6-2.19.01-.6-.59-.59-1.55.02-2.14l9.11-10.01-9.13-10.03c-.61-.6-.61-1.56,0-2.16.61-.59,1.59-.59,2.2,0l10.09,11.09c.61.6.61,1.56,0,2.16h0Z"/>
+</svg>

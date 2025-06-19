@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>NSGA-2多目标优化</title>
+  <link rel="stylesheet" type="text/css" href="css/jquery-ui.min.css"/>
+  <script type="text/javascript" src="js/ext/jquery-1.12.4.min.js"></script>
+  <script type="text/javascript" src="js/ext/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="js/ext/plotly-latest.min.js"></script>
+  <style type="text/css">
+    div{
+        
+    }
+
+    #prato_plot_setting{
+        position: absolute;
+        width: 800px;
+        height: 20px;
+    }
+
+
+    #prato_plot{
+        position: absolute;
+        width: 400px;
+        height: 400px;
+        top: 40px;
+        border: 1px solid black;
+    }
+
+    #params_plot{
+        position: absolute;
+        width: 800px;
+        height: 370px;
+        top:450px;
+        border: 1px solid black;
+    }
+
+    .objective_chart{
+        position: absolute;
+        left: 415px;
+        width: 395px;
+        height: 200px;
+        border: 1px solid black;
+    }
+
+    #obj1_plot{
+        top: 40px;
+    }
+
+    #obj2_plot{
+        top: 241px;
+    }
+
+    #obj3_plot{
+        top: 242px;
+    }
+
+    #obj4_plot{
+        top: 343px;
+    }
+
+    #params_control{
+        position: absolute;
+        width: 200px;
+        left: 830px;
+    }
+
+    .range{
+        color:#f6931f;
+    }
+
+    #start_button{
+        position: absolute;
+        left: 830px;
+        bottom: 20px;
+        width: 100px;
+        height: 60px;
+    }
+
+    #stop_button{
+        position: absolute;
+        left: 940px;
+        bottom: 20px;
+        width: 100px;
+        height: 60px;
+    }
+
+    #prato_plot_setting input{
+        text-align: center;
+    }
+
+
+  </style>
+</head>
+
+<body>
+    <div id="prato_plot_setting">
+        <strong>偏好设定：</strong>
+        <!-- <input type="checkbox" name="params_in_opt_curve" value="energy" checked> -->能耗&nbsp;<input id="sc_pre" type="input" name="" value="90.0" size="1">(kWh/m2a)&nbsp;&nbsp;&nbsp;&nbsp;
+       <!--  <input type="checkbox" name="params_in_opt_curve" value="uda" checked> -->围护结构总造价&nbsp;<input id="eco_pre" type="input" name="" value="7000000" size="1">(RMB)&nbsp;&nbsp;&nbsp;&nbsp;
+<!--         <input type="checkbox" name="params_in_opt_curve" value="sunhour">窗口日照达标率&nbsp;<input type="input" name="" value="80" size="1">&nbsp;&nbsp;&nbsp;&nbsp;
+        <input type="checkbox" name="params_in_opt_curve" value="area">总面积&nbsp;<input type="input" name="" value="10000.00" size="2"> -->
+        <input type="checkbox" name="open_preference" value="true">启动偏好
+        <input type="checkbox" name="open_visual_updating" value="true" checked>图表自适应
+        <input type="checkbox" name="open_history_record" value="true">记录历史方案
+    </div>
+    <div id="prato_plot"> </div>
+    <div id="obj1_plot" class="objective_chart"></div>
+    <div id="obj2_plot" class="objective_chart"></div>
+<!--     <div id="obj3_plot" class="objective_chart"></div>
+    <div id="obj4_plot" class="objective_chart"></div> -->
+
+    <div id="params_plot"> </div>
+
+    <table id="params_control">
+<!--         <tr>
+            <th>
+                优化设计参数
+                <br>
+                <br>
+            </th>
+        </tr> -->
+        <tr>
+            <td>
+                <strong>一层侧翼长度(l1)</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l1" type="text" index="opt_param_0"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>二层侧翼长度(l2)</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l2" type="text" index="opt_param_1"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>三层侧翼长度(l3)</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l3" type="text" index="opt_param_2"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>四层侧翼长度(l4)</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l4" type="text" index="opt_param_3"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>五层侧翼长度(l5)</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l5" type="text" index="opt_param_4"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>六层侧翼长度(l6)</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l6" type="text" index="opt_param_5"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>七层侧翼长度(l7)</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l7" type="text" index="opt_param_6"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>八层侧翼长度(l8)</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l8" type="text" index="opt_param_7"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>九层侧翼长度(l9)</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l9" type="text" index="opt_param_8"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>十层侧翼长度(l0)</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l10" type="text" index="opt_param_9"></div><br>
+            </td>
+        </tr>
+    </table>
+
+    <button id="start_button" onclick="start()">Update</button>
+    <button id="stop_button" onclick="stop()">Stop</button>
+
+  <script>
+
+    var num_parameters = 10;
+    var num_objectives = 2;
+    var num_generations = 10;
+    var i_generation = 0;
+    var status = false;
+    var already_started = false;
+
+    var opts = {
+        optimizer:"optimizer_thu_env_cn",
+        num_parameters:num_parameters,
+        x_bounds:null,
+        num_objectives:num_objectives,
+        obj_preferences:null,
+        open_preference:true,
+        population_size:100,
+        num_generations:num_generations
+    };
+
+    function get_x_bounds(){
+        var x_bounds = [];
+        for(var i = 0;  i < num_parameters; i++){
+            var ele = $("[index=opt_param_"+i+"]");
+            x_bounds.push([ele.slider("values",0), ele.slider("values",1)]);
+        }
+        return x_bounds;
+    }
+
+    function get_obj_preference(){
+        var pre = [];
+        pre.push($("#eco_pre").val()*1);
+        pre.push($("#sc_pre").val()*1);
+
+        return pre;
+    }
+
+    function start() {  
+
+        if(already_started == true){
+            sketchup.update_generation(i_generation);
+        }else{
+            already_started = true;
+            opts.x_bounds = get_x_bounds();
+
+            opts.obj_preferences = get_obj_preference();
+
+            if($("input[type='checkbox'][name='open_preference']").is(':checked')){
+                opts.open_preference = true;
+            }else{
+                opts.open_preference = false;
+            }
+
+            i_generation = -1;
+            sketchup.start(JSON.stringify(opts),{
+              onCompleted: function() {
+                //some code here
+
+              }
+            });
+
+        }
+    }
+
+    function nasg2_ready(){
+        sketchup.update_generation(i_generation);
+    }
+
+    function stop(){
+        already_started = false;
+    }
+
+    var objectives_data = [];
+    var prato_plot_layout = null;
+    var prato_obj_x_map = {};
+
+    var params_data = null;
+    var params_name = null;
+    var params_layout = null;
+    var params_name_mapping = ["l1","l2","l3","l4","l5","l6","l7","l8","l9","l10"];
+
+    var obj1_data = null;
+    var obj1_layout = null;
+    var obj2_data = null;
+    var obj2_layout = null;
+
+    var defaultPlotlyConfiguration ={
+        modeBarButtonsToRemove: ['sendDataToCloud', 'autoScale2d', 'hoverClosestCartesian', 'hoverCompareCartesian', 'lasso2d', 'select2d'], 
+        displaylogo: false, 
+        showTips: true 
+    };
+
+
+    function init_ui(){
+        /*
+        init_slider("l1",52,57,0.1);
+        init_slider("l2",40,45,0.1);
+        init_slider("l3",40,45,0.1);
+        init_slider("l4",25,40,0.1);
+        init_slider("l5",25,40,0.1);
+        init_slider("l6",25,40,0.1);
+        init_slider("l7",15,27,0.1);
+        init_slider("l8",15,27,0.1);
+        init_slider("l9",15,27,0.1);
+        init_slider("l10",15,27,0.1);*/
+
+        var i = 1;
+        while(i <= 10){
+            init_slider("l"+i,10,57,0.1);
+            i+=1;
+        }
+        
+        var pre = get_obj_preference();
+
+        var open_visual_updating = false;
+        if($("input[type='checkbox'][name='open_visual_updating']").is(':checked')){
+            open_visual_updating = true;
+        }
+
+        //对目标值的可视化
+        var objectives = {
+          x: [pre[0]],
+          y: [pre[1]],
+          name: 'P',
+          mode: 'markers',
+          type: 'scatter',
+          marker :{
+            symbol:"star-dot",
+            size: 12
+          },
+          showscale:false
+        };
+        objectives_data = [objectives];
+        prato_plot_layout = {
+          title:'第' + 0 +"代建筑性能分布",
+          font: {
+            family: 'Times New Roman'
+          },
+          xaxis: {
+            title: '围护结构造价',
+            range:[0,1000],
+            autorange:open_visual_updating
+          },
+          yaxis: {
+            title: '能耗',
+            range:[0,150],
+            autorange:open_visual_updating
+          }
+        };
+        Plotly.newPlot('prato_plot', objectives_data,prato_plot_layout);
+
+
+        //对优化参数进行可视化
+        var x_bounds = get_x_bounds();
+        var j;
+        var dimensions = [];
+        params_name = [];
+        for(j = 0; j < num_parameters; j++){
+            dimensions.push({
+                range: x_bounds[j],
+                label: params_name_mapping[j],  //'参数'+(j+1),
+                tickformat:"",
+                values: []
+            });
+            params_name.push("设计参数" + (j+1));
+        }
+        params_layout = {
+          title:"第"+0+"代设计参数值 ",
+          font: {
+            family: 'Times New Roman'
+          },
+          yaxis:{
+            autorange:false
+          }
+        };
+        params_data = [{
+          type: 'parcoords',
+          pad: [80,80,80,80],
+          line: {
+            showscale: false,
+            reversescale: false,
+            colorscale: 'Jet',
+            cmin: 50,
+            cmax: 150,
+            cauto:false,
+            // color: [],
+            // colorbar:{
+            //     tickmode:"array",
+            //     tickvals:[0.10,0.12,0.14,0.16,0.18,0.20]
+            // }
+          },
+    
+          /*line: {
+            color: unpack(rows, 'species_id'),
+            colorscale: [[0, 'red'], [0.5, 'green'], [1, 'blue']]
+          },*/
+          dimensions: dimensions
+        }];
+
+        Plotly.newPlot('params_plot', params_data,params_layout);
+
+
+        //对目标1结果的可视化
+        obj1_data = {
+          x: [],
+          y: [],
+          type: 'scatter'
+        };
+        obj1_layout = {
+          xaxis: {
+            title: '设计方案',
+          },
+          yaxis: {
+            title: '围护结构造价',
+          },
+          font: {
+            family: 'Times New Roman'
+          },
+          width: 390,
+          height: 200,
+          margin: {
+            l: 50,
+            r: 0,
+            b: 30,
+            t: 5
+          }
+        };
+        Plotly.newPlot('obj1_plot', [obj1_data],obj1_layout,defaultPlotlyConfiguration);
+
+        obj2_data = {
+          x: [],
+          y: [],
+          type: 'scatter'
+        };
+        obj2_layout = {
+          xaxis: {
+            title: '设计方案',
+          },
+          font: {
+            family: 'Times New Roman'
+          },
+          yaxis: {
+            title: '能耗',
+          },
+          width: 390,
+          height: 200,
+          margin: {
+            l: 50,
+            r: 0,
+            b: 30,
+            t: 5
+          }
+        };
+        Plotly.newPlot('obj2_plot', [obj2_data],obj2_layout,defaultPlotlyConfiguration);
+
+        $("#sc_pre,#eco_pre").change(function(){
+            var pre = get_obj_preference();
+            objectives_data[0]= {
+              x: [pre[0]],
+              y: [pre[1]],
+              name: '偏好',
+              mode: 'markers',
+              type: 'scatter',
+              marker :{
+                symbol:"star-dot",
+                size: 12
+              },
+              showscale:false
+            };
+            Plotly.newPlot('prato_plot',objectives_data,prato_plot_layout);
+        });
+    }
+
+    function init_slider(id,min,max,delta){
+        $( "#" +id ).slider({
+          range: true,
+          min: 0,
+          max: 57,
+          values: [ min, max ],
+          step:delta,
+          slide: function( event, ui ) {
+            $("#"+ui.handle.parentNode.id).parent().children(".range").html(ui.values[ 0 ] + "-" + ui.values[1]);
+            //$( "#amount" ).val( "$" + ui.values[ 0 ] + " - $" + ui.values[ 1 ] );
+          }
+        });
+        $( "#" +id).parent().children(".range").html(min + "-" + max);
+    }
+
+    function update_ui(data){
+
+        var solutions = data.solutions;
+
+        var i,j;
+        var obj1 = [];
+        var obj2 = [];
+        var s;
+
+        //prato_obj_x_map = {};
+        for(j = 0; j < num_parameters; j++){
+            params_data[0].dimensions[j].values = [];
+        }
+
+
+        var min_obj2 = Number.MAX_VALUE;
+        var max_obj2 = Number.MIN_VALUE;
+        for( i = 0; i < solutions.length; i++){
+            s = solutions[i];
+
+            obj1.push(s.objectives[0]);
+            obj2.push(s.objectives[1]);
+
+            if(s.objectives[1] > max_obj2) max_obj2 = s.objectives[1];
+            if(s.objectives[1] < min_obj2) min_obj2 = s.objectives[1];
+
+            prato_obj_x_map[s.objectives.join(",")] = s.x;
+
+            obj1_data.x.push(obj1_data.x.length);
+            obj2_data.x.push(obj2_data.x.length);
+            
+
+            var p_data = [];
+            for(j = 0; j < num_parameters; j++){
+                p_data.push(s.x[j]);
+                params_data[0].dimensions[j].values.push(s.x[j]);
+            }
+        }
+        params_data[0].line.showscale = true;
+        params_data[0].line.cmin = min_obj2;
+        params_data[0].line.cmax = max_obj2;
+        params_data[0].line.color = obj2;
+
+        obj1_data.y = obj1_data.y.concat(obj1.reverse());
+        obj2_data.y = obj2_data.y.concat(obj2.reverse());
+
+        
+        var open_visual_updating = false;
+        if($("input[type='checkbox'][name='open_visual_updating']").is(':checked')){
+            open_visual_updating = true;
+        }
+        prato_plot_layout.xaxis.autorange = open_visual_updating;
+        prato_plot_layout.yaxis.autorange = open_visual_updating;
+
+        var objectives = {
+          name:'G '+(i_generation+1),
+          x: obj1,
+          y: obj2,
+          mode: 'markers',
+          type: 'scatter'
+        };
+
+        if($("input[type='checkbox'][name='open_history_record']").is(':checked')){
+            objectives_data.push(objectives);
+        }else{
+            objectives_data[1] = objectives;
+        }
+
+        prato_plot_layout.title = '第' + (i_generation+1) + "代建筑性能分布";
+        //Plotly.redraw('prato_plot');
+        Plotly.newPlot('prato_plot',objectives_data,prato_plot_layout).then(function(){
+        });
+        document.getElementById('prato_plot').on('plotly_click', function(data){
+            if (data.points.length == 0) return;
+            var objs = data.points[0].x + "," + data.points[0].y;
+            var x = prato_obj_x_map[objs];
+            //x.splice(0,0,4);
+            sketchup.show_model(x.join(","));
+        });
+
+        //对优化参数进行可视化
+        params_layout.title = "第" + (i_generation+1) +"代设计参数值";
+        //Plotly.redraw('params_plot');
+        Plotly.newPlot('params_plot', params_data,params_layout);
+
+        //对目标值的数据进行可视化
+        Plotly.redraw('obj1_plot');
+        Plotly.redraw('obj2_plot');
+
+        i_generation += 1;
+        /*
+        if(i_generation < num_generations){
+            //alert("Continue Next Generation?");
+            sketchup.update_generation(i_generation);
+        }
+        */
+    }
+
+    $(document).ready(function(){ 
+        init_ui();
+    });
+
+
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,18 @@
+Firstname	Secondname	rad_type	R	G	B	spec	rough
+plaster		plastic	0.91	0.91	0.91	0	0
+print		plastic	0.75	0.75	0.75	0	0
+mortar		plastic	0.32	0.32	0.32	0	0
+brick		plastic				0	0
+brick	grey	plastic				0	0
+brick	red	plastic				0	0
+brick		plastic				0	0
+cladding		plastic				0	0
+stone		plastic				0	0
+concrete		plastic				0	0
+metal		plastic				0	0
+wood		plastic				0	0
+glazing		glass				0	0
+default	wall	plastic	0.6	0.6	0.6	0	0
+default	roof	plastic	0.75	0.75	0.75	0	0
+default	floor	plastic	0.3	0.3	0.3	0	0
+default	window	glass	0.78	0.78	0.78	0	0

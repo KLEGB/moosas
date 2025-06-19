@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+      }
+
+      .cls-1, .cls-2 {
+        stroke: #82358c;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.5px;
+      }
+
+      .cls-3 {
+        font-family: Calibri-Bold, Calibri;
+        font-size: 29px;
+        font-weight: 700;
+      }
+
+      .cls-3, .cls-2 {
+        fill: #82358c;
+      }
+    </style>
+  </defs>
+  <g>
+    <polygon class="cls-1" points="26.46 36.5 5.14 57.6 5.14 95.03 47.77 95.03 47.77 57.6 26.46 36.5"/>
+    <rect class="cls-2" x="47.77" y="57.6" width="17.55" height="37.43"/>
+    <polygon class="cls-2" points="65.32 57.6 47.77 57.6 26.46 36.5 44.01 36.5 65.32 57.6"/>
+  </g>
+  <text class="cls-3" transform="translate(22.66 26.11) scale(1.25 1)"><tspan x="0" y="0">ALL</tspan></text>
+  <path class="cls-2" d="M94.45,18.63s-.02.01-.03.02l-10.06,11.06c-.61.6-1.59.6-2.19.01-.6-.59-.59-1.55.02-2.14l9.11-10.01-9.13-10.03c-.61-.6-.61-1.56,0-2.16.61-.59,1.59-.59,2.2,0l10.09,11.09c.61.6.61,1.56,0,2.16h0Z"/>
+  <path class="cls-2" d="M5.4,16.48s.02-.01.03-.02L15.49,5.39c.61-.6,1.59-.6,2.19-.01.6.59.59,1.55-.02,2.14l-9.11,10.01,9.13,10.03c.61.6.61,1.56,0,2.16-.61.59-1.59.59-2.2,0l-10.09-11.09c-.61-.6-.61-1.56,0-2.16h0Z"/>
+  <g>
+    <polygon class="cls-1" points="55.83 36.47 34.51 57.57 34.51 95 77.14 95 77.14 57.57 55.83 36.47"/>
+    <rect class="cls-2" x="77.14" y="57.57" width="17.55" height="37.43"/>
+    <polygon class="cls-2" points="94.69 57.57 77.14 57.57 55.83 36.47 73.38 36.47 94.69 57.57"/>
+  </g>
+</svg>

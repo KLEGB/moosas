@@ -1,0 +1,712 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta http-equiv='X-UA-Compatible' content='IE=edge'>
+		<link rel="stylesheet" type="text/css" href="bootstrap/css/bootstrap.css"/>
+    	<link href="gijgo/gijgo.min.css" rel="stylesheet" type="text/css" />
+    	<link rel="stylesheet" type="text/css" href="css/jquery-ui-1.10.0.custom.css"></li>
+    	<link rel="stylesheet" type="text/css" href="css/main.css">
+	</head>
+
+	<body>
+		<ul class="nav nav-tabs bg-light" id="header_menu">
+			<li class="nav-item">
+		    	<a class="moosas_link nav-link active"  data-toggle="tab" href="#main_tab"> 综合面板</a>
+		  	</li>
+		  	<li class="nav-item">
+		    	<a class="moosas_link nav-link"  data-toggle="tab" href="#climate_tab"> 气象分析</a>
+		  	</li>
+		  	<li class="nav-item">
+		    	<a class="moosas_link nav-link" onclick=UI.update_model() data-toggle="tab" href="#geometry_tab"> 建筑模型</a>
+		  	</li>
+
+		  	<li class="nav-item dropdown">
+		    	<a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">性能分析</a>
+		    	<div class="dropdown-menu">
+		      		<a class="moosas_link dropdown-item" onclick="UI.energy_analysis()" href="#energy_analysis">能耗分析</a>
+		      		<a class="moosas_link dropdown-item" onclick="UI.daylight_analysis()" href="#daylight_analysis">采光分析</a>
+		      		<a class="moosas_link dropdown-item" onclick="UI.sunhour_analysis()" href="#sunhour_analysis">日照分析</a>
+		      		<a class="moosas_link dropdown-item" onclick="UI.ventilation_analysis()" href="#ventilation_analysis">通风分析</a>
+		      		<a class="moosas_link dropdown-item" onclick="UI.radiance_analysis()" href="#radiance_analysis">辐射分析</a>
+		    	</div>
+		  	</li>
+		  	<li class="nav-item dropdown">
+		    	<a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true" aria-expanded="false">性能优化</a>
+		    	<div class="dropdown-menu">
+		    		
+		      		<a class="moosas_link dropdown-item" data-toggle="tab" href="#params_analysis_tab">单目标参数分析</a>
+		      		<a class="moosas_link dropdown-item" data-toggle="tab" href="#multi_goal_params_analysis_tab">多目标参数分析</a>
+		      		
+		    	</div>
+		  	</li>
+		  	<li class="nav-item">
+		    	<a class="moosas_link nav-link"  data-toggle="tab" href="#report_tab" >评估报表</a>
+		  	</li>
+		</ul>
+
+		<div class="tab-content container-fluid">
+		 	<div id="main_tab" class="tab-pane fade show active" href="#main_tab">
+		    	<div class="row" style="padding-top: 5px;">
+				    <div class="col form-group">
+				      	<select id="selectCity" onchange="UI.update_settings()" class="form-control">
+				        	<option>加载中...</option>
+				      	</select>
+				    </div>
+				    <div class="col form-group">
+				      	<select id="selectBuildingType" class="form-control" onchange="UI.update_settings()" style="width:120px;">
+				        	<option>选择建筑类型...</option>
+							<option>居住建筑</option>
+				        	<option selected>办公建筑</option>
+							<option>酒店建筑</option>
+							<option>学校建筑</option>
+							<option>商场建筑</option>
+							<option>剧院建筑</option>
+							<option>医院建筑</option>
+				      	</select>
+				    </div>
+				    <div class="col form-group">
+				      	<select id="selectStandard" class="form-control" onchange="UI.update_settings()" style="width:210px;">
+				        	<option>选择评价标准...</option>
+				        	<option selected>近零能耗建筑技术标准 GB/T 51350-2019</option>
+				      	</select>
+				    </div>
+				    <div class="col">
+				      	<button id="main_analysis" type="button" class="btn btn-success">综合分析</button>
+				    </div>
+				    <div class="col" >
+				      	<div class="row" style="width:80px;">
+				      		<input type="checkbox" name="require_recognize_model" id="require_recognize_model" checked> 识别模型
+				      	</div>
+				      	<div class="row" style="width:80px;">
+				      		<input type="checkbox" name="require_radiation" id="require_radiation" checked> 快速辐射
+				      	</div>
+				    </div>
+  				</div>
+  				<div class="row border-bottom border-top" style="height: 260px;">
+				    <div class="col">
+				      	<div class="row border-bottom" style="height:85px;">
+				      		<div class="col-5">建筑面积(m<sup>2</sup>)</div><div class="col-7" id="total_area" style="font-size: 30px;font-weight: bolder;"></div>
+				      	</div>
+				      	<div class="row border-bottom"  style="height:85px;">
+				      		<div class="col-5">单位面积能耗(kWh/m<sup>2</sup>)</div><div class="col-7" id="eui_value" style="font-size: 30px;font-weight: bolder;"></div>
+				      	</div>
+				      	<div class="row"  style="height:85px;">
+				      		<div class="col-5">总能耗(MWh)</div><div class="col-7" id="total_energy_value" style="font-size: 30px;font-weight: bolder;"></div>
+				      	</div>
+				    </div>
+				    <div class="col">
+				      	能耗分项比例
+				      	<div id="energy_percent" style="width:230px;height:230px;"></div>
+				    </div>
+				    <div class="col">
+				      	采光系数估算
+				      	<div id="daylight_percent" style="width:230px;height:230px;"></div>
+				    </div>
+  				</div>
+  				<div class="row" style="height: 500px;margin-top: 10px;">
+				    <div class="col-2 nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+						<a class="nav-link" id="v-pills-home-tab" data-toggle="pill" href="#v-pills-history" role="tab" aria-controls="v-pills-history" aria-selected="false">历史方案</a>
+<!-- 						<a class="nav-link" id="v-pills-profile-tab" data-toggle="pill" href="#v-pills-database" role="tab" aria-controls="v-pills-database" aria-selected="false">同类建筑</a>
+						<a class="nav-link" id="v-pills-settings-tab" data-toggle="pill" href="#v-pills-suggestion" role="tab" aria-controls="v-pills-suggestion" aria-selected="false">优化建议</a>
+						<a class="nav-link" id="v-pills-messages-tab" data-toggle="pill" href="#v-pills-standard" role="tab" aria-controls="v-pills-standard" aria-selected="false">对比标准</a> -->
+						<a class="nav-link active" id="v-pills-settings-tab" data-toggle="pill" href="#v-pills-energy" role="tab" aria-controls="v-pills-energy" aria-selected="true">能耗分析</a>
+<!-- 						<a class="nav-link" id="v-pills-settings-tab" data-toggle="pill" href="#v-pills-radiance" role="tab" aria-controls="v-pills-radiance" aria-selected="false">辐射分析</a> -->
+						<a class="nav-link" id="v-pills-settings-tab" data-toggle="pill" href="#v-pills-daylight" role="tab" aria-controls="v-pills-daylight" aria-selected="false">采光分析</a>
+<!-- 						<a class="nav-link" id="v-pills-settings-tab" data-toggle="pill" href="#v-pills-sunhour" role="tab" aria-controls="v-pills-sunhour" aria-selected="false">日照分析</a>
+						<a class="nav-link" id="v-pills-settings-tab" data-toggle="pill" href="#v-pills-sunhour" role="tab" aria-controls="v-pills-sunhour" aria-selected="false">通风分析</a> -->
+					</div>
+					<div class="col-10 tab-content" id="v-pills-tabContent">
+						<div class="tab-pane fade" id="v-pills-history" role="tabpanel" aria-labelledby="v-pills-history-tab">
+							<div class="row" id="history_chart" style="height: 280px;">
+								
+							</div>
+							<div class="row" id="history_table" style="height: 300px;">
+								
+							</div>
+						</div>
+						<div class="tab-pane fade" id="v-pills-database" role="tabpanel" aria-labelledby="v-pills-database-tab">对比同类建筑</div>
+						<div class="tab-pane fade" id="v-pills-suggestion" role="tabpanel" aria-labelledby="v-pills-suggestion-tab">优化建议</div>
+						<div class="tab-pane fade" id="v-pills-standard" role="tabpanel" aria-labelledby="v-pills-standard-tab">对比标准</div>
+						<div class="tab-pane fade show active" id="v-pills-energy" role="tabpanel" aria-labelledby="v-pills-energy-tab">
+							<div id="month_energy_chart" style="width: 600px;height: 300px;"></div>
+							<div id="space_energy_chart" style="width: 600px;height: 300px;"></div>
+						</div>
+						<div class="tab-pane fade" id="v-pills-radiance" role="tabpanel" aria-labelledby="v-pills-radiance-tab">辐射分析</div>
+						<div class="tab-pane fade" id="v-pills-daylight" role="tabpanel" aria-labelledby="v-pills-daylight-tab">
+							<div class="row"  style="">
+				      			<button id="render_daylight_in_skp_btn" type="button" class="btn btn-success" style="margin-left:400px;">在Sketch Up场景中绘制采光模拟结果</button>
+				      		</div>
+				      		<div class="row" style="">
+				      			<div id="daylight_webgl_render_area" style="margin-left: 30px; width: 600px;height: 550px;" ></div>
+				      		</div>
+						</div>
+						<div class="tab-pane fade" id="v-pills-sunhour" role="tabpanel" aria-labelledby="v-pills-sunhour-tab">日照渲染</div>
+					</div>
+  				</div>
+		  	</div>
+
+		  	<div id="climate_tab" class="tab-pane fade">
+		  		<div class="row border-bottom" style="height: 320px;margin-top: 10px;">
+				    <div class="col border-right">
+				    	气候适应性优化策略
+				      	<ul>
+				      		<li>规划选址层面<br>从建筑的场址选择和规划阶段考虑节能，包括场地设计和建筑群总体布局，这一层次对于被动式建筑节能的影响最大。</li>
+				      		<li>建筑设计层面<br>在建筑的设计阶段考虑节能，包括通过单体建筑的朝向和体型选择，被动式自然能源利用等手段减少建筑采暖、降温和采光等方面的能耗需求。</li>
+				      		<li>系统设计层面<br>考虑建筑外围护结构节能和机械设备系统本身节能。</li>
+				      	</ul>
+				    </div>
+				    <div class="col" id="wind-rose-chart">
+				      	风玫瑰图
+				    </div>
+  				</div>
+		    	<div class="row border-bottom" style="height: 280px;">
+				    <div class="col-2 nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+						<a class="nav-link active" id="v-pills-temperature-tab" data-toggle="pill" href="#v-pills-temperature" role="tab" aria-controls="v-pills-temperature" aria-selected="true">干球温度<br>(&#8451;)</a>
+						<a class="nav-link" id="v-pills-humandity-tab" data-toggle="pill" href="#v-pills-humandity" role="tab" aria-controls="v-pills-humandity" aria-selected="false">含湿量<br>(g/kg)</a>
+					</div>
+					<div class="col-10 tab-content" id="v-pills-tabContent">
+						<div class="tab-pane fade show active" id="v-pills-temperature" role="tabpanel" aria-labelledby="v-pills-temperature-tab"></div>
+						<div class="tab-pane fade" id="v-pills-humandity" role="tabpanel" aria-labelledby="v-pills-humandity-tab"></div>
+					</div>
+  				</div>
+  				<div class="row" style="height: 280px;">
+				    <div class="col-2 nav flex-column nav-pills" id="v-pills-tab-1" role="tablist" aria-orientation="vertical">
+						<a class="nav-link active" id="v-pills-global-radiation-tab" data-toggle="pill" href="#v-pills-global-radiation" role="tab" aria-controls="v-pills-global-radiation" aria-selected="true">水平总辐射(W/m2)</a>
+					</div>
+					<div class="col-10 tab-content" id="v-pills-tabContent-1">
+						<div class="tab-pane fade show active" id="v-pills-global-radiation" role="tabpanel" aria-labelledby="v-pills-global-radiation-tab"></div>
+					</div>
+  				</div>
+		  	</div>
+		  	<div id="site_tab" class="tab-pane fade">
+		  		<div class="row border-bottom" style="height: 300px;">
+		  			场地标注
+		  		</div>
+		  		<div class="row" style="">
+		  			从在线三维地图中加载场地
+		  			<img src="images/3d_map_2.png">
+		  		</div>
+		  	</div>
+		  	<div id="geometry_tab" class="tab-pane fade" >
+		    	<div class="row" style="height: 40px;margin-top: 10px;">
+				    <div class="col">
+				    	<button id="recognize_btn" type="button" class="btn btn-success">
+				    		<span class="glyphicon glyphicon-align-left" aria-hidden="true"></span>识别建筑模型</button>
+				      	<button type="button" class="btn btn-light" id="enable_visualize_entity_type">开启可视化识别结果</button>
+				      	<button type="button" class="btn btn-light" id="disable_visualize_entity_type">关闭可视化识别结果</button>
+				      	
+				      	<button type="button" class="btn btn-light" id="show_all_face">显示模型所有的面</button>
+				    </div>
+  				</div>
+  				<div class="row" style="height: 40px;margin-top: 20px;">
+				    <div class="col">
+				    	建筑面积： <span id="building_area"></span>m<sup>2</sup>
+				    </div>
+				    <div class="col">
+				    	建筑高度： <span id="building_height"></span>m
+				    </div>
+				    <div class="col">
+				    	平均层高：<span  id="average_floor_height"></span>m
+				    </div>
+  				</div>
+  				<div class="row border-bottom border-top" style="height:450px;">
+				    <div class="col-4 border-right" id="building_tree" style="height: 420px;overflow-y: scroll;max-height: 420px;">
+
+				    </div>
+				    <div class="col-8">
+					    <div class="row building_params" id="zone_params"  style="position: absolute;width: 100%;height: auto;visibility: hidden;">
+					    	<table id="building_params_table" cellspacing="1" cellpadding="3" href="#building_params_table">
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="OrderName">参数名称</td>
+					    			<td width="70" id="OrderName1">参数取值</td>
+					    			<td width="20" id="OrderName2">单位</td>
+					    		</tr>
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="zone_name1">空间名称</td>
+					    			<td class="caname" id="zone_name">请选择空间</td>
+					    			<td width="20" id="zone_name2"></td>
+					    		</tr>
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="zone_wallU1">外墙U值</td>
+					    			<td class="caname" id="zone_wallU"></td>
+					    			<td width="20" id="zone_wallU2">m<sup>2</sup>K/W</td>
+					    		</tr>
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="zone_winU1">外窗U值</td>
+					    			<td class="caname" id="zone_winU"></td>
+					    			<td width="20" id="zone_winU2">W/m<sup>2</sup>K</td>
+					    		</tr>
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="zone_win_SHGC1">外窗SHGC值</td>
+					    			<td class="caname" id="zone_win_SHGC"></td>
+					    			<td width="20" id="zone_win_SHGC2"></td>
+					    		</tr>
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="zone_c_temp1">空调季控制温度</td>
+					    			<td class="caname" id="zone_c_temp"></td>
+					    			<td width="20" id="zone_c_temp2"><sup>o</sup>C</td>
+					    		</tr>
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="zone_h_temp1">采暖季控制温度</td>
+					    			<td class="caname" id="zone_h_temp"></td>
+					    			<td width="20" id="zone_h_temp2"><sup>o</sup>C</td>
+					    		</tr>
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="zone_collingEER1">空调能效比</td>
+					    			<td class="caname" id="zone_collingEER"></td>
+					    			<td width="20" id="zone_collingEER2"></td>
+					    		</tr>
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="zone_HeatingEER1">采暖能效比</td>
+					    			<td class="caname" id="zone_HeatingEER"></td>
+					    			<td width="20" id="zone_HeatingEER2"></td>
+					    		</tr>
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="zone_ppsm1">人员密度</td>
+					    			<td class="caname" id="zone_ppsm"></td>
+					    			<td width="20" id="zone_ppsm2">人/m<sup>2</sup></td>
+					    		</tr>
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="zone_equipment1">设备散热</td>
+					    			<td class="caname" id="zone_equipment"></td>
+					    			<td width="20" id="zone_equipment2">W/m<sup>2</sup></td>
+					    		</tr>
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="zone_lighting1">灯光散热</td>
+					    			<td class="caname" id="zone_lighting"></td>
+					    			<td width="20" id="zone_lighting2">W/m<sup>2</sup></td>
+					    		</tr>
+					    		<tr style="text-align: left;">
+					    			<td width="70" id="zone_inflitration1">渗风换气次数</td>
+					    			<td class="caname" id="zone_inflitration"></td>
+					    			<td width="20" id="zone_inflitration2">ACH</td>
+					    		</tr>
+					    	</table>
+					    	<div class="row" style="height: auto;margin-left: 5px;">
+					    			<p width="70" id="zone_standard1">*采用建筑模板:</p>
+					    			<p id="zone_standard"></p>
+					    	</div>
+					    </div>
+				    </div>
+  				</div>
+  				<div class="row" id="recognize_result_stat" style="height: auto;margin-top: 0px;margin-left: 10px;">
+								<div class="row" style="width: 100%;">
+					    			<div class="col" style="width: 100px;">
+					    				<img src="images/textures/texture_wall.png" alt="外墙" class="img-rounded">
+					    			</div>
+					    			<div class="col-2">
+					    				<h1 id="entity-0">0</h1>
+					    			</div>
+					    			<div class="col"style="width: 100px;">
+					    				<img src="images/textures/texture_internalwall.png" alt="内墙" class="img-rounded">
+					    			</div>
+					    			<div class="col-2">
+					    				<h1 id="entity-3">0</h1>
+					    			</div>
+						    		<div class="col"style="width: 100px;">
+						    			<img src="images/textures/texture_glazing.png" alt="外窗" class="img-rounded">
+						    		</div>
+						    		<div class="col-2">
+						    			<h1 id="entity-1">0</h1>
+						    		</div>
+						    	</div>
+						    	<div class="row" style="width: 100%;">	
+						    		<div class="col" style="width: 100px;">
+						    			<img src="images/textures/texture_internalglazing.png" alt="內窗" class="img-rounded">
+						    		</div>
+						    		<div class="col-2" >
+						    			<h1 id="entity-5">0</h1>
+						    		</div>
+						    		<div class="col" style="width: 100px;">
+						    			<img src="images/textures/texture_skyglazing.png" alt="天窗" class="img-rounded">
+						    		</div>
+						    		<div class="col-2">
+						    			<h1 id="entity-6">0</h1>
+						    		</div>
+						    		<div class="col" style="width: 100px;">
+						    			<img src="images/textures/texture_roof.png" alt="屋顶" class="img-rounded">
+						    		</div>
+						    		<div class="col-2">
+						    			<h1 id="entity-2">0</h1>
+						    		</div>
+						    	</div>
+						    	<div class="row" style="width: 100%;">
+						    		<div class="col" style="width: 100px;">
+						    			<img src="images/textures/texture_floor.png" alt="楼板" class="img-rounded">
+						    		</div>
+						    		<div class="col-2">
+						    			<h1 id="entity-4">0</h1>
+						    		</div>
+
+						    		<div class="col" style="width: 100px;">
+						    			<img src="images/textures/texture_groundfloor.png" alt="地板" class="img-rounded">
+						    		</div>
+						    		<div class="col-2">
+						    			<h1 id="entity-8">0</h1>
+						    		</div>
+						    		<div class="col" style="width: 100px;">
+						    			<img src="images/textures/texture_shading.png" alt="遮阳" class="img-rounded">
+						    		</div>
+						    		<div class="col-2">
+						    			<h1 id="entity-16">0</h1>
+						    		</div>
+						    	</div>
+  						</div>
+
+		  	</div>
+		  	<div id="building_parameters_tab" class="tab-pane fade">
+		    	<h3>建筑参数设置</h3>
+		    	<p>Some content in menu N.</p>
+		  	</div>
+		  	<div id="report_tab" class="tab-pane fade">
+		    	<h3>评估报表</h3>
+		    	<p>Some content in menu N.</p>
+		  	</div>
+		  	<div id="diag_and_opt_tab" class="tab-pane fade">
+		    	<div class="row" style="padding-top: 5px;">
+				    <div class="col-4 form-group">
+				      	<select id="inputCity" class="form-control">
+				        	<option>选择优化目标</option>
+				        	<option selected>优化目标：空调采暖能耗最低</option>
+				      	</select>
+				    </div>
+				    <div class="col-8">
+				      	<button id="optimize_energy_btn" type="button" class="btn btn-success">优化分析</button>
+				      	<button id="update_optimize_energy_btn" type="button" class="btn btn-success">搜索下一代</button>
+				    </div>
+  				</div>
+  				<div class="row  border-top" style="height: 260px;">
+				    <div class="col-4 border-right" id="opt_energy_radar">
+				    	<div class="row" style="height:43px;">
+				    		<div class="col-6 border-right">初始能耗(kWh/a)</div>
+				    		<div class="col-6" id="un_optimized_energy">--</div>
+				    	</div>
+				    	<div class="row border-top" style="height:43px;color: green;">
+				    		<div class="col-6 border-right">最低能耗(kWh/a)</div>
+				    		<div class="col-6" id="optimized_energy">--</div>
+				    	</div>
+				    	<div class="row border-top" style="height:43px;color: red;">
+				    		<div class="col-6 border-right">节能潜力(%)</div>
+				    		<div class="col-6" id="optimized_energy_percent">--</div>
+				    	</div>
+				    	<div class="row border-top" style="height:43px;">
+				    		<div class="col-6 border-right">空调能耗(kWh/a)</div>
+				    		<div class="col-6" id="optimized_cool_energy">--</div>
+				    	</div>
+				    	<div class="row border-top" style="height:43px;">
+				    		<div class="col-6 border-right">采暖能耗(kWh/a)</div>
+				    		<div class="col-6" id="optimized_heat_energy">--</div>
+				    	</div>
+				    	<div class="row border-top" style="height:45px;">
+				    		<div class="col-6 border-right">照明能耗(kWh/a)</div>
+				    		<div class="col-6" id="optimized_light_energy">--</div>
+				    	</div>
+				    </div>
+				    <div class="col-8" id="opt_performance_boundary">
+				    	
+				    </div>
+  				</div>
+  				<div class="row  border-top">
+				    <div class="col-12" id="opt_energy_params_plot" style="height: 320px;">
+				    	
+				    </div>
+				    <div class="col-12 border-top" id="opt_energy_params_table" style="height: 260px;">
+				    	
+				    </div>
+  				</div>
+<!--   				<div class="row  border-top" style="height: 260px;visibility: hidden;">
+				    <div class="col-6">南向窗墙比
+				    	<div id="p0" class="params_slider ui-slider-horizontal"></div>
+				    </div>
+				    <div class="col-6">西向窗墙比
+				    	<div id="p1" class="params_slider ui-slider-horizontal"></div>
+				    </div>
+				    <div class="col-6">北向窗墙比
+				    	<div id="p2"  class="params_slider ui-slider-horizontal"></div>
+				    </div>
+				    <div class="col-6">东向窗墙比
+				    	<div id="p3" class="params_slider ui-slider-horizontal"></div>
+				    </div>
+  				</div> -->
+		  	</div>
+		  	<div id="params_analysis_tab" class="tab-pane fade">
+		    	<div class="row" style="padding-top: 5px;">
+				    <div class="col-4 form-group">
+				      	<select id="inputParamsAnalysisGoalType" class="form-control">
+				        	<option>选择分析目标</option>
+				        	<option id="all" selected>分析目标：空调采暖照明能耗</option>
+				        	<option id="total">分析目标：总能耗</option>
+				        	<option id="cool">分析目标：空调能耗</option>
+				        	<option id="heat">分析目标：采暖能耗</option>
+				        	<option id="light">分析目标：照明能耗</option>
+				      	</select>
+				    </div>
+				    <div class="col-4 form-group">
+				      	<select id="inputParamsAnalysisParamsType" class="form-control">
+				        	<option>选择分析参数</option>
+				        	<option tag="wwr-0" range="0,1" step="0.1" name="南向窗墙比" selected>参数：南向窗墙比</option>
+				        	<option tag="wwr-1" range="0,1" step="0.1" name="西向窗墙比" >参数：西向窗墙比</option>
+				        	<option tag="wwr-2" range="0,1" step="0.1" name="北向窗墙比" >参数：北向窗墙比</option>
+				        	<option tag="wwr-3" range="0,1" step="0.1" name="东向窗墙比" >参数：东向窗墙比</option>
+
+				        	<option tag="wall_u-0" range="0.3,3.0" step="0.3" name="南向墙体U值" >参数：南向墙体U值</option>
+				        	<option tag="wall_u-1" range="0.3,3.0" step="0.3" name="西向墙体U值" >参数：西向墙体U值</option>
+				        	<option tag="wall_u-2" range="0.3,3.0" step="0.3" name="北向墙体U值" >参数：北向墙体U值</option>
+				        	<option tag="wall_u-3" range="0.3,3.0" step="0.3" name="东向墙体U值" >参数：东向墙体U值</option>
+
+				        	<option tag="win_u-0" range="1.0,3.0" step="0.2" name="南向窗户U值" >参数：南向窗户U值</option>
+				        	<option tag="win_u-1" range="1.0,3.0" step="0.2" name="西向窗户U值" >参数：西向窗户U值</option>
+				        	<option tag="win_u-2" range="1.0,3.0" step="0.2" name="北向窗户U值" >参数：北向窗户U值</option>
+				        	<option tag="win_u-3" range="1.0,3.0" step="0.2" name="东向窗户U值" >参数：东向窗户U值</option>
+
+				        	<option tag="win_shgc-0" range="0.3,0.8" step="0.1" name="南向窗户SHGC值" >参数：南向窗户SHGC值</option>
+				        	<option tag="win_shgc-1" range="0.3,0.8" step="0.1" name="西向窗户SHGC值" >参数：西向窗户SHGC值</option>
+				        	<option tag="win_shgc-2" range="0.3,0.8" step="0.1" name="北向窗户SHGC值" >参数：北向窗户SHGC值</option>
+				        	<option tag="win_shgc-3" range="0.3,0.8" step="0.1" name="东向窗户SHGC值" >参数：东向窗户SHGC值</option>
+
+				      	</select>
+				    </div>
+				    <div class="col-4">
+				      	<button id="param_analysis_btn" type="button" class="btn btn-success">参数分析</button>
+				    </div>
+  				</div>
+  				<div id="params_analysis_box" class="row  border-top">
+  					<div class="col-2 nav flex-column nav-pills" id="v-pills-tab-params" role="tablist" aria-orientation="vertical">
+						<a class="nav-link" data-toggle="pill" href="#v-pills-sensitive_analysis" role="tab" aria-controls="v-pills-sensitive_analysis" aria-selected="false">敏感性分析</a>
+						<!-- <a class="nav-link active" id="wwrs" data-toggle="pill" href="#v-pills-params-analysis" role="tab" aria-controls="v-pills-params-analysis" aria-selected="false">南向窗墙比</a> -->
+					</div>
+					<div class="col-10 tab-content" id="v-pills-tab-paramsContent" style="height: auto;overflow-y: scroll;max-height: 850px;">
+						<div class="tab-pane fade" id="v-pills-sensitive_analysis" role="tabpanel" >
+							<div class="row" id="sensitive_chart" style="height: auto;">
+								
+							</div>
+						</div>
+						<div class="tab-pane fade show active" id="v-pills-params-analysis" role="tabpanel">
+<!-- 						<div class="row" id="params_analysis_result_wwrs">
+									<div class="col-6 params-plot" style="height: 300px;">
+									</div>
+									<div class="col-6 params-distribution"  style="height: 300px;">
+									</div>
+							</div> -->
+						</div>
+					</div>
+  				</div>
+  			</div>
+  			<div id="multi_goal_params_analysis_tab" class="tab-pane fade">
+  				<div class="row" style="padding-top: 10px;">
+				    <div class="col-4 form-group">
+				      	<select id="multi_goal_params_analysis_goal_1" class="form-control" >
+				        	<option>性能维度1：建筑总能耗</option>
+				      	</select>
+				    </div>
+				    <div class="col-4 form-group">
+				      	<select id="multi_goal_params_analysis_goal_2" class="form-control" >
+				        	<option>性能维度2：建筑采光系数均值</option>
+				      	</select>
+				    </div>
+				</div>
+				<div class="row  border-top">
+					<div class="col-6 border-right" style="padding-top: 10px;padding-bottom: 10px;">
+						<div id="multi_goal_params_analysis_chart_wwr-0" style="height: 350px;"></div>
+						<button tag="wwr-0" id="wwr_s" type="button" name="南向窗墙比" class="btn btn-success multi_goal_params_analysis_btn" style="margin-left: 130px;">南向窗墙比参数分析</button>
+					</div>
+					<div class="col-6 border-right" style="padding-top: 10px;padding-bottom: 10px;">
+						<div id="multi_goal_params_analysis_chart_wwr-1" style="height: 350px;"></div>
+						<button tag="wwr-1" id="wwr_w" type="button"  name="西向窗墙比" class="btn btn-success multi_goal_params_analysis_btn" style="margin-left: 130px;">西向窗墙比参数分析</button>
+					</div>
+					<div class="col-6 border-right border-top" style="padding-top: 10px;padding-bottom: 10px;">
+						<div id="multi_goal_params_analysis_chart_wwr-2" style="height: 350px;"></div>
+						<button tag="wwr-2" id="wwr_n" type="button"  name="北向窗墙比" class="btn btn-success multi_goal_params_analysis_btn" style="margin-left: 130px;">北向窗墙比参数分析</button>
+					</div>
+					<div class="col-6 border-right border-top" style="padding-top: 10px;padding-bottom: 10px;">
+						<div id="multi_goal_params_analysis_chart_wwr-3" style="height: 350px;"></div>
+						<button tag="wwr-3" id="wwr_e" type="button"  name="东向窗墙比" class="btn btn-success multi_goal_params_analysis_btn" style="margin-left: 130px;">东向窗墙比参数分析</button>
+					</div>
+					
+				</div>		
+  			</div>
+  			<div id="parameters_setting_tab" class="tab-pane fade">
+		    	<h3>设定设计参数</h3>
+		    	<div class="row">
+				    <div class="col-4">南向窗墙比
+				    </div>
+				    <div class="col-4">
+				    	<input tag="wwr-0" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">西向窗墙比
+				    </div>
+				    <div class="col-4">
+				    	<input tag="wwr-1" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">北向窗墙比
+				    </div>
+				    <div class="col-4">
+				    	<input tag="wwr-2" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">东向窗墙比
+				    </div>
+				    <div class="col-4">
+				    	<input tag="wwr-0" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">南向墙体U值
+				    </div>
+				    <div class="col-4">
+				    	<input tag="wall_u-0" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">西向墙体U值
+				    </div>
+				    <div class="col-4">
+				    	<input tag="wall_u-1" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">北向墙体U值
+				    </div>
+				    <div class="col-4">
+				    	<input tag="wall_u-2" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">东向墙体U值
+				    </div>
+				    <div class="col-4">
+				    	<input tag="wall_u-3" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">南向窗户U值
+				    </div>
+				    <div class="col-4">
+				    	<input tag="win_u-0" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">西向窗户U值
+				    </div>
+				    <div class="col-4">
+				    	<input tag="win_u-1" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">北向窗户U值
+				    </div>
+				    <div class="col-4">
+				    	<input tag="win_u-2" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">东向窗户U值
+				    </div>
+				    <div class="col-4">
+				    	<input tag="win_u-3" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">南向窗户SHGC值
+				    </div>
+				    <div class="col-4">
+				    	<input tag="win_shgc-0" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">西向窗户SHGC值
+				    </div>
+				    <div class="col-4">
+				    	<input tag="win_shgc-1" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">北向窗户SHGC值
+				    </div>
+				    <div class="col-4">
+				    	<input tag="win_shgc-2" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+  				<div class="row">
+				    <div class="col-4">东向窗户SHGC值
+				    </div>
+				    <div class="col-4">
+				    	<input tag="win_shgc-3" class="parameter_setting_input" type="text">
+				    </div>
+				    <div class="col-4">
+				    	<button class="parameter_setting_input_apply_btn" type="button" class="btn btn-success">应用修改</button>
+				    </div>
+  				</div>
+		  	</div> 	
+		</div>
+		<div style="visibility: hidden;">
+			<p id="long_msg">
+			</p>
+		</div>
+		<script type="text/javascript" src="js/ext/three.min.js"></script>
+		<script type="text/javascript" src="js/ext/OrbitControls.js"></script>
+		
+		<script type="text/javascript" src="js/ext/jquery-1.12.4.min.js"></script>
+		<script type="text/javascript" src="bootstrap/js/vendor/popper.min.js"></script>
+		<script type="text/javascript" src="bootstrap/js/bootstrap.min.js"></script>
+		<script type="text/javascript" src="bootstrap/js/plugin/bootstrap-treeview.js"></script>
+		<script type="text/javascript" src="js/ext/plotly-latest.min.js"></script>
+		<script type="text/javascript" src="js/ext/jquery-ui-1.10.0.custom.min.js"></script>
+		<script type="text/javascript" src="js/ext/hashmap.js"></script>
+		
+		<script src="gijgo/gijgo.min.js" type="text/javascript"></script>
+		<script type="text/javascript" src="js/skp.js"></script>
+		<script type="text/javascript" src="js/ui.js"></script>
+	</body>
+</html>

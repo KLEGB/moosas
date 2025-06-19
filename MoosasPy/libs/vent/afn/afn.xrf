@@ -1,0 +1,17 @@
+File: ..\afn\afn.sim
+
+Results available
+  from 1/1 00:00:00
+  thru 1/1 00:00:00
+
+0 nodes  (ambient, 1 zones, 0 junctions)
+2 links  (2 paths, 0 ducts, 0 other)
+
+Cross reference data:
+SIM data     PRJ data
+Node   0  =  Ambient
+Node   1  =  zone   1
+
+Link   1  =  path   1
+Link   2  =  path   2
+2 links  (2 paths, 0 ducts, 0 terminals, 0 leaks)

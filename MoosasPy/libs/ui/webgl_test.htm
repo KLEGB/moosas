@@ -1,0 +1,118 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    </head>
+
+    <body>
+        <div id="daylight_webgl_render_area" style="width: 600px;height: 400px; border: 1px solid grey;" ></div>
+
+        <script type="text/javascript" src="js/ext/three.min.js"></script>
+        <script type="text/javascript" src="js/ext/OrbitControls.js"></script>
+        <script type="text/javascript" src="js/ext/jquery-1.12.4.min.js"></script>
+
+        <script type="text/javascript">
+            function update_daylight_webgl(daylight_result){
+
+                var div_width = 600, div_height = 400;
+
+                // 这个位置是留给后面初始化和开发3d页面的js代码
+                 scene = new THREE.Scene();
+                 camera = new THREE.PerspectiveCamera( 75, div_width * 1.0 / div_height, 0.1, 1000 );
+                camera.position.z = 1;
+                camera.position.set( 0, 50,300 );   
+                 renderer = new THREE.WebGLRenderer();
+                renderer.setSize( div_width, div_height );
+                document.getElementById('daylight_webgl_render_area').appendChild(renderer.domElement );
+                // 给场景添加一个环境光
+                var ambientLight = new THREE.AmbientLight( 0xf5f5f5);
+                scene.add( ambientLight );
+                var grid = new THREE.GridHelper( 400, 30, 0xcccccc, 0xcccccc );
+                scene.add( grid );
+                var ball = new THREE.SphereGeometry( 5, 32, 32 );//5:球半径 第一个32：水平分割面的数量. 第二个32：垂直分割面的数量.
+                var ballColor = new THREE.MeshPhongMaterial( { color: 0xff0000 } );
+                var cube = new THREE.Mesh( ball , ballColor );
+                scene.add( cube );
+
+                /*
+                var controls = new THREE.OrbitControls( camera, renderer.domElement );
+                controls.enabled = true;
+                controls.enableZoom =true;//允许缩放
+                //设置相机移动距离
+                controls.minDistance = 1;
+                controls.maxDistance = 2000;
+                controls.enableRotate =true;
+                controls.update();*/
+
+                
+                orbitControls = new THREE.OrbitControls( camera, renderer.domElement );
+                orbitControls.enabled = true;
+                orbitControls.enableZoom = true;
+                orbitControls.enablePan = true;
+                orbitControls.enableDamping = true;
+                orbitControls.autoRotate = false;
+                orbitControls.autoRotateSpeed = 10;
+
+            }
+
+
+            var camera, scene, renderer, orbitControls;
+
+
+
+function init() {
+
+    camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    camera.position.z = 1;
+
+    scene = new THREE.Scene();
+
+    var geometry = new THREE.BoxGeometry( 0.2, 0.2, 0.2 );
+    var material = new THREE.MeshNormalMaterial();
+
+    var mesh = new THREE.Mesh( geometry, material );
+    scene.add( mesh );
+
+    renderer = new THREE.WebGLRenderer( { antialias: true } );
+        renderer.setPixelRatio( window.devicePixelRatio );
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    document.body.appendChild( renderer.domElement );
+        
+        orbitControls = new THREE.OrbitControls( camera, renderer.domElement );
+    orbitControls.enabled = true;
+    orbitControls.enableZoom = false;
+    orbitControls.enablePan = false;
+    orbitControls.enableDamping = false;
+    orbitControls.autoRotate = true;
+        orbitControls.autoRotateSpeed = 10;
+        
+         window.addEventListener( 'resize', onWindowResize, false );
+
+}
+
+function onWindowResize() {
+
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+        
+    renderer.setSize( window.innerWidth, window.innerHeight );
+
+}
+
+function animate() {
+
+    requestAnimationFrame( animate );
+        orbitControls.update();
+    renderer.render( scene, camera );
+        
+}
+
+            $(document).ready(function(){ 
+                update_daylight_webgl("");
+                //init();
+                animate();
+            })
+        </script>
+    </body>
+</html>

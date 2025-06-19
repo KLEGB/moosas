@@ -1,0 +1,73 @@
+File: C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm_moosas\data\vent\afn_0x3b50.sim
+
+Results available
+  from 1/1 00:00:00
+  thru 1/1 00:00:00
+
+0 nodes  (ambient, 11 zones, 0 junctions)
+48 links  (48 paths, 0 ducts, 0 other)
+
+Cross reference data:
+SIM data     PRJ data
+Node   0  =  Ambient
+Node   1  =  zone   1
+Node   2  =  zone   2
+Node   3  =  zone   3
+Node   4  =  zone   4
+Node   5  =  zone   5
+Node   6  =  zone   6
+Node   7  =  zone   7
+Node   8  =  zone   8
+Node   9  =  zone   9
+Node  10  =  zone  10
+Node  11  =  zone  11
+
+Link   1  =  path   1
+Link   2  =  path   2
+Link   3  =  path   3
+Link   4  =  path   4
+Link   5  =  path   5
+Link   6  =  path   6
+Link   7  =  path   7
+Link   8  =  path   8
+Link   9  =  path   9
+Link  10  =  path  10
+Link  11  =  path  11
+Link  12  =  path  12
+Link  13  =  path  13
+Link  14  =  path  14
+Link  15  =  path  15
+Link  16  =  path  16
+Link  17  =  path  17
+Link  18  =  path  18
+Link  19  =  path  19
+Link  20  =  path  20
+Link  21  =  path  21
+Link  22  =  path  22
+Link  23  =  path  23
+Link  24  =  path  24
+Link  25  =  path  25
+Link  26  =  path  26
+Link  27  =  path  27
+Link  28  =  path  28
+Link  29  =  path  29
+Link  30  =  path  30
+Link  31  =  path  31
+Link  32  =  path  32
+Link  33  =  path  33
+Link  34  =  path  34
+Link  35  =  path  35
+Link  36  =  path  36
+Link  37  =  path  37
+Link  38  =  path  38
+Link  39  =  path  39
+Link  40  =  path  40
+Link  41  =  path  41
+Link  42  =  path  42
+Link  43  =  path  43
+Link  44  =  path  44
+Link  45  =  path  45
+Link  46  =  path  46
+Link  47  =  path  47
+Link  48  =  path  48
+48 links  (48 paths, 0 ducts, 0 terminals, 0 leaks)

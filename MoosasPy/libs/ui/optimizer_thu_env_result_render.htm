@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>NSGA-2多目标优化</title>
+  <link rel="stylesheet" type="text/css" href="css/jquery-ui.min.css"/>
+  <script type="text/javascript" src="js/ext/jquery-1.12.4.min.js"></script>
+  <script type="text/javascript" src="js/ext/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="js/ext/plotly-latest.min.js"></script>
+  <script type="text/javascript" src="js/ext/dbscan.js"></script>
+  <style type="text/css">
+    div{
+        
+    }
+
+    #prato_plot_setting{
+        position: absolute;
+        width: 800px;
+        height: 20px;
+    }
+
+
+    #prato_plot{
+        position: absolute;
+        width: 400px;
+        height: 400px;
+        top: 40px;
+        border: 1px solid black;
+    }
+
+    #params_plot{
+        position: absolute;
+        width: 800px;
+        height: 370px;
+        top:450px;
+        border: 1px solid black;
+    }
+
+    .objective_chart{
+        position: absolute;
+        left: 415px;
+        width: 395px;
+        height: 200px;
+        border: 1px solid black;
+    }
+
+    #obj1_plot{
+        top: 40px;
+    }
+
+    #obj2_plot{
+        top: 241px;
+    }
+
+    #obj3_plot{
+        top: 242px;
+    }
+
+    #obj4_plot{
+        top: 343px;
+    }
+
+    #params_control{
+        position: absolute;
+        width: 200px;
+        left: 830px;
+    }
+
+    .range{
+        color:#f6931f;
+    }
+
+    #start_button{
+        position: absolute;
+        left: 830px;
+        bottom: 20px;
+        width: 100px;
+        height: 60px;
+    }
+
+    #stop_button{
+        position: absolute;
+        left: 940px;
+        bottom: 20px;
+        width: 100px;
+        height: 60px;
+    }
+
+    #prato_plot_setting input{
+        text-align: center;
+    }
+
+    .converage_chart{
+        width: 600px;
+        height: 400px;
+    }
+
+    .pareto_chart{
+        width: 820px;
+        height: 800px;
+    }
+
+    .row{
+        width: 1250px;
+        float: none;
+    }
+
+    .diversity_chart{
+        width: 800px;
+        height: 400px;
+    }
+
+    thead tr td {
+        text-align: center;
+    }
+
+  </style>
+</head>
+
+<body>
+    加载偏好优化数据： <input type="file" onchange="jsReadFiles(this.files, 'pre')"/>&nbsp;&nbsp;&nbsp;&nbsp; 加载NSGA-2数据： <input type="file" onchange="jsReadFiles(this.files,'nsga2')"/>&nbsp;&nbsp;&nbsp;&nbsp;
+    <button onclick="update_all_ui()">更新图表</button>
+    <hr>
+    
+    <h1>收敛曲线</h1>
+    <table id="converage_chart_container" class="row">
+        <thead>
+            <tr>
+                <td>基于偏好的方法</td>
+                <td>基于NSGA2的方法</td>
+            </tr>
+        </thead>
+        <tbody >
+
+        </tbody>
+    </table> 
+
+    
+
+    <h1>Pareto曲线记录</h1>
+    <table id="history_record" class="row">
+        <thead>
+            <tr>
+                <td>基于偏好的方法与基于NSGA2的方法比较</td>
+            </tr>
+        </thead>
+        <tbody >
+
+        </tbody>
+    </table> 
+
+    <h1>偏好满足率统计分析</h1>
+    <div id="psr_curve" style="width: 800px;height:400px;"></div>
+    <div id="psr_content" style="width: 800px;height: 50px;background: rgba(200,200,200,0.5);"></div>
+
+    <h1>多样性分析</h1>
+    <table id="diversity_analysis" class="row">
+        <thead>
+            <tr>
+                <td>基于偏好的方法</td>
+                <td>基于NSGA2的方法</td>
+            </tr>
+        </thead>
+        <tbody >
+
+        </tbody>
+    </table>
+    <h1>多样性统计</h1>
+    <div id="diversity_stas_curve" style="width: 800px;height: 400px;"></div>
+     <div id="diversity_content" style="width: 800px;height: 50px;background: rgba(200,200,200,0.5);"></div>
+     <h1>性能边界统计</h1>
+     <div id="performance_boundary" style="width: 800px;height: 400px;"></div>
+<!--     <div id="prato_plot_setting">
+        <strong>Preference：</strong>
+        Shape Coffe.&nbsp;<input id="sc_pre" type="input" name="" value="0.15" size="1">&nbsp;&nbsp;&nbsp;&nbsp;
+        Cost&nbsp;<input id="eco_pre" type="input" name="" value="6800000" size="1">(RMB)&nbsp;&nbsp;&nbsp;&nbsp;
+        <input type="checkbox" name="open_preference" value="true">Enable Pre
+        <input type="checkbox" name="open_visual_updating" value="true" checked>Auto Update
+        <input type="checkbox" name="open_history_record" value="true">Enable Record
+    </div>
+    <div id="prato_plot"> </div>
+    <div id="obj1_plot" class="objective_chart"></div>
+    <div id="obj2_plot" class="objective_chart"></div>
+
+
+    <div id="params_plot"> </div>
+
+    <table id="params_control">
+
+        <tr>
+            <td>
+                <strong>L1 Value:</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l1" type="text" index="opt_param_0"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>L2 Value:</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l2" type="text" index="opt_param_1"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>L3 Value:</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l3" type="text" index="opt_param_2"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>L4 Value:</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l4" type="text" index="opt_param_3"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>L5 Value:</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l5" type="text" index="opt_param_4"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>L6 Value:</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l6" type="text" index="opt_param_5"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>L7 Value:</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l7" type="text" index="opt_param_6"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>L8 Value:</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l8" type="text" index="opt_param_7"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>L9 Value:</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l9" type="text" index="opt_param_8"></div><br>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                 <strong>L10 Value:</strong>:&nbsp;&nbsp;<span class="range"></span>
+                <br><br>
+                <div id="l10" type="text" index="opt_param_9"></div><br>
+            </td>
+        </tr>
+    </table>
+
+    <button id="start_button" onclick="start()">Update</button>
+    <button id="stop_button" onclick="stop()">Stop</button> -->
+
+  <script>
+
+    var num_parameters = 10;
+    var num_objectives = 2;
+    var num_generations = 10;
+    var i_generation = 0;
+    var status = false;
+    var already_started = false;
+
+    var opts = {
+        optimizer:"optimizer_thu_env_cn",
+        num_parameters:num_parameters,
+        x_bounds:null,
+        num_objectives:num_objectives,
+        obj_preferences:null,
+        open_preference:true,
+        population_size:200,
+        num_generations:num_generations
+    };
+
+    function get_x_bounds(){
+        var x_bounds = [];
+        for(var i = 0;  i < num_parameters; i++){
+            var ele = $("[index=opt_param_"+i+"]");
+            x_bounds.push([ele.slider("values",0), ele.slider("values",1)]);
+        }
+        return x_bounds;
+    }
+
+    function get_obj_preference(){
+        var pre = [];
+        pre.push($("#eco_pre").val()*1);
+        pre.push($("#sc_pre").val()*1);
+
+        return pre;
+    }
+
+    function start() {  
+
+        if(already_started == true){
+            sketchup.update_generation(i_generation);
+        }else{
+            already_started = true;
+            opts.x_bounds = get_x_bounds();
+
+            opts.obj_preferences = get_obj_preference();
+
+            if($("input[type='checkbox'][name='open_preference']").is(':checked')){
+                opts.open_preference = true;
+            }else{
+                opts.open_preference = false;
+            }
+
+            i_generation = -1;
+            sketchup.start(JSON.stringify(opts),{
+              onCompleted: function() {
+                //some code here
+
+              }
+            });
+
+        }
+    }
+
+    function nasg2_ready(){
+        sketchup.update_generation(i_generation);
+    }
+
+    function stop(){
+        already_started = false;
+    }
+
+    var objectives_data = [];
+    var prato_plot_layout = null;
+    var prato_obj_x_map = {};
+
+    var params_data = null;
+    var params_name = null;
+    var params_layout = null;
+    var params_name_mapping = ["l1","l2","l3","l4","l5","l6","l7","l8","l9","l10"];
+
+    var obj1_data = null;
+    var obj1_layout = null;
+    var obj2_data = null;
+    var obj2_layout = null;
+
+    var defaultPlotlyConfiguration ={
+        modeBarButtonsToRemove: ['sendDataToCloud', 'autoScale2d', 'hoverClosestCartesian', 'hoverCompareCartesian', 'lasso2d', 'select2d'], 
+        displaylogo: false, 
+        showTips: true 
+    };
+
+
+    function init_ui(){
+        init_slider("l1",52,57,0.1);
+        init_slider("l2",40,45,0.1);
+        init_slider("l3",40,45,0.1);
+        init_slider("l4",25,40,0.1);
+        init_slider("l5",25,40,0.1);
+        init_slider("l6",25,40,0.1);
+        init_slider("l7",15,27,0.1);
+        init_slider("l8",15,27,0.1);
+        init_slider("l9",15,27,0.1);
+        init_slider("l10",15,27,0.1);
+
+        var pre = get_obj_preference();
+
+        var open_visual_updating = false;
+        if($("input[type='checkbox'][name='open_visual_updating']").is(':checked')){
+            open_visual_updating = true;
+        }
+
+        //对目标值的可视化
+        var objectives = {
+          x: [pre[0]],
+          y: [pre[1]],
+          name: 'P',
+          mode: 'markers',
+          type: 'scatter',
+          marker :{
+            symbol:"star-dot",
+            size: 12
+          },
+          showscale:false
+        };
+        objectives_data = [objectives];
+        prato_plot_layout = {
+          title:'第' + 0 +"代建筑性能分布",
+          font: {
+            family: 'Times New Roman'
+          },
+          xaxis: {
+            title: '成本',
+            range:[0,1000],
+            autorange:open_visual_updating
+          },
+          yaxis: {
+            title: '能耗',
+            range:[0,120],
+            autorange:open_visual_updating
+          }
+        };
+        Plotly.newPlot('prato_plot', objectives_data,prato_plot_layout);
+
+
+        //对优化参数进行可视化
+        var x_bounds = get_x_bounds();
+        var j;
+        var dimensions = [];
+        params_name = [];
+        for(j = 0; j < num_parameters; j++){
+            dimensions.push({
+                range: x_bounds[j],
+                label: params_name_mapping[j],  //'参数'+(j+1),
+                tickformat:"",
+                values: []
+            });
+            params_name.push("设计参数" + (j+1));
+        }
+        params_layout = {
+          title:"第"+0+"代设计参数值 ",
+          font: {
+            family: 'Times New Roman'
+          },
+          yaxis:{
+            autorange:false,
+            range:[60,105]
+          }
+        };
+        params_data = [{
+          type: 'parcoords',
+          pad: [80,80,80,80],
+          line: {
+            showscale: false,
+            reversescale: false,
+            colorscale: 'Jet',
+            cmin: 0,
+            cmax: 1.0,
+            color: []
+          },
+    
+          /*line: {
+            color: unpack(rows, 'species_id'),
+            colorscale: [[0, 'red'], [0.5, 'green'], [1, 'blue']]
+          },*/
+          dimensions: dimensions
+        }];
+
+        Plotly.newPlot('params_plot', params_data,params_layout);
+
+
+        //对目标1结果的可视化
+        obj1_data = {
+          x: [],
+          y: [],
+          type: 'scatter'
+        };
+        obj1_layout = {
+          xaxis: {
+            title: '分析的方案数',
+          },
+          yaxis: {
+            title: '能耗',
+          },
+          font: {
+            family: 'Times New Roman'
+          },
+          width: 390,
+          height: 200,
+          margin: {
+            l: 50,
+            r: 0,
+            b: 30,
+            t: 5
+          }
+        };
+        Plotly.newPlot('obj1_plot', [obj1_data],obj1_layout,defaultPlotlyConfiguration);
+
+        obj2_data = {
+          x: [],
+          y: [],
+          type: 'scatter'
+        };
+        obj2_layout = {
+          xaxis: {
+            title: '分析的方案数',
+          },
+          font: {
+            family: 'Times New Roman'
+          },
+          yaxis: {
+            title: '围护结构造价',
+          },
+          width: 390,
+          height: 200,
+          margin: {
+            l: 50,
+            r: 0,
+            b: 30,
+            t: 5
+          }
+        };
+        Plotly.newPlot('obj2_plot', [obj2_data],obj2_layout,defaultPlotlyConfiguration);
+
+        $("#sc_pre,#eco_pre").change(function(){
+            var pre = get_obj_preference();
+            objectives_data[0]= {
+              x: [pre[0]],
+              y: [pre[1]],
+              name: 'Pre',
+              mode: 'markers',
+              type: 'scatter',
+              marker :{
+                symbol:"star-dot",
+                size: 12
+              },
+              showscale:false
+            };
+            Plotly.newPlot('prato_plot',objectives_data,prato_plot_layout);
+        });
+    }
+
+    function init_slider(id,min,max,delta){
+        $( "#" +id ).slider({
+          range: true,
+          min: 0,
+          max: 57,
+          values: [ min, max ],
+          step:delta,
+          slide: function( event, ui ) {
+            $("#"+ui.handle.parentNode.id).parent().children(".range").html(ui.values[ 0 ] + "-" + ui.values[1]);
+            //$( "#amount" ).val( "$" + ui.values[ 0 ] + " - $" + ui.values[ 1 ] );
+          }
+        });
+        $( "#" +id).parent().children(".range").html(min + "-" + max);
+    }
+
+    function update_ui(data){
+
+        var solutions = data.solutions;
+
+        var i,j;
+        var obj1 = [];
+        var obj2 = [];
+        var s;
+
+        //prato_obj_x_map = {};
+        for(j = 0; j < num_parameters; j++){
+            params_data[0].dimensions[j].values = [];
+        }
+
+
+        var min_obj2 = Number.MAX_VALUE;
+        var max_obj2 = Number.MIN_VALUE;
+        for( i = 0; i < solutions.length; i++){
+            s = solutions[i];
+
+            obj1.push(s.objectives[0]);
+            obj2.push(s.objectives[1]);
+
+            if(s.objectives[1] > max_obj2) max_obj2 = s.objectives[1];
+            if(s.objectives[1] < min_obj2) min_obj2 = s.objectives[1];
+
+            prato_obj_x_map[s.objectives.join(",")] = s.x;
+
+            obj1_data.x.push(obj1_data.x.length);
+            obj2_data.x.push(obj2_data.x.length);
+            
+
+            var p_data = [];
+            for(j = 0; j < num_parameters; j++){
+                p_data.push(s.x[j]);
+                params_data[0].dimensions[j].values.push(s.x[j]);
+            }
+        }
+        params_data[0].line.showscale = true;
+        params_data[0].line.cmin = min_obj2;
+        params_data[0].line.cmax = max_obj2;
+        params_data[0].line.color = obj2;
+
+        obj1_data.y = obj1_data.y.concat(obj1.reverse());
+        obj2_data.y = obj2_data.y.concat(obj2.reverse());
+
+        
+        var open_visual_updating = false;
+        if($("input[type='checkbox'][name='open_visual_updating']").is(':checked')){
+            open_visual_updating = true;
+        }
+        prato_plot_layout.xaxis.autorange = open_visual_updating;
+        prato_plot_layout.yaxis.autorange = open_visual_updating;
+
+        var objectives = {
+          name:'G '+(i_generation+1)*10,
+          x: obj1,
+          y: obj2,
+          mode: 'markers',
+          type: 'scatter'
+        };
+
+        if($("input[type='checkbox'][name='open_history_record']").is(':checked')){
+            objectives_data.push(objectives);
+        }else{
+            objectives_data[1] = objectives;
+        }
+
+        prato_plot_layout.title = '第' + (i_generation+1)*10 +"代建筑性能分布";
+        //Plotly.redraw('prato_plot');
+        Plotly.newPlot('prato_plot',objectives_data,prato_plot_layout).then(function(){
+        });
+        document.getElementById('prato_plot').on('plotly_click', function(data){
+            if (data.points.length == 0) return;
+            var objs = data.points[0].x + "," + data.points[0].y;
+            var x = prato_obj_x_map[objs];
+            x.splice(0,0,4);
+            sketchup.show_model(x.join(","));
+        });
+
+        //对优化参数进行可视化
+        params_layout.title = "第" + (i_generation+1) * 10 + "代设计参数分布";
+        //Plotly.redraw('params_plot');
+        Plotly.newPlot('params_plot', params_data,params_layout);
+
+        //对目标值的数据进行可视化
+        Plotly.redraw('obj1_plot');
+        Plotly.redraw('obj2_plot');
+
+        i_generation += 1;
+        /*
+        if(i_generation < num_generations){
+            //alert("Continue Next Generation?");
+            sketchup.update_generation(i_generation);
+        }
+        */
+    }
+
+
+    var data_pre = [];
+
+    var data_nsga = [];
+
+    var performance_boundary = {
+        energy :[[],[]],//min,max
+        cost:[[],[]]
+    };//min,max
+
+    function jsReadFiles(files,type) {
+        if (files.length) {
+            var file = files[0];
+            var reader = new FileReader();//new一个FileReader实例
+            if (/text+/.test(file.type)) {//判断文件类型，是不是text类型
+                reader.onload = function() {
+                    var raw_data = this.result;
+                    var arr = raw_data.split("\r\n");
+                    var i = 0;
+                    for(i = 0; i <arr.length; i++){
+                        if(arr[i] != ""){
+                            if(type == "pre"){
+                                data_pre.push(JSON.parse(arr[i]));    
+                            }else if(type == "nsga2"){
+                                data_nsga.push(JSON.parse(arr[i])); 
+                            }
+                            
+                        }
+                    }
+                    //$('body').append('<pre>' + this.result + '</pre>');
+                }
+                reader.readAsText(file);
+            } else if(/image+/.test(file.type)) {//判断文件是不是imgage类型
+                reader.onload = function() {
+                    $('body').append('<img src="' + this.result + '"/>');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+    }
+
+
+    
+
+    function update_converage_chart(div_id, title,y_title, x, y, y_range){
+
+        var obj_data = {
+          x: x,
+          y: y,
+          type: 'scatter'
+        };
+        var obj_layout = {
+          xaxis: {
+            title: '分析的方案数',
+            visible :true,
+            showline:true,
+            linewidth:1,
+            linecolor:"#000000",
+            tickcolor:"#000000",
+            titlefont:{
+                size: 20,
+                color:"#000000"
+            },
+            tickfont:{
+                size: 15,
+                color:"#000000"
+            }
+          },
+          yaxis: {
+            title: y_title,
+            range:y_range,
+            autorange:false,
+            visible :true,
+            showline:true,
+            linewidth:1,
+            linecolor:"#000000",
+            tickcolor:"#000000",
+            titlefont:{
+                size: 20,
+                color:"#000000"
+            },
+            tickfont:{
+                size: 15,
+                color:"#000000"
+            }
+          },
+          font: {
+            family: 'Times New Roman'
+          },
+          title:title,
+          titlefont:{
+            size: 20,
+            color:"#000000"
+          },
+          color:"#000000"
+          //width: 390,
+          //height: 200,
+          // margin: {
+          //   l: 50,
+          //   r: 0,
+          //   b: 30,
+          //   t: 5
+          // }
+        };
+        Plotly.newPlot(div_id, [obj_data],obj_layout,defaultPlotlyConfiguration);
+
+    }
+
+    function update_pareto_chart(div_id,i_generation,obj11,obj12,obj21,obj22){
+
+        var objectives_pre = {
+          x: [7000000],
+          y: [90],
+          name: 'P',
+          mode: 'markers',
+          type: 'scatter',
+          marker :{
+            symbol:"star-dot",
+            size: 12
+          },
+          showscale:false
+        };
+        var objectives1 = {
+          name:'pre',
+          x: obj11,
+          y: obj12,
+          mode: 'markers',
+          type: 'scatter'
+        };
+        var objectives2 = {
+          name:'NSGA-II',
+          x: obj21,
+          y: obj22,
+          mode: 'markers',
+          type: 'scatter'
+        };
+        var objectives_data = [objectives_pre,objectives2,objectives1];
+        var prato_plot_layout = {
+          title:'第' + (i_generation+1) + "代建筑性能分布",
+          font: {
+            family: 'Times New Roman'
+          },
+          xaxis: {
+            title: '成本',
+            range:[6500000,7500000],
+            autorange:true,
+            showline:true,
+            linewidth:1,
+            linecolor:"#000000",
+            tickcolor:"#000000",
+            titlefont:{
+                size: 25,
+                color:"#000000"
+            },
+            tickfont:{
+                size: 20,
+                color:"#000000"
+            }
+          },
+          yaxis: {
+            title: '能耗',
+            range:[85, 115],
+            autorange:true,
+            showline:true,
+            linewidth:1,
+            linecolor:"#000000",
+            tickcolor:"#000000",
+            titlefont:{
+                size: 25,
+                color:"#000000"
+            },
+            tickfont:{
+                size: 20,
+                color:"#000000"
+            }
+          },
+          titlefont:{
+            size: 30,
+            color:"#000000"
+          },
+          width:820,
+          height:800,
+          legend: {font: {size: 20}},
+          'shapes': [
+                {
+                    'type': 'rect',
+                    'x0': 6500000,
+                    'y0': 85.0,
+                    'x1': 7500000,
+                    'y1': 95.0,
+                    'line': {
+                        'color': 'rgba(200, 200, 200, 1)',
+                        'width': 1,
+                    },
+                    'fillcolor': 'rgba(200, 200, 200, 0.3)',
+                }
+            ]
+        };
+        Plotly.newPlot(div_id, objectives_data,prato_plot_layout);
+
+    }
+
+    function update_psr_curve(generations,psr_pre,psr_nsga2){
+        var trace1 = {
+          x: generations.slice(0,16),
+          y: psr_nsga2.slice(0,16),
+          name: 'NSGA-II',
+          type: 'bar',
+          marker: {
+                color: '#ff7f0e',
+          }
+        };
+
+        var trace2 = {
+          x: generations.slice(0,16),
+          y: psr_pre.slice(0,16),
+          name: 'Pre',
+          type: 'bar',
+          marker: {
+                color: '#2ca02c',
+          }
+        };
+
+        var data = [trace1, trace2];
+
+        var layout = {
+            barmode: 'group',
+          xaxis: {
+            title: '代数',
+            autorange:true,
+            showline:true,
+            linewidth:1,
+            linecolor:"#000000",
+            tickcolor:"#000000",
+            titlefont:{
+                family:'times new roman',
+                size: 25,
+                color:"#000000"
+            },
+            tickfont:{
+                size: 20,
+                color:"#000000",
+                family:'times new roman'
+            }
+          },
+          yaxis: {
+            title: '偏好满足率(%)',
+            autorange:true,
+            showline:true,
+            linewidth:1,
+            linecolor:"#000000",
+            tickcolor:"#000000",
+            titlefont:{
+                size: 25,
+                color:"#000000",
+                family:'times new roman'
+            },
+            tickfont:{
+                size: 20,
+                color:"#000000",
+                family:'times new roman'
+            }
+          },
+          titlefont:{
+            size: 30,
+            color:"#000000",
+            family:'times new roman'
+          },
+          title:"优化过程中的偏好满足率(%)"
+        };
+
+        Plotly.newPlot('psr_curve', data, layout);
+
+        $("#psr_content").append(psr_pre.join(","));
+        $("#psr_content").append("<br>");
+        $("#psr_content").append(psr_nsga2.join(","));
+    }
+
+
+    //var x_bounds = [[52.0,57.0],[40.0,45.0],[40.0,45.0],[25.0,40.0],[25.0,40.0],[25.0,40.0],[15.0,27.0],[15.0,27.0],[15.0,27.0],[15.0,27.0]];
+    var x_bounds = [[10.0,57.0],[10.0,57.0],[10.0,57.0],[10.0,57.0],[10.0,57.0],[10.0,57.0],[10.0,57.0],[10.0,57.0],[10.0,57.0],[10.0,57.0]];
+
+    var params_name_mapping = ["L1","L2","L3","L4","L5","L6","L7","L8","L9","L10"];
+    
+
+    function update_diversity_chart(div_id, title, g,xs,objs,range){
+        //对优化参数进行可视化
+        var j;
+        params_name = [];
+        var min_obj = Math.min.apply(null, objs);
+        var max_obj = Math.max.apply(null, objs);
+        range = [min_obj,max_obj];
+        
+        var params_layout = {
+          title:title,
+          font: {
+            family: 'Times New Roman'
+          },
+          yaxis:{
+            autorange:false,
+            tickcolor:"#000000",
+            titlefont:{
+                size: 25,
+                color:"#000000",
+                family:'times new roman'
+            },
+            tickfont:{
+                size: 20,
+                color:"#000000",
+                family:'times new roman'
+            }
+          },
+          titlefont:{
+            size: 30,
+            color:"#000000",
+            family:'times new roman'
+          }
+        };
+
+        var dimensions = [];
+        for(j = 0; j < 10; j++){
+            dimensions.push({
+                range: x_bounds[j],
+                label: params_name_mapping[j],  //'参数'+(j+1),
+                tickformat:"",
+                values: []
+            });
+        }
+        var s_length = xs.length;
+        for(var si = 0; si < s_length; si ++){
+            for( j = 0; j < 10; j++){
+                dimensions[j].values.push(xs[si][j]);    
+            }
+        }
+
+
+        var params_data = [{
+          type: 'parcoords',
+          width:800,
+          height:400,
+          pad: [80,80,80,80],
+          line: {
+            showscale: false,
+            reversescale: false,
+            colorscale: 'Jet',
+            cmin: 0,
+            cmax: 1.0,
+            color: []
+          },
+          dimensions: dimensions,
+          labelfont :{
+                size: 20,
+                color:"#000000",
+                family:'times new roman'
+          },
+          rangefont:{
+                size: 15,
+                color:"#000000",
+                family:'times new roman'
+          },
+            tickfont:{
+                size: 5,
+                color:"#000000",
+                family:'times new roman'
+            }
+        }];
+
+        params_data[0].line.showscale = true;
+        params_data[0].line.cmin = range[0];
+        params_data[0].line.cmax = range[1];
+        params_data[0].line.color = objs;
+
+        Plotly.newPlot(div_id, params_data,params_layout);
+    }
+
+    function update_cluser_diversity_curve(epsl, div_id, title, g, xs,objs,range,pcost){
+        var clusters = dbscan(xs,epsl,4);
+        var clusters_p_xs = [];
+        var clusters_p_sc = [];
+         $("#diversity_content").html("");
+
+        for(var ci = 0; ci < clusters.length; ci++){
+
+            clusters_p_xs.push(xs[clusters[ci][0]]);
+            clusters_p_sc.push(objs[clusters[ci][0]]);
+            $("#diversity_content").append(xs[clusters[ci][0]].join(","));
+            $("#diversity_content").append("<br>");
+            $("#diversity_content").append(objs[clusters[ci][0]]);
+            $("#diversity_content").append(",");
+            $("#diversity_content").append(pcost[clusters[ci][0]]);
+            $("#diversity_content").append("<hr>");
+        }
+        update_diversity_chart(div_id, title + "-类数=" +clusters.length, g, clusters_p_xs, clusters_p_sc,range);
+    }
+
+    function update_diversity_stas_chart(div_id,epsls,diversitys){
+        var data = [
+          {
+            x: epsls,
+            y: diversitys,
+            type: 'bar'
+          }
+        ];
+
+        var layout = {
+          title:'不同聚类范围(epsl)设定下的多样性测度' ,
+          font: {
+            family: 'Times New Roman'
+          },
+          xaxis: {
+            title: 'epsl(%)',
+            autorange:true,
+            showline:true,
+            linewidth:1,
+            linecolor:"#000000",
+            tickcolor:"#000000",
+            titlefont:{
+                size: 25,
+                color:"#000000"
+            },
+            tickfont:{
+                size: 20,
+                color:"#000000"
+            }
+          },
+          yaxis: {
+            title: 'DIV(%)',
+            autorange:true,
+            showline:true,
+            linewidth:1,
+            linecolor:"#000000",
+            tickcolor:"#000000",
+            titlefont:{
+                size: 25,
+                color:"#000000"
+            },
+            tickfont:{
+                size: 20,
+                color:"#000000"
+            }
+          },
+          titlefont:{
+            size: 30,
+            color:"#000000"
+          },
+          legend: {font: {size: 20}}
+        };
+
+        Plotly.newPlot(div_id, data,layout);
+    }
+
+    function update_all_ui(){
+        var solutions_index = [];
+        var pre_sc = [];
+        var pre_cost = [];
+        var nsga2_sc =  [];
+        var nsga2_cost = [];
+
+        
+
+        var i =  0;
+        var g = 0;
+        var gn = data_pre.length;
+        var pss, nss;
+        var si = 0;
+        var psc, pcost, nsc, ncost,dpsc;
+        var psr_pre= [];
+        var psr_nsga2 = [];
+        var generations = [];
+        var p_xs;
+        var n_xs;
+        var p_sc, p_c, n_sc, nc;
+        for(g = 0; g < gn; g++){
+            pss = data_pre[g].solutions;
+            nss = data_nsga[g].solutions;
+            psc = [];
+            pcost = [];
+            nsc = [];
+            ncost = [];
+            psr_p = 0.0;
+            psr_n = 0.0;
+            p_xs = [];
+            n_xs = [];
+
+
+            for(i = 0; i < pss.length; i++){
+                p_sc = pss[i].objectives[1];
+                p_c = pss[i].objectives[0];
+                n_sc = nss[i].objectives[1];
+                n_c = nss[i].objectives[0];
+
+
+
+                if(p_sc <= 95  &&  p_c <= 7500000){
+                    psr_p += 1;
+                }
+                if(n_sc <= 95 &&  n_c <= 7500000){
+                    psr_n += 1;
+                }
+
+
+                if(si >= 1000){
+                    if( n_sc >97){
+                        //continue;
+                    }
+
+                     if( n_c >6900000 || n_c > 7300000){
+                        //continue;
+                    }
+                }
+
+                pre_sc.push(p_sc);
+                pre_cost.push(p_c);
+
+                nsga2_sc.push(n_sc);
+                nsga2_cost.push(n_c);
+
+                si++;
+                solutions_index.push(si);
+
+                psc.push(p_sc);
+                pcost.push(p_c);
+
+                nsc.push(n_sc);
+                ncost.push(n_c);
+
+                if (g == 0 || g == 12){
+                    p_xs.push(pss[i].x);
+                    n_xs.push(nss[i].x);
+                }
+                
+            }
+
+            performance_boundary.energy[0].push(Math.min.apply(null, nsga2_sc));
+            performance_boundary.energy[1].push(Math.max.apply(null, nsga2_sc));
+            performance_boundary.cost[0].push(Math.min.apply(null, nsga2_cost));
+            performance_boundary.cost[1].push(Math.max.apply(null, nsga2_cost));
+
+            
+            psr_p = psr_p * 100.0 / pss.length;
+            psr_n = psr_n * 100.0 / pss.length;
+
+            generations.push("G"+(g+1));
+            psr_pre.push(psr_p);
+            psr_nsga2.push(psr_n);
+
+            $("#history_record tbody").append("<tr>");
+            $("#history_record tbody").append("<td><div id='pre_pareto_"+ g +"' class='pareto_chart'></div></td>");
+            //$("#history_record tbody").append("<td><div id='nasg2_pareto_"+ g +"' class='converage_chart'></div></td>");
+            $("#history_record tbody").append("</tr>");
+
+            //update_pareto_chart("pre_pareto_"+g,g,pcost, psc,ncost, nsc);
+
+            //更新多样性曲线
+            if (g == 0 || g == 12){
+                $("#diversity_analysis tbody").append("<tr>");
+                $("#diversity_analysis tbody").append("<td><div id='pre_diversity_"+g+"' class='diversity_chart'></div></td>");
+                $("#diversity_analysis tbody").append("<td><div id='nsga2_diversity_"+g+"' class='diversity_chart'></div></td>");
+                $("#diversity_analysis tbody").append("</tr>");
+                if(g == 0){
+                    update_diversity_chart("pre_diversity_"+g, "基于偏好的方法设计参数初始分布", g, p_xs, psc,[90,115]);
+                    //update_diversity_chart("nsga2_diversity_"+g, "Initial Variables Distribution (NSGA-II Method)", g, n_xs, nsc,[0.15,0.19]);
+                }else{
+                    update_diversity_chart("pre_diversity_"+g, "基于偏好的方法设计参数最终分布", g, p_xs, psc,[90.0,92.0]);
+                    //update_diversity_chart("nsga2_diversity_"+g, "Final Variables Distribution (NSGA-II Method)", g, n_xs, nsc,[0.15,0.19]);
+                }
+                
+            }
+
+
+            if (g == 12){
+                $("#diversity_analysis tbody").append("<tr>");
+                $("#diversity_analysis tbody").append("<td><div id='pre_diversity_a_1' class='diversity_chart'></div></td>");
+                $("#diversity_analysis tbody").append("<td><div id='pre_diversity_a_2' class='diversity_chart'></div></td>");
+                $("#diversity_analysis tbody").append("</tr>");
+                $("#diversity_analysis tbody").append("<tr>");
+                $("#diversity_analysis tbody").append("<td><div id='pre_diversity_a_3' class='diversity_chart'></div></td>");
+                $("#diversity_analysis tbody").append("<td><div id='pre_diversity_a_4' class='diversity_chart'></div></td>");
+                $("#diversity_analysis tbody").append("</tr>");
+                $("#diversity_analysis tbody").append("<tr>");
+                $("#diversity_analysis tbody").append("<td><div id='pre_diversity_a_5' class='diversity_chart'></div></td>");
+                $("#diversity_analysis tbody").append("<td><div id='pre_diversity_a_6' class='diversity_chart'></div></td>");
+                $("#diversity_analysis tbody").append("</tr>");
+                update_diversity_chart("pre_diversity_a_1", "最终设计参数分布(基于偏好的方法)", g, p_xs, psc,[6950000,7000000]);
+                //update_diversity_chart("pre_diversity_a_2", "最终设计参数分布(基于偏好的方法; 一个类)", g, p_xs, psc,[6950000,7000000]);
+                //update_diversity_chart("pre_diversity_a_2", "Preference-based Method", g, n_xs, nsc,[0.1555,0.1562]);
+
+                var epsl = 0.05;
+                update_cluser_diversity_curve(epsl, "pre_diversity_a_3", "基于偏好的方法设计参数聚类(epsl=5%)", g, p_xs, psc,[90.0,92.0],pcost);
+                epsl = 0.10;
+                update_cluser_diversity_curve(epsl, "pre_diversity_a_4", "基于偏好的方法设计参数聚类(epsl=10%)", g, p_xs, psc,[90.0,92.0],pcost);
+                epsl = 0.15;
+                update_cluser_diversity_curve(epsl, "pre_diversity_a_5", "基于偏好的方法设计参数聚类(epsl=15%)", g, p_xs, psc,[90.0,92.0],pcost);
+                epsl = 0.20;
+                update_cluser_diversity_curve(epsl, "pre_diversity_a_6", "基于偏好的方法设计参数聚类(epsl=20%)", g, p_xs, psc,[90.0,92.0],pcost);
+                
+                var diversitys = [];
+                var epss = [];
+                for(epsl_1 = 0.01; epsl_1 < 0.50; epsl_1+=0.01){
+                    clusters = dbscan(p_xs,epsl_1,4);
+                    epss.push(epsl_1 * 100);
+                    diversitys.push(clusters.length * 100.0 / p_xs.length);
+                }
+                update_diversity_stas_chart("diversity_stas_curve",epss,diversitys);
+
+
+            }
+        }
+
+        update_psr_curve(generations,psr_pre,psr_nsga2);
+
+        //更新收敛曲线
+        $("#converage_chart_container tbody").append("<tr>");
+        $("#converage_chart_container tbody").append("<td><div id='pre_sc' class='converage_chart'></div></td>");
+        $("#converage_chart_container tbody").append("<td><div id='pre_cost' class='converage_chart'></div></td>");
+        $("#converage_chart_container tbody").append("</tr>");
+        $("#converage_chart_container tbody").append("<tr>");
+        $("#converage_chart_container tbody").append("<td><div id='nsga2_sc' class='converage_chart'></div></td>");
+        $("#converage_chart_container tbody").append("<td><div id='nsga2_cost' class='converage_chart'></div></td>");
+        $("#converage_chart_container tbody").append("</tr>");
+        update_converage_chart('pre_sc',"基于偏好方法的能耗值收敛曲线","能耗",solutions_index,pre_sc,[40,180]);
+        update_converage_chart('pre_cost',"基于偏好方法的围护结构成本值收敛曲线","成本",solutions_index,pre_cost,[4000000,10000000]);
+        update_converage_chart('nsga2_sc',"NSGA-II方法的能耗值收敛曲线","能耗",solutions_index,nsga2_sc,[40,180]);
+        update_converage_chart('nsga2_cost',"NSGA-II方法的围护结构成本值收敛曲线","成本",solutions_index,nsga2_cost,[4000000,10000000]);
+
+
+
+        $("#performance_boundary").append(JSON.stringify(performance_boundary));
+
+
+    }
+
+    $(document).ready(function(){ 
+        //提取收敛数据
+
+
+        //提取历史数据
+
+        //提取多样性数据
+    });
+
+
+  </script>
+</body>
+</html>
+

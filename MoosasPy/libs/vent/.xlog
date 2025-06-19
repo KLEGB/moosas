@@ -1,0 +1,14 @@
+Program:  C:\Users\Lenovo\PycharmProjects\ComtamW\data\contam\contamx3.exe
+  Version:  3.4.0.2 release 32 bit
+  Compiler: Visual C++ 1929
+  Created:  Fri Aug 26 02:32:02 2022
+Project (_file_name):  .prj
+cwd: C:\Users\Lenovo\PycharmProjects\ComtamW\data
+prj arg = (null)
+_pdrive , _pdir , _prjname , _pext .prj
+
+Calling arguments (1):
+	argv[0] = contam\contamx3
+Running ContamX 3.4.0.2 on .prj
+ERROR  (file prj-read, line 246)
+ Could not open file .prj

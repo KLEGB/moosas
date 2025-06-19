@@ -1,0 +1,61 @@
+Program:  C:\Users\Umiko\PycharmProjects\moosas+\libs\vent\contam\contamx3.exe
+  Version:  3.4.0.2 release 32 bit
+  Compiler: Visual C++ 1929
+  Created:  Thu Feb 29 21:16:23 2024
+Project (_file_name):  C:\Users\Umiko\PycharmProjects\moosas+\data\vent\project\afn_0x9g9e1.prj
+cwd: C:\Users\Umiko\PycharmProjects\moosas+
+prj arg = C:\Users\Umiko\PycharmProjects\moosas+\data\vent\project\afn_0x9g9e1.prj
+_pdrive C:, _pdir \Users\Umiko\PycharmProjects\moosas+\data\vent\project\, _prjname afn_0x9g9e1, _pext .prj
+  Updated:  Mon Apr 29 18:19:27 2024
+Calling arguments (2):
+	argv[0] = C:\Users\Umiko\PycharmProjects\moosas+\libs\vent\contam\contamx3.exe
+	argv[1] = C:\Users\Umiko\PycharmProjects\moosas+\data\vent\project\afn_0x9g9e1.prj
+Running ContamX 3.4.0.2 on C:\Users\Umiko\PycharmProjects\moosas+\data\vent\project\afn_0x9g9e1.prj
+
+Reading project file: C:\Users\Umiko\PycharmProjects\moosas+\data\vent\project\afn_0x9g9e1.prj
+Run Control section read successfully.
+Speices section read successfully.
+Level section read successfully.
+Day Schedule section read successfully.
+Week Schedule section read successfully.
+WindP Profile section read successfully.
+Kinetic Reaction section read successfully.
+Filter Element section read successfully.
+Filter section read successfully.
+Source/Sink Element section read successfully.
+Airflow Element section read successfully.
+Airflow Element section read successfully.
+Controls section read successfully.
+AHS section read successfully.
+Zone section read successfully.
+Zone CC section read successfully.
+Path section read successfully.
+Duct Junction section read successfully.
+Duct Junction CC section read successfully.
+Duct Segment section read successfully.
+Source/Sink section read successfully.
+Occupant Day Schedule section read successfully.
+Occupant Exposure section read successfully.
+Note section read successfully.
+Creating Envelope path lists:
+  56 envelope paths|terminals for WPC
+0 Duct Networks
+      network # 0 - jctns:
+
+  56 envelope paths|terminals|leaks for CSM/CEX
+Unlinked nodes:
+     zone:   18
+     zone:   19
+     zone:   20
+     zone:   21
+     zone:   22
+     zone:   23
+     zone:   25
+     zone:   26
+     zone:   27
+     zone:   28
+     zone:   30
+     zone:   31
+FATAL  (file prj-data, line 1487)
+ Zones/junctions not linked to ambient by variable flow path
+ContamX finish(2)
