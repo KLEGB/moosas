@@ -10,8 +10,8 @@ Besides, a SketchUp Plugin version was embedded by src/ coded in ruby as an inte
 
 ## 👀 instructions
 
-[SketchUp instruction](doc/Users Manual.pdf)  
-[python module document](doc/document.md)
+[SketchUp instruction](MoosasPy/doc/Users Manual.pdf)  
+[python module document](MoosasPy/doc/document.md)
 
 
 ## 🔧 python installation
