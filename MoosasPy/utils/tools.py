@@ -9,6 +9,7 @@ class MoosasPath(object):
     def __init__(self, MoosasPlusDirectory=None):
         if MoosasPlusDirectory is None:
             MoosasPlusDirectory = os.path.realpath(os.path.join(os.path.dirname(__file__), r'../'))
+        MoosasPlusDirectory = os.path.abspath(MoosasPlusDirectory)
         self.moosasPlusDir = MoosasPlusDirectory
         self.libDir = os.path.join(MoosasPlusDirectory, 'libs')
         self.dataBaseDir = os.path.join(MoosasPlusDirectory, 'db')
@@ -23,8 +24,9 @@ class MoosasPath(object):
 
     @staticmethod
     def clean(dir):
-        remove = [os.remove(os.path.join(dir, dell)) for dell in os.listdir(dir)]
-        return remove
+        if os.path.exists(dir):
+            remove = [os.remove(os.path.join(dir, dell)) for dell in os.listdir(dir)]
+            return remove
 
     @staticmethod
     def checkBuildDir(*dir):

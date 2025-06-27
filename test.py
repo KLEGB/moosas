@@ -1,6 +1,7 @@
 import pygeos, os
 import numpy as np
 import sys, re, time
+os.chdir(r'C:\\')
 from datetime import datetime
 from MoosasPy import transform,energyAnalysis
 from MoosasPy import IO,geometry,preprocess
