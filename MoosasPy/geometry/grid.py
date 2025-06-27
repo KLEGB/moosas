@@ -8,7 +8,7 @@ class MoosasGrid(MoosasElement):
     __slots__ = ['gridSize', 'gridOffset', 'gridCell', 'params','proj','UVFace']
 
     def __init__(self, element: MoosasElement, gird_size=None, grid_offset=0.78):
-        super(MoosasGrid, self).__init__(element.faceId, element.parent,
+        super(MoosasGrid, self).__init__(element.parent,element.faceId,
                                          element.level, element.offset, element.glazingId, element.space)
 
         self.griding(gird_size, grid_offset)
