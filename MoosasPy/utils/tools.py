@@ -34,9 +34,10 @@ class MoosasPath(object):
             if not os.path.exists(thisDir):
                 os.mkdir(thisDir)
 
-
+curPath = os.path.abspath('.')
+os.chdir(os.path.dirname(__file__))
 path = MoosasPath(open(r'_.pth').read().strip())
-
+os.chdir(curPath)
 
 def isFilePath(thePath):
     if "\\" in thePath or "/" in thePath:

@@ -1,6 +1,7 @@
 -- 0.8.0
 # Environment Update 06.19
 - 0.8.0.0 create a deployment toSKetchUp.py to auto download embedded python and build the environment.
+- 0.8.0.1 fix path issue
 
 --- 0.7.9 
 # IDF update 05.08
