@@ -12,7 +12,8 @@ Besides, a SketchUp Plugin version was embedded by src/ coded in ruby as an inte
 
 [SketchUp instruction](MoosasPy/doc/Users Manual.pdf)  
 [python module document](MoosasPy/doc/document.md)
-
+[introduction BS2023](https://www.dropbox.com/scl/fi/x6e2ed0a1cxs11362ymzq/BS2023-Introduction.pptx?rlkey=wasohit85x2yd4xlreomuptoy&st=vvvblori&dl=0)
+[Transformation Module BS2025](https://www.dropbox.com/scl/fi/adxrg69v5l0oh46uzd6u9/BS2025-Geometry-Transformation.pptx?rlkey=wcjrnwm3puxx4c7z6vxwdqqz3&st=4svjujgx&dl=0)
 
 ## 🔧 python installation
 following module would need if an external Interpreter was implemented (see requirement):  
@@ -59,10 +60,27 @@ Open the [MoosasLock file](src/MoosasLock.rb), find the following line:
 
 
 ## 📖 Reference
-Please cite the following article if the analysis module was implemented:  
-Lin, B.; Chen, H.; Yu, Q.; Zhou, X.; Lv, S.; He, Q.; Li, Z. MOOSAS – A Systematic Solution for Multiple Objective Building Performance Optimization in the Early Design Stage. Building and Environment 2021, 200, 107929. https://doi.org/10.1016/j.buildenv.2021.107929.
+
 Please cite the following article if the transformation module was implemented:  
 Xiao, J.; Zhou, H.; Yang, S.; Zhang, D.; Lin, B. A CAD-BEM Geometry Transformation Method for Face-Based Primary Geometric Input Based on Closed Contour Recognition. Build. Simul. 2023. https://doi.org/10.1007/s12273-023-1081-6.
+
+### Related Paper
+#### Review Paper
+Lin, B.; Chen, H.; Yu, Q.; Zhou, X.; Lv, S.; He, Q.; Li, Z. MOOSAS – A Systematic Solution for Multiple Objective Building Performance Optimization in the Early Design Stage. Building and Environment 2021, 200, 107929. https://doi.org/10.1016/j.buildenv.2021.107929.  
+Xiao, J., Zhang, D., Yang, S., & Lin, B. (2023). MOOSAS - a building performance optimization tool in the early design stage: Development, evaluations, improvements, and applications. Proceedings of Building Simulation 2023: 18th Conference of IBPSA, 18, 2339–2346. https://doi.org/10.26868/25222708.2023.1708  
+
+#### Daylighting Estimation
+Wen, J., Yang, S., Xie, Y., Yu, J., & Lin, B. (2022). A fast calculation tool for assessing the shading effect of surrounding buildings on window transmitted solar radiation energy. Sustainable Cities and Society, 81, 103834. https://doi.org/10.1016/j.scs.2022.103834  
+
+#### Model Transformation
+Chen, H., Li, Z., Wang, X., & Lin, B. (n.d.). A graph- and feature-based building space recognition algorithm for performance simulation in the early design stage. Building Simulation, 11(2).  
+Xiao, J.; Zhou, H.; Yang, S.; Zhang, D.; Lin, B. A CAD-BEM Geometry Transformation Method for Face-Based Primary Geometric Input Based on Closed Contour Recognition. Build. Simul. 2023. https://doi.org/10.1007/s12273-023-1081-6.
+
+#### User Feadback
+Wang, C., Lu, S., Chen, H., Li, Z., & Lin, B. (2021). Effectiveness of one-click feedback of building energy efficiency in supporting early-stage architecture design: An experimental study. Building and Environment, 196, 107780. https://doi.org/10.1016/j.buildenv.2021.107780
+
+#### Performance Optimization
+Li, Z., Chen, H., Lin, B., & Zhu, Y. (2018). Fast bidirectional building performance optimization at the early design stage. Building Simulation, 11(4), 647–661. https://doi.org/10.1007/s12273-018-0432-1
 
 
 ## 🤗 Credits and acknowledgements
