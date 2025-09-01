@@ -1,7 +1,7 @@
 from .rad import _meshToRadObject, _materialLib, _getSky
 from .models import MoosasModel
-from .geometry import MoosasElement, MoosasGrid, Vector, MoosasSpace
-from .utils import np, pygeos, path, callCmd, os
+from .geometry import MoosasElement, MoosasGrid, Vector, MoosasSpace,Projection
+from .utils import np, pygeos, path, callCmd, os,mixItemListToList
 from datetime import datetime
 
 
@@ -62,17 +62,17 @@ def simModel(model: MoosasModel, date: datetime, skyType, lat=39.93, lon=116.28,
 def _generateRadGeo(roof, floor, others):
     geoStr = ''
     ids = 0
-    for moGeo in floor:
-        geoStr += _meshToRadObject(moGeo.face, "default_floor", ids)
+    for moFace in floor:
+        geoStr += _meshToRadObject(triOpaque(moFace), "default_floor", ids)
         ids += 1
-    for moGeo in roof:
-        geoStr += _meshToRadObject(moGeo.face, "default_roof", ids)
+    for moFace in roof:
+        geoStr += _meshToRadObject(triOpaque(moFace), "default_roof", ids)
         ids += 1
-    for moGeo in others:
-        if moGeo.category == 0:
-            geoStr += _meshToRadObject(moGeo.face, "default_wall", ids)
-        if moGeo.category == 1:
-            geoStr += _meshToRadObject(moGeo.face, "glazing_", ids)
+    for moFace in others:
+        if moFace.category == 0:
+            geoStr += _meshToRadObject(triOpaque(moFace), "default_wall", ids)
+        if moFace.category == 1:
+            geoStr += _meshToRadObject(moFace.representation(), "glazing_", ids)
         ids += 1
     return geoStr
 
@@ -84,20 +84,20 @@ def modelToRad(model: MoosasModel, date: datetime, skyType, lat, lon, diff=10000
         faces = spc.getAllFaces(to_dict=True)
         ceils, ground = [], []
         for moface in faces["MoosasCeiling"]:
-            ceils = np.append(ceils, moface.faceId)
+            ceils = np.append(ceils, moface)
         for moface in faces["MoosasFloor"]:
-            ground = np.append(ground, moface.faceId)
+            ground = np.append(ground, moface)
         roof = np.append(roof, ceils)
         floor = np.append(floor, ground)
     roof = list(set(roof).difference(set(floor)))
     floor = list(floor)
-    others = set(model.geoId).difference(set(roof + floor))
-    roof = [model.geoId.index(item) for item in roof]
-    floor = [model.geoId.index(item) for item in floor]
-    others = [model.geoId.index(item) for item in others]
-    roof = np.array(model.geometryList)[roof]
-    floor = np.array(model.geometryList)[floor]
-    others = np.array(model.geometryList)[others]
+    others = list(model.wallList)+list(model.glazingList)+list(model.skylightList)
+    # roof = [model.geoId.index(item) for item in roof]
+    # floor = [model.geoId.index(item) for item in floor]
+    # others = [model.geoId.index(item) for item in others]
+    # roof = np.array(model.geometryList)[roof]
+    # floor = np.array(model.geometryList)[floor]
+    # others = np.array(model.geometryList)[others]
 
     geoStr = _generateRadGeo(roof, floor, others)
     radStr = _getSky(date, skyType, lat, lon, diff) + _materialLib() + geoStr
@@ -105,23 +105,40 @@ def modelToRad(model: MoosasModel, date: datetime, skyType, lat, lon, diff=10000
         f.write(radStr)
     return radStr
 
-
+def triOpaque(moFace:MoosasElement)->list[pygeos.Geometry]:
+    proj = Projection(origin=np.mean(pygeos.get_coordinates(moFace.face, include_z=True), axis=0), unitZ=moFace.normal)
+    baseFace = mixItemListToList(moFace.face)
+    baseBrep,holes=[],[]
+    for face in baseFace:
+        baseBrep.append(pygeos.get_exterior_ring(face))
+        if len(pygeos.get_rings(face))>1:
+            holes+=list(pygeos.get_rings(face))[1:]
+    for gls in moFace.glazingElement:
+        holes.append(gls.representation())
+    baseBrep = [proj.toUV(face) for face in baseBrep]
+    baseBrep = pygeos.union_all(baseBrep)
+    holes = [proj.toUV(face) for face in holes]
+    for h in holes:
+        baseBrep = pygeos.difference(baseBrep,h)
+    baseBrep = pygeos.delaunay_triangles(baseBrep)
+    baseBrep = [proj.toWorld(tri) for tri in pygeos.get_parts(baseBrep)]
+    return baseBrep
 def spaceToRad(space: MoosasSpace, date: datetime, skyType, lat, lon, diff=10000,
                radPath=rf"{path.libDir}\rad\model.rad"):
     roof, floor, others = [], [], []
     faces = space.getAllFaces(to_dict=True)
     for moface in faces["MoosasCeiling"]:
-        roof = np.append(roof, moface.face)
+        roof = np.append(roof, moface)
     for moface in faces["MoosasFloor"]:
-        floor = np.append(floor, moface.face)
+        floor = np.append(floor, moface)
     for moface in faces["MoosasWall"]:
-        others = np.append(others, moface.face)
+        others = np.append(others, moface)
     for moface in faces["MoosasGlazing"]:
-        others = np.append(others, moface.face)
+        others = np.append(others, moface)
     for moface in faces["MoosasSkylight"]:
-        others = np.append(others, moface.face)
+        others = np.append(others, moface)
 
-    geoStr = _RadGeo(roof, floor, others)
+    geoStr = _generateRadGeo(roof, floor, others)
 
     radStr = _getSky(date, skyType, lat, lon, diff) + _materialLib() + geoStr
     with open(radPath, 'w+') as f:

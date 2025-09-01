@@ -2,7 +2,7 @@
 # Environment Update 06.19
 - 0.8.0.0 create a deployment toSKetchUp.py to auto download embedded python and build the environment.
 - 0.8.0.1 fix path issue
-
+- 0.8.0.1 fix RANDIANCE module to solve the holes create by aperture
 --- 0.7.9 
 # IDF update 05.08
 - 0.7.9.0 create *.idf exporting module, which can extend a template idf file with the geometries in MOOSAS

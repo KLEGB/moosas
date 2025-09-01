@@ -3,26 +3,32 @@ from datetime import datetime
 from ..geometry import Projection
 
 
-def _meshToRadObject(geo: pygeos.Geometry, material, id):
-    try:
-        proj = Projection.fromPolygon(geo)
-        geoUV = proj.toUV(geo)
-        triangles = pygeos.delaunay_triangles(geoUV)
-        triangles = [proj.toWorld(tri) for tri in pygeos.get_parts(triangles)]
-
-        if len(triangles) == 0:
-            return ""
-        geoStr = []
-        for trIdx, tri in enumerate(triangles):
-            pts = pygeos.get_coordinates(tri, include_z=True)
-            geoStr += [f"{material} polygon {id}_{trIdx} 0 0 {(len(pts)-1) * 3}"]
-            for pt in pts[:-1]:
-                geoStr += ["    "+" ".join(pt.astype(str))]
-            geoStr += [""]
-        return "\n".join(geoStr)+"\n"
-    except Exception as e:
-        print(e)
-        return ""
+def _meshToRadObject(geos, material, id):
+    if isinstance(geos, pygeos.Geometry):
+        geos = [geos]
+    geoStr = []
+    for gid,geo in enumerate(geos):
+        try:
+            proj = Projection.fromPolygon(geo)
+        except IndexError as e:
+            print("******Warning: GeometryError, invalid projection while writing rad")
+            continue
+        try:
+            geoUV = proj.toUV(geo)
+            triangles = pygeos.delaunay_triangles(geoUV)
+            triangles = [proj.toWorld(tri) for tri in pygeos.get_parts(triangles)]
+            if len(triangles) == 0:
+                return ""
+            for trIdx, tri in enumerate(triangles):
+                pts = pygeos.get_coordinates(tri, include_z=True)
+                geoStr += [f"{material} polygon {id}_{gid}_{trIdx} 0 0 {(len(pts)-1) * 3}"]
+                for pt in pts[:-1]:
+                    geoStr += ["    "+" ".join(pt.astype(str))]
+                geoStr += [""]
+            return "\n".join(geoStr)+"\n"
+        except Exception as e:
+            print("GeometryError:",e)
+    return "\n".join(geoStr) + "\n"
 
 
 def _materialLib():
