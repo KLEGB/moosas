@@ -21,12 +21,12 @@ def graph_temp():
 if __name__ == '__main__':
     user_profile = os.environ['USERPROFILE']
 
-    input_geo_path = rf"{user_profile}/AppData/Roaming/SketchUp/SketchUp 2022/SketchUp/Plugins/pkpm_moosas/data/geometry/selection0_out.geo"
+    input_geo_path = ""
 
-    input_xml_path = rf"{user_profile}/AppData/Roaming/SketchUp/SketchUp 2022/SketchUp/Plugins/pkpm_moosas/data/geometry/selection0.xml"
+    input_xml_path = ""
 
-    output_geo_path = "D:/BaiduSyncdisk/Research/202410MOOSAS+/BuildingConvex/data/selection0_convex.geo"
-    output_xml_path = "D:/BaiduSyncdisk/Research/202410MOOSAS+/BuildingConvex/data/selection0_convex.xml"
+    output_geo_path = ""
+    output_xml_path = ""
 
     convex_temp()
     graph_temp()
