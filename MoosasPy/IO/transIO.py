@@ -6,6 +6,7 @@ from ._geo import _readGeo,writeGeo
 from ._obj import _readObj
 from ._xml import writeXml
 from ._json import _readGeojson,writeJson,writeGeojson
+from ._idf import writeIDF
 from ..utils import path
 
 def modelFromFile(inputPath: str, inputType=None):
@@ -71,6 +72,8 @@ def modelToFile(model, outputPath, outputType=None, geoPath=None, geoType=None):
         writeXml(outputPath, model)
     elif outputPath[-4:len(outputPath)] == 'json' or outputType == 'json':
         writeJson(outputPath, model)
+    elif outputPath[-4:len(outputPath)] == '.idf' or outputType == 'idf':
+        writeIDF(outputPath, model)
     else:
         print('***Error: Wrong file type(.spc,.xml,.json) Please check:', outputPath)
 

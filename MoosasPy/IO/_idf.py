@@ -1,13 +1,23 @@
 from ..thermal import idfGeometry, construction
 from ..geometry.element import MoosasSpace
 from eppy.modeleditor import IDF
-import re
+import re, os
 
+global _ENERGYPLUS_DIR
+_ENERGYPLUS_DIR = r"D:/EnergyPlusV24-2-0"
 
-def writeIDF(model, idfTemplatePath: str, outputPath: str,idd='C:\EnergyPlusV23-1-0\Energy+.idd'):
+def writeIDF(outputPath: str, model):
     from ..models import MoosasModel
     model: MoosasModel = model
     print('IDF: initialization from IDF file...')
+
+    if not _ENERGYPLUS_DIR:
+        print("***Warning: ENERGYPLUS_DIR is not set. Please set it to your EnergyPlus installation folder.")
+        return
+
+    # Properly handle paths for cross-platform compatibility
+    idfTemplatePath = os.path.join(_ENERGYPLUS_DIR, "ExampleFiles", "Moosas.idf")
+    idd = os.path.join(_ENERGYPLUS_DIR, "Energy+.idd")
     # IDF.setiddname(r'C:\EnergyPlusV8-9-0\Energy+.idd')
     IDF.setiddname(idd)
     idf = IDF(idfTemplatePath)
