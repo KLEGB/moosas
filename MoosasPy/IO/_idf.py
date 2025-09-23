@@ -4,8 +4,7 @@ from eppy.modeleditor import IDF
 import re, os
 
 global _ENERGYPLUS_DIR
-_ENERGYPLUS_DIR = r"D:/EnergyPlusV24-2-0"
-
+_ENERGYPLUS_DIR = r"D:/EnergyPlusV23-1-0"
 def writeIDF(outputPath: str, model):
     from ..models import MoosasModel
     model: MoosasModel = model
