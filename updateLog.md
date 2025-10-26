@@ -1,3 +1,7 @@
+--0.8.1
+# IDF update 10.26
+- 0.8.1.1 create transformation module between owl and idf, using internal unique namespace idf referred to the inputAndOutputReference.pdf
+
 -- 0.8.0
 # Environment Update 06.19
 - 0.8.0.0 create a deployment toSKetchUp.py to auto download embedded python and build the environment.

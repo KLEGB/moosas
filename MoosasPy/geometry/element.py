@@ -43,6 +43,7 @@ class MoosasGeometry(object):
             normal = faceNormal(face)
         if not holes:
             holes = []
+
         # test if input is valid
         if Vector(normal).length() == 0:
             raise GeometryError(face, "zero-length normal")

@@ -1,12 +1,17 @@
 import pygeos, os
 import numpy as np
 import sys, re, time
-os.chdir(r'C:\\')
 from datetime import datetime
 from MoosasPy import transform,energyAnalysis
 from MoosasPy import IO,geometry,preprocess
 
-f = rf"\\166.111.40.8\protect\CUGER_Daylight\evomass\geo"
+owl = IO.IDFtoOWL(r'\\166.111.40.8\home\2024_MOOSASIDF_BS2025\MO2IDF\1.idf')
+owl.serialize(r'test\IDF2OWL.ttl', format='ttl')
+idf = IO.OWLtoIDF(owl,r'test\OWL2IDF.idf')
+print(idf)
+raise Exception
+
+f = rf"\\166.111.40.8\protect\moosasTestModelDataset\_newcleaned\101_01901_01901-01.geo"
 model = transform(f,output_path=f'test\example.xml',
                   solve_contains=True, divided_zones=False, break_wall_horizontal=True, solve_redundant=True,
                   attach_shading=False, standardize=True)

@@ -106,7 +106,8 @@ def mixItemListToObject(*itemOrList: list | object) -> np.ndarray | object:
         mixObject = np.append(mixObject, np.array(itemList))
     if mixObject.size == 1:
         mixObject = mixObject.item()
-
+    elif len(mixObject) ==0:
+        return None
     return mixObject
 
 

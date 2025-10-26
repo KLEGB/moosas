@@ -31,13 +31,17 @@ class Vector(object):
             vec = vec.array
             self.style = np.ndarray
         if isinstance(vec, pygeos.Geometry):
-            vec = pygeos.force_3d(vec, z=0)
-            vec = pygeos.get_coordinates(vec, include_z=True)
-            if len(vec) > 1:
-                vec = vec[-1] - vec[0]
+            if pygeos.is_empty(vec):
+                vec = np.array([0,0,0])
+                self.style = np.ndarray
             else:
-                vec = vec[0]
-            self.style = pygeos.Geometry
+                vec = pygeos.force_3d(vec, z=0)
+                vec = pygeos.get_coordinates(vec, include_z=True)
+                if len(vec) > 1:
+                    vec = vec[-1] - vec[0]
+                else:
+                    vec = vec[0]
+                self.style = pygeos.Geometry
         else:
             if not (isinstance(vec, Iterable)):
                 raise Exception(f'Expect Iterable, got{type(vec)}')

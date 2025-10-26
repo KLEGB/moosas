@@ -165,7 +165,7 @@ class MoosasGraph(Graph):
             (self.ifc.IfcBuildingElement, self.rdfs.comment, Literal(f"elements of the building according to IFC4.0")))
         self.add((self.ifc.GlobalID, self.rdfs.subPropertyOf, self.ifc.IfcBuildingElement))
         self.add((self.moosas.refElement, self.rdfs.subPropertyOf, self.ifc.IfcBuildingElement))
-        self.add((self.moosas.refElement, self.rdfs.range, self.bot.Element))
+        self.add((self.moosas.refElement, self.rdfs.range, self.bot.Elemetnt))
 
         self.add((self.ifc.IfcWall, self.rdfs.subClassOf, self.ifc.IfcBuildingElement))
         self.add((self.ifc.IfcCurtainWall, self.rdfs.subClassOf, self.ifc.IfcBuildingElement))
@@ -178,7 +178,7 @@ class MoosasGraph(Graph):
             (self.ifc.IfcRelSpaceBoundary2ndLevel, self.rdfs.comment, Literal(f"2LSB element according to IFC4.0")))
         self.add((self.ifc.GlobalID, self.rdfs.subPropertyOf, self.ifc.IfcRelSpaceBoundary2ndLevel))
         # 2a: heat transfer face; 2b: adiabatic face; shading: shading
-        self.add((self.ifc.Description, self.rdfs.subPropertyOf, self.ifc.IfcRelSpaceBoundary2ndLevel))
+        self.add((self.ifc.Description, self.rdfs.subPropertyOf, self.ifc.t))
         # reference to the Space
         self.add((self.ifc.RelatingSpace, self.rdfs.subPropertyOf, self.ifc.IfcRelSpaceBoundary2ndLevel))
         self.add((self.ifc.RelatingSpace, self.rdfs.range, self.ifc.IfcSpace))
@@ -433,6 +433,7 @@ class MoosasGraph(Graph):
         objects = set()
         for o in self.subjects(_property, _to):
             objects.add(o)
+
         return mixItemListToObject(list(objects))
 
     def getRelate(self, node) -> list:

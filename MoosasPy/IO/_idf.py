@@ -1,10 +1,16 @@
 from ..thermal import idfGeometry, construction
-from ..geometry.element import MoosasSpace
+from ._rdf import MoosasGraph
+from ..utils import path
+
 from eppy.modeleditor import IDF
 import re, os
-
+from rdflib.namespace import RDF, RDFS
+from rdflib import Graph, Namespace, Literal, URIRef
+import re
 global _ENERGYPLUS_DIR
-_ENERGYPLUS_DIR = r"D:/EnergyPlusV23-1-0"
+_ENERGYPLUS_DIR = r"C:/EnergyPlusV23-1-0"
+idd = os.path.join(_ENERGYPLUS_DIR, "Energy+.idd")
+IDF.setiddname(idd)
 def writeIDF(outputPath: str, model):
     from ..models import MoosasModel
     model: MoosasModel = model
@@ -16,9 +22,9 @@ def writeIDF(outputPath: str, model):
 
     # Properly handle paths for cross-platform compatibility
     idfTemplatePath = os.path.join(_ENERGYPLUS_DIR, "ExampleFiles", "Moosas.idf")
-    idd = os.path.join(_ENERGYPLUS_DIR, "Energy+.idd")
+
     # IDF.setiddname(r'C:\EnergyPlusV8-9-0\Energy+.idd')
-    IDF.setiddname(idd)
+
     idf = IDF(idfTemplatePath)
     moElements = model.getAllFaces(dumpUseless=True)
     zTemplate = idfGeometry.ZoneTemplate(idf)
@@ -66,3 +72,135 @@ def writeIDF(outputPath: str, model):
             zTemplate.appliedToZone(space)
     idf.save(outputPath)
     print()
+
+def encodeURI(hint):
+    hint = re.sub(' ','_',str(hint).strip())
+    if "!" in hint:
+        raise Exception
+    return URIRef(hint)
+
+def IDFtoOWL(idfTemplatePath):
+    """
+    Translate and IDF knowledgebase into OWL graph.
+    All subjects were defined under idf namespace with:
+    https://energyplus.net/assets/nrel_custom/pdfs/pdfs_v9.6.0/InputOutputReference.pdf
+    """
+
+    rootFile = IDF(idfTemplatePath)
+    rootGraph = Graph()
+    idf = Namespace('https://energyplus.net/assets/nrel_custom/pdfs/pdfs_v9.6.0/InputOutputReference.pdf')
+    rootGraph.bind('idf', idf)
+    rootGraph.add((idf.idfClass,RDFS.comment,Literal("Normal idf classes which can be referred in the InputOutputReference")))
+    rootGraph.add((idf.idfUniqueClass,RDFS.subClassOf,idf.idfClass))
+    rootGraph.add((idf.idfUniqueClass, RDFS.comment, Literal("Unique classes with only one object")))
+    for objHint in rootFile.idfobjects.keys():
+        # serialized Processing idf class
+        if len(rootFile.idfobjects[objHint])>0:
+
+            # embedded class information
+            memo = rootFile.idfobjects[objHint][0].objidd[0]['memo']
+            rootGraph.add((encodeURI(objHint),RDFS.comment,Literal(' '.join(memo))))
+
+            # serialized Processing idf object
+            for obj in rootFile.idfobjects[objHint]:
+
+                # encoding normal objects
+                if len(obj.obj)>=2 and re.search('name',str(obj.objidd[1]['field']),re.IGNORECASE) is not None:
+                    rootGraph.add((encodeURI(obj.obj[1]), RDF.type, idf.idfObject))
+                    rootGraph.add((encodeURI(obj.obj[1]), idf.key, encodeURI(objHint)))
+                    # mark as idfClass
+                    rootGraph.add((encodeURI(objHint), RDF.type, idf.idfClass))
+
+                    # embedding field and field value
+                    for idx,fieldIdd in enumerate(obj.objidd[1:len(obj.obj)]):
+                        if 'note' in fieldIdd:
+                            rootGraph.add((encodeURI(fieldIdd['field'][0]), RDFS.comment, Literal(''.join(fieldIdd['note']))))
+                        if 'type' in fieldIdd:
+                            rootGraph.add((encodeURI(fieldIdd['field'][0]), idf.fieldType, encodeURI(fieldIdd['type'][0])))
+                            if fieldIdd['type'][0] == 'object-list':
+                                if obj.obj[idx + 1] !='':
+                                    rootGraph.add((encodeURI(obj.obj[1]), encodeURI(fieldIdd['field'][0]), encodeURI(obj.obj[idx + 1])))
+                            else:
+                                if obj.obj[idx + 1] != '':
+                                    rootGraph.add((encodeURI(obj.obj[1]), encodeURI(fieldIdd['field'][0]), Literal(obj.obj[idx + 1])))
+                        else:
+                            if obj.obj[idx + 1] != '':
+                                rootGraph.add((encodeURI(obj.obj[1]), encodeURI(fieldIdd['field'][0]), Literal(obj.obj[idx + 1])))
+
+                # encoding output variables
+                elif objHint == 'OUTPUT:VARIABLE':
+                    rootGraph.add((encodeURI(obj.obj[2]),RDF.type,encodeURI(objHint)))
+                    rootGraph.add((encodeURI(obj.obj[2]), encodeURI('Key Value'), Literal(encodeURI(obj.obj[1]))))
+                    rootGraph.add((encodeURI(obj.obj[2]), encodeURI('Reporting Frequency'), Literal(encodeURI(obj.obj[3]))))
+
+                # encoding unique object
+                else:
+                    rootGraph.add((encodeURI(objHint), RDF.type, idf.idfUniqueClass))
+                    # embedding field and field value
+                    for idx, fieldIdd in enumerate(obj.objidd[1:len(obj.obj)]):
+                        if 'note' in fieldIdd:
+                            rootGraph.add((encodeURI(fieldIdd['field'][0]), RDFS.comment, Literal(''.join(fieldIdd['note']))))
+                        if 'type' in fieldIdd:
+                            rootGraph.add((encodeURI(fieldIdd['field'][0]), idf.fieldType, encodeURI(fieldIdd['type'][0])))
+                            if fieldIdd['type'][0] == 'object-list':
+                                if obj.obj[idx + 1] != '':
+                                    rootGraph.add((encodeURI(objHint), encodeURI(fieldIdd['field'][0]), encodeURI(obj.obj[idx + 1])))
+                            else:
+                                if obj.obj[idx + 1] != '':
+                                    rootGraph.add((encodeURI(objHint), encodeURI(fieldIdd['field'][0]), Literal(obj.obj[idx + 1])))
+                        else:
+                            if obj.obj[idx + 1] != '':
+                                rootGraph.add((encodeURI(objHint), encodeURI(fieldIdd['field'][0]), Literal(obj.obj[idx + 1])))
+
+    return rootGraph
+
+
+def OWLtoIDF(owl:Graph,outFile):
+    # copy the graph into a MoosasGraph
+    if isinstance(owl,str):
+        newowl = Graph()
+        newowl.parse(owl)
+        owl = newowl
+    graph = MoosasGraph()
+    for triple in owl:
+        graph.add(triple)
+
+    idfFile = IDF(path.dataBaseDir+r'\default.idf')
+    for key in idfFile.idfobjects:
+        idfFile.idfobjects[key]=[]
+    idf = Namespace('https://energyplus.net/assets/nrel_custom/pdfs/pdfs_v9.6.0/InputOutputReference.pdf')
+    # add unique objects
+    for idfObject in graph.subjects(RDF.type,idf.idfUniqueClass):
+        objHint = re.sub('_',' ',str(idfObject))
+        uniqueObj = idfFile.newidfobject(objHint)
+        for idx, fieldIdd in enumerate(uniqueObj.objidd[1:]):
+            fieldValue = graph.getObject(idfObject,encodeURI(fieldIdd['field'][0]))
+            if fieldValue is not None:
+                uniqueObj[uniqueObj.objls[idx+1]]=str(fieldValue)
+
+    # add normal objects
+    for idfObject in graph.subjects(RDF.type,idf.idfObject):
+        for validKey in graph.objects(idfObject,idf.key):
+            objHint = re.sub('_', ' ', str(validKey))
+            obj = idfFile.newidfobject(objHint)
+            for idx, fieldIdd in enumerate(obj.objidd[1:]):
+                fieldValue = graph.getObject(idfObject, encodeURI(fieldIdd['field'][0]))
+                if fieldValue is not None:
+                    obj[obj.objls[idx+1]] = str(fieldValue)
+
+    # add output objects
+    for outputObject in graph.subjects(RDF.type,encodeURI("OUTPUT:VARIABLE")):
+        output = idfFile.newidfobject("OUTPUT:VARIABLE")
+        fieldValue = graph.getObject(outputObject, encodeURI('Key Value'))
+        output["Variable_Name"] = re.sub('_'," ",str(outputObject))
+        if fieldValue is not None:
+            output['Key_Value']=str(fieldValue)
+        fieldValue = graph.getObject(outputObject, encodeURI('Reporting Frequency'))
+        if fieldValue is not None:
+            output['Reporting_Frequency']=str(fieldValue)
+
+    idfFile.save(outFile)
+    return idfFile
+
+
+
