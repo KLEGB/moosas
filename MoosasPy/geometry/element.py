@@ -117,11 +117,26 @@ class MoosasGeometry(object):
     @property
     def category(self) -> int:
         """
-        0: opaque
-        1: glazing
-        2: airBoundary
+            -2 == ignore faces (would not be included in calculation)
+            -1 == shading faces (included as shading element)
+            0 == opaque surface
+            1 == translucent surface
+            2 == the air wall
+            3 == wall element.MoosasWall
+            4 == plane element.MoosasFace
+            5 == glazing element.MoosasGlazing
+            6 == skylight element.MoosasSkylight
         """
         return self.__category
+
+    def setCategory(self,cat=None) -> None:
+        if cat:
+            self.__category = cat
+        else:
+            if self.category==3 or self.category==4 or self.category==-1:
+                self.__category=0
+            if self.category>=5:
+                self.__category=1
 
     @property
     def holes(self) -> list[pygeos.Geometry]:
@@ -592,13 +607,16 @@ class MoosasFace(MoosasElement):
     """
     __slots__ = ['parentFloors']
 
-    def __init__(self, model: MoosasContainer, faceId: str | list[str] | np.ndarray[str], level: float = None,
+    def __init__(self, model: MoosasContainer, faceId: str | MoosasGeometry, level: float = None,
                  offset: float = None, glazingId=None,
                  glazingElement: MoosasElement | list[MoosasElement] | np.ndarray[MoosasElement] = None, space=None,
                  uid=None):
-        if not isinstance(faceId, str):
+        if isinstance(faceId, list) or isinstance(faceId,np.ndarray):
             raise ValueError("MoosasFace should only contain one geometry")
-        uid = f"face_{mixItemListToList(faceId)[0]}" if uid is None else uid
+        if isinstance(faceId,MoosasGeometry):
+            uid = f"face_{faceId.faceId}" if uid is None else uid
+        else:
+            uid = f"face_{mixItemListToList(faceId)[0]}" if uid is None else uid
         super(MoosasFace, self).__init__(model, faceId, level=level, offset=offset, glazingElement=glazingElement,
                                          space=space, glazingId=glazingId, uid=uid)
         self.parentFloors: list[MoosasFloor] = []
@@ -652,13 +670,16 @@ class MoosasSkylight(MoosasFace):
         '''
     __slots__ = ['parentFace']
 
-    def __init__(self, model: MoosasContainer, faceId: str | list[str] | np.ndarray[str], level: float = None,
+    def __init__(self, model: MoosasContainer, faceId: str | MoosasGeometry, level: float = None,
                  offset: float = None, glazingId=None,
                  glazingElement: MoosasElement | list[MoosasElement] | np.ndarray[MoosasElement] = None, space=None,
                  uid=None):
-        if not isinstance(faceId, str):
+        if isinstance(faceId, list):
             raise ValueError("MoosasFace should only contain one geometry")
-        uid = f"sky_{mixItemListToList(faceId)[0]}" if uid is None else uid
+        if isinstance(faceId, MoosasGeometry):
+            uid = f"skylight_{faceId.faceId}" if uid is None else uid
+        else:
+            uid = f"skylight_{mixItemListToList(faceId)[0]}" if uid is None else uid
         super(MoosasSkylight, self).__init__(model, faceId, level=level, offset=offset, glazingElement=glazingElement,
                                              space=space, glazingId=glazingId, uid=uid)
         self.parentFace: MoosasFace | None = None
@@ -695,7 +716,10 @@ class MoosasWall(MoosasElement):
                  offset: float = None, glazingId=None,
                  glazingElement: MoosasElement | list[MoosasElement] | np.ndarray[MoosasElement] = None, space=None,
                  uid=None):
-        uid = f"wall_{mixItemListToList(faceId)[0]}" if uid is None else uid
+        if isinstance(faceId, MoosasGeometry):
+            uid = f"wall_{faceId.faceId}" if uid is None else uid
+        else:
+            uid = f"wall_{mixItemListToList(faceId)[0]}" if uid is None else uid
         super(MoosasWall, self).__init__(model, faceId, level=level, offset=offset, glazingElement=glazingElement,
                                          space=space, glazingId=glazingId, uid=uid)
         pointlist = pygeos.get_coordinates(self.face, include_z=True)
@@ -936,7 +960,10 @@ class MoosasGlazing(MoosasWall):
                  offset: float = None, glazingId=None,
                  glazingElement: MoosasElement | list[MoosasElement] | np.ndarray[MoosasElement] = None, space=None,
                  uid=None):
-        uid = f"gls_{mixItemListToList(faceId)[0]}" if uid is None else uid
+        if isinstance(faceId, MoosasGeometry):
+            uid = f"gls_{faceId.faceId}" if uid is None else uid
+        else:
+            uid = f"gls_{mixItemListToList(faceId)[0]}" if uid is None else uid
         super(MoosasGlazing, self).__init__(model, faceId, level=level, offset=offset, glazingElement=glazingElement,
                                             space=space, glazingId=glazingId, uid=uid)
         self.parentFace: MoosasWall | None = None
@@ -1705,6 +1732,7 @@ class MoosasContainer(object):
         # horizontalVerticalPlaneSet
         self.faceList: list[MoosasFace] = []
         self.wallList: list[MoosasWall] = []
+        self.shadingList: list[MoosasElement] = []
 
         # Identify the result set
         self.levelList: list[float] = []
@@ -1779,7 +1807,7 @@ class MoosasContainer(object):
         """
         if not dumpUseless:
             faces = []
-            for elementList in [self.wallList, self.faceList, self.glazingList, self.skylightList]:
+            for elementList in [self.wallList, self.faceList, self.glazingList, self.skylightList,self.shadingList]:
                 faces = np.append(faces, elementList)
             return list(faces)
         else:

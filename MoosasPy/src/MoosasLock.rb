@@ -5,7 +5,7 @@ require "digest/sha1"
 
 class MoosasLock
     p 'MoosasLock Ver.0.7.1'
-    @exp_date = [2025,9,1]
+    @exp_date = [2027,9,1]
     
     #连接到PKPM的锁或授权，连接成功返回true
     def self.remain_time()

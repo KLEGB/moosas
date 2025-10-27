@@ -1,6 +1,7 @@
 --0.8.1
 # IDF update 10.26
 - 0.8.1.1 create transformation module between owl and idf, using internal unique namespace idf referred to the inputAndOutputReference.pdf
+- 0.8.1.2 src update, improving robustness of skp plugin
 
 -- 0.8.0
 # Environment Update 06.19

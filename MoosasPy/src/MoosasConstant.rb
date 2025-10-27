@@ -40,6 +40,7 @@ module MoosasConstant
     ENTITY_SHADING          = 16
     ENTITY_PARTY_WALL       = 32
     ENTITY_DOOR             = 64
+    ENTITY_AIRWALL          = 99
     ENTITY_IGNORE           = -2
     ENTITY_SURROUNDING      = -1
 

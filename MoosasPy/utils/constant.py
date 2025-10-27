@@ -26,7 +26,7 @@ class geom:
 
     # Fuzzy recognition accuracy (meters), directly passed into pygeos.set_precision() does not
     # change the original geometry, and is only called in the force_2d() method used for recognition
-    POINT_PRECISION = 0.05
+    POINT_PRECISION = 0.01
     AREA_PRECISION = 1.0
 
     INCH_METER_MULTIPLIER = 0.0254

@@ -13,6 +13,7 @@ module MMR
     IDENTITY_TRANSFORMATION = Geom::Transformation.new
     MATERIAL_ALPHA_THRESHOLD = 0.99
     @geometries = []
+    @all_recognized_faces = []
     NJTD = 0.05 / 0.0254   #法向量判断平移距离
 
     HIDDEN_STATUS = false
@@ -97,8 +98,23 @@ module MMR
         t3 = Time.new
         p "识别用时： #{t3-t2}s"
         model_data = mm.pack_data
-        MoosasWebDialog.send("update_model_data",model_data) 
+        MoosasWebDialog.send("update_model_data",model_data)
+        @all_recognized_faces = mm.get_all_face
+        # 更新面的默认类型表格
+        @all_recognized_faces.each do |mf|
+            MoosasRender.update_define_materials(mf.face,mf.type)
+        end
         return mm
+    end
+
+    def self.all_recognized_faces
+        moosas_faces = []
+        @all_recognized_faces.each do |mf|
+            unless mf.face.deleted?
+                moosas_faces.push(mf)
+            end
+        end
+        return moosas_faces
     end
 
     def self.attach_shading(model,shdingface)
@@ -131,6 +147,64 @@ module MMR
         end
     end
 
+    def self.get_category(face)
+        # @entity_materials = {
+        #   MoosasConstant::ENTITY_Wall => "wall",
+        #   MoosasConstant::ENTITY_INTERNAL_WALL => "internalwall",
+        #   MoosasConstant::ENTITY_GLAZING => "glazing",
+        #   MoosasConstant::ENTITY_INTERNAL_GLAZING => "internalglazing",
+        #   MoosasConstant::ENTITY_SKY_GLAZING => "skyglazing",
+        #   MoosasConstant::ENTITY_ROOF => "roof",
+        #   MoosasConstant::ENTITY_FLOOR => "floor",
+        #   MoosasConstant::ENTITY_GROUND_FLOOR => "groundfloor",
+        #   MoosasConstant::ENTITY_SHADING => "shading",
+        #   MoosasConstant::ENTITY_PARTY_WALL => "partywall",
+        #   MoosasConstant::ENTITY_DOOR => "door",
+        #   MoosasConstant::ENTITY_AIRWALL => "airwall",
+        #   MoosasConstant::ENTITY_SURROUNDING => "surrounding",
+        #   MoosasConstant::ENTITY_IGNORE => "ignore"
+        # }
+        # mat_translate = {
+        #   0 => 3, #"wall",
+        #   3 => 3, #"internalwall",
+        #   1 => 5, #"glazing",
+        #   5 => 5, #"internalglazing",
+        #   6 => 6, #"skyglazing",
+        #   2 => 4, #"roof",
+        #   4 => 4, #"floor",
+        #   8 => 4, #"groundfloor",
+        #   16 => -1, #"shading",
+        #   -1 => -1, #"surrounding",
+        #   -2 => -2, #"ignore"
+        # }
+        mat_translate = {
+          MoosasConstant::ENTITY_WALL => 3,
+          MoosasConstant::ENTITY_INTERNAL_WALL => 3,
+          MoosasConstant::ENTITY_GLAZING => 5,
+          MoosasConstant::ENTITY_INTERNAL_GLAZING => 5,
+          MoosasConstant::ENTITY_SKY_GLAZING => 6,
+          MoosasConstant::ENTITY_ROOF => 4,
+          MoosasConstant::ENTITY_FLOOR => 4,
+          MoosasConstant::ENTITY_GROUND_FLOOR => 4,
+          MoosasConstant::ENTITY_SHADING => -1,
+          MoosasConstant::ENTITY_PARTY_WALL => 3,
+          MoosasConstant::ENTITY_DOOR => 5,
+          MoosasConstant::ENTITY_AIRWALL => 2,
+          MoosasConstant::ENTITY_SURROUNDING => -1,
+          MoosasConstant::ENTITY_IGNORE => -2
+        }
+        if $define_materials.has_key?(face.persistent_id)
+            return mat_translate[$define_materials[face.persistent_id]]
+        else
+            if self.is_glazing(face)
+                return 1
+            else
+                return 0
+            end
+        end
+
+    end
+
     def self.model_to_text()
         input_file,output_file,geo_file=[],[],[]
         model = Sketchup.active_model
@@ -155,9 +229,9 @@ module MMR
                     geo_text=""
                     transformation = path.inject(IDENTITY_TRANSFORMATION){|t,f| t * f.transformation}
                     id += 1
-                    cat = 0
+                    cat = self.get_category(e)
                     normal=e.normal
-                    cat=1 if self.is_glazing(e)
+                    # cat=1 if self.is_glazing(e)
 
                     pts_outer = e.outer_loop.vertices.map {|v|
                         pt = transformation * v.position
@@ -400,8 +474,14 @@ module MMR
                         for g in _wall.glazings
                             g_area+=g.face.area * MoosasConstant::INCH_METER_MULTIPLIER_SQR
                         end
-                        _wwr=g_area/(distance*_height)
-                        _wall.area_m=distance*_height
+                        e_area = 0.0
+                        for e in _wall.walls
+                            e_area+=e.face.area * MoosasConstant::INCH_METER_MULTIPLIER_SQR
+                        end
+                        # _wwr=g_area/(distance*_height)
+                        # _wall.area_m=distance*_height
+                        _wwr = g_area/e_area
+                        _wall.area_m = e_area
                         # p "wwr:#{_wwr}",g_area,distance,_height
                         _wall.wwr=_wwr
                         # _wall.area_m = (g_area+e_area)*MoosasConstant::INCH_METER_MULTIPLIER_SQR
@@ -413,8 +493,8 @@ module MMR
                         _wall.normal.length=1
                         _edge.push(_wall)
                     end
-                }
 
+                }
                 spaces.push(self.construct_space(spc,_floor,_ceiling,_edge))
             end
 

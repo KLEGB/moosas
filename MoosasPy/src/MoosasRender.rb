@@ -1,16 +1,44 @@
 # Ver.0.6.1
 class MoosasRender
-    Ver='0.6.3'
     
     @entity_materials = nil
     @visulized=false
-    @backup_materials= {}
+    $define_materials = {}
+    $backup_materials = {}
+
+    def self.update_define_materials(face,cat)
+        if @entity_materials == nil
+            self.load_entity_materials
+        end
+        if cat.is_a?(String)
+            cat = cat.to_i
+        end
+        if @entity_materials.has_key?(cat)
+            $define_materials[face.persistent_id] = cat
+        end
+    end
+
+    def self.mark_face(cat)
+        entities = Sketchup.active_model.selection
+        self.traverse_faces(entities) do |face,path|
+            self.update_define_materials(face,cat)
+            if $define_materials.has_key?(face.persistent_id)
+                if $backup_materials[face.persistent_id]==nil
+                    $backup_materials[face.persistent_id]=[face.material,face.back_material]
+                end
+                mat = "moosas_" + @entity_materials[$define_materials[face.persistent_id]]
+                face.material = mat
+                face.back_material = mat
+            end
+        end
+    end
 
     def self.visualize_repeat(model)
         if @visulized
             begin
                 self.disable_visualize_entity_type(model)
             rescue StandardError => e
+                p "Error disable visualize"
                 @visulized = false
             end
             
@@ -18,6 +46,7 @@ class MoosasRender
             begin
                 self.visualize_entity_type(model)  
             rescue StandardError => e
+                p "Error visualize"
                 @visulized = true
             end
             
@@ -27,30 +56,43 @@ class MoosasRender
     def self.visualize_entity_type(model)
 
         if @entity_materials == nil
-            self.load_entity_materials()
+            self.load_entity_materials
         end
 
 
         Sketchup.active_model.start_operation("标记面的类型", true)
 
-        moosas_faces = model.get_all_face
+        model = Sketchup.active_model
 
-        moosas_faces.each do |mf|
-            #p "id =#{mf.id}, type = #{mf.type}"
-            mat = "moosas_" + @entity_materials[mf.type]
-            face = mf.face
-            if @backup_materials[mf.id]==nil
-                @backup_materials[mf.id]=[face.material,face.back_material]
-            end
-            face.material = mat
-            face.back_material = mat
-            if mf.type == MoosasConstant::ENTITY_SHADING or mf.type == MoosasConstant::ENTITY_SURROUNDING
-                face.material.alpha=0.5
+        self.traverse_faces(model.entities) do |face,path|
+            if $define_materials.has_key?(face.persistent_id)
+                if $backup_materials[face.persistent_id]==nil
+                    $backup_materials[face.persistent_id]=[face.material,face.back_material]
+                end
+                mat = "moosas_" + @entity_materials[$define_materials[face.persistent_id]]
+                face.material = mat
+                face.back_material = mat
             end
         end
-        
-        m=Sketchup.active_model
-        entities=m.active_entities
+
+        # moosas_faces = MMR.all_recognized_faces
+        #
+        # moosas_faces.each do |mf|
+        #     #p "id =#{mf.id}, type = #{mf.type}"
+        #     mat = "moosas_" + @entity_materials[mf.type]
+        #     face = mf.face
+        #     if $backup_materials[face.persistent_id]==nil
+        #         $backup_materials[face.persistent_id]=[face.material,face.back_material]
+        #     end
+        #     face.material = mat
+        #     face.back_material = mat
+        #     if mf.type == MoosasConstant::ENTITY_SHADING or mf.type == MoosasConstant::ENTITY_SURROUNDING
+        #         face.material.alpha=0.5
+        #     end
+        # end
+        #
+        # m=Sketchup.active_model
+        # entities=m.active_entities
 
         #for s in model.spaces
         #    entities=s.construct_space_volume(entities)
@@ -64,20 +106,30 @@ class MoosasRender
 
 
     def self.disable_visualize_entity_type(model)
-        return if @visulized==false
-
-        #status = Sketchup.active_model.abort_operation  #简单采用撤销操作
-        #Sketchup.send_action("editUndo:")
-        moosas_faces = model.get_all_face
-
-        for i in 0..moosas_faces.length-1
-            begin
-                face = moosas_faces[i].face
-                face.material = @backup_materials[moosas_faces[i].id][0]
-                face.back_material = @backup_materials[moosas_faces[i].id][1]
-            rescue
+        return if !@visulized
+        model = Sketchup.active_model
+        self.traverse_faces(model.entities) do |face,path|
+            if $backup_materials.has_key?(face.persistent_id)
+                face.material = $backup_materials[face.persistent_id][0]
+                face.back_material = $backup_materials[face.persistent_id][1]
             end
         end
+        # moosas_faces = MMR.all_recognized_faces
+        #
+        #status = Sketchup.active_model.abort_operation  #简单采用撤销操作
+        #Sketchup.send_action("editUndo:")
+        # moosas_faces = model.get_all_face
+        #
+        # for i in 0..moosas_faces.length-1
+        #     begin
+        #         face = moosas_faces[i].face
+        #         face.material = $backup_materials[face.persistent_id][0]
+        #         face.back_material = $backup_materials[face.persistent_id][1]
+        #         # face.material = moosas_faces[i].skp_material[0]
+        #         # face.back_material = moosas_faces[i].skp_material[1]
+        #     rescue
+        #     end
+        # end
         @visulized=false
     end
 
@@ -136,6 +188,9 @@ class MoosasRender
     end
 
     def self.load_entity_materials
+        if @entity_materials != nil
+            return @entity_materials
+        end
         d = Sketchup.active_model.bounds.diagonal
         size = 50 + 50 * (d/800)
 
@@ -150,17 +205,20 @@ class MoosasRender
         
 
         @entity_materials = {
-            0 => "wall",
-            3 => "internalwall",
-            1 => "glazing",
-            5 => "internalglazing",
-            6 => "skyglazing",
-            2 => "roof",
-            4 => "floor",
-            8 => "groundfloor",
-            16 => "shading",
-            -1 => "surrounding",
-            -2 => "ignore"
+          MoosasConstant::ENTITY_WALL => "wall",
+          MoosasConstant::ENTITY_INTERNAL_WALL => "internalwall",
+          MoosasConstant::ENTITY_GLAZING => "glazing",
+          MoosasConstant::ENTITY_INTERNAL_GLAZING => "internalglazing",
+          MoosasConstant::ENTITY_SKY_GLAZING => "skyglazing",
+          MoosasConstant::ENTITY_ROOF => "roof",
+          MoosasConstant::ENTITY_FLOOR => "floor",
+          MoosasConstant::ENTITY_GROUND_FLOOR => "groundfloor",
+          MoosasConstant::ENTITY_SHADING => "shading",
+          MoosasConstant::ENTITY_PARTY_WALL => "partywall",
+          MoosasConstant::ENTITY_DOOR => "door",
+          MoosasConstant::ENTITY_AIRWALL => "airwall",
+          MoosasConstant::ENTITY_SURROUNDING => "surrounding",
+          MoosasConstant::ENTITY_IGNORE => "ignore"
         }
 
         @entity_materials.keys.each do |k|
@@ -172,9 +230,16 @@ class MoosasRender
             #material.alpha = mat_name.include?("glazing") ? 0.95 : 1.0
 
         end
+
+        return @entity_materials
     end
 
-
+    def self.moosas_material_lib
+        if @entity_materials == nil
+            self.load_entity_materials
+        end
+        return @entity_materials
+    end
 
 
 end

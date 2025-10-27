@@ -395,7 +395,7 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
         for i, wall, w2d in zip(wall_list, wallElement, wall2d):
             prs += 1
 
-            print(f"\rCLEANSE: solve horizontal intersection {prs}/{len(model.wallList)}", end='')
+            print(f"\rCLEANSE: solve vertical faces intersection {prs}/{len(model.wallList)}", end='')
             parallel = [not(Vector.parallel(Vector(wall.normal), Vector(w.normal))) for w in wallElement]
             testSet2d = wall2d[parallel]
             for w2dOther in testSet2d:
@@ -404,6 +404,7 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
                 if (not pygeos.is_empty(intersection)) and pygeos.get_dimensions(intersection)==0:
                     twins =pygeos.points(pygeos.get_coordinates(w2d))
                     if not (pygeos.dwithin(twins[0], intersection, geom.POINT_PRECISION) or pygeos.dwithin(twins[1], intersection,geom.POINT_PRECISION)):
+                        print(intersection)
                         brkResult = MoosasWall.break_(wall, intersection)
                         if brkResult is not None:
                             newWalls += brkResult
@@ -415,7 +416,8 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
                 #         wall1, wall2 = MoosasWall.break_(wall, poi)
                 #         newWalls += [wall1, wall2]
                 #         delWalls.append(i)
-    print(f'\tbreak walls:{len(delWalls)}',end='')
+
+    print(f'\tbreak walls:{len(delWalls)} add:{len(newWalls)}',end='')
 
     model.wallList = list(np.delete(model.wallList, delWalls))
     model.wallList += newWalls

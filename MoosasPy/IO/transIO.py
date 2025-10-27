@@ -41,11 +41,13 @@ def modelFromFile(inputPath: str, inputType=None):
         model.geometryList = _readGeojson(inputPath)
     else:
         raise ImportError('***Error: Wrong file type(.geo,.xml,.obj,.json) Please check:', inputPath)
+
+    return preClassified(model)
+
+def preClassified(model):
     model.geoId = [geo.faceId for geo in model.geometryList]
     model.newIndex = len(model.geometryList)
     return model
-
-
 def modelToFile(model, outputPath, outputType=None, geoPath=None, geoType=None):
     """write the space topology data or geometry data to the file
 

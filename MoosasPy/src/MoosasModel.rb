@@ -656,7 +656,6 @@ class MoosasEdge
         @walls = []
         @glazings = []
         @is_internal_edge = false
-
         if require_infer
             @area_m = get_length() * height * MoosasConstant::INCH_METER_MULTIPLIER_SQR
             set_edge_center_point(height)
@@ -851,7 +850,7 @@ class MoosasFace
         @transformation = transformation
         @area = area
         @normal = nor
-        calculate_height() if face != nil
+        calculate_height if face != nil
         @wc = nil
         @type = nil
         @material=nil

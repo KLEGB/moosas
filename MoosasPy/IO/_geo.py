@@ -9,7 +9,18 @@ def writeGeo(file_path, model=None, geoList=None, mask=None) -> str:
     """Get a *.geo file for the geometry library in the model
 
     .geo is a moosasPy dedicated file format, which uses a simplified file structure to increase I/O speed......
-    The .geo file format is: (cat: 0 is the opaque surface, 1 is the translucent surface, and 2 is the air wall)
+    cateories of the surface (polygon type cat):
+    -2 == ignore faces (would not be included in calculation)
+    -1 == shading faces (included as shading element)
+    0 == opaque surface
+    1 == translucent surface
+    2 == the air wall
+    3 == wall element.MoosasWall
+    4 == plane element.MoosasFace
+    5 == glazing element.MoosasGlazing
+    6 == skylight element.MoosasSkylight
+
+    The .geo file format is:
     f,{polygon type cat},{polygon number idd}
     fn, {normal x}, {normal y}, {normal z}
     fv, {vertex 1x}, {vertex 1y}, {vertex 1z}
@@ -136,7 +147,7 @@ def geoLegacyToGeo(file_path, geo_path=None):
 def _readGeo(file_path) -> list[MoosasGeometry]:
     """
     .geo is a moosasPy dedicated file format, which uses a simplified file structure to increase I/O speed......
-    The .geo file format is: (cat: 0 is the opaque surface, 1 is the translucent surface, and 2 is the air wall)
+    The .geo file format is:
     f,{polygon type cat},{polygon number idd}
     fn, {normal x}, {normal y}, {normal z}
     fv, {vertex 1x}, {vertex 1y}, {vertex 1z}
@@ -217,6 +228,7 @@ def _readGeo(file_path) -> list[MoosasGeometry]:
     faces = _roundPolygons(faces, geom.POINT_PRECISION)
     geos: list[MoosasGeometry] = []
     for f, i, n, c, h in zip(faces, idd, normal, cat, holes):
+        if c==-2: continue
         try:
             geos.append(MoosasGeometry(f, i, n, c, h, errors='raise'))
         except GeometryError as gE:

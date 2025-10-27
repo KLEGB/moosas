@@ -41,7 +41,7 @@ def loadModel(filePath:str, fileFormat='turtle') -> MoosasModel:
     model = spaceTopology(model, True)
     model = faceTopology(model)
     print("-" * 20)
-    _summary(model)
+    model.summary(len(model.wallList))
     print("-" * 20)
     return model
 
@@ -192,7 +192,9 @@ def transform(input_path: str, output_path: str = None, geo_path: str = None, in
         modelToFile(model, output_path, output_type, geo_path)
 
     sys.stdout = sysout
-
+    # print(len(model.spaceList))
+    # print(len(model.voidList))
+    # input()
     return model
 
 
@@ -473,6 +475,8 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
         MoosasModel
             The model for further transformation or analysis.
     """
+
+    # triangulate the faces with holes
     if triangulate_faces:
         delfaces = []
         for i in range(len(model.geoId)):
@@ -496,17 +500,62 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
         model.geometryList = list(np.delete(model.geometryList, delfaces))
         print(f'\t\tprocessing faces: {len(delfaces)}')
 
+    # predefine faces with the note of category.
+    print(f'\rLOADING: Predefining existing tag on faces...', end='')
+    unClearId1 = []
     for i in range(len(model.geoId)):
+        geo = model.geometryList[i]
+        if geo.category == -1:
+            geo.setCategory()
+            model.shadingList.append(MoosasElement(model,geo))
+
+        elif geo.category == 4:
+            geo.setCategory()
+            face = MoosasFace(model,geo)
+            model.faceList.append(face)
+            if not face.level in model.levelList:
+                model.levelList.append(face.level)
+                model.levelList.sort()
+
+        elif geo.category == 6:
+            geo.setCategory()
+            face = MoosasSkylight(model, geo)
+            model.skylightList.append(face)
+            if not face.level in model.levelList:
+                model.levelList.append(face.level)
+                model.levelList.sort()
+        else:
+            unClearId1.append(i)
+
+    unClearId2 = []
+    for i in range(len(model.geoId)):
+        geo = model.geometryList[i]
+        if geo.category == 3:
+            geo.setCategory()
+            model.wallList.append(MoosasWall(model,geo))
+        elif geo.category == 5:
+            geo.setCategory()
+            model.glazingList.append(MoosasGlazing(model,geo))
+        else:
+            unClearId2.append(i)
+
+    unClearId = list(set(unClearId1) & set(unClearId2))
+    print()
+    # print('wall:', len(model.wallList))
+    # print('glazing:', len(model.glazingList))
+    # print('skylight:', len(model.skylightList))
+    # print('face:', len(model.faceList))
+    for i in unClearId:
         geo = model.geometryList[i]
         print(f'\rLOADING: Filtering horizontal faces {i + 1}/{len(model.geoId)}', end='')
         if np.abs(Vector.dot(geo.normal, pygeos.points([0, 0, 1]))) >= 0.99:
             if geo.category != 0:
                 # print(' skylight',end='')
-                face = MoosasSkylight(model, geo.faceId)
+                face = MoosasSkylight(model, geo)
                 model.skylightList.append(face)
             else:
                 # print(' opaque', end='')
-                face = MoosasFace(model, geo.faceId)
+                face = MoosasFace(model, geo)
                 model.faceList.append(face)
             # print(face.level)
             if not face.level in model.levelList:
@@ -514,18 +563,18 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
                 model.levelList.sort()
     print()
     # Ver1.3 move the incline wall here
-    for i in range(len(model.geoId)):
+    for i in unClearId:
         geo = model.geometryList[i]
         print(f'\rLOADING: Filtering inclined faces {i + 1}/{len(model.geoId)}', end='')
         if 0.99 > np.abs(Vector.dot(geo.normal, pygeos.points([0, 0, 1]))) >= geom.HORIZONTAL_ANGLE_THRESHOLD:
             # horizontal faces!
             if geo.category != 0:
                 # print(' skylight',end='')
-                face = MoosasSkylight(model, geo.faceId)
+                face = MoosasSkylight(model, geo)
                 model.skylightList.append(face)
             else:
                 # print(' opaque', end='')
-                face = MoosasFace(model, geo.faceId)
+                face = MoosasFace(model, geo)
                 model.faceList.append(face)
             # print(face.level)
             if not face.level in model.levelList:
@@ -551,7 +600,7 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
         # print(f'break walls: {len(wallList) - wallcount}')
         print(f'\t\t\tadd walls:{len(wallList_new) - len(wallList)}')
 
-    for i in range(len(model.geoId)):
+    for i in unClearId:
         geo = model.geometryList[i]
         print(f'\rLOADING: Filtering vertical faces {i + 1}/{len(model.geoId)}', end='')
         if np.abs(Vector.dot(geo.normal, pygeos.points([0, 0, 1]))) < geom.HORIZONTAL_ANGLE_THRESHOLD:
@@ -559,12 +608,13 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
             if geo.category != 0:
                 # print(' glazing',end='')
                 model.glazingList.append(
-                    MoosasGlazing(model, geo.faceId))
+                    MoosasGlazing(model, geo))
             else:
                 # print(' wall', end='')
-                model.wallList.append(MoosasWall(model, geo.faceId))
+                model.wallList.append(MoosasWall(model, geo))
 
     print(f"\t\ttotal vertical faces: {len(model.wallList)} glazings: {len(model.glazingList)}")
+
     return model
 
 
@@ -1190,6 +1240,7 @@ def spaceTopology(model: MoosasModel, break_wall_vertical=True) -> MoosasModel:
                         metaVoids.append(_findVoidAbove(metaVoids[-1]))
                     # Drop duplicated void (bottom void)
                     metaVoids.pop()
+                    metaVoidsDelete = [s for s in metaVoids]
                     # if metaVoid is valid, add aperture to the space
                     if metaVoids[-1].ceiling is not None:
                         # copy all void to construct space
@@ -1205,6 +1256,8 @@ def spaceTopology(model: MoosasModel, break_wall_vertical=True) -> MoosasModel:
 
                         print(f'\n2LSB: Add{metaVoids} to space list.')
                         model.spaceList = list(np.append(model.spaceList, metaVoids))
+                        model.voidList = list(set(model.voidList) - set(metaVoidsDelete))
+
         print()
     print(f'\r2LSB: Recording Boundary topology', end='')
     for spId, space in enumerate(model.spaceList):

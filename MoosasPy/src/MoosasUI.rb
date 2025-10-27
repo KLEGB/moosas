@@ -12,9 +12,11 @@ module MoosasUI
                     MoosasUtils.get_flat_plane()
                 }
                 '''
-                sub_menu.add_item("采光计算：标注周围建筑遮挡面"){
-                    MoosasDaylight.label_sourrouding_shading()
-                }
+                MoosasRender.load_entity_materials.invert.each do |name, cat|
+                    sub_menu.add_item("mark as #{name}"){
+                        MoosasRender.mark_face(cat)
+                    }
+                end
                 @contextual_menu_created = true
             end
         end
@@ -258,13 +260,13 @@ module MoosasUI
         toolbar = toolbar.add_item cmd
 
         cmd = UI::Command.new(tooltip_name[11]) {
-            if MoosasLock.valid()
+            # if MoosasLock.valid()
                 if $current_model == nil
                     p "Spaces not found. Please run the model transformation." 
                 else
                     MoosasRender.visualize_repeat($current_model)
                 end
-            end
+            # end
         }
         cmd.small_icon = "#{image_fodler}/tag_entity.png"
         cmd.large_icon = "#{large_image_fodler}/tag_entity.png"
