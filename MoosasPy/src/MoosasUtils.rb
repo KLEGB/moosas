@@ -26,7 +26,7 @@ class MoosasUtils
 	def self.moosas_active?
 		MoosasWebDialog.dialog.visible?
 	end
-	def self.exec_python(pyfile,codelines,console=false)
+	def self.exec_python(pyfile,codelines,console=true)
 		Dir.chdir MPath::PYTHON
 		if FileTest::exists?("status.log")
 			File.delete("status.log")

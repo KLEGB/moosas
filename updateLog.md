@@ -4,6 +4,7 @@
 - 0.8.1.2 src update, improving robustness of skp plugin
 - 0.8.1.3 solveIntersectionVertical update
 - 0.8.1.4 solveOverlapFace update
+- 0.8.1.5 src update, improving robustness of skp plugin
 
 -- 0.8.0
 # Environment Update 06.19

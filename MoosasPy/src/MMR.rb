@@ -17,7 +17,7 @@ module MMR
     NJTD = 0.05 / 0.0254   #法向量判断平移距离
 
     HIDDEN_STATUS = false
-    def self.recognize_floor
+    def self.recognize_floor(remodel=false)
         begin
             MoosasRender.disable_visualize_entity_type($current_model) if $current_model!=nil
         rescue
@@ -39,7 +39,7 @@ module MMR
         #show_id(geometries)
         # 运行MoosasTransforming.exe
 
-        if self.exec_transform(zip_command['input_file'],zip_command['output_file'],zip_command['geo_file'])
+        if self.exec_transform(zip_command['input_file'],zip_command['output_file'],zip_command['geo_file'],remodel)
             p "successfully get:",zip_command['output_file']
             @geometries = self.geo_to_lib(zip_command['geo_file'],true)
             p "update geometries"
@@ -355,15 +355,21 @@ module MMR
         @geometries=new_geometries
         return @geometries
     end
-    def self.exec_transform(input_file,output_file,geo_file)
+    def self.exec_transform(input_file,output_file,geo_file,remodel=false)
         code = ["from MoosasPy import transform"]
+        console = remodel
         for i in 0..input_file.length-1
-            code.push("transform('#{input_file[i]}','#{output_file[i]}',geo_path='#{geo_file[i]}',solve_duplicated=True,solve_redundant=True,solve_contains=False,break_wall_vertical=True,attach_shading=False)")
+            if remodel
+                remodel = "True"
+            else
+                remodel = "False"
+            end
+            code.push("transform('#{input_file[i]}','#{output_file[i]}',geo_path='#{geo_file[i]}',solve_duplicated=True,solve_redundant=#{remodel},solve_contains=#{remodel},break_wall_vertical=#{remodel},break_wall_horizontal=#{remodel},attach_shading=False)")
         end
         if @geometries.length>1000
-            return MoosasUtils.exec_python("transform.py",code,true)
+            return MoosasUtils.exec_python("transform.py",code,console=console)
         else
-            return MoosasUtils.exec_python("transform.pyw",code)
+            return MoosasUtils.exec_python("transform.pyw",code,console=console)
         end
     end
 

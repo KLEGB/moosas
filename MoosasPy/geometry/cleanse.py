@@ -489,10 +489,12 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
                     if not (pygeos.dwithin(twins[0], intersection, geom.POINT_PRECISION) or pygeos.dwithin(twins[1],
                                                                                                            intersection,
                                                                                                            geom.POINT_PRECISION)):
+
                         brkResult = MoosasWall.break_(wall, intersection)
                         if brkResult is not None:
                             newWalls.pop()
                             newWalls += brkResult
+                            break
 
         if len(newWalls) != len(walls):
             return checkBreakIntersection(newWalls, otherWall2d)
