@@ -26,7 +26,10 @@ f = r'C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pk
 model = transform(f,solve_duplicated=True,
                   solve_contains=True, divided_zones=False, break_wall_horizontal=True, solve_redundant=True,
                   attach_shading=False, standardize=False)
-
+model.loadWeatherData()
+model.loadCumSky()
+eng = energyAnalysis(model,core="办公建筑")
+print(eng)
 # 		total horizontal faces: 22 skylights: 3
 # LOADING: Break walls 84/84			add walls:0
 # 		total vertical faces: 42 glazings: 35

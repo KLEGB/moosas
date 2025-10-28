@@ -120,7 +120,7 @@ func simulation(inputInfo simulationInfo) {
 		Altitude:         inputInfo.latitude,
 		ShapeCoefficient: inputInfo.shapeFactor,
 	}
-	for i := 1; i < len(input1); i++ {
+	for i := 0; i < len(input1); i++ {
 		if !strings.HasPrefix(input1[i], "!") {
 			input2 := strings.Split(input1[i], ",")
 			spaceHeight, _ := strconv.ParseFloat(input2[0], 64)
@@ -184,6 +184,7 @@ func simulation(inputInfo simulationInfo) {
 			})
 		}
 	}
+
 	// 计算
 	energy.Analysis()
 	// 输出
@@ -292,6 +293,7 @@ func (e MoosasEnergy) Analysis() {
 		gt, _ := strconv.ParseFloat(v[7], 64)
 		weather.GroTem = append(weather.GroTem, gt)
 	}
+
 	totalArea, totalAreaK := float64(0), float64(0)
 	for _, v := range e.Spaces {
 		totalArea += v.FacadeArea + v.WindowArea + v.RoofArea + v.SkylightArea
@@ -311,6 +313,7 @@ func (e MoosasEnergy) Analysis() {
 			rec[i][d] = make([]float64, 3)
 		}
 	}
+
 	for i := 0; i < len(e.Spaces); i++ {
 		s, gr := e.Spaces[i], float64(0)
 		s.SummerSolar = s.SummerSolar * summerRadCorrect / float64(weather.SummerEnd-weather.SummerStart+1)
@@ -321,6 +324,12 @@ func (e MoosasEnergy) Analysis() {
 		for d := 0; d < 365; d++ {
 			nat := calculate_night_average_temperature(d, s.WorkStart, s.WorkEnd) // 夜间平均温度
 			for h := s.WorkStart - 1; h <= s.WorkEnd-2; h++ {
+				if h < 0 {
+					h = 0
+				}
+				if h > 23 {
+					h = 23
+				}
 				lightingEnergy := solar.calculate_lighting_energy(e.Latitude, e.Altitude, d+1, h+1, gr, s.SpaceArea-s.OutsideArea, s.OutsideArea, s.LHD)
 				rec[i][d][2] += lightingEnergy / 2
 				if d >= weather.SummerStart && d <= weather.SummerEnd { // 空调季
@@ -334,8 +343,10 @@ func (e MoosasEnergy) Analysis() {
 						rec[i][d][0] += non(el + lightingEnergy + s.SpaceArea*(s.PPSM*s.PHD+s.EHD+AirDensity*deltaE*s.PPSM*s.PFAV/3.6)) // 内区不考虑渗风
 					}
 				} else if d >= weather.WinterStart || d <= weather.WinterEnd { // 采暖季
+
 					deltaT := s.HeatingTem - weather.AirTem[d*24+h] + calculate_deltaT(e.AverageK, e.ShapeCoefficient, nat, s.HeatingTem, float64(s.WorkEnd-s.WorkStart), s.ACHN)
 					deltaG := s.HeatingTem - weather.GroTem[d*24+h]
+
 					el := calculate_envelope_load(s, deltaT, deltaG, e.WeekendCorrection) // 围护结构负荷
 					if s.OutsideArea > 0 {
 						rec[i][d][1] += non(el-lightingEnergy-s.SpaceArea*(s.PPSM*s.PHD+s.EHD-AirDensity*AirCapacity*deltaT*s.SpaceHeight*s.ACH/3.6)) + non(AirDensity*AirCapacity*deltaT*s.PPSM*s.PFAV/3.6)

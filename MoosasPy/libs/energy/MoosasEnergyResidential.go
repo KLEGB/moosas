@@ -273,6 +273,7 @@ func (e MoosasEnergy) Analysis() {
 		gt, _ := strconv.ParseFloat(v[7], 64)
 		weather.GroTem = append(weather.GroTem, gt)
 	}
+
 	// 迭代计算
 	rec := make([][][]float64, len(e.Spaces))
 	for i := 0; i < len(e.Spaces); i++ {
@@ -285,6 +286,7 @@ func (e MoosasEnergy) Analysis() {
 		s := e.Spaces[i]
 		s.SummerSolar = s.SummerSolar * summerRadCorrect / float64(weather.SummerEnd-weather.SummerStart+1)
 		s.WinterSolar = s.WinterSolar * winterRadCorrect / float64(365-weather.WinterStart+weather.WinterEnd+1)
+
 		for d := 0; d < 365; d++ {
 			for h := 0; h < 24; h++ {
 				lightingEnergy := s.LHD * lighting_schedule[h] * s.SpaceArea
