@@ -799,19 +799,26 @@ class MoosasWall(MoosasElement):
 
     @classmethod
     def break_(cls, wall: MoosasWall, breakPoints: list[pygeos.Geometry] | pygeos.Geometry):
-        twins = pygeos.points(pygeos.get_coordinates(wall.force_2d()))
+        twins = pygeos.get_coordinates(wall.force_2d())
         if len(twins) < 2:
             return [wall]
         bottom = wall.level + wall.offset
         top = wall.toplevel + wall.topoffset
+        unit = Vector(twins[1]-twins[0]).unit()
         breakPoints = np.array([breakPoints]).flatten()
+        breakPoints = np.append(pygeos.points(twins), breakPoints)
+        for i,bp in enumerate(breakPoints):
+            vecBp = Vector(pygeos.get_coordinates(bp)[0]-twins[0])
+            breakPoints[i] = Vector(unit * Vector.dot(vecBp, unit) + Vector(twins[0])).geometry
         # breakPoints = [breakP for breakP in breakPoints if pygeos.contains(wall.force_2d(), breakP)]
-        breakPoints = np.append(twins, breakPoints)
+        breakPoints = pygeos.force_2d(breakPoints)
+
         coor = pygeos.get_coordinates(breakPoints)
         argIdx = np.lexsort((coor[:, 0], coor[:, 1]))
         st, ed = list(argIdx).index(0), list(argIdx).index(1)
         argIdx = argIdx[min(st, ed):max(st, ed) + 1]
         breakPoints = breakPoints[argIdx]
+
         if len(breakPoints) < 3:
             # dont need to break
             return [wall]

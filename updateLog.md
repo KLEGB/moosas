@@ -2,6 +2,8 @@
 # IDF update 10.26
 - 0.8.1.1 create transformation module between owl and idf, using internal unique namespace idf referred to the inputAndOutputReference.pdf
 - 0.8.1.2 src update, improving robustness of skp plugin
+- 0.8.1.3 solveIntersectionVertical update
+- 0.8.1.4 solveOverlapFace update
 
 -- 0.8.0
 # Environment Update 06.19
@@ -215,7 +217,7 @@ empty lines are valid, it will be regraded as an empty data
 # 0.3.5 Improve Performance
 Ventilation: Residual exit and irregular temperature identified have been added to ventilation.<br>
 AFN: Heat load calculation has been improved and faster.<br>
-transforming: solve_redundant_line method has been improved to be more stable and save.<br>
+transforming: cleanseCoplannerLine method has been improved to be more stable and save.<br>
 radiation: new calculation method on the whole model have been added, but the method is not save and need improvement in the future.<br>
 weather: Deviation in simulating the cumulative sky has been fix by the global horizontal radiation in the weather file.
 

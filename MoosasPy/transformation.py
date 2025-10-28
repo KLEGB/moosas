@@ -266,11 +266,11 @@ def structured(model: MoosasModel,
 
     """solve redundant coincident edge for faces that have the same factor"""
     if solve_redundant:
-        model = solve_redundant_line(model)
+        model = cleanseCoplannerLine(model)
 
     """***We must solve invalid walls.***"""
-    model = solve_invalid_wall(model)
-    model = solve_invalid_face(model)
+    model = cleanseInvalidWall(model)
+    model = cleanseInvalidFace(model)
     """match glazing"""
     model = _glazingToFace(model)
     t2 = time.time()
@@ -300,24 +300,25 @@ def structured(model: MoosasModel,
 
     """solve redundant coincident edge again after include curtains"""
     if solve_redundant:
-        model = solve_redundant_line(model)
+        model = cleanseCoplannerLine(model)
 
     """solve duplicated walls that the 2d projections are the same."""
     if solve_duplicated:
-        model = solve_duplicated_wall(model)
+        model = cleanseDuplicatedWall(model)
 
     """***We must solve invalid walls.***"""
-    model = solve_invalid_wall(model)
-    model = solve_invalid_face(model)
+    model = cleanseInvalidWall(model)
+    model = cleanseInvalidFace(model)
 
     """solve contained walls that the 2d projections are overlapped by others."""
     if solve_contains:
-        model = solve_overlapped_wall(model)
+        model = cleanseOverlapWall(model)
+        model = cleanseOverlapFace(model)
 
     """solve the intersection of walls on 2d space"""
     if break_wall_horizontal:
         model = solveIntersectionVertical(model)
-        model = solve_invalid_wall(model)
+        model = cleanseInvalidWall(model)
     t3 = time.time()
 
     """Floor identification of closed areas: // This is the hatch algorithm of AutoCAD, and the effect is average 
@@ -584,7 +585,7 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
     if len(model.levelList) == 0:
         return None
 
-    model = solve_duplicated_level(model)
+    model = cleanseDuplicatedLevel(model)
     print(f'\t\ttotal horizontal faces: {len(model.faceList)} skylights: {len(model.skylightList)}')
     if break_wall_vertical:
         # Ver2.0 break the walls into each level
@@ -1427,7 +1428,7 @@ def _copy_air_boundaries(model: MoosasModel) -> MoosasModel:
     print()
     model.wallList = list(np.append(model.wallList, wallNew))
     # solve containBy since some intermediate walls were added
-    model = solve_overlapped_wall(model)
+    model = cleanseOverlapWall(model)
     return model
 
 

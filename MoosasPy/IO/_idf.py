@@ -11,6 +11,7 @@ global _ENERGYPLUS_DIR
 _ENERGYPLUS_DIR = r"C:/EnergyPlusV23-1-0"
 idd = os.path.join(_ENERGYPLUS_DIR, "Energy+.idd")
 IDF.setiddname(idd)
+
 def writeIDF(outputPath: str, model):
     from ..models import MoosasModel
     model: MoosasModel = model

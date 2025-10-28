@@ -1,4 +1,6 @@
-# 去重方法
+"""Cleanse module for the transformation.
+all module has MoosasConatiner as an entrance/return
+"""
 from __future__ import annotations
 import copy
 import numpy as np
@@ -12,7 +14,7 @@ from ..encoding.convexify import triangulate2dFace
 
 
 def _groupByNormal(listToGroup: list, listOfNormal: list[pygeos.Geometry | np.ndarray]) -> list[list]:
-    """group the items by their normal.
+    """group the items by the list of normal. This method can accelerate the calculation of the cleanse.
         The items with same factor (both positive and negative) will be pushed in the same group
 
         ---------------------------------
@@ -47,7 +49,10 @@ def _groupByNormal(listToGroup: list, listOfNormal: list[pygeos.Geometry | np.nd
 
 
 def _groupRelateArray(sequences: list) -> list:
-    """join array together if they have intersections"""
+    """join array together if they have intersections.
+    e.g. [[1, 2], [2, 3, 4], [5, 6], [4, 7, 8], [6, 9, 10], [11, 12]]
+    => [[1, 2, 3, 4, 7, 8], [5, 6, 9, 10], [11, 12]]
+    """
     sequenceSet = [set(s) for s in sequences]
     length = len(sequenceSet)
     for _ in range(length):
@@ -65,7 +70,16 @@ def _groupRelateArray(sequences: list) -> list:
 
 def _groupByCollinear(listToGroup: list, listOfNormal: list[pygeos.Geometry | np.ndarray],
                       listOfGeometry: list[pygeos.Geometry]) -> list[list]:
-    """push linestring in a group if they are collinear. based on _groupByNormal function"""
+    """push linestring in a group if they are collinear. (based on _groupByNormal function)
+        it will produce more detailed groups than groupByNormal; and therefore more acceleration on the calculation.
+
+         ---------------------------------
+        listToGroup: anything that need to be grouped
+        listOfNormal: the guidance vector, with the same lengh as listToGroup
+        listOfGeometry: the guidance geometry (to test intersection), with the same lengh as listToGroup
+
+        return: 2-dimensional list with the same type as listToGroup
+    """
     if len(listOfNormal) != len(listToGroup) or len(listOfNormal) != len(listOfGeometry):
         raise Exception('items and normals should have same number.')
     if len(listOfNormal)==0:
@@ -90,6 +104,8 @@ def _groupByCollinear(listToGroup: list, listOfNormal: list[pygeos.Geometry | np
 def partitionWall(walls: list[MoosasWall], model: MoosasContainer, bottom=None, top=None) -> list[MoosasWall]:
     """partition the walls by sorting their coordinates and making polygon using the top and bottom boundaries
     the glazing of all walls will be collected and try to attach to the new wall again.
+
+    ***Warning: A legacy method. It should be replaced by MoosasWall._break() in the future!
     """
     coor = pygeos.points(pygeos.get_coordinates([w.force_2d() for w in walls]))
 
@@ -108,8 +124,8 @@ def partitionWall(walls: list[MoosasWall], model: MoosasContainer, bottom=None, 
 
 
 def _fastOverlap(wall1: pygeos.Geometry, wall2: pygeos.Geometry) -> bool:
-    """very fast calculate weather two walls are containBy
-    according the sequence of their coordinates
+    """very fast calculate weather two walls are containBy one another
+    according the sequence of their coordinates.
     """
     coor = list(np.append(pygeos.get_coordinates([wall1, wall2]), [[0], [0], [1], [1]], axis=1))
     coor.sort(key=lambda x: (x[0], x[1]))
@@ -119,9 +135,12 @@ def _fastOverlap(wall1: pygeos.Geometry, wall2: pygeos.Geometry) -> bool:
     return False
 
 
-def solve_duplicated_level(model: MoosasContainer) -> MoosasContainer:
+def cleanseDuplicatedLevel(model: MoosasContainer) -> MoosasContainer:
     """remove duplicated levels,
      and put geometries on those levels onto the bottom level
+
+    *** One of the duplicated level would be removed from MoosasContainer.levelList.
+
      """
     del_level = []
     for i in range(1, len(model.levelList)):
@@ -138,12 +157,62 @@ def solve_duplicated_level(model: MoosasContainer) -> MoosasContainer:
     model.levelList = np.delete(model.levelList, del_level).tolist()
     return model
 
+def cleanseOverlapFace(model: MoosasContainer) -> MoosasContainer:
+    """
+        Identify the duplicated faces with pygeos
+        you must solve duplication before solving containment
 
-def solve_duplicated_wall(model: MoosasContainer) -> MoosasContainer:
+        *** One of the duplicated walls would be removed from MoosasContainer.wallList.
+    """
+
+    for bld_level in model.levelList:
+        print(f'\rCLEANSE: Duplicated face checking on {bld_level}', end='')
+        completed = False
+        while not completed:
+            completed = True
+            faceId = searchBy('face', bld_level, model.faceList)
+            faces = np.array(model.faceList)[faceId]
+
+            # sort the faces based on the face area, to solve the containment at the same time.
+            area = [ - pygeos.area(face) for face in faces] # sort from bigger faces to smaller faces
+            argIdx = np.argsort(area)
+            faces = faces[argIdx]
+            faceId = np.array(faceId)[argIdx]
+            faces = [f.force_2d() for f in faces]
+
+            delId = []
+            for fid,face in enumerate(faces[:-1]):
+                for otherId in range(fid+1,len(faces)):
+                    other = faces[otherId]
+                    overArea = overlapArea(face,other)
+                    if overArea>geom.AREA_PRECISION:
+                        # check if face is redundant
+                        if abs(overArea - pygeos.area(face))<geom.AREA_PRECISION:
+                            delId.append(faceId[fid])
+                            break
+
+                        # boolean difference
+                        else:
+                            delId.append(faceId[fid])
+                            face = pygeos.force_3d(pygeos.difference(face, other),z=bld_level)
+                            moFace = MoosasFace(model,faceId=model.includeGeo(face, Vector([0, 0, 1]).geometry, cat=0),level=bld_level)
+                            model.faceList = np.append(model.faceList, moFace)
+
+            # recursively divided
+            if len(delId)>0:
+                model.faceList = np.delete(model.faceList, delId)
+                completed = False
+
+    return model
+
+def cleanseDuplicatedWall(model: MoosasContainer) -> MoosasContainer:
     """
         Identify the duplicated walls that 2 points of them are placed nearby
         you must solve duplication before solving containment
         this func is based on _groupByCollinear. if _groupByCollinear do not perform well, serious error will occur here
+
+    *** One of the duplicated walls would be removed from MoosasContainer.wallList.
+
     """
     """build up tue duplication check list"""
     duplicateCheckList: list[list[int]] = []
@@ -163,7 +232,7 @@ def solve_duplicated_wall(model: MoosasContainer) -> MoosasContainer:
 
     """check if the walls are duplicated, and dissolve that wall into the others"""
     for wl, task in enumerate(duplicateCheckList):
-        print(f'\rCLEANSE: Duplicated checking: {wl}/{len(duplicateCheckList)}', end='')
+        print(f'\rCLEANSE: Duplicated wall checking: {wl}/{len(duplicateCheckList)}', end='')
         for i in range(1, len(task)):
             if equals(edge2d[task[0]], edge2d[task[i]]):
                 model.wallList[task[i]].dissolve(model.wallList[task[0]])
@@ -175,7 +244,7 @@ def solve_duplicated_wall(model: MoosasContainer) -> MoosasContainer:
     return model
 
 
-def solve_overlapped_wall(model: MoosasContainer) -> MoosasContainer:
+def cleanseOverlapWall(model: MoosasContainer) -> MoosasContainer:
     """ Solve the overlapped of walls.
 
     Identify the big walls which overlaps with a small walls or other walls,
@@ -190,6 +259,9 @@ def solve_overlapped_wall(model: MoosasContainer) -> MoosasContainer:
     P.S.
     you must solve duplication before solving containment
     this func is based on _groupByCollinear. if _groupByCollinear do not perform well, serious error will occur here
+
+    *** The overlap walls would be removed from MoosasContainer.wallList; And a partition by their intersections would be added.
+
     """
     """build the containment check list"""
     containCheckList: list[list[int]] = []
@@ -228,12 +300,15 @@ def solve_overlapped_wall(model: MoosasContainer) -> MoosasContainer:
     return model
 
 
-def solve_invalid_wall(model: MoosasContainer) -> MoosasContainer:
+def cleanseInvalidWall(model: MoosasContainer) -> MoosasContainer:
     """check if the walls are valid including:
     1.zone length or zero height wall
     2.invalid pygeos.Geometry
     3.then dissolve those walls to others valid walls,
     which have coincident edge with the invalid walls and lay below the them.
+
+    *** The invalid walls would be removed from MoosasContainer.wallList.
+
     """
 
     def _isValid(_wall: MoosasWall) -> int:
@@ -281,10 +356,13 @@ def solve_invalid_wall(model: MoosasContainer) -> MoosasContainer:
     return model
 
 
-def solve_invalid_face(model: MoosasContainer) -> MoosasContainer:
+def cleanseInvalidFace(model: MoosasContainer) -> MoosasContainer:
     """check if the faces are valid including:
     face.force2d() was valid 2d geometry.
-    all faces would be triangulated before testing
+    all faces would be triangulated before testing.
+
+    *** The invalid faces would be removed from MoosasContainer.wallList.
+
     """
     delface = []
     for i, face in enumerate(model.faceList):
@@ -295,8 +373,13 @@ def solve_invalid_face(model: MoosasContainer) -> MoosasContainer:
     return model
 
 
-def solve_redundant_line(model: MoosasContainer) -> MoosasContainer:
+def cleanseCoplannerLine(model: MoosasContainer) -> MoosasContainer:
+    """check and remove the co-planner faces, then merge them into one face.
+    the process has been redirect to the general method _conPlannerCleanse (for MoosasContainer or obj file)
 
+    *** The original faces would be removed from MoosasContainer.wallList; and the new faces would be added.
+
+    """
     total_a = len(model.wallList)
     for bld_level in model.levelList:
         total = len(model.wallList)
@@ -383,32 +466,84 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
     but only solve the intersection between vertical faces (walls).
     Besides, since we implement the function in 2d space, any 3d relations will be ignored.
     in this case, this function do not care about any walls cross multi-level.
+
+    the _groupByNormal method has been applied to accelerate the calculation.
+
+    *** The walls would be recursively divided. THIS SHOULD BE CAREFULLY MAINTENANCE!
     """
-    delWalls, newWalls = [], []
-    prs = 0
 
-    for bld_level in model.levelList:
-        wall_list = searchBy('level', bld_level, model.wallList)
-        wallElement = np.array(model.wallList)[wall_list]
-        wall2d = np.array([w.force_2d() for w in wallElement])
 
-        for i, wall, w2d in zip(wall_list, wallElement, wall2d):
-            prs += 1
-
-            print(f"\rCLEANSE: solve vertical faces intersection {prs}/{len(model.wallList)}", end='')
-            parallel = [not(Vector.parallel(Vector(wall.normal), Vector(w.normal))) for w in wallElement]
-            testSet2d = wall2d[parallel]
-            for w2dOther in testSet2d:
-                intersection = pygeos.intersection(w2d, w2dOther,grid_size=1.5*geom.POINT_PRECISION)
+    # recursively break the wall into minimal parts
+    def checkBreakIntersection(walls, otherWall2d):
+        if not isinstance(walls, list):
+            walls = [walls]
+        newWalls = []
+        for wall in walls:
+            newWalls.append(wall)
+            w2d = wall.force_2d()
+            for w2dOther in otherWall2d:
+                intersection = pygeos.intersection(w2d, w2dOther, grid_size= 1.5 * geom.POINT_PRECISION)
                 # print(w2d, w2dOther,Vector.parallel(Vector(w2d), Vector(w2dOther)),intersection)
-                if (not pygeos.is_empty(intersection)) and pygeos.get_dimensions(intersection)==0:
-                    twins =pygeos.points(pygeos.get_coordinates(w2d))
-                    if not (pygeos.dwithin(twins[0], intersection, geom.POINT_PRECISION) or pygeos.dwithin(twins[1], intersection,geom.POINT_PRECISION)):
-                        print(intersection)
+                if (not pygeos.is_empty(intersection)) and pygeos.get_dimensions(intersection) == 0:
+                    twins = pygeos.points(pygeos.get_coordinates(w2d))
+                    if not (pygeos.dwithin(twins[0], intersection, geom.POINT_PRECISION) or pygeos.dwithin(twins[1],
+                                                                                                           intersection,
+                                                                                                           geom.POINT_PRECISION)):
                         brkResult = MoosasWall.break_(wall, intersection)
                         if brkResult is not None:
+                            newWalls.pop()
                             newWalls += brkResult
-                            delWalls.append(i)
+
+        if len(newWalls) != len(walls):
+            return checkBreakIntersection(newWalls, otherWall2d)
+        else:
+            return newWalls
+
+    delWalls, newWalls = [], []
+    prs = 0
+    model.wallList = list(model.wallList)
+    for bld_level in model.levelList:
+        wall_list = searchBy('level', bld_level, model.wallList)
+        if len(wall_list) == 0:
+            continue
+        wallElement = np.array(model.wallList)[wall_list]
+        wallNormal = [w.normal for w in wallElement]
+        wallElementGroup = _groupByNormal(wallElement,wallNormal)
+        wallListGroup = _groupByNormal(wall_list, wallNormal)
+
+        for gidx,_ in enumerate(wallElementGroup):
+            otherWallGroup = wallElementGroup[:gidx]+wallElementGroup[gidx+1:]
+            _t = []
+            for ggg in otherWallGroup:
+                _t += ggg
+            otherWallGroup = _t
+            testSet2d = np.array([w.force_2d() for w in otherWallGroup])
+            for wid, wall in zip(wallListGroup[gidx], wallElementGroup[gidx]):
+                prs += 1
+                print(f"\rCLEANSE: solve vertical faces intersection {prs}/{len(model.wallList)}", end='')
+                brkResult = checkBreakIntersection(wall, testSet2d)
+                if len(brkResult) > 1:
+                    newWalls += brkResult
+                    delWalls.append(wid)
+
+
+        # for i, wall, w2d in zip(wall_list, wallElement, wall2d):
+        #     prs += 1
+        #
+        #     print(f"\rCLEANSE: solve vertical faces intersection {prs}/{len(model.wallList)}", end='')
+        #     parallel = [not(Vector.parallel(Vector(wall.normal), Vector(w.normal))) for w in wallElement]
+        #     testSet2d = wall2d[parallel]
+        #     for w2dOther in testSet2d:
+        #         intersection = pygeos.intersection(w2d, w2dOther,grid_size=1.5*geom.POINT_PRECISION)
+        #         # print(w2d, w2dOther,Vector.parallel(Vector(w2d), Vector(w2dOther)),intersection)
+        #         if (not pygeos.is_empty(intersection)) and pygeos.get_dimensions(intersection)==0:
+        #             twins =pygeos.points(pygeos.get_coordinates(w2d))
+        #             if not (pygeos.dwithin(twins[0], intersection, geom.POINT_PRECISION) or pygeos.dwithin(twins[1], intersection,geom.POINT_PRECISION)):
+        #                 print(intersection)
+        #                 brkResult = MoosasWall.break_(wall, intersection)
+        #                 if brkResult is not None:
+        #                     newWalls += brkResult
+        #                     delWalls.append(i)
                 # if pygeos.contains(w2d, poi):
                 #     twins = pygeos.points(pygeos.get_coordinates(w2d))
                 #     if not (pygeos.dwithin(twins[0], poi, geom.POINT_PRECISION) or pygeos.dwithin(twins[1], poi,
@@ -426,6 +561,9 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
 
 
 def solveIntersectionHorizontal(model: MoosasContainer) -> MoosasContainer:
+    """Calculating the overlap on a level between faces and edges.
+    The faces would be recursively divided until all faces are minimal faces.
+    """
     dividedCount = 0
     for bldLevelIndex in range(len(model.levelList)):
         faces = list(np.array(model.faceList)[searchBy('level', model.levelList[bldLevelIndex], model.faceList)])
@@ -466,8 +604,16 @@ def splitFaces(face: MoosasFace, edge: MoosasEdge) -> (MoosasFace, list[MoosasFa
     """split the face into the intersection with edge's boundary and the remained part
     if the face is not a planar face or the face is incline,
     it will not be changed since it is seldom connects to other spaces
+
     ***you should check if the face overlaps with the edge first by overlapArea method!!
+
     ***intersection will only create one face, but pygeos.difference can create multi faces!!
+
+        ---------------------------------
+    face: MoosasFace as input to be split
+    edge: MoosasEdge as input as a spliter
+
+    Return: inner face and outer faces (MoosasFace, list[MoosasFace])
     """
     model: MoosasContainer = face.parent
     if not Vector.parallel(face.normal, [0, 0, 1]):
