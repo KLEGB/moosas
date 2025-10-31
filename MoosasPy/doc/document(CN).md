@@ -50,7 +50,7 @@ prjFile = MoosasPy.vent.buildPrj(zoneList=zoneList, pathList=pathList)
 zoneInfoFile = MoosasPy.vent.buildZoneInfoFile(zoneList=zoneList)
 
 # Run ventilation analysis
-result = MoosasPy.ventilation.contam_iteration(prjFile=prjFile, zoneInfoFile=zoneInfoFile)
+result = MoosasPy.ventilation.iterateFile(prjFile=prjFile, zoneInfoFile=zoneInfoFile)
 
 
 ```
@@ -95,7 +95,7 @@ public class Test2 {
         FileStr="""
         from MoosasPy.afn import getZoneAndPath, buildPrj, buildZoneInfoFile
         from MoosasPy.transforming import transform
-        from MoosasPy.ventilation import contam_iteration
+        from MoosasPy.ventilation import iterateFile
         
         model = transform(r'geo\selection0.geo', stdout=None)
         zoneList, pathList = getZoneAndPath(model)
@@ -104,7 +104,7 @@ public class Test2 {
         prjFile = buildPrj(zoneList=zoneList, pathList=pathList)
         
         zoneInfoFile = buildZoneInfoFile(zoneList=zoneList)
-        result = contam_iteration(prjFile=prjFile, zoneInfoFile=zoneInfoFile)
+        result = iterateFile(prjFile=prjFile, zoneInfoFile=zoneInfoFile)
         """
         
         // write
@@ -432,7 +432,7 @@ roomInfo 文件可以排除房间名称，仅提供 roomInfo，这意味着：
 ```python
 from python.Lib.MoosasPy.vent.afn import getZoneAndPath, buildPrj, buildZoneInfoFile
 from python.Lib.MoosasPy.transformation import transform
-from python.Lib.MoosasPy.ventilation import contam_iteration
+from python.Lib.MoosasPy.ventilation import iterateFile
 
 model = transform(r'geo\selection0.geo', stdout=None)
 zoneList, pathList = getZoneAndPath(model)
@@ -440,7 +440,7 @@ zoneList[0].heatLoad = 900  # unit in Watt (W)
 pathList[0].pressure = 20.5  # unit in Pa
 prjFile = buildPrj(zoneList=zoneList, pathList=pathList)
 zoneInfoFile = buildZoneInfoFile(zoneList=zoneList)
-result = contam_iteration(prjFile=prjFile, zoneInfoFile=zoneInfoFile)
+result = iterateFile(prjFile=prjFile, zoneInfoFile=zoneInfoFile)
 ```
 
 > **ZoneResult**

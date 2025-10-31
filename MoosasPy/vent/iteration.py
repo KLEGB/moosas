@@ -7,10 +7,10 @@
 """
 
 import time
-from .vent.conread import *
+from .conread import *
 import csv
 import random
-from .utils.tools import path, callCmd,parseFile
+from ..utils.tools import path, callCmd,parseFile
 import os
 
 working_dir = os.path.join(path.libDir, r'vent')
@@ -52,7 +52,7 @@ class ZoneResult(object):
 def iterateProjects(prjFiles, zoneInfoFiles, concatResultFile=None, outdoorTemperature=20, maxIteration=10,
                     exitResidual=0.01) -> list[ZoneResult]:
     """
-    Enter method for contam_iteration().
+    Enter method for iterateFile().
     This method allow users to give multi project file for calculation.
     In this way, separated Air Flow Network can be calculated individually to escape from error.
     The result will be merged together finally.
@@ -107,11 +107,11 @@ def iterateProjects(prjFiles, zoneInfoFiles, concatResultFile=None, outdoorTempe
 
     allZones = []
     for prj, heat, res in zip(prjFiles, zoneInfoFiles, resultFiles):
-        allZones += contam_iteration(prjFile=prj,
-                                     zoneInfoFile=heat,
-                                     resultFile=res,
-                                     outdoorTemperature=outdoorTemperature, maxIteration=int(maxIteration),
-                                     exitResidual=float(exitResidual))
+        allZones += iterateFile(prjFile=prj,
+                                zoneInfoFile=heat,
+                                resultFile=res,
+                                outdoorTemperature=outdoorTemperature, maxIteration=int(maxIteration),
+                                exitResidual=float(exitResidual))
 
     writeZone(concatResultFile, allZones)
     print('------------------------------')
@@ -119,8 +119,8 @@ def iterateProjects(prjFiles, zoneInfoFiles, concatResultFile=None, outdoorTempe
     return allZones
 
 
-def contam_iteration(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, maxIteration=50,
-                     exitResidual=0.01) -> list[ZoneResult]:
+def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, maxIteration=50,
+                exitResidual=0.01) -> list[ZoneResult]:
     """
     Simulating buoyancy effect by contamx based on Mass Flow Balance in Air Flow Network.
     More information can be found in this article:
@@ -205,7 +205,7 @@ def contam_iteration(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=
         print("Iteration", iteration, FilePath['current_file'])
 
         """run contamx.exe"""
-        run_contam(exe=FilePath['contamx'], file=os.path.join(FilePath['project_dir'], FilePath['current_file']))
+        execContam(exe=FilePath['contamx'], file=os.path.join(FilePath['project_dir'], FilePath['current_file']))
 
         """run simread.exe"""
         exe_simread(simread_path=FilePath['simread'], file_path=FilePath['current_file'],
@@ -278,6 +278,17 @@ def contam_iteration(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=
     print('simulation finished :', resultFile)
     return zones
 
+def runFile(prjFile):
+    execContam(exe=FilePath['contamx'], file=prjFile)
+
+    """run simread.exe"""
+    exe_simread(simread_path=FilePath['simread'], file_path=prjFile,
+                responseFile=FilePath['response'])
+
+    AFN = build_matrix(file_path=prjFile)
+
+    return AFN
+
 
 def readZoneInfo(prjFile, roomInfoFile):
     """
@@ -340,7 +351,7 @@ def readZoneInfo(prjFile, roomInfoFile):
     return zones
 
 
-def run_contam(exe, file):
+def execContam(exe, file):
     if not os.path.exists(exe):
         print('error: contamx.exe not found')
         return False
@@ -426,7 +437,7 @@ def writeZone(resultFile, zones):
 if __name__ == '__main__':
     prjfile = '.\data\\' + [file for file in os.listdir('../data') if file[-3:] == 'prj'][0]
     roomInfo_file = r'../data/roomInfo.txt'
-    # contam_iteration(r'C:\Users\Lenovo\PycharmProjects\ComtamW\data\kunming_old.prj',r'C:\Users\Lenovo\PycharmProjects\ComtamW\data\roomInfo_old.txt')
-    # contam_iteration(r'.\data\ttt.prj', r'.\data\roomInfottt.txt')
-    contam_iteration(prjfile,
-                     roomInfo_file)
+    # iterateFile(r'C:\Users\Lenovo\PycharmProjects\ComtamW\data\kunming_old.prj',r'C:\Users\Lenovo\PycharmProjects\ComtamW\data\roomInfo_old.txt')
+    # iterateFile(r'.\data\ttt.prj', r'.\data\roomInfottt.txt')
+    iterateFile(prjfile,
+                roomInfo_file)

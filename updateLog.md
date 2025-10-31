@@ -1,3 +1,7 @@
+--0.8.2
+# AFN update 10.31
+- 0.8.2.1 include skylight in MoosasAFN.go and fix their bug. The funcs in MoosasPy.ventilation have been included in MoosasPy.vent
+
 --0.8.1
 # IDF update 10.26
 - 0.8.1.1 create transformation module between owl and idf, using internal unique namespace idf referred to the inputAndOutputReference.pdf

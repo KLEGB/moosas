@@ -3,7 +3,7 @@ import numpy as np
 import sys, re, time
 from datetime import datetime
 from MoosasPy import transform,energyAnalysis
-from MoosasPy import IO,geometry,preprocess
+from MoosasPy import IO,geometry,preprocess,vent
 
 # owl = IO.IDFtoOWL(r'\\166.111.40.8\home\2024_MOOSASIDF_BS2025\MO2IDF\1.idf')
 # owl.serialize(r'test\IDF2OWL.ttl', format='ttl')
@@ -30,6 +30,11 @@ model.loadWeatherData()
 model.loadCumSky()
 eng = energyAnalysis(model,core="办公建筑")
 print(eng)
+
+prjFile = vent.buildPrj(model)
+print(prjFile)
+afn=vent.runFile(prjFile)
+print(afn)
 # 		total horizontal faces: 22 skylights: 3
 # LOADING: Break walls 84/84			add walls:0
 # 		total vertical faces: 42 glazings: 35

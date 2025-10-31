@@ -6,7 +6,7 @@ module MoosasAnalysis
 
         if require_recognize_model == "true"
             t1 = Time.new
-            model = MMR.recognize_floor
+            model = MMR.recognize_floor(remodel=false)
             t2 = Time.new
             p "模型识别用时： #{t2-t1}s"
         else

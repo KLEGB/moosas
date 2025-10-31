@@ -407,7 +407,8 @@ def structured(model: MoosasModel,
         1.4 Two models. Moosasfloor is combined with a model.Moosasedge to form a model.MoosasSpace
     """
     model = packing_edges(model, divided_zones)
-    model = solveIntersectionHorizontal(model)
+    if solve_contains:
+        model = solveIntersectionHorizontal(model)
     model = _packing_model(model)
     t5 = time.time()
 

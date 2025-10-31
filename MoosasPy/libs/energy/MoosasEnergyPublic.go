@@ -327,9 +327,6 @@ func (e MoosasEnergy) Analysis() {
 				if h < 0 {
 					h = 0
 				}
-				if h > 23 {
-					h = 23
-				}
 				lightingEnergy := solar.calculate_lighting_energy(e.Latitude, e.Altitude, d+1, h+1, gr, s.SpaceArea-s.OutsideArea, s.OutsideArea, s.LHD)
 				rec[i][d][2] += lightingEnergy / 2
 				if d >= weather.SummerStart && d <= weather.SummerEnd { // 空调季
@@ -440,6 +437,9 @@ func (s MoosasSolar) calculate_lighting_energy(latitude, altitude float64, d, h 
 func calculate_night_average_temperature(d, ws, we int) float64 {
 	sum := float64(0)
 	for h := 0; h < 24; h++ {
+		if h < 0 {
+			h = 0
+		}
 		if h <= ws-2 || h >= we-1 {
 			sum += weather.AirTem[d*24+h]
 		}

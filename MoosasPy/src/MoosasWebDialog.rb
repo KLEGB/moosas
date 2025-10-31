@@ -80,7 +80,7 @@ class MoosasWebDialog
             #p param
             MoosasAnalysis.main_analysis(param["recognize"], param["selectBuildingType"],param["radiation"])
         when "recognize_model"
-            model = MMR.recognize_floor()
+            model = MMR.recognize_floor(remodel=true)
         when "reset_ui_data"
             MoosasWeather.reset_weather_data_to_ui
             MoosasMeta.reset_saved_data

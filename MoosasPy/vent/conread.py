@@ -14,7 +14,7 @@ AIR_DENSITY = 1.204
 def exe_simread(simread_path, file_path, responseFile):
     """simread.exe"""
     # print(simread_path + ' ' + file_path+'<'+responseFile)
-    callCmd([simread_path, file_path + '<' + responseFile])
+    callCmd([simread_path, file_path, ' < ' ,responseFile])
 
 
 def read_flowpath(file_path):

@@ -677,9 +677,9 @@ class MoosasSkylight(MoosasFace):
         if isinstance(faceId, list):
             raise ValueError("MoosasFace should only contain one geometry")
         if isinstance(faceId, MoosasGeometry):
-            uid = f"skylight_{faceId.faceId}" if uid is None else uid
+            uid = f"sky_{faceId.faceId}" if uid is None else uid
         else:
-            uid = f"skylight_{mixItemListToList(faceId)[0]}" if uid is None else uid
+            uid = f"sky_{mixItemListToList(faceId)[0]}" if uid is None else uid
         super(MoosasSkylight, self).__init__(model, faceId, level=level, offset=offset, glazingElement=glazingElement,
                                              space=space, glazingId=glazingId, uid=uid)
         self.parentFace: MoosasFace | None = None

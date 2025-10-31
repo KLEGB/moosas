@@ -41,6 +41,7 @@ type flowPath struct {
 	from     int
 	to       int
 	pressure float64
+	winType  int
 }
 
 type globalInfo struct {
@@ -189,7 +190,7 @@ func readFile(zoneFile string) airFlowNetwork {
 			if len(arr) == 9 {
 				zoneStrList = append(zoneStrList, arr)
 			}
-			if len(arr) == 10 {
+			if len(arr) >= 10 {
 				pathStrList = append(pathStrList, arr)
 			}
 		}
@@ -227,7 +228,7 @@ func readFile(zoneFile string) airFlowNetwork {
 	}
 
 	// read flowPath
-	// ! pathName,pathIndex,height,width,positionX,positionY,positionZ,fromZone,toZone,pressure (len==10)
+	// ! pathName,pathIndex,height,width,positionX,positionY,positionZ,fromZone,toZone,pressure,pathType (optional) (len==11)
 	paths := make([]flowPath, len(pathStrList))
 	for i := 0; i < len(pathStrList); i++ {
 		//pathIndex, _ := strconv.ParseFloat(pathStrList[i][1], 64)
@@ -236,6 +237,10 @@ func readFile(zoneFile string) airFlowNetwork {
 		from, _ := strconv.Atoi(pathStrList[i][7])
 		to, _ := strconv.Atoi(pathStrList[i][8])
 		pressure, _ := strconv.ParseFloat(pathStrList[i][9], 64)
+		winType := 1
+		if len(pathStrList[i]) == 11 {
+			winType, _ = strconv.Atoi(pathStrList[i][10])
+		}
 		paths[i] = flowPath{
 			pathStrList[i][0],
 			height,
@@ -246,6 +251,7 @@ func readFile(zoneFile string) airFlowNetwork {
 			from,
 			to,
 			pressure,
+			winType,
 		}
 	}
 
@@ -272,7 +278,7 @@ func networkToFile(zonFileBaseMame string, info globalInfo, network airFlowNetwo
 		networkStr += pointStr[0:len(pointStr)-1] + "\n"
 	}
 	networkStr += "! PATH DATA\n"
-	networkStr += "! pathName,pathIndex,height,width,positionX,positionY,positionZ,fromZone,toZone,pressure (len==10)\n"
+	networkStr += "! pathName,pathIndex,height,width,positionX,positionY,positionZ,fromZone,toZone,pressure,pathType (optional) (len==11)\n"
 	for i, p := range network.paths {
 		networkStr += p.username + "," +
 			"p" + strconv.Itoa(i) + "," +
@@ -283,7 +289,8 @@ func networkToFile(zonFileBaseMame string, info globalInfo, network airFlowNetwo
 			fmt.Sprintf("%.2f", float64(p.hei)/100.0) + "," +
 			strconv.Itoa(p.from) + "," +
 			strconv.Itoa(p.to) + "," +
-			fmt.Sprintf("%.2f", p.pressure) + "\n"
+			fmt.Sprintf("%.2f", p.pressure) +
+			fmt.Sprintf("%.2f", p.winType) + "\n"
 	}
 
 	os.Remove(path.Join(info.directory, zonFileBaseMame))
@@ -390,18 +397,31 @@ func generatePrj(prjBaseName string, info globalInfo, network airFlowNetwork) st
 		"-999",
 		strconv.Itoa(len(network.paths)) + " ! flow elements:",
 	}...)
+
 	for i, p := range network.paths {
 		h, w := p.height, p.width
+		expt := strconv.FormatFloat(0.5, 'f', 2, 64)
 		lam := fmt.Sprintf("%.6f", h*w*h*w/(h+w)*0.02028)
 		turb := fmt.Sprintf("%.6f", h*w*0.551543)
 		dh := fmt.Sprintf("%.6f", h*0.222222)
 		hd := strconv.FormatFloat(h, 'f', 2, 64)
 		wd := strconv.FormatFloat(w, 'f', 2, 64)
-		lines = append(lines, []string{
-			strconv.Itoa(i+1) + " 27 dor_pl2 p" + strconv.Itoa(i+1),
-			"",
-			" " + lam + " " + turb + " 0.5 " + dh + " " + hd + " " + wd + " 0.78 0 0",
-		}...)
+
+		if p.winType == 1 {
+			lines = append(lines, []string{
+				strconv.Itoa(i+1) + " 27 dor_pl2 p" + strconv.Itoa(i+1),
+				"",
+				" " + lam + " " + turb + " " + expt + " " + dh + " " + hd + " " + wd + " 0.78 0 0",
+			}...)
+		} else {
+			A := strconv.FormatFloat(w*h, 'f', 2, 64)
+			coef := strconv.FormatFloat(0.65, 'f', 2, 64)
+			lines = append(lines, []string{
+				strconv.Itoa(i+1) + " 27 plr_conn p" + strconv.Itoa(i+1),
+				"",
+				" " + lam + " " + turb + " " + expt + " " + A + " " + coef + " 0",
+			}...)
+		}
 	}
 	lines = append(lines, []string{
 		"-999",

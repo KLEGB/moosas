@@ -83,6 +83,7 @@ class MoosasEnergy
         args =" -w \"#{weather_path}\" -l #{latitude} -a #{altitude} -o \"#{energy_o}\""+
           " -s "+(totalOutsideArea / totalVolumn).round(2).to_s+
           " \"#{energy_i}\""
+
         # 生成输入文件,调用exe生成输出文件
         File.write(energy_i, lines.join("\n"))
         if $language == 'Chinese'

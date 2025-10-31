@@ -100,11 +100,12 @@ class AfnPath(MoosasGlazing):
         toZone: the zone index that the path to
         pressure: wind pressure of the path if it is connected to outdoor
     """
-    __slots__ = ['pathName', 'fromZone', 'toZone', 'pressure', 'prjIndex']
+    __slots__ = ['pathName', 'fromZone', 'toZone', 'pressure', 'prjIndex','winType']
 
     def __init__(self, moGeometry: MoosasGlazing | MoosasSkylight, model, pathName=None, fromZone=None, toZone=None,
                  pressure=0.0):
         super(AfnPath, self).__init__(model, moGeometry.faceId)
+        self.winType = 1 if isinstance(moGeometry, MoosasGlazing) else 0
         self.Uid = moGeometry.Uid
         if pathName is None:
             pathName = moGeometry.Uid
@@ -160,6 +161,7 @@ class AfnPath(MoosasGlazing):
         pathStr += [str(self.fromZone)]
         pathStr += [str(self.toZone)]
         pathStr += [str(self.pressure)]
+        pathStr += [str(self.winType)]
         return ','.join(pathStr)
 
 
@@ -304,7 +306,7 @@ def buildNetworkFile(model=None, pathList: list[AfnPath] = None, zoneList: list[
     for z in zoneList:
         networkStr += z.dump() + "\n"
     networkStr += ";\n! PATH DATA\n"
-    networkStr += "! pathName,pathIndex,height,width,positionX,positionY,positionZ,fromZone,toZone,pressure\n"
+    networkStr += "! pathName,pathIndex,height,width,positionX,positionY,positionZ,fromZone,toZone,pressure,winType\n"
     for p in pathList:
         networkStr += p.dump() + "\n"
     if networkFilePath is None:
@@ -334,8 +336,8 @@ def cleanseNetwork(pathList: list[AfnPath], zoneList: list[AfnZone]) -> (list[Af
         invalid = len(invalidZone)
         _oriValid = list(validZone)
         for zIdx in _oriValid:
-            validZone = validZone | topology[zIdx]
-        invalidZone = invalidZone.difference(validZone)
+            validZone = validZone | topology[zIdx] # add the connected zones to valid group
+        invalidZone = invalidZone.difference(validZone) # find invalid zones
 
     if len(invalidZone) > 0:
         print(f'******Warning: some zones do not linked to ambient.')

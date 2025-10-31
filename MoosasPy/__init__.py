@@ -37,7 +37,6 @@ from . import encoding
 # simulation functions
 from .transformation import transform,loadModel,saveModel
 from .energy import energyAnalysis
-from .ventilation import iterateProjects,contam_iteration
 from .rad import positionRadiation
 from .sunhour import positionSunHour
 from . import daylightFactor

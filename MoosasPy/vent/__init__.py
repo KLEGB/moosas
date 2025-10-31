@@ -1,4 +1,4 @@
 """ventilation support files"""
-from . import afn, conread
-from .afn import *
+from .afn import buildPrj,buildNetworkFile,buildZoneInfoFile
 from .ventXgb import callXgb
+from .iteration import iterateFile,iterateProjects,runFile

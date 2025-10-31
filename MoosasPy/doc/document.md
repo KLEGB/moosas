@@ -69,7 +69,7 @@ prjFile = MoosasPy.vent.buildPrj(zoneList=zoneList, pathList=pathList)
 zoneInfoFile = MoosasPy.vent.buildZoneInfoFile(zoneList=zoneList)
 
 # Run ventilation analysis
-result = MoosasPy.ventilation.contam_iteration(prjFile=prjFile, zoneInfoFile=zoneInfoFile)
+result = MoosasPy.ventilation.iterateFile(prjFile=prjFile, zoneInfoFile=zoneInfoFile)
 ```
 
 ### Geometry Transformation
@@ -465,7 +465,7 @@ You can finish an iteration by following example:
 ```python
 from MoosasPy.vent.afn import getZoneAndPath, buildPrj, buildZoneInfoFile
 from MoosasPy.transformation import transform
-from MoosasPy.ventilation import contam_iteration
+from MoosasPy.ventilation import iterateFile
 
 model = transform(r'geo\selection0.geo', stdout=None)
 zoneList, pathList = getZoneAndPath(model)
@@ -473,7 +473,7 @@ zoneList[0].heatLoad = 900  # unit in Watt (W)
 pathList[0].pressure = 20.5  # unit in Pa
 prjFile = buildPrj(zoneList=zoneList, pathList=pathList)
 zoneInfoFile = buildZoneInfoFile(zoneList=zoneList)
-result = contam_iteration(prjFile=prjFile, zoneInfoFile=zoneInfoFile)
+result = iterateFile(prjFile=prjFile, zoneInfoFile=zoneInfoFile)
 ```
 
 > **ZoneResult**
@@ -493,7 +493,7 @@ It can be matched to the space in model.MoosasSpaceList by userName:
 ```python
 from MoosasPy.vent.afn import getZoneAndPath, buildPrj, buildZoneInfoFile
 from MoosasPy.transformation import transform
-from MoosasPy.ventilation import contam_iteration
+from MoosasPy.ventilation import iterateFile
 import numpy as np
 
 model = transform(r'geo\selection0.geo', stdout=None)
@@ -502,7 +502,7 @@ zoneList[0].heatLoad = 900  # unit in Watt (W)
 pathList[0].pressure = 20.5  # unit in Pa
 prjFile = buildPrj(zoneList=zoneList, pathList=pathList)
 zoneInfoFile = buildZoneInfoFile(zoneList=zoneList)
-zResult = contam_iteration(prjFile=prjFile, zoneInfoFile=zoneInfoFile)
+zResult = iterateFile(prjFile=prjFile, zoneInfoFile=zoneInfoFile)
 spaceIdList = [s.id for s in model.spaceList]
 sortList = [spaceIdList.index(z.userName) for z in zResult]
 zResult = np.array(zResult)[sortList]
