@@ -41,7 +41,7 @@ def loadModel(filePath:str, fileFormat='turtle') -> MoosasModel:
     model = spaceTopology(model, True)
     model = faceTopology(model)
     print("-" * 20)
-    model.summary(len(model.wallList))
+    model.summary()
     print("-" * 20)
     return model
 
@@ -66,7 +66,6 @@ def saveModel(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseles
         None
     """
     writeRDF(model, out_path, fileFormat=fileFormat, dumpUseless=dumpUseless)
-
 
 def transform(input_path: str, output_path: str = None, geo_path: str = None, input_type: str = None,
               output_type: str = None, method=CCRSpaceGeneration,

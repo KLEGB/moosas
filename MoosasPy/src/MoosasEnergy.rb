@@ -97,6 +97,7 @@ class MoosasEnergy
         else
             system("\"#{MPath::ENERGY_PUBLIC}\""+args)
         end
+
         output = []
         File.open(energy_o,"r") do |file|
             while line = file.gets
@@ -109,6 +110,7 @@ class MoosasEnergy
                 end
             end
         end
+
         spacefloorarea=spacefloorarea.map{|area| (area *spacefloorarea.length/spacefloorarea.sum())**0.2}
 
         total, spaces, months = output[0], [], [] 
@@ -132,6 +134,7 @@ class MoosasEnergy
         
         #p spacefloorarea
         e_data = {"total"=>total, "spaces"=>spaces.sort_by{|k|k[3]}, "months"=>months,"area"=>spacefloorarea}
+
         return e_data
     end
 

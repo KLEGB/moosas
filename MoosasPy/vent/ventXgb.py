@@ -4,7 +4,7 @@ import pygeos
 
 from ..utils import Iterable
 from ..utils.tools import path
-from ..geometry.element import MoosasGlazing, MoosasWall
+from ..geometry.element import MoosasGlazing
 
 from ..geometry.geos import Vector
 
@@ -18,9 +18,11 @@ def _modelBoundBox(model) -> np.ndarray:
 
 
 def _calculate_orientation(normal) -> int:
+    if Vector.parallel(normal,[0,0,1]):
+        return 0
     normal = normal.array
     """calculate facade orientation by its factor"""
-    orientation = np.acos((-1) * (normal[0]) / np.sqrt((normal[0]) ** 2 + (normal[1]) ** 2)) * 180 / np.pi
+    orientation = np.arccos((-1) * (normal[0]) / np.sqrt((normal[0]) ** 2 + (normal[1]) ** 2)) * 180 / np.pi
     if normal[1] > 0:
         orientation = 360 - orientation
     if orientation == 360:

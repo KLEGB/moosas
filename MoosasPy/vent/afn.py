@@ -29,7 +29,11 @@ class AfnZone(MoosasSpace):
     def __init__(self, space: MoosasSpace, name=None, temperature=27):
         spaceId = space.parent.spaceList.index(space)
         if space.settings['zone_summerrad'] is None:
-            modelRadiation(space.parent, reflection=0)
+            try:
+                modelRadiation(space.parent, reflection=0)
+            except:
+                space.settings['zone_summerrad']=0
+                space.settings['zone_winterrad']=0
             space = space.parent.spaceList[spaceId]
         super(AfnZone, self).__init__(space.floor, space.edge, space.ceiling)
 
@@ -186,7 +190,16 @@ class AfnNetwork:
         """connect to applyWindPressure()"""
         self.paths = applyWindPressure(self.paths, windVector=windVector, speed=speed, airDensity=airDensity,
                                        alpha=alpha)
-
+    def applyZoneHeat(self,zoneInfoFile):
+        """copy the heat information in zoneInfoFile"""
+        zoneInfo = parseFile(zoneInfoFile)[0]
+        heatIdx,nameIdx = 2,3
+        if len(zoneInfo[0]) == 2:
+            heatIdx, nameIdx = 1, 2
+        heatInfo = {line[nameIdx]:float(line[heatIdx]) for line in zoneInfo}
+        for zone in self.zones:
+            if zone.username in heatInfo.keys():
+                zone.heatLoad = heatInfo[zone.username]
     def toFile(self, networkFilePath=None):
         """connect to buildNetworkFile()"""
         return buildNetworkFile(pathList=self.paths, zoneList=self.zones, networkFilePath=networkFilePath)
@@ -231,6 +244,8 @@ def applyWindPressure(pathList: list[AfnPath], windVector: Vector, speed: float 
     pressure = Wp * airDensity * windVector.length(power=True) * np.power(([p.elevation for p in pathList]),
                                                                           (alpha * 2)) / 2
     for _path, _pressure in zip(pathList, pressure):
+        if Vector.parallel(_path.normal,[0,0,1]):
+            _pressure = 0
         _path.pressure = _pressure
 
     return pathList
@@ -269,7 +284,8 @@ def pathTopology(pathList: list[AfnPath], zoneList: list[AfnZone]) -> list[AfnPa
 
 
 def buildNetworkFile(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone] = None,
-                     networkFilePath=None) -> str:
+                     networkFilePath=None, windVector: Vector = None,
+                      airDensity=1.205, alpha=0.22) -> str:
     """
         Build *.net file from model or pathList/zoneList.
         It is the input for MoosasAFN.exe and record zone and path data.
@@ -300,6 +316,9 @@ def buildNetworkFile(model=None, pathList: list[AfnPath] = None, zoneList: list[
         zoneList, pathList = getZoneAndPath(model)
 
     pathList, zoneList = cleanseNetwork(pathList, zoneList)
+    if windVector:
+        pathList = applyWindPressure(pathList, windVector=windVector, speed=windVector.length(), airDensity=airDensity,
+                          alpha=alpha)
     networkStr = "! All annotations has prefix as !\n"
     networkStr += "! ZONE DATA\n"
     networkStr += "! zoneName,zonePrjName,heatLoad,temperature,volume,positionX,positionY,positionZ,boundaryPolygon\n"
@@ -361,7 +380,8 @@ def cleanseNetwork(pathList: list[AfnPath], zoneList: list[AfnZone]) -> (list[Af
 
 def buildPrj(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone] = None,
              prjFilePath=None, networkFilePath=None, split=False,
-             t0=25, simulate=False, resultFile=None) -> list[str]:
+             t0=25, windVector: Vector = None,airDensity=1.205, alpha=0.22,
+             simulate=False, resultFile=None) -> list[str]:
     """
         Build *.prj file(s) from model or pathList/zoneList.
         networkFile,model and pathList/zoneList cannot be all None.
@@ -397,7 +417,8 @@ def buildPrj(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone]
             if model is None:
                 raise Exception("model, pathList and zoneList cannot be all None")
             zoneList, pathList = getZoneAndPath(model)
-        networkFilePath = buildNetworkFile(pathList=pathList, zoneList=zoneList, networkFilePath=networkFilePath)
+        networkFilePath = buildNetworkFile(pathList=pathList, zoneList=zoneList, networkFilePath=networkFilePath,
+                                           windVector = windVector,airDensity=airDensity, alpha=alpha)
 
     if prjFilePath is None:
         prjName = prjTempName

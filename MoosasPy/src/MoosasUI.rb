@@ -131,7 +131,7 @@ module MoosasUI
         toolbar = toolbar.add_separator
 
         cmd = UI::Command.new(tooltip_name[3]) {
-            MMR.update_model(remodel=false)
+            MMR.update_model
             if MoosasLock.valid()
                 MoosasVent.analysis()
             end

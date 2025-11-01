@@ -380,10 +380,16 @@ class MoosasGraph(Graph):
         cat = int(float(self.getObject(geoUri, self.moosas.Category)))
         face = URIRef(str(self.getObject(geoUri, self.geo.hasGeometry)))
         face = pygeos.Geometry(self.getObject(face, self.geo.asWKT))
-        holes = [self.getObject(URIRef(str(hole)), self.geo.asWKT) for hole in
-                 self.getObject(geoUri, self.moosas.hasHole)]
-        holes = [pygeos.Geometry(str(h)) for h in holes]
-        return MoosasGeometry(face=face, faceId=faceId, category=cat, holes=holes, errors="raise")
+        if self.getObject(geoUri, self.moosas.hasHole) is not None:
+            holes = []
+            for hole in self.getObject(geoUri, self.moosas.hasHole):
+                hole=self.getObject(URIRef(str(hole)), self.geo.asWKT)
+                if hole:
+                    holes.append(pygeos.Geometry(str(hole)))
+
+        else:
+            holes = []
+        return MoosasGeometry(face=face, faceId=faceId, category=cat, holes=holes, errors="ignore")
 
     def decodeElement(self, elementUri, model: MoosasModel = None) -> MoosasElement | None:
         if isinstance(elementUri, str):
@@ -406,8 +412,8 @@ class MoosasGraph(Graph):
         offset = float(self.getObject(elementUri, self.moosas.Offset))
         level = self.getObject(elementUri, self.moosas.hasLevel)
         level = float(self.getObject(URIRef(str(level)), self.moosas.altitute))
-        geoId = str(self.getObject(elementUri, self.moosas.hasFace))
-        geoId = str(self.getObject(URIRef(geoId), self.moosas.faceId))
+        geoId = mixItemListToList(self.getObject(elementUri, self.moosas.hasFace))
+        geoId = mixItemListToObject([str(self.getObject(URIRef(gi), self.moosas.faceId)) for gi in geoId])
         if surfaceType == self.moosas.Face:
             element = MoosasFace(model, geoId, level=level, uid=Uid, offset=offset)
         elif surfaceType == self.moosas.Wall:
@@ -492,6 +498,7 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
         print(f'\rLOADING: level {i + 1}/{len(levelList)}', end='')
     model.levelList.sort()
     print()
+
     # construct MoosasFaceList
     for i, faceUri in enumerate(moFaceList):
         element = rdfGraph.decodeElement(faceUri, model)
@@ -499,6 +506,7 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
             model.faceList.append(element)
         print(f'\rLOADING: Faces {i + 1}/{len(moFaceList)}', end='')
     print()
+
     # construct MoosasWallList
     for i, faceUri in enumerate(moWallList):
         element = rdfGraph.decodeElement(faceUri, model)
@@ -506,17 +514,21 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
             model.wallList.append(element)
         print(f'\rLOADING: Wall {i + 1}/{len(moWallList)}', end='')
     print()
+
     # construct MoosasGlazingList
     for i, faceUri in enumerate(glsList):
-        element = rdfGraph.decodeElement(faceUri, model)
-        if element:
-            parentFace = str(rdfGraph.getSubject(rdfGraph.bot.hasSubElement, URIRef(faceUri)))
-            parentFace = rdfGraph.decodeElement(parentFace, model)
-            if parentFace:
-                parentFace.add_glazing(element)
-            model.glazingList.append(element)
+        if faceUri is not None:
+            element = rdfGraph.decodeElement(faceUri, model)
+            if element:
+                parentFace = str(rdfGraph.getSubject(rdfGraph.bot.hasSubElement, URIRef(faceUri)))
+
+                parentFace = rdfGraph.decodeElement(parentFace, model)
+                if parentFace:
+                    parentFace.add_glazing(element)
+                model.glazingList.append(element)
         print(f'\rLOADING: glazing {i + 1}/{len(glsList)}', end='')
     print()
+
     # construct MoosasSkylightList
     for i, faceUri in enumerate(skyList):
         element = rdfGraph.decodeElement(faceUri, model)
@@ -528,6 +540,7 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
             model.skylightList.append(element)
         print(f'\rLOADING: skylight {i + 1}/{len(skyList)}', end='')
     print()
+
     # load Building Template
     for i, pgUri in enumerate(pgList):
         pgName = str(rdfGraph.getObject(URIRef(pgUri), rdfGraph.moosas.Uid))
@@ -538,10 +551,12 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
         model.includeTemplate(pgName, pgDict)
         print(f'\rLOADING: program {i + 1}/{len(pgList)}', end='')
     print()
+
     # load Space
     for i, spaceUri in enumerate(spList):
         spaceUri = URIRef(str(spaceUri))
         topoElements = mixItemListToList(rdfGraph.getObject(spaceUri, rdfGraph.bot.adjacentElement))
+
         topology = {"Floor": None, "Ceiling": None, "Edge": None}
         for topoElement in topoElements:
             topoElement = URIRef(str(topoElement))
@@ -549,6 +564,7 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
             subElement = [rdfGraph.decodeElement(URIRef(subE), model) for subE in subElement]
             subElement = {subE.Uid: subE for subE in subElement}
             topoElementType = rdfGraph.getObject(topoElement, rdfGraph.pgd.hasSurfaceType)
+
 
             if URIRef(str(topoElementType)) == rdfGraph.moosas.Edge:
                 loop = str(rdfGraph.getObject(topoElement, rdfGraph.moosas.subElementOrder)).split(',')
@@ -564,6 +580,6 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
             model.voidList.append(spc)
         else:
             model.spaceList.append(spc)
-        print(f'\rLOADING: space {i + 1}/{len(spList)}', end='')
+        print(f'\rLOADING: space {i + 1}/{len(spList)}',end='')
     print()
     return model

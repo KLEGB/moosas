@@ -1,5 +1,6 @@
 class MoosasVent
     Ver='0.6.4'
+    require 'json'
     def self.analysis()
         # 朝向转换角度：西向（0）、南向（90）、东向（180）、北向（270）
         if $language == 'Chinese'
@@ -30,18 +31,110 @@ class MoosasVent
             thermal = false
             out_temp,in_temp = 20.0,20.0
         end
-        alpha = 0.22
+
         if wind_direction < 0
             wind_direction = 360 + wind_direction
         end
         t1 = Time.new
-        ach = calculate_ach($current_model, wind_speed, wind_direction, out_temp,in_temp,alpha,thermal)
+        alpha = 0.22
+        # ach = run_vent_legacy($current_model, wind_speed, wind_direction, out_temp,in_temp,alpha,thermal)
+        path_result = call_vent(wind_speed, wind_direction, out_temp,in_temp,alpha,thermal)
+        ach = calculate_ach(path_result)
+        visualize_path(path_result,ach)
         t2 = Time.new
         p "全建筑换气次数：#{ach} 次/小时"
         p "通风分析用时： #{t2-t1}s"
     end
 
-    def self.calculate_ach(model, wind_speed, wind_direction,out_temp,in_temp, alpha,thermal)
+    def self.calculate_ach(path_result)
+        total_flow,total_volume = 0.0,0.0
+        path_result.each do |path,flow|
+            if flow['from']=='ambient'
+              if flow['flow'].to_f>0.0
+                  total_flow+=flow['flow'].to_f
+              end
+            end
+            if flow['to']=='ambient'
+                if flow['flow'].to_f<0.0
+                    total_flow-=flow['flow'].to_f
+                end
+            end
+        end
+
+        $current_model.spaces.each do |s|
+            total_volume+= s.area_m * s.height_m
+        end
+        return total_flow/total_volume
+    end
+
+    def self.call_vent(wind_speed, wind_direction, out_temp,in_temp,alpha,thermal)
+        if thermal
+            p 'calculating radiance heat gain...'
+            # BuildZoneHeatFile
+            heats = self.calculate_rooomheat($current_model)
+            zoneHeatFile = []
+            for i in 0..heats.length-1
+                zoneHeatFile.push("#{heats[i]},#{$current_model.spaces[i]}")
+            end
+            File.write(MPath::DATA+"vent/zInfo.heat", zoneHeatFile.join("\n"))
+        end
+        # calculate Wind Vector
+        a_rad = wind_direction * Math::PI / 180
+
+        # 计算向量的x和y分量（正北为Y轴，顺时针旋转角度a）
+        # x分量：长度 × sin(角度)（东西方向）
+        # y分量：长度 × cos(角度)（南北方向）
+        x = Math.sin(a_rad)
+        y = Math.cos(a_rad)
+        vector = "Vector(#{x},#{y},0)"
+
+        code = ["from MoosasPy import loadModel,vent"]
+        code.push("from MoosasPy.geometry import Vector")
+        code.push("import json")
+        code.push("netWork,prjFile,zoneFile,netFile = [],[],[],[]")
+
+        # build networks
+        for owlFile in $ontologies
+            code.push("model = loadModel('#{owlFile}')")
+            code.push("net = vent.afn.AfnNetwork(model)")
+            code.push("net.applyWindPressure(windVector=#{vector},speed=#{wind_speed},alpha=#{alpha})")
+            if thermal
+                code.push("net.applyZoneHeat('#{MPath::DATA+"vent/zInfo.heat"}')")
+            end
+            code.push("for zone in net.zones:")
+            code.push("     zone.temperature = #{in_temp}")
+            code.push("netWork.append(net)")
+        end
+
+        # write prj and zoneHeat
+        code.push("for net in netWork:")
+        code.push("     prjFile.append(net.toPrj())")
+        code.push("     zoneFile.append(net.toZoneFile())")
+        code.push("     netFile.append(net.toFile())")
+
+        if thermal
+            code.push("vent.iterateProjects(prjFile, zoneFile, concatResultFile='#{MPath::DATA+"vent/result.csv"}', outdoorTemperature=#{out_temp}")
+            code.push("prjFile = [prj[:-4]+'_final.prj' for prj in prjFile]")
+        end
+        code.push("vent.runFile(prjFile)")
+        code.push("pathResult = {}")
+        code.push("for prj,nFile in zip(prjFile,netFile):")
+        code.push("     prjJson = vent.readPathResult(prj,nFile)")
+        code.push("     for key,value in prjJson.items():")
+        code.push("         pathResult[key] = value")
+        code.push("with open('#{MPath::DATA+"vent/path.json"}','w+') as jsonf:")
+        code.push("     json.dump(pathResult,jsonf)")
+
+        # run python
+        MoosasUtils.exec_python("afn.pyw",code,true)
+
+        # read path result
+        path_content = File.read(MPath::DATA+"vent/path.json")
+
+        return JSON.parse(path_content)
+    end
+
+    def self.run_vent_legacy(model, wind_speed, wind_direction,out_temp,in_temp, alpha,thermal)
         zones, paths, paths_inner, bdh, params, heights, rv = [], [], {}, calculate_bdh(model), "", [], 0
         for i in 0..model.spaces.length - 1 do
             s = model.spaces[i]
@@ -137,11 +230,49 @@ class MoosasVent
         end
 
         # 可视化各外窗流量
-        self.visulization(model,airVol/ rv)
+        self.visualization(model,airVol/ rv)
 
         return (airVol/ rv).round(2)
     end
-    def self.visulization(model,airVol)
+
+    def self.visualize_path(path_result,airVol)
+        arrowLines = {}
+        vent = {}
+        $current_model.spaces.each do |s|
+            airVol_space=0
+            s.bounds.each do |b|
+                nor=b.normal
+                nor.length=1
+                b.glazings.each do |g|
+                    if path_result.has_key?(g.uid)
+                        vel = path_result[g.uid]['flow']
+                        if path_result[g.uid]['from'] == 'ambient'
+                            fromP = g.get_weight_center()
+                        else
+                            fromP = $current_model%(path_result[g.uid]['from'])
+                            fromP = fromP.get_weight_center()
+                        end
+                        if path_result[g.uid]['to'] == 'ambient'
+                            toP = g.get_weight_center()
+                        else
+                        toP = $current_model%(path_result[g.uid]['to'])
+                        toP = toP.get_weight_center()
+                        end
+                        p toP,fromP,toP-fromP
+                        if nor.dot(toP-fromP)<0
+                            nor.length=-1
+                        end
+                        airVol_space += vel.abs() if b.is_internal_edge == false
+                        arrowLines[g.uid] = self.draw_arrow(g,vel,nor)
+                    end
+                end
+            end
+            vent[s.id] = airVol_space.abs()*3600/2/s.area_m/s.height_m
+        end
+        self.flow_visualization(arrowLines.values,airVol)
+        # self.room_visulization(vent)
+    end
+    def self.visualization(model,airVol)
         airVel = {}
         File.open("airVel","r") do |file|
             while line = file.gets
@@ -162,7 +293,7 @@ class MoosasVent
                     s.floor.each{|floor| floor.face.vertices.each{|ver| vertices_.push(ver)}}
                     vel = airVel[self.calculate_midpoint(vertices_) + "," + self.calculate_midpoint(g.face.vertices)]
                     airVol_space += vel.abs()*g.area_m if b.is_internal_edge == false
-                    arrowLines[g.id] = self.calculate_arrow(g,vel,nor)
+                    arrowLines[g.id] = self.draw_arrow(g,vel,nor)
                 end
             end
             vent[s.id] = airVol_space.abs()*3600/2/s.area_m/s.height_m
@@ -285,7 +416,7 @@ class MoosasVent
         return o
     end
 
-    def self.calculate_arrow(g,vel,nor)
+    def self.draw_arrow(g,vel,nor)
         #p nor
         vel=0.01 if vel==0
         c, x, y ,z = 0, 0, 0, 0

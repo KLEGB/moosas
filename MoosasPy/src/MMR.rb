@@ -13,6 +13,8 @@ module MMR
     IDENTITY_TRANSFORMATION = Geom::Transformation.new
     MATERIAL_ALPHA_THRESHOLD = 0.99
     @geometries = []
+    $current_model=nil
+    $ontologies=nil
     @all_recognized_faces = []
     NJTD = 0.05 / 0.0254   #法向量判断平移距离
 
@@ -42,6 +44,7 @@ module MMR
         if self.exec_transform(zip_command['input_file'],zip_command['output_file'],zip_command['geo_file'],remodel)
             p "successfully get:",zip_command['output_file']
             @geometries = self.geo_to_lib(zip_command['geo_file'],true)
+            $ontologies = zip_command['owl_file']
             p "update geometries"
             spaces=self.read_xml(zip_command['output_file'])
 
@@ -129,12 +132,12 @@ module MMR
     def self.update_model
         if $current_model==nil
             p 'no_model'
-            self.recognize_floor
+            self.recognize_floor(remodel=true)
             return
         end
-        if Sketchup.active_model.number_faces != $current_model.get_all_face.length
+        if @all_recognized_faces.length != self.all_recognized_faces.length
             p 'update_model'
-            self.recognize_floor
+            self.recognize_floor(remodel=true)
             return
         end
     end
@@ -206,7 +209,7 @@ module MMR
     end
 
     def self.model_to_text()
-        input_file,output_file,geo_file=[],[],[]
+        input_file,output_file,geo_file,owl_file=[],[],[],[]
         model = Sketchup.active_model
         model.start_operation("Export model to geo", true)
         group_entities = model.selection.grep(Sketchup::Group).map{ |group| group.entities  }
@@ -263,14 +266,17 @@ module MMR
             end
             input_file.push(MPath::DATA+"geometry/selection"+i.to_s+'.geo')
             output_file.push(MPath::DATA+"geometry/selection"+i.to_s+'.xml')
+            owl_file.push(MPath::DATA+"geometry/selection"+i.to_s+'.owl')
             geo_file.push(MPath::DATA+"geometry/selection"+i.to_s+'_out.geo')
             File.write(MPath::DATA+"geometry/selection"+i.to_s+'.geo', model_text)
         end
-        return {'geometries'=>geometries,'input_file'=>input_file,'output_file'=>output_file,'geo_file'=>geo_file}
+        return {'geometries'=>geometries,'input_file'=>input_file,'output_file'=>output_file,'geo_file'=>geo_file,'owl_file'=>owl_file}
     end
 
     def self.geo_to_lib(geo_file,reform = true)
         valid_id,geo_pts,cats,geo_normals = [],[],[],[]
+        offset = Sketchup.active_model.bounds.depth*1.1
+
         for file_i in 0..geo_file.length-1
             gfile = geo_file[file_i]
             File.open(gfile,"r") do |f|
@@ -314,22 +320,23 @@ module MMR
                 materialAir = materials.add('air')
                 materialAir.color = 'Gray'
                 materialAir.alpha=0.1
-                group = model.entities.add_group
+                # group = model.entities.add_group
                 new_geometries = []
                 empty_transformation = Geom::Transformation.new(Geom::Point3d.new(0,0,0))
                 for geoI in 0..valid_id.length-1
                     gid = valid_id[geoI]
                     pts = geo_pts[geoI]
-                    g = group.entities.add_group
+                    ent = model.entities
+                    ent = model.entities.add_group.entities
 
-                    pts = self.simplified(pts)
+                    pts = self.simplified(pts,offset)
                     if pts.length <3
                       next
                     end
                     if geo_normals[geoI][2] == 0 or geo_normals[geoI][0] + geo_normals[geoI][1] == 0
-                        e = g.entities.add_face(pts)
+                        e = ent.add_face(pts)
                     else
-                        e = self.add_2d_face(g.entities,pts,geo_normals[geoI])
+                        e = self.add_2d_face(ent,pts,geo_normals[geoI])
                     end
 
                     if cats[geoI]=="0"
@@ -356,7 +363,7 @@ module MMR
         return @geometries
     end
     def self.exec_transform(input_file,output_file,geo_file,remodel=false)
-        code = ["from MoosasPy import transform"]
+        code = ["from MoosasPy import transform,saveModel"]
         console = remodel
         for i in 0..input_file.length-1
             if remodel
@@ -364,7 +371,8 @@ module MMR
             else
                 remodel = "False"
             end
-            code.push("transform('#{input_file[i]}','#{output_file[i]}',geo_path='#{geo_file[i]}',solve_duplicated=True,solve_redundant=#{remodel},solve_contains=#{remodel},break_wall_vertical=#{remodel},break_wall_horizontal=#{remodel},attach_shading=False)")
+            code.push("model = transform('#{input_file[i]}','#{output_file[i]}',geo_path='#{geo_file[i]}',solve_duplicated=True,solve_redundant=#{remodel},solve_contains=#{remodel},break_wall_vertical=#{remodel},break_wall_horizontal=#{remodel},attach_shading=False)")
+            code.push("saveModel(model,'#{output_file[i][0..-4]+'owl'}')")
         end
         if @geometries.length>1000
             return MoosasUtils.exec_python("transform.py",code,console=console)
@@ -484,10 +492,13 @@ module MMR
                         for e in _wall.walls
                             e_area+=e.face.area * MoosasConstant::INCH_METER_MULTIPLIER_SQR
                         end
-                        # _wwr=g_area/(distance*_height)
-                        # _wall.area_m=distance*_height
-                        _wwr = g_area/e_area
-                        _wall.area_m = e_area
+                        begin
+                            _wwr=g_area/(distance*_height)
+                            _wall.area_m=distance*_height
+                        rescue
+                            _wwr = g_area/e_area
+                            _wall.area_m = e_area
+                        end
                         # p "wwr:#{_wwr}",g_area,distance,_height
                         _wall.wwr=_wwr
                         # _wall.area_m = (g_area+e_area)*MoosasConstant::INCH_METER_MULTIPLIER_SQR
@@ -519,7 +530,7 @@ module MMR
         rf=nil
         @geometries.each do |moface|
             if moface.id == idd
-                rf = moface
+                return moface
             end
         end
         return rf
@@ -544,8 +555,10 @@ module MMR
     def self.construct_face(_element,glazings)
             _height=_element.get_elements('height')[0].text.to_f()
             _id=_element.get_elements('faceId')[0].text.split(" ")
+            _uid=_element.get_elements('Uid')[0].text
             _face=_id.map{|g| self.find_geometry(g)}
             if _face[0] == nil
+                p _id
                 return nil
             end
             fl_glazing=[]
@@ -557,13 +570,16 @@ module MMR
                     gls = glazings[glazingUid]
                     gls_ids = gls.get_elements('faceId')[0].text.split(" ")
                     gls_ids.each do |g|
-                        fl_glazing.push(self.find_geometry(g))
+                        g_moface = self.find_geometry(g)
+                        g_moface.uid=glazingUid
+                        fl_glazing.push(g_moface)
                     end
                 end
             end
             for f in _face
                 f.glazings=fl_glazing
                 f.height=_height
+                f.uid=_uid
             end
             return _face
     end
@@ -578,7 +594,7 @@ module MMR
             _height=_element.get_elements('height')[0].text.to_f()/ MoosasConstant::INCH_METER_MULTIPLIER
             space_id=_element.get_elements('id')[0].text
             neighbor=_element.get_elements('neighbor')
-            s = MoosasSpace.new(_floor,_height,_ceil,_bound)
+            s = MoosasSpace.new(_floor,_height,_ceil,_bound,id=space_id)
             #s.set_id("s_0x"+space_id)
             s.is_outer = false
             # neighbor.each{|nei| s.neighbor[nei.text]=self.find_geometry(nei.attribute('Faceid').value()).id}
@@ -721,9 +737,9 @@ module MMR
         }
     end
 
-    def self.simplified(pts)
+    def self.simplified(pts,offset)
 
-        pts = pts.map{|pt| Geom::Vector3d.new(pt)}
+        pts = pts.map{|pt| Geom::Vector3d.new([pt[0],pt[1],pt[2]+offset])}
         # pts.unshift(pts[-1])
         # pts.push(pts[0])
 

@@ -325,13 +325,13 @@ end
 class MoosasSpace
     attr_accessor :floor,:height, :bounds,:ceils, :is_outer, :id, :area_m, :height_m, :settings, :neighbor, :internal_wall
 
-    def initialize(f,h,c,b)
+    def initialize(f,h,c,b,id=nil)
         @multifloor = f
         @floor=f
         @height = h
         @ceils = c
         @bounds = b
-        @id = nil
+        @id = id
         @neighbor={}
         @area_m = @floor.map{|fl| fl.area_m}.sum()
         @height_m = @height * MoosasConstant::INCH_METER_MULTIPLIER
@@ -351,12 +351,13 @@ class MoosasSpace
                     MoosasStandard::STANDARDNAME[$ui_settings["selectStandard"]]
                     ])[0]
             )
-        #根据空间参数计算id
-        @id='s_'+@area_m.round().to_s+@height_m.round().to_s+@bounds.length.to_s
-        @id += @bounds.map{|edge| (edge.wwr*10).round()}.sort.join("")
-        @id += self.get_weight_center().map{ |v| v.round().to_s  }.join("")
-        @settings["zone_name"]= "Space"+id.to_s[2,4]
-        
+        if @id == nil
+            #根据空间参数计算id
+            @id='s_'+@area_m.round().to_s+@height_m.round().to_s+@bounds.length.to_s
+            @id += @bounds.map{|edge| (edge.wwr*10).round()}.sort.join("")
+            @id += self.get_weight_center().map{ |v| v.round().to_s  }.join("")
+        end
+        @settings["zone_name"]= @id
     end
 
     def %(id)
@@ -842,10 +843,10 @@ end
 
 #描述每个面
 class MoosasFace
-    attr_accessor :face, :glazings, :shading, :height, :transformation, :area, :wc, :type,:id, :normal, :area_m, :settings,:material
+    attr_accessor :face, :glazings, :shading, :height, :transformation, :area, :wc, :type,:id,:uid, :normal, :area_m, :settings,:material
 
 
-    def initialize(face, transformation, area,nor=nil,id=0)
+    def initialize(face, transformation, area,nor=nil,id=nil,uid=nil)
         @face = face
         @transformation = transformation
         @area = area
@@ -857,8 +858,9 @@ class MoosasFace
         @glazings=[]
         @shading=[]
         @id = id
+        @uid = uid
         @area_m = area * MoosasConstant::INCH_METER_MULTIPLIER_SQR
-        @settings = {"u"=>MoosasConstant::WALL_U}
+        @settings = {"u"=>MoosasConstant::WALL_U,"id":@id}
     end
 
     def assign_material(mat_lib)

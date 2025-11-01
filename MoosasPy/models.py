@@ -160,8 +160,9 @@ class MoosasModel(MoosasContainer):
         plot_object(walls, gls, aperture, skylight, colors=['black', 'blue', 'grey', 'blue'], lineSize=[1, 3, 1, 1],
                     lineType=['-', '-', '-', '--'], show=show)
 
-    def summary(self,wall_count):
+    def summary(self,wall_count=None):
         print('LEVEL\t\tWALL\t\tGLS\t\tSKY\t\tFACE\t\tSPACE\t\tAREA')
+
         for i, bld_level in enumerate(self.levelList):
             print(f"%.2f" % bld_level, end='')
             if wall_count:

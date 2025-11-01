@@ -105,7 +105,6 @@ def build_matrix(file_path):
 
     return np.array(matrix) * 3600.0 / AIR_DENSITY
 
-
 def read_file(path):
     """
     We need to change the temperature in the project file for each iteration.

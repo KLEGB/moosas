@@ -152,7 +152,7 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
         [[roomheatload]...[]]
         in this case, the roomheatload data should be in the same sequence of zones in the project file
 
-        Of course, you can get a roomInfo series by MoosasModel.buildRoomHeat() method, then directly send as this argument
+        Of course, you can get a roomInfo series by MoosasModel.buildRoomHeat() method, then directly send as the argument
 
     resultFile: the iteration result path, will be coded into csv.
         In this file, the temperature changes and Volume Metric Flow Rate in ACH will be recorded.
@@ -276,18 +276,29 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
     if resultFile is None:
         return writeZone(resultFile, zones)
     print('simulation finished :', resultFile)
+    callCmd(['copy',
+             "\"" + FilePath['current_file'] + "\"",
+             "\"" + prjFile[:-4]+'_final.prj' + "\""
+             ])
     return zones
 
-def runFile(prjFile):
-    execContam(exe=FilePath['contamx'], file=prjFile)
+def runFile(prjFiles):
+    """run and read the AirFlowNetwork result of a *.prj file.
 
-    """run simread.exe"""
-    exe_simread(simread_path=FilePath['simread'], file_path=prjFile,
-                responseFile=FilePath['response'])
+    -----------------------------------------
+    prjFile: path of the prj file. the *.lfr file should be in the same directory and has same basename
 
-    AFN = build_matrix(file_path=prjFile)
+    return: None
+    """
+    if isinstance(prjFiles, str):
+        prjFiles = [prjFiles]
+    for prjFile in prjFiles:
+        execContam(exe=FilePath['contamx'], file=prjFile)
 
-    return AFN
+        """run simread.exe"""
+        exe_simread(simread_path=FilePath['simread'], file_path=prjFile,
+                    responseFile=FilePath['response'])
+
 
 
 def readZoneInfo(prjFile, roomInfoFile):
@@ -360,6 +371,38 @@ def execContam(exe, file):
         return False
     callCmd([exe, file])
     return True
+
+def readPathResult(prjFile,netFile=None):
+    """read *.lfr file and translate the mass flow to volumetric flow
+
+    -----------------------------------------
+    prjFile: path of the prj file. the *.lfr file should be in the same directory and has same basename
+
+    netFile: optional network file to name the zones and paths
+
+    return: dict{
+                #{pathName or pathIndex}:{
+                    'from':#{zoneName or zoneIndex},'to':#{zoneName or zoneIndex}',flow:#{volumetric flow m3/h}
+                }
+            }
+    """
+
+    airflow = read_flowpath(prjFile[:-4] + '.lfr') * 3600.0 / AIR_DENSITY
+    topology = read_topology(prjFile)
+    if netFile:
+        zoneName,pathName = [],[]
+        strs = parseFile(netFile)
+        zoneStr = strs[0]
+        pathStr = strs[1]
+        zoneName = [line[0] for line in zoneStr if len(line) > 1]
+        pathName = [line[0] for line in pathStr if len(line) > 1]
+        zoneName=['ambient']+zoneName
+        topology = [[max(flow[0],0),max(flow[1],0)] for flow in topology]
+        topology = {pathName[i]:{'from':zoneName[topology[i][0]],"to":zoneName[topology[i][1]],'flow':airflow[i][0]+airflow[i][1]} for i in range(len(topology))}
+
+    else:
+        topology = {i: {'from': topology[i][0], "to":topology[i][1],'flow': airflow[i][0] + airflow[i][1]} for i in range(len(topology))}
+    return topology
 
 
 def change_temperature(AFN: np.ndarray, roomInfo: np.ndarray, t0):
