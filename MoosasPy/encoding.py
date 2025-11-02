@@ -7,6 +7,20 @@ from pythonDist.MoosasPy.utils.constant import geom
 
 class Moosasboundary(object):
     def __init__(self,polygon:pygeos.Geometry):
+        """
+        Initialize the object with a polygon geometry and compute transformed edges based on angular thresholds.
+        
+        Parameters
+        ----------
+        polygon : pygeos.Geometry
+            A PyGEOS geometry object representing a polygon. The polygon's coordinates are used to create edge linestrings
+            and apply transformations based on alignment with orthogonal basis vectors.
+        
+        Returns
+        -------
+        None
+            This method initializes instance attributes and does not return any value.
+        """
         coordinates = pygeos.get_coordinates(polygon)
         self.originalEdge = np.array([pygeos.linestrings(coordinates[i:i+2]) for i in range(len(coordinates)-1)])
         self.edgeTransformation = [Transformation2d() for edge in self.originalEdge]
@@ -34,9 +48,39 @@ class Moosasboundary(object):
 
     @property
     def regularize(self):
+        """
+        Regularize the edge by connecting segments.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `regularEdge` attribute and `connectSegment` method.
+        
+        Returns
+        -------
+        object
+            The result of connecting the regular edge segment, type depends on `connectSegment` implementation.
+        """
         return self.connectSegment(self.regularEdge)
 
     def connectSegment(self,segments):
+        """
+        Connect a sequence of line segments into a closed polygon, handling parallel segments.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this method.
+        segments : array-like of pygeos geometries (LineString)
+            A sequence of line segment geometries. Each segment is expected to be a two-point LineString.
+        
+        Returns
+        -------
+        pygeos.geometry.Polygon
+            A closed polygon formed by connecting the input segments, with intersections computed at joints.
+            If consecutive segments are parallel, their common vertex is replaced with an intersection point 
+            from the previous and current segment to ensure proper closure and geometry continuity.
+        """
         coordinates = []
         for i in range(len(segments)):
             veci = pygeos.get_coordinates(segments[i])[1] - pygeos.get_coordinates(segments[i])[0]
@@ -53,6 +97,20 @@ class Moosasboundary(object):
         return pygeos.polygons(coordinates)
 
     def deRegularize(self,geo:pygeos.Geometry):
+        """
+        De-regularizes a geometry by applying transformation based on a reference regularized polygon.
+        
+        Parameters
+        ----------
+        geo : pygeos.Geometry
+            Input geometry whose coordinate structure is used to compute new edge transformations.
+            Must have the same number of coordinates as the original regularized polygon.
+        
+        Returns
+        -------
+        pygeos.Geometry
+            A reconnected geometry formed by transforming and connecting de-regularized edges.
+        """
         regularPolygon = self.regularize
         medianOri = pygeos.get_coordinates(regularPolygon)
         edgesOri = [medianOri[i+1]-medianOri[i] for i in range(len(medianOri)-1)]
@@ -71,6 +129,22 @@ class Moosasboundary(object):
 
 
     def getRadius(self,axis, vector):
+        """
+        Calculate the signed angular radius between a given axis and vector.
+        
+        Parameters
+        ----------
+        axis : array-like
+            The reference axis direction as a 3D vector. Will be converted to a numpy array.
+        vector : array-like
+            The input vector as a 3D vector. Will be converted to a numpy array.
+        
+        Returns
+        -------
+        float
+            The signed angle (in radians) between the axis and vector. Positive if counter-clockwise,
+            negative if clockwise when viewed along the [0,0,1] direction.
+        """
         axis = np.array(axis)
         vector = np.array(vector)
         # 使轴与线同方向
@@ -83,6 +157,21 @@ class Moosasboundary(object):
         return radius
 
     def orthogonalization(self, proj:Projection=None):
+        """
+        Perform orthogonalization of a polygon boundary by projecting it onto an orthogonal basis and adjusting non-orthogonal edges.
+        
+        Parameters
+        ----------
+        proj : Projection, optional
+            A projection object defining the coordinate system for orthogonalization. If None, an orthogonal basis is automatically 
+            determined from the regularized boundary using `Projection.findOrthogonalBasis`. Default is None.
+        
+        Returns
+        -------
+        spliter : list of pygeos geometries (LineString)
+            A list of splitting lines used to subdivide the input boundary when it cannot be represented as a quadrilateral after 
+            orthogonalization. Each LineString connects vertices to reduce the number of boundary points until a quadrilateral is formed.
+        """
         boundary = simplify(self.regularize)
         if proj is None:
             proj = Projection.findOrthogonalBasis(boundary)
@@ -127,6 +216,19 @@ class Moosasboundary(object):
         return spliter
 
 def encodingModel(model: MoosasModel):
+    """
+    Apply encoding process to the model by standardizing spaces and regularizing boundaries.
+    
+    Parameters
+    ----------
+    model : MoosasModel
+        The input model containing levels, spaces, and associated geometric data to be processed.
+    
+    Returns
+    -------
+    MoosasModel
+        The input model after processing each space by standardization and boundary regularization.
+    """
     for buildingLevel in model.levelList:
         spaces = np.array(model.spaceList)[searchBy('level', buildingLevel, model.spaceList)]
         for space in spaces:
@@ -139,4 +241,17 @@ def encodingModel(model: MoosasModel):
 
 
 def standarizeSpace(space: MoosasSpace):
+    """
+    Standardize the given space object.
+    
+    Parameters
+    ----------
+    space : MoosasSpace
+        The space object to be standardized.
+    
+    Returns
+    -------
+    MoosasSpace
+        The standardized space object.
+    """
     return space

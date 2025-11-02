@@ -35,6 +35,23 @@ class MoosasWebDialog
     @long_message = nil  #用于传递‘大’数据
 
     def self.show_ui(tab=nil)
+    # """
+    # Function
+    # --------
+    # Displays the user interface dialog and initializes related components, including action callbacks and weather data reset.
+    # Optionally navigates to a specified tab if provided.
+    # 
+    # Parameters
+    # ----------
+    # tab : str or nil, optional
+    # The name of the tab to display after showing the UI. If nil, no tab is selected automatically. Default is nil.
+    # 
+    # Returns
+    # -------
+    # None
+    # This method does not return a value. It performs side effects such as displaying the UI dialog, setting up callbacks,
+    # and optionally switching to a specified tab.
+    # """
         p "Expired after: #{MoosasLock.remain_time()} days"
 
         @dialog.add_action_callback("call") { |action_context, param1|
@@ -56,11 +73,50 @@ class MoosasWebDialog
     end
 
     def self.get_long_value(element_id)
+    # """
+    # Function
+    # --------
+    # Retrieves the long value of a specified element from the dialog.
+    # 
+    # Parameters
+    # ----------
+    # element_id : int or string
+    # The identifier of the element whose value is to be retrieved.
+    # 
+    # Returns
+    # -------
+    # int or nil
+    # The long integer value of the specified element, or nil if the element
+    # does not exist or no value is set.
+    # """
         return @dialog.get_element_value(element_id)
     end
 
 
     def self.receive(message)
+    # """
+    # Function
+    # --------
+    # Processes an incoming message from a web interface and executes corresponding commands
+    # based on the command type. This method acts as a router for various application-level
+    # operations such as analysis, rendering, model manipulation, and settings update.
+    # 
+    # Parameters
+    # ----------
+    # message : str
+    # A string message received from the web dialog, formatted as a command followed by
+    # optional parameters, separated by the payload delimiter (`|`). The first part is
+    # the command name; subsequent parts contain parameter data, often in JSON or
+    # key-value format.
+    # 
+    # Returns
+    # -------
+    # None
+    # This method does not return a value. It performs side effects such as triggering
+    # analyses, updating UI states, modifying model data, or sending responses back to
+    # the web interface. If the Moosas utility is not active, the method returns early
+    # with no action.
+    # """
         return unless MoosasUtils.moosas_active?
         
         #p "收到来自HTML的指令: "+message
@@ -178,6 +234,23 @@ class MoosasWebDialog
     ########################## Package and Send JSON Command to WebDialog #############################
 
     def self.send(command,params)
+    # """
+    # Function
+    # --------
+    # Sends a command with parameters to a dialog interface by generating a JSON string and executing it as a script.
+    # 
+    # Parameters
+    # ----------
+    # command : String
+    # The command name to be sent, typically representing an action to be performed in the receiving environment.
+    # params : Hash
+    # A hash of parameters associated with the command, containing key-value pairs that provide additional data or options.
+    # 
+    # Returns
+    # -------
+    # nil
+    # This method does not return a value. In case of an exception, it logs the error and continues execution.
+    # """
       begin
         json = JSON.generate({ "command" => command, "params" => params })
         script_string = "Skp.receive(eval(#{json}))"
@@ -189,6 +262,28 @@ class MoosasWebDialog
     end
 
     def self.send_weather_data(data)
+    # """
+    # Function
+    # --------
+    # Sends weather data to a web dialog by executing a JavaScript function within the dialog's context.
+    # 
+    # Parameters
+    # ----------
+    # data : String
+    # A string containing weather-related data that will be passed to the JavaScript function
+    # `Skp.receive_weather_data` in the web dialog.
+    # 
+    # Returns
+    # -------
+    # None
+    # This method does not return a value. It executes a script asynchronously and handles errors internally.
+    # 
+    # Notes
+    # -----
+    # The method attempts to execute a JavaScript call `Skp.receive_weather_data(data)` within the context
+    # of a web dialog referenced by the class variable `@dialog`. If an exception occurs during execution,
+    # it prints an error message and logs the exception using `MoosasUtils.rescue_log`.
+    # """
         begin
             
             #script_string = "alert(1)"
@@ -204,6 +299,16 @@ class MoosasWebDialog
     end
 
     def self.set_long_value(long_message)
+    # Function:
+    # Set the inner HTML of an element with ID 'long_msg' using JavaScript execution within a dialog.
+    # 
+    # Parameters:
+    # long_message : str
+    # The string content to be set as the innerHTML of the element with ID 'long_msg'.
+    # 
+    # Returns:
+    # None
+    # This method does not return any value.
         js_command = "document.getElementById('long_msg').innerHTML = #{long_message}"
         @dialog.execute_script(js_command)
     end

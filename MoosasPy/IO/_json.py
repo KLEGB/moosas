@@ -101,4 +101,17 @@ def writeGeojson(file_path, model) -> str:
 
 
 def _readGeojson(file_path) -> list[MoosasGeometry]:
+    """
+    Read a GeoJSON file and return a list of MoosasGeometry objects.
+    
+    Parameters
+    ----------
+    file_path : str
+        Path to the GeoJSON file to be read.
+    
+    Returns
+    -------
+    list[MoosasGeometry]
+        A list of MoosasGeometry objects parsed from the GeoJSON file.
+    """
     raise NotImplementedError("geojson reader has not been implemented")

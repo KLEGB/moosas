@@ -6,6 +6,19 @@ from .contour import _documentBoundary
 
 
 def BTGSpaceGeneration(model: MoosasContainer) -> MoosasContainer:
+    """
+    Generate boundary space from model elements grouped by level.
+    
+    Parameters
+    ----------
+    model : MoosasContainer
+        The container object holding building levels, faces, walls, and to which generated boundaries will be assigned.
+    
+    Returns
+    -------
+    MoosasContainer
+        The input model with updated boundaryList containing walls identified as valid boundaries for each level.
+    """
     validBound = []
     for bld_level in model.levelList:
         faceList = searchBy('level', bld_level, model.faceList, asObject=True)
@@ -18,6 +31,20 @@ def BTGSpaceGeneration(model: MoosasContainer) -> MoosasContainer:
 
 
 def CCRSpaceGeneration(model: MoosasContainer) -> MoosasContainer:
+    """
+    Perform closed contour calculation for each building level in the model.
+    
+    Parameters
+    ----------
+    model : MoosasContainer
+        The input model container containing building levels and associated data.
+        This object is updated in place with closed contour calculations.
+    
+    Returns
+    -------
+    MoosasContainer
+        The updated model container after applying closed contour calculations for each level.
+    """
     for bld_level in model.levelList:
         # wallList = np.array(model.wallList)[searchBy("level", bld_level, model.wallList)]
         # from .visual.geometry import plot_object

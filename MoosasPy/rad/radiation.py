@@ -10,6 +10,23 @@ from ..weather import MoosasCumSky
 
 
 def modelRadiation(model, reflection=1):
+    """
+    Calculate radiation for each space in the model using a fast single-call method via MoosasRad.exe.
+    
+    Parameters
+    ----------
+    model : object
+        The building model containing spaces, geometry, and sky data. Must have `spaceList`, 
+        `cumSky['summerCumSky']`, `cumSky['winterCumSky']`, and settings attributes.
+    reflection : int, optional
+        The number of reflections to consider in the radiation calculation. Default is 1.
+    
+    Returns
+    -------
+    object
+        The input model with updated space settings including 'zone_summerrad' and 'zone_winterrad'
+        values representing the total solar radiation for summer and winter periods.
+    """
     model.x = 1000
     """
          This method is faster than spaceRadiation since it only call MoosasRad.exe once.
@@ -59,6 +76,22 @@ def modelRadiation(model, reflection=1):
 
 
 def spaceRadiation(space: MoosasSpace, reflection=1) -> dict:
+    """
+    Calculate seasonal radiation for a space by aggregating aperture-level radiation contributions.
+    
+    Parameters
+    ----------
+    space : MoosasSpace
+        The space object containing apertures (skylights or glazing) for which radiation is calculated.
+    reflection : float, optional
+        Reflection coefficient used in radiation calculation. Default is 1.
+    
+    Returns
+    -------
+    dict
+        Updated settings dictionary of the space with 'zone_summerrad' and 'zone_winterrad' keys 
+        representing total summer and winter radiation values weighted by window areas.
+    """
     """
         This method packing up the ray of all apertures of the space and call MoosasRad.exe once.
         Radiation Calculation in MoosasRad is parallel.
@@ -231,6 +264,19 @@ def rayTest(rays: Iterable[Ray], model = None, geo_path: str = None, ray_path: s
 
 
 def WriteRadGeo(model):
+    """
+    Write a geometry file for the given model in Radiance format.
+    
+    Parameters
+    ----------
+    model : object
+        The geometric model to be written to the Radiance .geo file. The exact type depends on the expected input of `writeGeo`, typically representing a 3D scene or geometry structure.
+    
+    Returns
+    -------
+    str
+        The absolute file path to the generated .geo file.
+    """
     prj = 'ray_' + generate_code(4)
     geo_path = os.path.abspath(os.path.join(path.tempDir, prj + '.geo'))
     writeGeo(geo_path, model)

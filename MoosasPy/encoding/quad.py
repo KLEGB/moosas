@@ -3,6 +3,25 @@ from collections import defaultdict
 
 
 def create_quadrilaterals(divide_lines):
+    """
+    Create quadrilateral faces and their corresponding normals from grouped 3D lines.
+    
+    Parameters
+    ----------
+    divide_lines : list of numpy.ndarray
+        A list of line segments, where each line is a 2x3 numpy array representing 
+        two 3D points (shape: [2, 3]). Each line segment is used to generate quadrilaterals 
+        when paired with overlapping lines at different heights.
+    
+    Returns
+    -------
+    quad_faces : list of numpy.ndarray
+        A list of quadrilateral faces, each represented as a 4x3 numpy array containing 
+        the four corner points in 3D space.
+    quad_normals : list of numpy.ndarray
+        A list of unit normal vectors (3D) corresponding to each quadrilateral face, 
+        normalized to unit length.
+    """
     line_groups = defaultdict(list)
     quad_faces = []
     quad_normals = []

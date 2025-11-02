@@ -7,6 +7,19 @@ from .error import FileError, ShellError
 
 class MoosasPath(object):
     def __init__(self, MoosasPlusDirectory=None):
+        """
+        Initialize the MoosasPlus environment with directory paths.
+        
+        Parameters
+        ----------
+        MoosasPlusDirectory : str, optional
+            Root directory for MoosasPlus. If None, defaults to the parent directory
+            of the current file's directory. Will be converted to an absolute path.
+        
+        Returns
+        -------
+        None
+        """
         if MoosasPlusDirectory is None:
             MoosasPlusDirectory = os.path.realpath(os.path.join(os.path.dirname(__file__), r'../'))
         MoosasPlusDirectory = os.path.abspath(MoosasPlusDirectory)
@@ -24,12 +37,40 @@ class MoosasPath(object):
 
     @staticmethod
     def clean(dir):
+        """
+        Clean all files in the specified directory.
+        
+        Parameters
+        ----------
+        dir : str
+            Path to the directory whose files are to be removed.
+        
+        Returns
+        -------
+        list
+            A list of None values, one for each file removed (result of os.remove calls).
+        """
         if os.path.exists(dir):
             remove = [os.remove(os.path.join(dir, dell)) for dell in os.listdir(dir)]
             return remove
 
     @staticmethod
     def checkBuildDir(*dir):
+        """
+        Check and create build directories if they do not exist.
+        
+        Parameters
+        ----------
+        *dir : str
+            Variable number of directory paths to check. If a given path is not an existing directory, 
+            its parent directory is used instead. For each valid directory path, if it does not exist, 
+            it will be created.
+        
+        Returns
+        -------
+        None
+            This function does not return any value.
+        """
         for thisDir in dir:
             if not os.path.isdir(thisDir):
                 thisDir = os.path.dirname(thisDir)
@@ -42,6 +83,19 @@ path = MoosasPath(open(r'_.pth').read().strip())
 os.chdir(curPath)
 
 def isFilePath(thePath):
+    """
+    Check if the given string contains path separators indicating it is a file path.
+    
+    Parameters
+    ----------
+    thePath : str
+        The string to check for file path separators.
+    
+    Returns
+    -------
+    bool
+        True if the string contains '\\' or '/', False otherwise.
+    """
     if "\\" in thePath or "/" in thePath:
         return True
 
@@ -121,6 +175,19 @@ def mixItemListToList(*mixObject: list | object) -> list:
 
 def generate_code(bit_num):
     """
+    Generate a random hexadecimal-like code of specified length.
+    
+    Parameters
+    ----------
+    bit_num : int
+        The number of characters in the generated code (excluding the '0x' prefix).
+    
+    Returns
+    -------
+    str
+        A string representing the generated code, prefixed with '0x'.
+    """
+    """
     generate random code in given length.
     """
     all_str = string.digits + string.ascii_lowercase[0:11]
@@ -129,6 +196,20 @@ def generate_code(bit_num):
 
 
 def encodeParams(*args) -> str:
+    """
+    Encode a variable number of integer arguments into a hexadecimal-like string representation.
+    
+    Parameters
+    ----------
+    *args : int
+        Variable length argument list of integers to be encoded.
+    
+    Returns
+    -------
+    str
+        A string starting with '0x' followed by encoded characters representing the input integers.
+        The encoding uses digits 0-9 and lowercase letters 'a' to 'k' (first 11 ASCII lowercase letters).
+    """
     allChars = string.digits + string.ascii_lowercase[0:11]
     return '0x' + ''.join(
         [allChars[(int(a / len(allChars))) % len(allChars)] for a in args] +
@@ -169,6 +250,23 @@ def searchBy(attribute: str, searchdata, searchList, earlyEnd=False, asObject=Fa
 
 def to_dictionary(etree):
     """
+    Convert an ElementTree XML object to a nested dictionary.
+    
+    Parameters
+    ----------
+    etree : xml.etree.ElementTree.Element
+        The input ElementTree element to be converted into a dictionary.
+        The function recursively processes its children and attributes.
+    
+    Returns
+    -------
+    dict or str
+        A dictionary representation of the XML structure where each tag becomes a key.
+        If an element has no children, its text content is returned as a string.
+        Nested elements are represented as nested dictionaries or lists if multiple
+        elements with the same tag exist.
+    """
+    """
         3d objects are not support in pygeos.to_geojson.
         in this case we must write the geojson by ourselves using the model.buildGeojson() method
         this method can reform the given elementTree (xml) into dictionary
@@ -189,6 +287,22 @@ def to_dictionary(etree):
 
 
 def parseFile(file_path: str) -> list[list[list[str]]]:
+    """
+    Parse a file into a nested list structure based on Moosas+ file format.
+    
+    Parameters
+    ----------
+    file_path : str
+        Path to the input file to be parsed. The file should follow the Moosas+ format
+        with blocks separated by ';' and lines separated by '\n'. Lines may contain
+        comments starting with '!' and data items separated by commas.
+    
+    Returns
+    -------
+    list[list[list[str]]]
+        A list of blocks, where each block is a list of lines, and each line is a list of strings
+        representing the parsed data items. Empty lines or comment-only lines are excluded.
+    """
     """
     General func to process all file in Moosas.
     a typical file should be:

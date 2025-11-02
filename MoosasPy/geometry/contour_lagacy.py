@@ -8,6 +8,21 @@ from pythonDist.MoosasPy.visual.visualization import *
 from ..utils.constant import geom
 
 def closed_contour_calculation(model: MoosasModel, bld_level: float):
+    """
+    Perform closed contour calculation for a given building level in a model.
+    
+    Parameters
+    ----------
+    model : MoosasModel
+        The building model containing walls and other structural elements.
+    bld_level : float
+        The building level (elevation) at which to perform the closed contour calculation.
+    
+    Returns
+    -------
+    MoosasModel
+        The input model updated with detected boundary information at the specified level.
+    """
     print(f'Preprocessing in level {bld_level}')
     # 创造wall_list
     wall_list = searchBy('level', bld_level, model.wallList)
@@ -62,6 +77,31 @@ def closed_contour_calculation(model: MoosasModel, bld_level: float):
 
 # 路径搜索相关
 def findpath_depth(node, end: list, node_list: list, block_list: list, last=None, max_depth=geom.PATH_MAX_DEPTH):
+    """
+    Find a path from the current node to any node in the end list using depth-limited DFS.
+    
+    Parameters
+    ----------
+    node : int or hashable
+        The current node to start searching from.
+    end : list
+        List of target nodes; the search stops if any of these nodes are reached.
+    node_list : list of lists or dict of lists
+        Adjacency list representing the graph; node_list[node] contains neighbors of node.
+    block_list : list
+        List of nodes that cannot be traversed; paths through these nodes are blocked.
+    last : int or hashable, optional
+        The previous node in the path to avoid going backwards. Default is None.
+    max_depth : int, optional
+        Maximum depth to search from the current node. Default is geom.PATH_MAX_DEPTH.
+    
+    Returns
+    -------
+    list
+        A list of nodes representing the path from `node` to a node in `end`, 
+        in reverse order (from end to start). Returns empty list if no path is found 
+        within the depth limit or due to blocking.
+    """
     if node in end: return [node]
     if max_depth == 0: return []
     neighbor = []
@@ -78,6 +118,25 @@ def findpath_depth(node, end: list, node_list: list, block_list: list, last=None
 
 
 def split(linerring: list, splitline: list):
+    """
+    Split a linear ring by a given split line.
+    
+    Parameters
+    ----------
+    linerring : list
+        List of nodes representing a linear ring. If the first and last elements are identical, 
+        the last element is removed before processing.
+    splitline : list
+        List of nodes defining the split line. The split starts at the first node of splitline 
+        and ends at the last node. This line is used to divide the linerring into two parts.
+    
+    Returns
+    -------
+    tuple of list
+        A tuple containing two lists: linerring1 and linerring2. These represent the two resulting 
+        rings after splitting the original linerring along the splitline. The splitline is included 
+        in both output rings in forward order in linerring1 and reverse order in linerring2.
+    """
     # Ver1.3 定位到分割算法有问题！重写此模块
     if linerring[0] == linerring[-1]:
         linerring.pop()
@@ -95,12 +154,45 @@ def split(linerring: list, splitline: list):
 
 
 def polygon_from_node(nodelist: list, location: list):
+    """
+    Construct a polygon from a list of node indices and their corresponding locations.
+    
+    Parameters
+    ----------
+    nodelist : list
+        List of indices referring to positions in the location list.
+    location : list
+        List of point geometries (e.g., PyGEOS points) corresponding to node locations.
+    
+    Returns
+    -------
+    pygeos.Geometry
+        A polygon geometry constructed from the ordered sequence of points.
+    """
     polist = [location[i] for i in nodelist]
     polist = [[pygeos.get_x(node), pygeos.get_y(node)] for node in polist]
     return pygeos.polygons(polist)
 
 # 轮廓识别方法
 def useful_wall(wall_list, model):
+    """
+    Filter out invalid, zero-length, duplicate, and isolated walls from a wall list.
+    
+    Parameters
+    ----------
+    wall_list : list of int
+        List of wall indices to be filtered.
+    model : object
+        Model object containing a `wallList` attribute, where each element is a wall 
+        with methods `force_2d()` and attributes `height` representing geometric and 
+        dimensional properties.
+    
+    Returns
+    -------
+    list of int
+        Filtered list of wall indices with invalid, zero-length, duplicate, and 
+        isolated walls removed.
+    """
     # 1.1.1 去除零长度线、无效线、重线
     vec_list = []
     wall_list = [i for i in wall_list if model.wallList[i].force_2d() != None]
@@ -126,6 +218,24 @@ def useful_wall(wall_list, model):
     # plot_object(model.wallList[wall_list], color='black')
     # 1.1.2 去除wall_list孤立线
     def remove_wall(wall_list):
+        """
+        Remove walls that do not meet connectivity criteria and generate a list of wall vectors.
+        
+        Parameters
+        ----------
+        wall_list : list of int
+            List of indices referring to walls in `model.wallList`. Each wall is processed 
+            to extract its 2D geometric representation using `force_2d()`.
+        
+        Returns
+        -------
+        tuple of (numpy.ndarray, list of int)
+            A tuple containing:
+            - vec_list: A numpy array of shape (N, 3) where each row contains 
+              [wall_index, start_point, end_point] for each directed segment of the remaining walls.
+            - wall_list: Modified list of wall indices that satisfy the connectivity condition 
+              (both endpoints shared by at least two other points in the simplified point set).
+        """
         vec_list_simple = []
         for i in wall_list:
             line = model.wallList[i].force_2d()
@@ -161,6 +271,28 @@ def useful_wall(wall_list, model):
 
 
 def construct_node_network(vec_list):
+    """
+    Construct a node network from a list of vectors.
+    
+    Parameters
+    ----------
+    vec_list : list of tuple
+        A list where each element is a tuple containing vector information.
+        Each tuple is expected to have at least three elements: 
+        (ignored, source_point, target_point), where source_point and target_point 
+        are points (e.g., coordinates or identifiers) representing connections.
+    
+    Returns
+    -------
+    location_list : list
+        List of unique points (nodes) extracted from the second element of each tuple in vec_list.
+    node_list : list of numpy.ndarray
+        List where each element is an array of indices representing connected nodes 
+        to the corresponding node in location_list, sorted by angular order.
+    angle_list : list of numpy.ndarray
+        List where each element is an array of angles corresponding to the direction 
+        of connected vectors from the node, sorted in ascending order.
+    """
     # 1.2.1 创造唯一点列表location_list / 点链接组node_list
     unique_set = set()
     for point_item in vec_list:
@@ -187,6 +319,20 @@ def construct_node_network(vec_list):
 
 
 def node_Groupping(node_list):
+    """
+    Group nodes based on their connectivity.
+    
+    Parameters
+    ----------
+    node_list : list of list
+        A list where each element is a list representing connections or edges from a node.
+        Nodes with more than one connection are considered eligible for grouping.
+    
+    Returns
+    -------
+    list of list
+        A list of groups, where each group is a list of indices representing connected nodes.
+    """
     node_groups: list = []
     eligible = [i for i in range(len(node_list)) if len(node_list[i]) > 1]
     while len(eligible) > 0:
@@ -194,6 +340,29 @@ def node_Groupping(node_list):
         group = []
 
         def findpath_breadth(node):
+            """
+            Perform a breadth-first search to find a path from the start node and group connected nodes.
+            
+            Parameters
+            ----------
+            node : object
+                The current node being processed in the graph. Expected to be a hashable type.
+            start : object
+                The starting node for the breadth-first traversal. Must be present in the graph.
+            node_list : dict
+                A dictionary mapping each node to a list of its neighboring nodes.
+            eligible : set
+                A set of nodes that are eligible to be visited during traversal.
+            node_groups : list
+                A list that accumulates groups of connected nodes; updated in-place.
+            group : list
+                A temporary list storing the current group of connected nodes during traversal.
+            
+            Returns
+            -------
+            list
+                Updated list of node groups, where each group is a list of connected nodes.
+            """
             if node in group: return False
             if not (node in eligible): return False
             group.append(node)
@@ -208,6 +377,26 @@ def node_Groupping(node_list):
 
 
 def nodegroup_outerboundary(node_groups, node_list, location_list, angle_list):
+    """
+    Compute the outer boundary of each node group based on geometric and angular relationships.
+    
+    Parameters
+    ----------
+    node_groups : list of list of int
+        A list of node groups, where each group is a list of node indices.
+    node_list : list of list of int
+        Adjacency list representation of the graph; node_list[i] contains the neighbors of node i.
+    location_list : list of object
+        List of point objects representing the spatial location of each node; supports coordinate extraction via pygeos.
+    angle_list : list of list of float
+        For each node, a list of angles (in radians) to its neighboring nodes, aligned with node_list.
+    
+    Returns
+    -------
+    list of list of list of int
+        A list corresponding to each node group. Each element is a list of closed loops (sub-boundaries),
+        where each loop is represented as a list of node indices forming an outer or inner boundary.
+    """
     boundary_list = []
     for group in node_groups:
         # 对node进行二段关键词排序，第一关键词为x坐标(最大)，第二关键词为y坐标(最小),即右下角
@@ -290,6 +479,30 @@ def nodegroup_outerboundary(node_groups, node_list, location_list, angle_list):
 
 
 def divide_boundary_node(boundary_iteration, node_list, location_list, eligible):
+    """
+    Iteratively splits boundary nodes by inserting eligible interior nodes to refine polygonal regions.
+    
+    Parameters
+    ----------
+    boundary_iteration : list of list of int
+        A list of boundary node sequences, where each inner list represents a polygonal boundary 
+        defined by node indices.
+    node_list : dict or list of lists
+        Graph-like structure representing connections between nodes; used during depth-first search 
+        to find paths between nodes.
+    location_list : array-like of shapely.Point or similar geometric points
+        List of point coordinates corresponding to each node, indexed by node ID; used for spatial 
+        containment checks.
+    eligible : list of int
+        List of node indices that are candidates for insertion into boundaries if they lie inside 
+        a given region.
+    
+    Returns
+    -------
+    list of list of int
+        Refined list of boundary node sequences after iterative splitting; each inner list is a 
+        resulting polygon boundary with inserted nodes, ensuring no eligible interior nodes remain.
+    """
     # 迭代分割轮廓-点
     ContinueSplit = True
     while len(eligible) > 0 and ContinueSplit:
@@ -343,8 +556,39 @@ def divide_boundary_node(boundary_iteration, node_list, location_list, eligible)
 
 
 def divide_boundary_edge(boundary_iteration, vec_list, node_groups):
+    """
+    Divide boundary edges based on given node groups and vector list.
+    
+    Parameters
+    ----------
+    boundary_iteration : int
+        The current iteration index for the boundary processing.
+    vec_list : list of array_like
+        List of vectors representing line segments or edges in the boundary.
+    node_groups : list of tuple
+        List of tuples, each containing node indices that define a group of connected nodes.
+    
+    Returns
+    -------
+    list of array_like
+        A list of divided boundary edge vectors resulting from the grouping and iteration.
+    """
     # 整理线段组
     def overlaps_in_node(geo1_node: list, geo2_node: list):
+        """Check if two nodes overlap in a geometric sequence and process boundary edges accordingly.
+        
+        Parameters
+        ----------
+        geo1_node : list
+            List representing the first geometric node sequence.
+        geo2_node : list
+            List of two elements representing the second geometric node to check for overlap in geo1_node.
+        
+        Returns
+        -------
+        bool
+            True if the two nodes are adjacent in geo1_node, False otherwise.
+        """
         try:
             id1 = geo1_node.index(geo2_node[0])
             id2 = geo1_node.index(geo2_node[1])
@@ -382,6 +626,28 @@ def divide_boundary_edge(boundary_iteration, vec_list, node_groups):
 
 
 def document_boundary(boundary_coordinates, location_list, vec_list, model):
+    """
+    Constructs and appends boundary edges to the model based on boundary coordinates.
+    
+    Parameters
+    ----------
+    boundary_coordinates : list of list of int
+        A nested list where each sublist contains node indices defining a polygonal boundary.
+    location_list : list
+        List of node locations; used to construct polygons for orientation checking.
+    vec_list : list of tuples
+        List of vectors, each represented as a tuple (index, node1, node2), 
+        used to find corresponding wall elements between nodes.
+    model : object
+        A model object containing a `wallList` attribute (list of wall elements) 
+        and a `boundaryList` attribute (list to which constructed boundaries are appended).
+    
+    Returns
+    -------
+    model : object
+        The input model object with updated `boundaryList` containing lists of wall elements 
+        representing each detected boundary.
+    """
     new_boundary_coordinates = []
     for i in boundary_coordinates:
         for j in i:

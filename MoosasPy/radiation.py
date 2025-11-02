@@ -9,6 +9,21 @@ from .utils.constant import rad
 
 
 def modelRadiation(model: MoosasModel, reflection=1) -> MoosasModel:
+    """
+    Calculate radiation for model spaces using parallelized ray tracing.
+    
+    Parameters
+    ----------
+    model : MoosasModel
+        The Moosas model containing spaces, geometry, and sky data for radiation calculation.
+    reflection : int, optional
+        The number of ground reflections to consider in radiation calculation. Default is 1.
+    
+    Returns
+    -------
+    MoosasModel
+        The input model with updated space settings including 'zone_summerrad' and 'zone_winterrad' values.
+    """
     model.x = 1000
     """
          This method is faster than spaceRadiation since it only call MoosasRad.exe once.
@@ -59,6 +74,21 @@ def modelRadiation(model: MoosasModel, reflection=1) -> MoosasModel:
 
 def spaceRadiation(space: MoosasSpace, reflection=1) -> MoosasSpace:
     """
+    Calculate seasonal radiation for a space by summing weighted contributions from skylights and glazing.
+    
+    Parameters
+    ----------
+    space : MoosasSpace
+        The space object containing faces (e.g., glazing, skylights) for which radiation is calculated.
+    reflection : float, optional
+        The surface reflection coefficient used in radiation calculation. Default is 1.
+    
+    Returns
+    -------
+    MoosasSpace
+        The input space object with updated settings including 'zone_summerrad' and 'zone_winterrad' values.
+    """
+    """
         This method packing up the ray of all apertures of the space and call MoosasRad.exe once.
         Radiation Calculation in MoosasRad is parallel.
     """
@@ -98,6 +128,30 @@ def spaceRadiation(space: MoosasSpace, reflection=1) -> MoosasSpace:
 
 def positionRadiation(positionRay: Ray | Iterable[Ray], sky: MoosasCumSky,
                       model: MoosasModel = None, reflection=1, geo_path=None)->Iterable[float]:
+    """
+    Calculate cumulative radiation for given positions considering reflections.
+    
+    Parameters
+    ----------
+    positionRay : Ray or Iterable[Ray]
+        Position(s) defined as Ray objects with origin and direction. 
+        Each Ray may also include a factor. Can be a single Ray, list of Rays, or numpy array of Rays.
+    sky : MoosasCumSky
+        Cumulative sky model used for radiation calculation.
+    model : MoosasModel, optional
+        Model containing geometry and reflectance information for ray tracing. 
+        Required if geo_path is not provided.
+    reflection : int, default=1
+        Number of reflection bounces to consider in the radiation calculation.
+    geo_path : str, optional
+        Path to a *.geo file representing the geometry for ray tracing. 
+        If not provided, the model parameter must be given to generate the geometry.
+    
+    Returns
+    -------
+    Iterable[float]
+        Cumulative radiation values in kWh/m² for each input position.
+    """
     """
         Cumulative radiation for positions with factors.
         The position are defined as Ray class with origins and directions.
@@ -167,6 +221,30 @@ def positionRadiation(positionRay: Ray | Iterable[Ray], sky: MoosasCumSky,
 
 def rayTest(rays: Iterable[Ray], model: MoosasModel = None, geo_path:str=None, ray_path:str=None)->list[Ray | None]:
     """
+    Test ray-face intersections and reflections using MoosasRad.exe.
+    
+    Parameters
+    ----------
+    rays : Iterable[Ray]
+        The rays to test. It is recommended to batch as many rays as possible for efficiency.
+    model : MoosasModel, optional
+        The model containing the geometry and material data for the reflectance test. 
+        Either `model` or `geo_path` must be provided.
+    geo_path : str, optional
+        Path to a *.geo file representing the geometry for the test. If not provided, 
+        the geometry will be exported from the `model`.
+    ray_path : str, optional
+        Temporary file path to store the input ray data. If not provided, a default 
+        path in the temporary directory will be used.
+    
+    Returns
+    -------
+    list[Ray | None]
+        A list of results corresponding to each input ray. If a ray intersects a face, 
+        the reflected ray is returned. If no intersection occurs, `None` is returned 
+        for that ray.
+    """
+    """
         call MoosasRad.exe to test the ray face intersection and reflection.
         if the ray hit a face: result ray will be the reflection ray of the input ray.
         if the ray doesnt hit a face: result==None.
@@ -229,6 +307,19 @@ def rayTest(rays: Iterable[Ray], model: MoosasModel = None, geo_path:str=None, r
 
 
 def WriteRadGeo(model):
+    """
+    Write a geometry file for the given model in Radiance format.
+    
+    Parameters
+    ----------
+    model : object
+        The geometric model to be written to the Radiance .geo file. The exact type depends on the expected input of `write_geo`, typically a structured representation of 3D geometry.
+    
+    Returns
+    -------
+    str
+        The absolute file path to the generated .geo file.
+    """
     prj = 'ray_' + generate_code(4)
     geo_path = os.path.abspath(os.path.join(path.tempDir, prj + '.geo'))
     write_geo(geo_path, model)

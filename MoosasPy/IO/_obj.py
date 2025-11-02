@@ -4,6 +4,22 @@ from ..utils.constant import geom
 from ..geometry.element import MoosasGeometry
 
 def _readObj(file_path) -> list[MoosasGeometry]:
+    """
+    Reads an OBJ file and its associated MTL file to construct a list of MoosasGeometry objects.
+    
+    Parameters
+    ----------
+    file_path : str
+        Path to the input .obj file. The corresponding .mtl file is expected to be referenced 
+        within the OBJ file and located in the same directory.
+    
+    Returns
+    -------
+    list[MoosasGeometry]
+        A list of MoosasGeometry instances constructed from the geometry, material properties,
+        and face data parsed from the OBJ and MTL files. Each MoosasGeometry object contains
+        polygonal face data, identifier, normal vector, and category based on material transparency.
+    """
     obj_file, mtl_file = [], []
     material_lab = {}
     """

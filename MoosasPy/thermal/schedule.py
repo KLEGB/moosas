@@ -46,6 +46,28 @@ typeLimitSettings = [
 
 
 def dailySchedule(sch: dict, _type=schType.AnyNumber, _name=None):
+    """
+    Generate a daily schedule for design days based on input dictionary.
+    
+    Parameters
+    ----------
+    sch : dict
+        A dictionary where keys are design day types (e.g., schDesignDay.anything) 
+        and values are lists of 24 numeric values representing hourly data starting from 1 AM 
+        (covering the period from 12:00 PM to 1 AM next day).
+    _type : schType, optional
+        Schedule type limits name, used to define valid value ranges for the schedule. 
+        Default is schType.AnyNumber.
+    _name : str, optional
+        Name assigned to the generated schedule. If not provided, a unique name 
+        in the format 'sch_xxxx' (where xxxx is a random 4-character code) will be generated.
+    
+    Returns
+    -------
+    MoosasSettings
+        An instance of MoosasSettings with updated parameters representing the constructed 
+        daily schedule, including proper fields for EnergyPlus-compatible schedule definitions.
+    """
     """schedule for any type pf design days
     sch:{schDesignDay.anything:[]*24}
     _type:schType.anything

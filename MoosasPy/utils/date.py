@@ -33,6 +33,27 @@ class DateTime(datetime):
     __slots__ = ()
 
     def __new__(cls, monthOrDateTime: int | datetime = 1, day=1, hour=0, minute=0, leap_year=False):
+        """
+        Create a MoosasDateTime instance from a month or datetime object, with optional day, hour, minute, and leap year settings.
+        
+        Parameters
+        ----------
+        monthOrDateTime : int or datetime, default 1
+            If int, represents the month (1-12). If datetime, its month, day, hour, and minute are used.
+        day : int, default 1
+            Day of the month (1-31), used only if monthOrDateTime is an integer.
+        hour : int or float, default 0
+            Hour of the day (0-23) or decimal hour. Can be combined with minute.
+        minute : int or float, default 0
+            Minute of the hour (0-59) or fractional minutes. Combined with hour as total minutes.
+        leap_year : bool, default False
+            If True, sets the year to 2016 (leap year); otherwise, sets year to 2017.
+        
+        Returns
+        -------
+        MoosasDateTime
+            A new instance of MoosasDateTime with the specified date and time components.
+        """
         """Create MoosasDateTime
         """
         year = 2016 if leap_year else 2017
@@ -50,6 +71,24 @@ class DateTime(datetime):
             ))
 
     def __reduce_ex__(self, protocol):
+        """
+        Call the __new__() constructor when the class instance is unpickled.
+        
+        This method is necessary for the pickle.loads() call to work.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class being pickled.
+        protocol : int
+            The pickle protocol version used for serialization.
+        
+        Returns
+        -------
+        tuple
+            A tuple containing the class type and a tuple of arguments (month, day, hour, minute) 
+            required to reconstruct the instance during unpickling.
+        """
         """Call the __new__() constructor when the class instance is unpickled.
 
         This method is necessary for the pickle.loads() call to work.
@@ -58,6 +97,21 @@ class DateTime(datetime):
 
     @classmethod
     def from_hoy(cls, hoy, leap_year=False):
+        """
+        Create Ladybug Datetime from an hour of the year.
+        
+        Parameters
+        ----------
+        hoy : float
+            A float value representing the hour of the year, 0 <= hoy < 8760.
+        leap_year : bool, optional
+            Boolean to note whether the DateTime is part of a leap year. Default is False.
+        
+        Returns
+        -------
+        Ladybug Datetime
+            A DateTime object corresponding to the given hour of the year.
+        """
         """Create Ladybug Datetime from an hour of the year.
 
         Args:
@@ -69,6 +123,21 @@ class DateTime(datetime):
 
     @classmethod
     def from_moy(cls, moy, leap_year=False):
+        """
+        Create a Ladybug Datetime object from a minute of the year.
+        
+        Parameters
+        ----------
+        moy : int
+            An integer representing the minute of the year, must satisfy 0 <= moy < 525600.
+        leap_year : bool, optional
+            Boolean indicating whether the datetime is in a leap year. Default is False.
+        
+        Returns
+        -------
+        LadybugDatetime
+            A Ladybug Datetime object corresponding to the given minute of the year.
+        """
         """Create Ladybug Datetime from a minute of the year.
 
         Args:
@@ -116,6 +185,21 @@ class DateTime(datetime):
 
     @classmethod
     def from_date_and_time(cls, date, time):
+        """
+        Create a DateTime object from a Date and a Time object.
+        
+        Parameters
+        ----------
+        date : Date
+            A ladybug Date object.
+        time : Time
+            A ladybug Time object.
+        
+        Returns
+        -------
+        DateTime
+            A new DateTime object created from the given Date and Time.
+        """
         """Create Ladybug DateTime from a Date and a Time object.
 
         Args:
@@ -193,6 +277,23 @@ class Date(date):
     __slots__ = ()
 
     def __new__(cls, month=1, day=1, leap_year=False):
+        """
+        Create a Ladybug Date object.
+        
+        Parameters
+        ----------
+        month : int, optional
+            The month of the year from 1 to 12. Default is 1.
+        day : int, optional
+            The day of the month from 1 to 31. Default is 1.
+        leap_year : bool, optional
+            Boolean to indicate whether the date is in a leap year (2016) or not (2017). Default is False.
+        
+        Returns
+        -------
+        date
+            A date object representing the specified day in either a leap year (2016) or a common year (2017).
+        """
         """Create Ladybug Date.
         """
         year = 2016 if leap_year else 2017
@@ -202,6 +303,24 @@ class Date(date):
             raise ValueError("{}:\n\t({}/{})(m/d)".format(e, month, day))
 
     def __reduce_ex__(self, protocol):
+        """
+        Call the __new__() constructor when the class instance is unpickled.
+        
+        This method is necessary for the pickle.loads() call to work.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class being pickled.
+        protocol : int
+            The pickle protocol used for serialization.
+        
+        Returns
+        -------
+        tuple
+            A tuple containing the class type and a tuple of arguments (month, day, leap_year) 
+            to be passed to __new__ upon unpickling.
+        """
         """Call the __new__() constructor when the class instance is unpickled.
 
         This method is necessary for the pickle.loads() call to work.
@@ -258,6 +377,22 @@ class Time(time):
     __slots__ = ()
 
     def __new__(cls, hour=0, minute=0):
+        """
+        Create a Ladybug Time object.
+        
+        Parameters
+        ----------
+        hour : int or float, optional
+            The hour of the time, which can be an integer or a float. If a float is provided,
+            it will be converted to hours and minutes. Default is 0.
+        minute : int, optional
+            The minute of the time. Default is 0.
+        
+        Returns
+        -------
+        time
+            A new instance of Ladybug Time with the specified hour and minute.
+        """
         """Create Ladybug Time.
         """
         hour, minute = cls._calculate_hour_and_minute(hour + minute / 60.0)
@@ -267,6 +402,24 @@ class Time(time):
             raise ValueError("{}:\n\t({}:{})(h:m)".format(e, hour, minute))
 
     def __reduce_ex__(self, protocol):
+        """
+        Call the __new__() constructor when the class instance is unpickled.
+        
+        This method is necessary for the pickle.loads() call to work.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class being pickled.
+        protocol : int
+            The pickle protocol version used for serialization.
+        
+        Returns
+        -------
+        tuple
+            A tuple containing the class type and a tuple of arguments (hour, minute) 
+            to be passed to __new__ upon unpickling.
+        """
         """Call the __new__() constructor when the class instance is unpickled.
 
         This method is necessary for the pickle.loads() call to work.
@@ -275,6 +428,21 @@ class Time(time):
 
     @classmethod
     def from_dict(cls, data):
+        """
+        Create a time object from a dictionary.
+        
+        Parameters
+        ----------
+        data : dict
+            A dictionary containing time components with the following keys:
+            - 'hour' (int, optional): Hour value between 0-23. Default is 0.
+            - 'minute' (int, optional): Minute value between 0-59. Default is 0.
+        
+        Returns
+        -------
+        cls
+            A new instance of the class initialized with the given hour and minute.
+        """
         """Create time from a dictionary.
 
         Args:
@@ -293,6 +461,19 @@ class Time(time):
 
     @classmethod
     def from_mod(cls, mod):
+        """
+        Create a Ladybug Time object from a minute of the day.
+        
+        Parameters
+        ----------
+        mod : int
+            An integer value representing the minute of the day, in the range 0 <= mod < 1440.
+        
+        Returns
+        -------
+        Ladybug Time
+            A Time object corresponding to the given minute of the day.
+        """
         """Create Ladybug Time from a minute of the day.
 
         Args:
@@ -303,6 +484,24 @@ class Time(time):
 
     @classmethod
     def from_time_string(cls, time_string, leap_year=False):
+        """
+        Create a Ladybug Time object from a time string in the format 'HH:MM'.
+        
+        Parameters
+        ----------
+        time_string : str
+            A string representing time in 24-hour format 'HH:MM', where HH is hours (00-23)
+            and MM is minutes (00-59).
+        leap_year : bool, optional
+            A flag to indicate whether the time is for a leap year. This parameter does not
+            affect the parsing of the time string but may be used by the class constructor.
+            Default is False.
+        
+        Returns
+        -------
+        Time
+            A Ladybug Time object representing the given time.
+        """
         """Create Ladybug Time from a Time string.
 
         Usage:
@@ -320,6 +519,19 @@ class Time(time):
 
     @classmethod
     def from_array(cls, time_array):
+        """
+        Create a Ladybug Time object from an array of integers.
+        
+        Parameters
+        ----------
+        time_array : array-like of int
+            An array of 2 integers ordered as follows: (hour, minute).
+        
+        Returns
+        -------
+        LadybugTime
+            A new instance of Ladybug Time initialized with the given hour and minute.
+        """
         """Create Ladybug Time from am array of integers.
 
         Args:

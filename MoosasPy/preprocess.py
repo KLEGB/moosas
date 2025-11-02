@@ -2,6 +2,21 @@ from __future__ import annotations
 
 
 def coPlanner(inputFile: str, outputFile: str):
+    """
+    Solve co-planarity issues in a 3D geometry file by merging co-planar faces and removing redundant edges.
+    
+    Parameters
+    ----------
+    inputFile : str
+        Path to the input geometry file. Supported formats include *.geo, *.obj, and *.stl.
+        Alternatively, a `MoosasModel` object can be passed directly.
+    outputFile : str
+        Path to the output file. Only *.geo format is supported.
+    
+    Returns
+    -------
+    None
+    """
     """solve the co-planner issues of the input file: delete the redundant line of the faces
     using the same module in the cleanse process, that finding the co-edge and judge the co-planner
     then merge the elements together.
@@ -42,6 +57,21 @@ def coPlanner(inputFile: str, outputFile: str):
 
 
 def overlap(inputFile: str, outputFile: str):
+    """
+    Solve overlap issues in the input geometry file by removing overlapping co-planar faces and merging elements.
+    
+    Parameters
+    ----------
+    inputFile : str
+        Path to the input geometry file. Supported formats are *.geo, *.obj, or *.stl.
+        Alternatively, a `MoosasModel` object can be passed directly.
+    outputFile : str
+        Path to the output file. Only *.geo format is supported.
+    
+    Returns
+    -------
+    None
+    """
     """solve the overlap issues of the input file: remove the overlap faces then merge the elements together.
     the overlap would be only done on co-planner faces.
 

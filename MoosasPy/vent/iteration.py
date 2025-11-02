@@ -40,6 +40,25 @@ class ZoneResult(object):
     __slots__ = ['name', 'heat', 'volume', 'userName', 'temperature', 'ACH', 'thermalParams']
 
     def __init__(self, name=None, heat=None, volume=None, userName=None):
+        """
+        Initialize a ZoneResult instance with optional parameters.
+        
+        Parameters
+        ----------
+        name : str, optional
+            Name of the zone. Default is None.
+        heat : float, optional
+            Heat value associated with the zone. Will be converted to float. Default is None.
+        volume : float, optional
+            Volume of the zone. Default is None.
+        userName : str, optional
+            User-defined name for the zone. Default is None.
+        
+        Returns
+        -------
+        None
+            This constructor does not return a value.
+        """
         super(ZoneResult, self).__init__()
         self.name = name
         self.heat = float(heat)
@@ -51,6 +70,37 @@ class ZoneResult(object):
 
 def iterateProjects(prjFiles, zoneInfoFiles, concatResultFile=None, outdoorTemperature=20, maxIteration=10,
                     exitResidual=0.01) -> list[ZoneResult]:
+    """
+    Iterate over multiple CONTAM project files to perform buoyancy ventilation simulations and merge results.
+    
+    Parameters
+    ----------
+    prjFiles : str or list of str
+        Path(s) to CONTAM project file(s) (.prj). If a string is provided, it will be converted to a list.
+        Initial indoor temperature must be defined in these files.
+    zoneInfoFiles : str or list of str
+        Path(s) to zone information file(s), each containing room-specific data. Each file should contain
+        one or more of the following formats:
+        - [[prjroomname, roomheatload, userroomname], ...]
+        - [[prjroomname, roomheatload], ...] (userroomname defaults to prjroomname)
+        - [[roomheatload, userroomname], ...] (order matches zones in .prj)
+        - [[roomheatload], ...] (order matches zones in .prj)
+    concatResultFile : str, optional
+        Path to the output CSV file where all merged results will be saved. If not provided, defaults to
+        'concatResult.csv' in the result directory.
+    outdoorTemperature : float, default 20
+        Static outdoor temperature in degrees Celsius. Only the temperature difference between indoor and
+        outdoor is considered in the simulation.
+    maxIteration : int, default 10
+        Maximum number of iterations for the CONTAM simulation.
+    exitResidual : float, default 0.01
+        Convergence criterion; simulation stops when residual falls below this value.
+    
+    Returns
+    -------
+    list of ZoneResult
+        A list of ZoneResult objects, each representing the simulation result for a zone.
+    """
     """
     Enter method for iterateFile().
     This method allow users to give multi project file for calculation.
@@ -121,6 +171,44 @@ def iterateProjects(prjFiles, zoneInfoFiles, concatResultFile=None, outdoorTempe
 
 def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, maxIteration=50,
                 exitResidual=0.01) -> list[ZoneResult]:
+    """
+    Simulate buoyancy-driven airflow in a building using CONTAMX based on mass flow balance in an air flow network.
+    
+    Parameters
+    ----------
+    prjFile : str
+        Path to the CONTAM project file (.prj). The initial indoor temperature must be defined in this file.
+        This file can be created using CONTAMW3 GUI. See NIST documentation for details.
+    zoneInfoFile : str or list[list]
+        Path to a room information file or direct data in list format. Each entry contains zone-specific data:
+        [prjroomname, roomheatload, userroomname] or variations with 1-2 columns as described below:
+        
+        - 3 columns: [prjroomname (str), roomheatload (float), userroomname (str)]
+        - 2 columns: [prjroomname, roomheatload] → userroomname defaults to prjroomname
+        - 2 columns: [roomheatload, userroomname] → assumes order matches zones in .prj file
+        - 1 column: [roomheatload] → values assigned sequentially to zones in .prj file
+        
+        Alternatively, output from `MoosasModel.buildRoomHeat()` can be passed directly.
+    resultFile : str, optional
+        Path to save iteration results as CSV. Records indoor temperature (°C) and ACH over iterations.
+        If None, results are not saved to file. Default is None.
+    outdoorTemperature : float, default=25
+        Outdoor air temperature in °C. Only temperature difference between indoor and outdoor affects simulation.
+    maxIteration : int, default=50
+        Maximum number of iterations before stopping, regardless of convergence.
+    exitResidual : float, default=0.01
+        Convergence threshold. Iteration stops when mean absolute residual (temperature and airflow) falls below this value.
+    
+    Returns
+    -------
+    list[ZoneResult]
+        List of ZoneResult objects containing per-zone results including:
+        - temperature history (in °C)
+        - air change rate (ACH) history
+        - zone names (project and user-defined)
+        - heat loads
+        Each object corresponds to a zone in the project file.
+    """
     """
     Simulating buoyancy effect by contamx based on Mass Flow Balance in Air Flow Network.
     More information can be found in this article:
@@ -303,6 +391,26 @@ def runFile(prjFiles):
 
 def readZoneInfo(prjFile, roomInfoFile):
     """
+    Build a list of ZoneResult objects by combining zone data from project and room info files.
+    
+    Parameters
+    ----------
+    prjFile : str
+        Path to the project file containing zone names and volumes.
+    roomInfoFile : str or list of lists
+        Path to the room information file or a pre-parsed list of lists containing room heat load data.
+        The file can have one of the following formats:
+        - 3 columns: [prjroomname, roomheatload, usersroomname]
+        - 2 columns: [prjroomname, roomheatload] (usersroomname defaults to prjroomname)
+        - 2 columns: [roomheatload, usersroomname] (must match project zone order)
+        - 1 column: [roomheatload] (must match project zone order)
+    
+    Returns
+    -------
+    list of ZoneResult
+        A list of ZoneResult objects containing zone name, volume, heat load, and user-defined name.
+    """
+    """
     Build the zone list by combining the data in prjFile and roomInfoFile.
     in this method we will read standard roomInfo file into:
     [[prjroomname,roomheatload,usersroomname]...[]]
@@ -363,6 +471,21 @@ def readZoneInfo(prjFile, roomInfoFile):
 
 
 def execContam(exe, file):
+    """
+    Execute CONTAM simulation using the specified executable and input file.
+    
+    Parameters
+    ----------
+    exe : str
+        Path to the CONTAMX executable file.
+    file : str
+        Path to the input project file for the simulation.
+    
+    Returns
+    -------
+    bool
+        True if the execution command was successfully called, False if either the executable or input file does not exist.
+    """
     if not os.path.exists(exe):
         print('error: contamx.exe not found')
         return False
@@ -407,6 +530,28 @@ def readPathResult(prjFile,netFile=None):
 
 def change_temperature(AFN: np.ndarray, roomInfo: np.ndarray, t0):
     """
+    Calculate indoor temperatures using mass flow balance in an air flow network.
+    
+    Parameters
+    ----------
+    AFN : numpy.ndarray
+        The clean matrix of Air Flow Network, including outdoor air connections.
+        Modified in-place to adjust diagonal elements and off-diagonal zero entries.
+    roomInfo : numpy.ndarray
+        Room-specific information array with length matching the number of rooms.
+        Represents internal heat data or similar room properties.
+    t0 : float or int
+        Outdoor temperature in degrees Celsius, used to compute heat exchange
+        from outside air.
+    
+    Returns
+    -------
+    numpy.ndarray
+        Array of indoor temperatures in Kelvin, calculated based on energy balance.
+        The result is obtained by solving a linear system derived from the modified
+        AFN matrix and adjusted room heat gains, then converting from Celsius to Kelvin.
+    """
+    """
     calculate indoor temperature via Mass Flow Balance in the network.
 
     AFN: the clean matrix of Air Flow Network, include outdoor air.
@@ -433,6 +578,18 @@ def change_temperature(AFN: np.ndarray, roomInfo: np.ndarray, t0):
 
 
 def test_exist():
+    """
+    Check existence and set up necessary directories and files for the project.
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    bool
+        True if all required paths exist (or are created successfully), False otherwise.
+    """
     # for file in FilePath.keys():
     #    if file != skip and file[-3:]!='dir':
     #        if not os.path.exists(FilePath[file]):
@@ -453,6 +610,19 @@ def test_exist():
 
 
 def wait(file):
+    """
+    Wait for a file to exist by checking at regular intervals.
+    
+    Parameters
+    ----------
+    file : str
+        The path of the file to wait for.
+    
+    Returns
+    -------
+    bool
+        True if the file exists within the waiting period.
+    """
     for i in range(100):
         if os.path.exists(file):
             return True
@@ -463,6 +633,23 @@ def wait(file):
 
 
 def writeZone(resultFile, zones):
+    """
+    Write zone data to a CSV file and return it as a formatted string.
+    
+    Parameters
+    ----------
+    resultFile : str or None
+        Path to the output CSV file. If None, the data is not written to a file.
+    zones : list of object
+        List of zone objects, each having attributes `name`, `heat`, `volume`, 
+        `userName`, `ACH` (list), and `temperature` (list).
+    
+    Returns
+    -------
+    str
+        A string representation of the CSV data, with rows separated by newlines
+        and columns separated by commas.
+    """
     lines = [['!prjZoneName'] + [z.name for z in zones]]
     lines += [['!zoneHeatLoad'] + [z.heat for z in zones]]
     lines += [['!zoneVolume'] + [z.volume for z in zones]]

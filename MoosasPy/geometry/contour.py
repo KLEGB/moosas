@@ -12,6 +12,27 @@ from .topology import TopoNode, TopoBound, TopoEdge, TopoNetwork
 def _findPathDepth(node: TopoNode, exitPoint: list[TopoNode],
                    avoidPoint: list[TopoNode] = None, avoidEdge: list[TopoBound] = None,
                    max_depth=geom.PATH_MAX_DEPTH) -> list[TopoNode]:
+    """
+    Recursive Depth-first search to find a valid path from node to exit points.
+    
+    Parameters
+    ----------
+    node : TopoNode
+        The starting node for the search.
+    exitPoint : list of TopoNode
+        List of target exit nodes to reach.
+    avoidPoint : list of TopoNode, optional
+        Nodes to exclude from the search (default is None, treated as empty list).
+    avoidEdge : list of TopoBound, optional
+        Edges to avoid traversing; if a connection between two nodes lies on one of these edges, it will be skipped (default is None, treated as empty list).
+    max_depth : int, default=geom.PATH_MAX_DEPTH
+        Maximum recursion depth allowed to prevent infinite traversal.
+    
+    Returns
+    -------
+    list of TopoNode
+        A list of nodes representing the path from the input node to an exit point, including both ends. Returns empty list if no path is found.
+    """
     """Recursive Depth-first search method to find a valid connection from the target node to the exit point(s)
     -----------------------------------------------
     node: searching node
@@ -44,6 +65,21 @@ def _findPathDepth(node: TopoNode, exitPoint: list[TopoNode],
 
 
 def _divideBoundaryByNode(boundaries: list[TopoBound], nodeList: list[TopoNode]) -> list[TopoBound]:
+    """
+    Recursively divide boundaries by internal nodes to decompose complex regions into simpler ones.
+    
+    Parameters
+    ----------
+    boundaries : list of TopoBound
+        List of boundary objects to be subdivided. Each boundary represents a closed loop of nodes.
+    nodeList : list of TopoNode
+        List of nodes not yet assigned to any boundary. These nodes are candidates for splitting existing boundaries.
+    
+    Returns
+    -------
+    list of TopoBound
+        A list of simplified, non-overlapping boundary objects resulting from recursive subdivision by internal nodes.
+    """
     """recursively divide the boundary(s) by some nodes inside the boundary(s)
     1. build a sub set of the eligible nodes that are not coveredBy by the boundaries
     2. for each boundary:
@@ -129,6 +165,23 @@ def _divideBoundaryByNode(boundaries: list[TopoBound], nodeList: list[TopoNode])
 
 
 def _divideBoundaryByEdge(boundaries: list[TopoBound], edgeList: list[TopoBound] | list[TopoEdge]) -> list[TopoBound]:
+    """
+    Recursively divide boundary polygons using internal edges.
+    
+    Parameters
+    ----------
+    boundaries : list of TopoBound
+        List of boundary objects to be subdivided. Each boundary represents a polygonal region.
+    edgeList : list of TopoBound or list of TopoEdge
+        List of edges that may lie inside the boundaries and are used for subdivision. 
+        These edges are not part of any existing boundary. If TopoEdge objects are provided, 
+        they are converted internally to TopoBound objects.
+    
+    Returns
+    -------
+    list of TopoBound
+        A list of refined boundary objects resulting from recursive subdivision by eligible edges.
+    """
     """recursively divide the boundary(s) by some edges inside the boundary(s)
     1. build a sub set of the eligible edges that are not coveredBy by the boundaries
     2. for each boundary:
@@ -195,6 +248,23 @@ def _divideBoundaryByEdge(boundaries: list[TopoBound], edgeList: list[TopoBound]
 
 
 def _divideBoundary(boundaries: list[TopoBound], edgeList: list[TopoBound] | list[TopoEdge]) -> list[TopoBound]:
+    """
+    Recursively divide boundaries using internal edges to decompose complex regions into minimal boundaries.
+    
+    Parameters
+    ----------
+    boundaries : list[TopoBound]
+        List of boundary objects to be subdivided. Each boundary is expected to define a closed loop.
+    edgeList : list[TopoBound] or list[TopoEdge]
+        List of edge-like objects (either `TopoBound` or `TopoEdge`) that may lie inside the boundaries and are used for splitting.
+        These edges are typically not yet part of any boundary and represent internal connections or potential splits.
+    
+    Returns
+    -------
+    list[TopoBound]
+        A list of decomposed boundary objects resulting from recursive subdivision. 
+        The output contains only minimal boundaries (i.e., those without any internal edges) and any newly detected inner rings.
+    """
     """recursively divide the boundary(s) by some edges inside the boundary(s)
     1. build a sub set of the eligible edges that are not coveredBy by the boundaries
     2. for each boundary:
@@ -294,6 +364,21 @@ def _divideBoundary(boundaries: list[TopoBound], edgeList: list[TopoBound] | lis
 
 
 def outerBoundary(model: MoosasContainer, bld_level: float) -> list[pygeos.Geometry]:
+    """
+    Calculate the outer boundary of a network at a specified building level.
+    
+    Parameters
+    ----------
+    model : MoosasContainer
+        The model containing topological edges to retrieve the network from.
+    bld_level : float
+        The building level at which to retrieve the network.
+    
+    Returns
+    -------
+    list[pygeos.Geometry]
+        A list of pygeos Geometry objects representing the outer boundaries of each network component.
+    """
     """only Calculate the outer boundary of a network
 
      ---------------------------------
@@ -315,6 +400,21 @@ def outerBoundary(model: MoosasContainer, bld_level: float) -> list[pygeos.Geome
 
 
 def closed_contour_calculation(model: MoosasContainer, bld_level: float) -> MoosasContainer:
+    """
+    Calculate closed contours at a specified building level and update the model with boundary information.
+    
+    Parameters
+    ----------
+    model : MoosasContainer
+        The input model containing topological edges to be processed.
+    bld_level : float
+        The building level at which to compute the closed contours.
+    
+    Returns
+    -------
+    MoosasContainer
+        The updated model with recorded boundary information from the contour calculation.
+    """
     """calculate the closed contour in the given building level.
     This method start with the network.inLevel method to build a network.
     the recognized boundaries will be recorded into the MoosasModel.
@@ -364,6 +464,21 @@ def closed_contour_calculation(model: MoosasContainer, bld_level: float) -> Moos
 
 
 def _documentBoundary(boundaries: Iterable[TopoBound], model: MoosasContainer) -> MoosasContainer:
+    """
+    Reverse boundary orientation if necessary and append boundary edges to model.
+    
+    Parameters
+    ----------
+    boundaries : Iterable[TopoBound]
+        An iterable of TopoBound objects representing boundaries, each containing a geometry and edge loop.
+    model : MoosasContainer
+        The container model to which boundary edge lists will be added.
+    
+    Returns
+    -------
+    MoosasContainer
+        The updated model with boundary edge lists appended to its boundaryList attribute.
+    """
     for i, bound in enumerate(boundaries):
         if not is_ccw(bound.geometry):
             bound.reverse()
@@ -372,6 +487,24 @@ def _documentBoundary(boundaries: Iterable[TopoBound], model: MoosasContainer) -
 
 
 def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
+    """
+    Packs edges into a MoosasContainer by validating and processing boundary lists, and optionally subdividing complex faces into simpler polygons.
+    
+    Parameters
+    ----------
+    model : MoosasContainer
+        The container object holding wall, edge, boundary, and level lists to be processed.
+        Modified in place by appending valid edges and walls, and removing processed ones.
+    divided_zones : bool
+        If True, enables the subdivision of complex 2D faces into simpler polygons using triangulation.
+        Air walls are added to represent internal divisions, and original edges are replaced with new constructed edges.
+    
+    Returns
+    -------
+    MoosasContainer
+        The updated model with validated and potentially subdivided edges, newly added air walls (if applicable),
+        and remaining unassigned walls marked in `wall_remain`.
+    """
     faceSet = set([member for member in model.wallList])
     for edge in model.boundaryList:
         # print(edge)
@@ -432,6 +565,27 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
 
 def plot_TopoObject(*collection: TopoNode | TopoNetwork | TopoEdge | TopoBound, color='', show=True,
                     filled=False):
+    """
+    Plot TopoObject instances such as TopoNode, TopoEdge, TopoBound, or TopoNetwork.
+    
+    Parameters
+    ----------
+    *collection : TopoNode or TopoNetwork or TopoEdge or TopoBound
+        Variable number of topology objects to plot. Supported types include TopoNode (points),
+        TopoEdge (lines), TopoBound (areas), and TopoNetwork (collections of nodes and edges).
+    color : str, optional
+        Color string to use for plotting the objects (e.g., 'r', 'b', '#FF5733'). If empty string (''),
+        default color is used. Default is ''.
+    show : bool, optional
+        If True, display the plot immediately using plt.show(). Default is True.
+    filled : bool, optional
+        If True and the object is a TopoBound (area), fill the area with the same color. Default is False.
+    
+    Returns
+    -------
+    None
+        This function does not return any value. It generates a matplotlib plot as a side effect.
+    """
     import matplotlib.pyplot as plt
     plotPoint, plotEdge, plotArea = [], [], []
     for obj in collection:

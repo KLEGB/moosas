@@ -21,6 +21,26 @@ class OBB:
 
     def create_obb(points, normal, min_scale = 0.1):
         """
+        Create an oriented bounding box (OBB) for a set of 3D points given a normal vector.
+        
+        Parameters
+        ----------
+        points : numpy.ndarray, shape (N, 3)
+            Array of N 3D points.
+        normal : numpy.ndarray, shape (3,)
+            Normal vector defining the orientation of the OBB's z-axis.
+        min_scale : float, optional
+            Minimum allowable scale for each dimension of the OBB. Default is 0.1.
+        
+        Returns
+        -------
+        obb_params : dict
+            Dictionary containing the OBB parameters with keys:
+            - 'center' (numpy.ndarray, shape (3,)): Center point of the OBB.
+            - 'scale' (numpy.ndarray, shape (3,)): Dimensions (length, width, height) of the OBB.
+            - 'rotation' (numpy.ndarray, shape (3, 3)): Rotation matrix defining the OBB's orientation.
+        """
+        """
         创建点集的定向包围盒 (OBB)，并返回 OBB 参数
         参数:
             points: np.ndarray, (N, 3);
@@ -118,6 +138,26 @@ class OBB:
         return obb_params
     
     def plot_obb_and_points(points, obb_params):
+        """
+        Plot a 3D oriented bounding box (OBB) and point cloud.
+        
+        Parameters
+        ----------
+        points : numpy.ndarray
+            An N x 3 array representing the 3D coordinates of points to be plotted.
+        obb_params : dict
+            A dictionary containing OBB parameters with the following keys:
+            - 'center' (numpy.ndarray): 3-element array for the center of the OBB.
+            - 'scale' (tuple or list): Three elements (l, w, h) representing the length, width, and height of the OBB.
+            - 'rotation' (numpy.ndarray): A 3x3 rotation matrix (as array) defining the orientation of the OBB.
+        
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The generated 3D figure object containing the plotted points and OBB.
+        ax : mpl_toolkits.mplot3d.Axes3D
+            The 3D axes object with the scatter plot of points and OBB edges.
+        """
         
 
         fig = plt.figure()
@@ -180,6 +220,19 @@ class MoosasGraph:
 
     """
     def __init__(self):
+        """
+        Initialize an empty directed graph, spaces, faces, and positions.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class being initialized.
+        
+        Returns
+        -------
+        None
+            This constructor does not return any value.
+        """
         """初始化一个空的有向图、空void、空面"""
         self.graph = nx.DiGraph() 
         self.spaces = []
@@ -187,6 +240,24 @@ class MoosasGraph:
         self.positions = {}
 
     def graph_representation(self, geo_path, xml_path, _is_cleaned=True):
+        """
+        Parse .geo and .xml files to construct an ADSIM graph representation with nodes for faces and spaces, including geometric and topological properties.
+        
+        Parameters
+        ----------
+        geo_path : str
+            Path to the *.geo file containing face geometry data (vertices, normals, categories).
+        xml_path : str
+            Path to the *.xml file containing semantic and topological information about faces, spaces, and their relationships.
+        _is_cleaned : bool, optional
+            If True, removes isolated nodes (with no edges) from the graph before returning. Default is True.
+        
+        Returns
+        -------
+        graph : networkx.Graph
+            A graph structure where nodes represent faces and spaces with associated parameters (e.g., OBB, type, area), 
+            and edges represent spatial and semantic relationships (e.g., adjacency, glazing, shading).
+        """
         """
             Parse .xml and associated .geo files and build the ADSIM graph
             Args:  
@@ -365,6 +436,21 @@ class MoosasGraph:
                     print (f"Removing node: {node}")
 
     def draw_graph_3d(self, file_path, _fig_show =False):
+        """
+        Draw a 3D visualization of the graph structure and save it to a file.
+        
+        Parameters
+        ----------
+        file_path : str
+            Path to save the generated 3D graph image.
+        _fig_show : bool, optional
+            If True, display the figure using plt.show(). Default is False.
+        
+        Returns
+        -------
+        None
+            This function does not return any value. It saves the 3D plot to the specified file path and optionally displays it.
+        """
         """绘制图结构的三维表示"""
         fig = plt.figure(figsize=(20, 10))
         ax = fig.add_subplot(111, projection='3d')
@@ -489,18 +575,82 @@ class MoosasGraph:
         plt.close()
 
     def nodes(self):
+        """
+        Get all nodes in the graph.
+        
+        Returns a view of all nodes in the graph, including their associated data.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the graph attribute.
+        
+        Returns
+        -------
+        dict_keyiterator or dict
+            A dictionary-like object containing all nodes with their data. Each node is returned 
+            as a key-value pair where the key is the node identifier and the value is a dictionary 
+            of node attributes.
+        """
         """获取图中的所有节点"""
         return self.graph.nodes(data=True)
 
     def edges(self):
+        """
+        Return all edges in the graph with their associated data.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the graph attribute.
+        
+        Returns
+        -------
+        edges : networkx.classes.coreviews.EdgeView
+            A view of all edges in the graph, each represented as a tuple 
+            (u, v, data_dict), where u and v are nodes and data_dict contains 
+            edge attributes.
+        """
         """获取图中的所有边"""
         return self.graph.edges(data=True)
     
   
     def graph_representation_legacy(self, geo_path):
+        """Generate a graph representation from a geographic path using legacy method.
+        
+                This function processes a geographic path and generates a graph representation
+                by assigning unique indices to shared vertices.
+        
+                Parameters
+                ----------
+                geo_path : str or pathlib.Path
+                    Path to the geographic data file used for generating the graph representation.
+        
+                Returns
+                -------
+                dict
+                    A dictionary representing the graph, where keys are node identifiers
+                    and values are lists of connected nodes (adjacency list format).
+        """
         
         # 为共享顶点分配唯一索引
         def assign_vertex_indices(faces_vertices):
+            """
+            Assign unique indices to vertices and return indexed faces and a vertex dictionary.
+            
+            Parameters
+            ----------
+            faces_vertices : list of list of array-like
+                A list of faces, where each face is represented as a list of vertices.
+                Each vertex is an array-like structure (e.g., list or tuple) of coordinates.
+            
+            Returns
+            -------
+            tuple
+                A tuple containing:
+                - faces_with_indices (list of list of int): Faces with each vertex replaced by its unique index.
+                - vertex_dict (dict): A dictionary mapping each vertex tuple to its assigned index.
+            """
             vertex_dict = {}
             vertex_index = 0
             faces_with_indices = []
@@ -518,6 +668,20 @@ class MoosasGraph:
 
         # 优化后的共享顶点判断函数，使用索引比较
         def shared_vertices_by_index(face1, face2):
+            """Determine if two faces share at least two vertices by comparing their vertex indices.
+            
+                Parameters
+                ----------
+                face1 : dict
+                    Dictionary containing face data, must include 'vertex_indices' as a list or array of integers.
+                face2 : dict
+                    Dictionary containing face data, must include 'vertex_indices' as a list or array of integers.
+            
+                Returns
+                -------
+                bool
+                    True if the two faces share at least two vertices, False otherwise.
+            """
             vertices1 = set(face1['vertex_indices'])
             vertices2 = set(face2['vertex_indices'])
             shared_count = len(vertices1 & vertices2)  # 计算交集中的顶点数量

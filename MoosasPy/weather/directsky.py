@@ -38,6 +38,29 @@ class SunPosition(Vector):
 
     def __init__(self, datetime: DateTime, altitude, azimuth,
                  is_daylight_saving=False, north_angle=0, data=None):
+        """
+        Initialize a SunPosition object with solar position parameters.
+        
+        Parameters
+        ----------
+        datetime : DateTime
+            The date and time for which the sun position is calculated. This attribute is read-only.
+        altitude : float
+            The altitude angle of the sun in degrees, must be between -90 and 90.
+        azimuth : float
+            The azimuth angle of the sun in degrees, should be between -360 and 360.
+        is_daylight_saving : bool, optional
+            Indicates whether daylight saving time is in effect (default is False).
+        north_angle : float, optional
+            The angle offset from true north in degrees (default is 0). If non-zero, it adjusts the azimuth accordingly.
+        data : Any, optional
+            A placeholder for metadata or additional data associated with the sun position (default is None).
+        
+        Returns
+        -------
+        None
+            This constructor does not return a value.
+        """
         """Init sun."""
         self.datetime = datetime  # read-only
 
@@ -108,6 +131,28 @@ class MoosasDirectSky(object):
     def __init__(self, latitude: float, longitude: float,
                  timeZone: int = None, northAngle: float = 0,
                  daylightSavingStDay: DateTime | int = None, daylightSavingEdDay: DateTime | int = None):
+        """
+        Initialize a Sunpath object with geographic and time-related parameters.
+        
+        Parameters
+        ----------
+        latitude : float
+            The latitude of the location in degrees. Must be between -90 and 90.
+        longitude : float
+            The longitude of the location in degrees. Must be between -180 and 180.
+        timeZone : int, optional
+            The time zone as an offset from UTC in hours. If None, calculated from longitude (default: None).
+        northAngle : float, optional
+            The angle in degrees clockwise from true north representing the direction of the local Y-axis (default: 0).
+        daylightSavingStDay : DateTime or int, optional
+            The start day of daylight saving time. If int, interpreted as hour of the year (HOY) (default: None).
+        daylightSavingEdDay : DateTime or int, optional
+            The end day of daylight saving time. If int, interpreted as hour of the year (HOY) (default: None).
+        
+        Returns
+        -------
+        None
+        """
         """Init sunpath.
         """
         self.latitude = float(latitude)
@@ -197,12 +242,40 @@ class MoosasDirectSky(object):
                            self.northAngle)
 
     def annualSun(self, leapYear=False) -> list[SunPosition]:
+        """
+        Calculate sun positions for all hours in a year.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this method, which provides the `sunAtDateTime` method.
+        leapYear : bool, optional
+            If True, calculates sun positions for a leap year (8761 hours), otherwise for a standard year (8760 hours). Default is False.
+        
+        Returns
+        -------
+        list of SunPosition
+            A list of SunPosition objects representing the sun's position for each hour of the year.
+        """
         hoyList = list(np.arange(8760)) if not leapYear else list(np.arange(8761))
         datetimeList = [DateTime.from_hoy(hoy) for hoy in hoyList]
         sunList = [self.sunAtDateTime(dateTime) for dateTime in datetimeList]
         return sunList
 
     def calculateSolarGeometry(self, datetime: DateTime):
+        """
+        Calculate solar geometry parameters for a given date and time.
+        
+        Parameters
+        ----------
+        datetime : DateTime
+            The date and time for which to calculate solar geometry, typically including year, month, day, hour, minute, and second.
+        
+        Returns
+        -------
+        dict
+            A dictionary containing calculated solar geometry parameters such as solar zenith angle, solar azimuth angle, and other relevant angles.
+        """
         def _days_from_010119(year, month, day):
             """Calculate the number of days from 01-01-1900 to the provided date.
 

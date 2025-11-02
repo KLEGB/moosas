@@ -9,6 +9,14 @@ class MoosasSolar
     GSC = 1367.0  # W/m*m
 
     def self.reset()
+    # Function:
+    # Resets all class variables to their initial zero values. This method is typically used to clear previously calculated solar position and daylight-related data.
+    # 
+    # Parameters:
+    # None
+    # 
+    # Returns:
+    # None
         @declination = 0
         @dayLength = 0
         @sunrise =  0
@@ -25,6 +33,34 @@ class MoosasSolar
      * @param n
      *'''
     def self.update_day_sun_info(n, lat, ele)
+    # Function
+    # --------
+    # Updates the solar information for a given day, including day length, sunrise and sunset times,
+    # solar constant correction (extraterrestrial irradiance), and atmospheric transmittance coefficients,
+    # based on day of year, latitude, and elevation.
+    # 
+    # Parameters
+    # ----------
+    # n : Integer
+    # The day of the year (1-365 or 1-366 for leap years), used to calculate solar declination
+    # and day angle for extraterrestrial radiation adjustments.
+    # lat : Float
+    # The latitude of the location in degrees (positive for northern hemisphere,
+    # negative for southern hemisphere), used to compute day length and solar angles.
+    # ele : Float
+    # The elevation above sea level in meters. Internally converted to kilometers;
+    # used to adjust atmospheric transmittance coefficients (a0, a1, k).
+    # 
+    # Returns
+    # -------
+    # None
+    # This method updates several instance variables but does not return a value:
+    # - @declination: Solar declination in degrees.
+    # - @dayLength: Length of the daylight period in hours.
+    # - @sunrise: Estimated hour of sunrise (rounded up to nearest hour).
+    # - @sunset: Estimated hour of sunset (rounded down to nearest hour).
+    # - @gon: Extraterrestrial irradiance (corrected for Earth-Sun distance).
+    # - @a0, @a1, @k: Atmospheric transmittance coefficients dependent on elevation.
 
         @declination = 23.45 * Math.sin(2 * Math::PI * (284 + n) / 365)
         @dayLength = 2.0 / 15 * Math.acos(0 - Math.tan(lat)*Math.tan(@declination * Math::PI / 180)) * 180 / Math::PI
@@ -54,6 +90,34 @@ class MoosasSolar
      * @return
      *'''
     def self.calculate_qsolar_in_time(lat, n, h)
+    # Function
+    # --------
+    # Calculate the solar radiation intensity (direct and diffuse) for a given hour of the day.
+    # 
+    # This method computes the x, y, z components of the solar vector and the global solar irradiance 'g'
+    # based on latitude, day of year, and hour of day. If the hour is outside sunrise/sunset times,
+    # all values are set to zero. Otherwise, solar geometry (hour angle, solar altitude, and azimuth)
+    # is calculated, followed by correction factors and total solar irradiance.
+    # 
+    # Parameters
+    # ----------
+    # lat : Float
+    # Latitude of the location in radians.
+    # n : Integer
+    # Day of the year (1 <= n <= 365 or 366), used to determine solar declination (@declination should be precomputed).
+    # h : Float
+    # Hour of the day (in 24-hour format, e.g., 9.5 for 9:30 AM). Must be between 0 and 24.
+    # 
+    # Returns
+    # -------
+    # sun : Hash
+    # A hash containing the following keys:
+    # - "x" : Float, x-component of solar direction vector (east-west, positive west).
+    # - "y" : Float, y-component of solar direction vector (north-south, positive south).
+    # - "z" : Float, z-component (vertical component, sine of solar altitude).
+    # - "g" : Float, estimated global solar irradiance (combination of direct and diffuse radiation),
+    # calculated using empirical coefficients @a0, @a1, @k, and @gon.
+    # Values are set to 0 if the time is before sunrise or after sunset.
         sun = {}   #x, y, z, G
         if h < @sunrise or h > @sunset   #如果超过日出日落时间的范围，就不用计算
             sun["x"]=sun["y"]=sun["z"]=sun["g"] = 0 
@@ -91,6 +155,30 @@ class MoosasSolar
         计算每个小时的太阳直射和散射的强度值
     '''
     def self.calculate_radianc_in_time(lat, n, h)
+    # Function
+    # --------
+    # Calculates solar radiation parameters at a given time based on latitude, day of year, and hour of day.
+    # This method computes solar altitude, azimuth, and various radiation components (direct horizontal, diffuse horizontal, extraterrestrial radiation) depending on whether the specified hour is within sunrise and sunset times.
+    # 
+    # Parameters
+    # ----------
+    # lat : Float
+    # Latitude of the location in radians.
+    # n : Integer
+    # Day of the year (1 <= n <= 365 or 366 for leap years).
+    # h : Float
+    # Hour of the day (in 24-hour format, e.g., 12.5 for 12:30 PM). Must be between 0 and 24.
+    # 
+    # Returns
+    # -------
+    # Hash
+    # A dictionary containing the following keys:
+    # - "alt" (Float): Solar altitude angle in radians.
+    # - "az" (Float): Solar azimuth angle in radians.
+    # - "ibh" (Float): Beam horizontal irradiance.
+    # - "idh" (Float): Diffuse horizontal irradiance.
+    # - "e0" (Float): Extraterrestrial radiation.
+    # If the hour `h` is outside sunrise/sunset times, all values are set to 0.
         sun = {}   #x, y, z, G
         if h < @sunrise or h > @sunset   #如果超过日出日落时间的范围，就不用计算
             sun["alt"]=sun["az"]=sun["idh"]=sun["ibh"] =sun["e0"]= 0 
@@ -126,6 +214,28 @@ class MoosasSolar
      * @return
      *'''
     def self.calculate_qsolar_on_face(nx,ny,nz,sun)
+    # Function:
+    # Calculates the solar radiation incident on a surface face based on surface normal and sun direction.
+    # 
+    # Parameters:
+    # nx : Float
+    # The x-component of the unit normal vector of the surface face.
+    # ny : Float
+    # The y-component of the unit normal vector of the surface face.
+    # nz : Float
+    # The z-component of the unit normal vector of the surface face.
+    # sun : Hash
+    # A hash containing solar vector components and irradiance:
+    # - "x": x-component of the solar direction vector.
+    # - "y": y-component of the solar direction vector.
+    # - "z": z-component of the solar direction vector.
+    # - "g": global solar irradiance (W/m²).
+    # 
+    # Returns:
+    # Float
+    # The effective solar radiation (in W/m²) incident on the surface face.
+    # Returns 0 if the sun is below the horizon (sun["g"] == 0) or if the angle between the sun and the surface normal is greater than 90 degrees (cos < 0).
+    # Otherwise, returns the projected irradiance using the cosine of the incidence angle multiplied by half the global irradiance.
         if sun["g"] == 0
             return 0
         end

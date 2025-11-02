@@ -3,6 +3,21 @@ module MoosasUI
     Ver='0.6.3'
     @TOOLBAR=nil
     def self.create_contexual_menus()
+    # Function:
+    # Creates a contextual (right-click) menu in the UI if it has not already been created.
+    # The menu contains submenu items for marking faces with different materials/categories
+    # loaded from MoosasRender. A separator is added before the submenu to distinguish it
+    # from other context menu items.
+    # 
+    # Parameters:
+    # None
+    # 
+    # Returns:
+    # nil
+    # 
+    # This method does not return a value. Its primary effect is the side effect of modifying
+    # the application's context menu by adding a submenu with dynamic entries based on
+    # material categories.
         unless @contextual_menu_created
             UI.add_context_menu_handler do |menu|
                 menu.add_separator
@@ -23,6 +38,26 @@ module MoosasUI
     end
 
     def self.create_menus()
+    # Function:
+    # Creates a custom plugin menu interface in the application UI based on the current language setting.
+    # The method adds a main menu under 'PlugIns' with localized submenu items for launching Moosas features,
+    # including opening the main interface and showing the toolbar. Additional functionality may be added
+    # in the future through commented-out menu items related to solar radiation, daylight analysis,
+    # and urban data integration.
+    # 
+    # Parameters:
+    # None
+    # 
+    # Returns:
+    # None
+    # 
+    # Notes:
+    # This is a class method that ensures the menu is created only once via the `@menu_created` flag.
+    # The menu structure and item labels are determined by the global `$language` variable, supporting
+    # at least 'Chinese' and other (presumably English) locales. Some advanced features are currently
+    # disabled by being commented out, such as solar analysis, daylight simulation, and urban environment
+    # data loading tools. The method interacts with SketchUp's UI system via the `UI.menu` interface
+    # and references external modules like `MoosasWebDialog`, `MoosasRadiance`, `MoosasSunHour`, etc.
         unless @menu_created
             if $language == 'Chinese'
                 view_menu = UI.menu "PlugIns"
@@ -86,6 +121,18 @@ module MoosasUI
     end
 
     def self.create_toolbars()
+    # Function
+    # ------
+    # Creates and displays a toolbar interface for the Moosas plugin in SketchUp, with language-specific tooltips and functionality for various modeling, analysis, and visualization tools. The toolbar includes commands for opening the UI, model transformation, environmental analyses (ventilation, CFD, daylight, etc.), space navigation, and face visualization.
+    # 
+    # Parameters
+    # ----------
+    # None
+    # 
+    # Returns
+    # -------
+    # None
+    # Initializes and shows a UI toolbar with multiple command items; assigns the created toolbar to the global `@TOOLBAR` variable and sets initial state for `$space_select_index`.
         if $language == 'Chinese'
             tooltip_name=['打开Moosas','模型重建&识别','快速模型识别',"通风分析","气流模拟","日照时数分析","辐射分析","室内采光分析","性能优化","查看上一个空间","查看下一个空间","显示所有空间","可视化面的类型"]
         else

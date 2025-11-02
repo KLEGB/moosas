@@ -210,6 +210,20 @@ class MoosasSettings(object):
     __slots__ = ['id', 'params']
 
     def __init__(self, default=None, **kwargs):
+        """
+        Initialize the object with default parameters and optional keyword arguments.
+        
+        Parameters
+        ----------
+        default : SpaceDefault, optional
+            The default parameter set to copy. If None, defaults to SpaceDefault.
+        **kwargs : dict
+            Additional keyword arguments to update the parameters; may include 'id'.
+        
+        Returns
+        -------
+        None
+        """
         if default is None:
             default = SpaceDefault
         self.params = copy.copy(default)
@@ -219,6 +233,22 @@ class MoosasSettings(object):
 
     @classmethod
     def fromIdfObject(cls, idfObject):
+        """
+        Create a new instance from an IDF object.
+        
+        Parameters
+        ----------
+        cls : type
+            The class constructor, used to instantiate the new object.
+        idfObject : object
+            An object containing IDF data with attributes 'objls' and key-value access 
+            via indexing. Keys in 'objls' are used to extract non-empty values.
+        
+        Returns
+        -------
+        cls
+            A new instance of the class initialized with extracted keyword arguments.
+        """
         kwargs = {}
         for key in idfObject.objls:
             if idfObject[key]!='':
@@ -226,17 +256,73 @@ class MoosasSettings(object):
         return cls({}, **kwargs)
 
     def updateParams(self, **kwargs):
+        """
+        Update the parameters of the object with the provided keyword arguments.
+        
+        Parameters
+        ----------
+        **kwargs : dict
+            Arbitrary keyword arguments representing the parameters to be updated.
+            Each key-value pair will be added or updated in the `self.params` dictionary.
+        
+        Returns
+        -------
+        self : object
+            Returns the instance of the object with updated parameters, enabling method chaining.
+        """
         for key in kwargs.keys():
             self.params[key] = kwargs[key]
         return self
 
     def paramToString(self):
+        """
+        Convert parameter values to a comma-separated string.
+        
+        Parameters
+        ----------
+        self : object
+            The instance containing a `params` attribute, which is a dictionary 
+            mapping parameter names to their values.
+        
+        Returns
+        -------
+        str
+            A comma-separated string representation of the parameter values.
+        """
         return ','.join(np.array(list(self.params.values())).astype(str))
 
     def paramTags(self):
+        """Get a string of parameter keys prefixed with an exclamation mark.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing a `params` dictionary attribute.
+        
+        Returns
+        -------
+        str
+            A string starting with '!' followed by comma-separated parameter keys.
+        """
         return '!' + ','.join(np.array(list(self.params.keys())).astype(str))
 
     def applyToIDF(self, idf, rename: dict = None):
+        """
+        Apply parameters to an IDF object, optionally renaming fields.
+        
+        Parameters
+        ----------
+        idf : pyenergyplus.idf.IDF
+            The IDF object to which the parameters will be applied.
+        rename : dict, optional
+            A dictionary mapping parameter names to new field names in the IDF object.
+            If not provided, no renaming is performed.
+        
+        Returns
+        -------
+        None
+            This function does not return a value. It modifies the `idf` object in place.
+        """
         if 'key' not in self.params.keys():
             return None
         idfObject = idf.newidfobject(self.params['key'])
@@ -257,6 +343,18 @@ class MoosasSettings(object):
                 idfObject[_objName] = self.params[_name]
 
     def __repr__(self):
+        """String representation of the ThermalSettings object.
+        
+        Parameters
+        ----------
+        self : ThermalSettings
+            The instance of ThermalSettings to represent as a string.
+        
+        Returns
+        -------
+        str
+            A string representation of the ThermalSettings object, specifically the string representation of its `params` attribute.
+        """
         return self.params.__repr__()
 
 
@@ -264,6 +362,19 @@ class ThermalSettings(MoosasSettings):
     __slots__ = ['load']
 
     def __init__(self, **kwargs):
+        """
+        Initialize the ThermalSettings object with default space settings and load values.
+        
+        Parameters
+        ----------
+        **kwargs : dict
+            Additional keyword arguments to be passed to the parent class constructor.
+        
+        Returns
+        -------
+        None
+            This method does not return any value.
+        """
         super(ThermalSettings, self).__init__(SpaceDefault, **kwargs)
         self.load = {
             'total': 0.0,
@@ -272,4 +383,16 @@ class ThermalSettings(MoosasSettings):
             'lighting': 0.0
         }
     def __repr__(self):
+        """Return string representations of the params and load attributes.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing `params` and `load` attributes.
+        
+        Returns
+        -------
+        str
+            Concatenated string representation of `self.params` and `self.load`.
+        """
         return self.params.__repr__() + self.load.__repr__()

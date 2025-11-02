@@ -88,6 +88,19 @@ def read_geo(file_path):
 
 def write_geo(file_path, cat, idd, normal, faces):
     """
+    Write classification, ID, normal vectors, and polygon face data to a .geo file.
+    
+    Parameters:
+        file_path (str): Path to the output .geo file.
+        cat (list): List of categories for each face.
+        idd (list): List of IDs corresponding to each face.
+        normal (list): List of normal vectors, where each normal is a list or tuple of three floats.
+        faces (list): List of faces, where each face is a list of vertices, and each vertex is a list or tuple of three coordinates.
+    
+    Returns:
+        None
+    """
+    """
     将分类、编号、法向量和多边形面的信息写入.geo文件。
 
     Parameters:
@@ -120,11 +133,39 @@ def write_geo(file_path, cat, idd, normal, faces):
         print(f"Error writing to file {file_path}: {e}")
 
 def read_xml(file_path):
+    """
+    Parse an XML file and return the root element.
+    
+    Parameters
+    ----------
+    file_path : str
+        Path to the XML file to be parsed.
+    
+    Returns
+    -------
+    xml.etree.ElementTree.Element
+        Root element of the parsed XML tree.
+    """
     tree = ET.parse(file_path)
     root = tree.getroot()
     return root
 
 def write_adjson (file_path, data):
+    """
+    Write data to a file in ADJSON format.
+    
+    Parameters
+    ----------
+    file_path : str
+        The path to the file where data will be written.
+    data : str
+        The data to write to the file, expected to be in ADJSON format.
+    
+    Returns
+    -------
+    None
+        This function does not return any value.
+    """
     try:
         with open(file_path, "w", encoding='utf-8') as f:
             f.write(data)
@@ -132,6 +173,19 @@ def write_adjson (file_path, data):
         print(f"Error writing to file {file_path}: {e}")
 
 def read_adjson (file_path):
+    """
+    Reads the content of a file and returns it as a string.
+    
+    Parameters
+    ----------
+    file_path : str
+        Path to the file to be read. Should be a valid file path accessible by the system.
+    
+    Returns
+    -------
+    str or None
+        The content of the file as a string if successful, otherwise None if an error occurs.
+    """
     try:
         with open(file_path, "r", encoding='utf-8') as f:
             data = f.read()
@@ -143,6 +197,21 @@ def read_adjson (file_path):
 class NumpyEncoder(json.JSONEncoder):
     """处理 numpy 数组的 JSON 编码器"""
     def default(self, obj):
+        """
+        Convert NumPy data types to native Python types for serialization.
+        
+            Parameters
+            ----------
+            obj : Any
+                The object to convert. Supported types include np.ndarray, np.float32, and np.int64.
+        
+            Returns
+            -------
+            Any
+                The converted object in a native Python type: list for np.ndarray,
+                float for np.float32, int for np.int64, or the result of the parent class's
+                default method for other types.
+        """
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         if isinstance(obj, np.float32):
@@ -152,6 +221,25 @@ class NumpyEncoder(json.JSONEncoder):
         return super().default(obj)
 
 def graph_to_json(graph, output_dir):
+    """
+    Export graph data to JSON files.
+    
+    Parameters
+    ----------
+    graph : object
+        A graph object with a `graph` attribute that contains nodes and edges with attributes.
+        The graph should have `nodes(data=True)` and `edges(data=True)` methods returning 
+        node/edge attributes as dictionaries. Node and edge attributes may contain numpy arrays.
+    output_dir : str or pathlib.Path
+        Directory path where the JSON files will be saved. If the directory does not exist,
+        it will be created along with any necessary parent directories.
+    
+    Returns
+    -------
+    None
+        This function does not return any value. It writes two JSON files, 'nodes.json' and 'edges.json',
+        to the specified output directory.
+    """
     """导出图数据到JSON文件"""
     # 准备节点数据
     nodes_data = {}

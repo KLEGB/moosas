@@ -11,6 +11,20 @@ module MoosasUrban
 
 
     def self.load_osm_building_from_json(json_string)
+    # Function:
+    # Load OSM building data from a JSON string and create 3D building models in SketchUp.
+    # The method parses geographic building features, calculates their local Cartesian coordinates
+    # relative to a central reference point, and generates extruded faces (buildings) in the SketchUp model.
+    # 
+    # Parameters:
+    # json_string : str
+    # A JSON-formatted string containing OSM building data, expected to have a structure with
+    # "features" array, each containing geometry (coordinates) and properties (address, Name, Floor).
+    # 
+    # Returns:
+    # None
+    # This method does not return a value. It directly modifies the SketchUp model by adding 3D buildings.
+    # If parsing fails or no features are found, the method returns early or shows an error message.
         begin
             osm = JSON.parse(json_string)
 
@@ -74,6 +88,18 @@ module MoosasUrban
 
     #load from file
     def self.load_osm_building
+    # Function:
+    # Load an OSM (OpenStreetMap) building data file through a user interface and process it from JSON format.
+    # This method opens a file selection dialog to allow the user to select a JSON file, reads its content,
+    # strips whitespace and surrounding brackets, then passes the cleaned JSON string to another method for processing.
+    # If an error occurs during file reading or processing, it logs the exception and displays an error message.
+    # 
+    # Parameters:
+    # None
+    # 
+    # Returns:
+    # nil : This method does not return a value. It performs side effects such as UI interaction, file reading,
+    # and calling other methods to process OSM building data.
 
         osm_file = UI.openpanel("选择OSM文件", "d:/code/urban_svf/", "json")
 
@@ -97,6 +123,19 @@ module MoosasUrban
     DELTA_B = 1.0 / 180 * Math::PI  #1度角度对应的弧度
     ANGLE_TO_DEGREE = 1.0 / 180 * Math::PI 
     def self.analysis_single_point_svf(model,point)
+    # Function:
+    # Calculates the Sky View Factor (SVF) at a single point in a 3D model by analyzing visibility in all horizontal directions.
+    # The SVF represents the fraction of the visible sky from the given point, considering surrounding obstacles such as buildings.
+    # 
+    # Parameters:
+    # model : Sketchup::Model
+    # The 3D model used for ray testing to determine intersection with geometry.
+    # point : Geom::Point3d
+    # The 3D point at which the sky view factor is calculated.
+    # 
+    # Returns:
+    # Float
+    # The computed sky view factor (SVF) value between 0.0 and 1.0, where 1.0 indicates full visibility to the sky and lower values indicate partial obstruction.
 
         svf  = 0
         for a in 0..359
@@ -130,6 +169,15 @@ module MoosasUrban
     RED_COLOR = Sketchup::Color.new "Red"
     YELLOW_COLOR = Sketchup::Color.new "Yellow"
     def self.analysis_urban_svf()
+    # Function:
+    # Analyzes the Sky View Factor (SVF) of urban geometry within a SketchUp model by generating a grid of sample points and calculating SVF at each point.
+    # The method supports analyzing either the entire model or a selected subset, creates a visual representation of results using colored faces, and outputs statistical SVF data.
+    # 
+    # Parameters:
+    # None : This is a class method with no input parameters. It interacts with the active SketchUp model, user input dialogs, and selection state.
+    # 
+    # Returns:
+    # nil : The method does not return a value. It performs operations such as ray testing, SVF computation, and drawing colored grid faces in the SketchUp model.
         model = Sketchup.active_model
 
 
@@ -217,6 +265,24 @@ module MoosasUrban
     end
 
     def self.get_svf_color(svf)
+    # """
+    # Function
+    # --------
+    # Calculate a color based on the given SVF (Sky View Factor) value using linear color blending.
+    # 
+    # Parameters
+    # ----------
+    # svf : float
+    # The Sky View Factor value, expected to be in the range [0.0, 1.0].
+    # This value determines how much of the visible sky is perceived from a point.
+    # 
+    # Returns
+    # -------
+    # Color
+    # A blended color based on the SVF value:
+    # - For svf > 0.5: blends from yellow to red as svf increases from 0.5 to 1.0.
+    # - For svf <= 0.5: blends from red to blue as svf decreases from 0.5 to 0.0.
+    # """
         if svf > 0.5
             color = YELLOW_COLOR.blend(RED_COLOR,(svf-0.5)/0.5)
         else
@@ -227,6 +293,27 @@ module MoosasUrban
 
     DEFAULT_GRID_SIZE = 10.m
     def self.load_urban_svf_data()
+    # Function
+    # --------
+    # Load urban sky view factor (SVF) data from a JSON file and visualize it in the SketchUp model.
+    # This method opens a file dialog for the user to select a JSON file containing urban building
+    # geometries and grid-based SVF values. It parses the data, converts geographic coordinates to
+    # Cartesian coordinates relative to Beijing's center, creates 3D building models, and visualizes
+    # SVF grids with color-coded materials based on SVF values.
+    # 
+    # Parameters
+    # ----------
+    # None
+    # This is a class method that takes no arguments. It interacts with the user via a file open
+    # dialog to select the input JSON file.
+    # 
+    # Returns
+    # -------
+    # None
+    # The method does not return any value. It modifies the active SketchUp model by adding:
+    # - A group of 3D building geometries extruded based on floor count (converted to height).
+    # - A group of ground-level grid faces colored according to their SVF values.
+    # Progress and statistics (count of buildings/grids, min/max/average SVF) are printed to console.
         urban_svf_file = UI.openpanel("选择城市光环境数据文件", "d:/code/urban_svf/", "json")
         begin
             json_string = File.open(urban_svf_file, "r:UTF-8", &:read)

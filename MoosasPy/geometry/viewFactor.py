@@ -11,6 +11,23 @@ class ViewFactorFace(Ray):
     __slots__ = ("element", "objects")
 
     def __init__(self, element: MoosasElement, normal=None, value=None):
+        """
+        Initialize a ViewFactorFace instance.
+        
+        Parameters
+        ----------
+        element : MoosasElement
+            The MoosasElement associated with this face, containing geometry and normal information.
+        normal : array-like, optional
+            The normal vector of the face. If None, defaults to the element's normal.
+        value : float, optional
+            An optional scalar value associated with the face, passed to the parent class.
+        
+        Returns
+        -------
+        None
+            This constructor does not return a value.
+        """
         self.element = element
         normal = normal if normal is not None else element.normal
         normal = Vector(normal).unit()
@@ -20,12 +37,40 @@ class ViewFactorFace(Ray):
 
     @classmethod
     def fromElement(cls, element: MoosasElement):
+        """
+        Create two instances of the class from a MoosasElement.
+        
+        Parameters
+        ----------
+        element : MoosasElement
+            The element used to create the instances, providing normal vector and Uid.
+        
+        Returns
+        -------
+        tuple
+            A tuple containing two instances of the class initialized with opposite normal vectors and modified Uids.
+        """
         normal = Vector(element.normal)
         vFF1 = cls(element, normal, element.Uid + "+")
         vFF2 = cls(element, -normal, element.Uid + "-")
         return (vFF1, vFF2)
 
     def branchTest(self, faces: list[ViewFactorFace], number=100):
+        """
+        Perform a ray-casting test to determine visible faces from a source ray using multiple sample directions.
+        
+        Parameters
+        ----------
+        faces : list of ViewFactorFace
+            List of face objects to test for visibility. Each face must have an origin, direction, and associated geometric representation.
+        number : int, optional
+            Number of azimuthal rays to cast per elevation band. Default is 100.
+        
+        Returns
+        -------
+        None
+            This function does not return a value. It updates the `objects` attribute of the instance by adding the closest visible faces based on ray intersection tests.
+        """
         factor = []
         proj = Projection.fromRay(self)
         for alt in [-.1,-.05,0,.05,.1]:
@@ -63,6 +108,23 @@ class ViewFactorFace(Ray):
 
 
 def viewFactorTopology(model, elementList,vfNumber=64):
+    """
+    Calculate view factor topology for a given model and element list.
+    
+    Parameters
+    ----------
+    model : object
+        The model containing wall and geometric information; expected to have `wallList` attribute with geometric representations.
+    elementList : list
+        List of elements from which ViewFactorFace instances are generated; each element should support `ViewFactorFace.fromElement`.
+    vfNumber : int, optional
+        Number of view factors to compute during branch testing. Default is 64.
+    
+    Returns
+    -------
+    list
+        A list of boundary objects (e.g., TopoNetwork boundaries) representing outer boundaries after shading analysis and topological grouping.
+    """
     vfFaces: list[ViewFactorFace] = [vfw for w in elementList for vfw in ViewFactorFace.fromElement(w)]
     _nameDict = {vfw.value: vfw for vfw in vfFaces}
     for i, vfw in enumerate(vfFaces):

@@ -7,6 +7,27 @@ from eppy.modeleditor import IDF
 def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
                          Construction_Name="Office_External_Wall",
                          Construction_Name_Window="Office_External_Window"):
+    """
+    Create thermal surface(s) in an IDF model based on a MoosasElement.
+    
+    Parameters
+    ----------
+    idf : IDF
+        The EnergyPlus IDF object to which the thermal surface will be added.
+    element : MoosasElement
+        The geometric and spatial element used to define the thermal surface.
+    surfaceType : str, optional
+        Type of the surface (e.g., 'Floor', 'Wall', 'Roof'). Default is 'Floor'.
+    Construction_Name : str, optional
+        Name of the construction used for the main surface. Default is "Office_External_Wall".
+    Construction_Name_Window : str, optional
+        Name of the construction used for window surfaces. Default is "Office_External_Window".
+    
+    Returns
+    -------
+    list
+        A list of IDF objects representing the created thermal surfaces, including interior paired surfaces and any associated window surfaces.
+    """
     ThermalSettings = MoosasSettings(default=FaceDefault)
     kwargs = {'Name': element.space[0] + '-' + element.Uid,
               "Zone_Name": element.space[0],
@@ -55,6 +76,26 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
 
 def createWindowSurface(idf: IDF, element: MoosasElement, parentElement: MoosasElement,
                         Construction_Name="Office_External_Wall"):
+    """
+    Create one or two FenestrationSurface:Detailed objects in an IDF file based on a given element and its parent.
+    
+    Parameters
+    ----------
+    idf : IDF
+        The EnergyPlus IDF object to which the new fenestration surface(s) will be added.
+    element : MoosasElement
+        The Moosas element representing the window or fenestration geometry.
+    parentElement : MoosasElement
+        The parent Moosas element, typically a wall, that hosts the fenestration element.
+    Construction_Name : str, optional
+        The name of the construction used for the fenestration surface. Default is "Office_External_Wall".
+    
+    Returns
+    -------
+    list
+        A list containing one or two FenestrationSurface:Detailed objects created in the IDF. 
+        Returns two surfaces if the parent element is internal (not outer), otherwise returns one.
+    """
 
     kwargs = {'Name': parentElement.space[0] + '-' + parentElement.Uid + '-' + element.Uid,
               "Building_Surface_Name": parentElement.space[0] + '-' + parentElement.Uid,

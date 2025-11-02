@@ -129,6 +129,21 @@ def epw2csv(epw_file):
 
 
 def epw2wea(location, epw_file):
+    """
+    Convert EPW weather data file to WEA format using epw2wea executable.
+    
+    Parameters
+    ----------
+    location : object
+        Object containing location information; expected to have a `stationId` attribute used for naming the output file.
+    epw_file : str
+        Path to the input EPW (EnergyPlus Weather) file.
+    
+    Returns
+    -------
+    str
+        Path to the generated WEA file.
+    """
     '''
     RADIANCE/bin/epw2wea.exe
     SYNOPSIS
@@ -144,6 +159,22 @@ def epw2wea(location, epw_file):
 
 
 def cum_sky(location, weatherFile):
+    """
+    Compute cumulative sky matrix from weather data using gendaymtx.
+    
+    Parameters
+    ----------
+    location : object
+        Location object containing stationId used to name the output matrix file.
+    weatherFile : str
+        Path to the weather file input for gendaymtx, typically in EPW or WEATHER format.
+    
+    Returns
+    -------
+    numpy.ndarray
+        A 2D array of shape (145, 8760) representing the cumulative sky radiation in kWh/m²,
+        with rows corresponding to sky patches and columns to hourly timesteps.
+    """
     mtx_file = os.path.join(temp_dic, location.stationId + '.mtx')
     # command=' '.join([gendaymtx_exe,'-D',sun_position,'-A -m 1 -c 1 1 1 -n -O1 ',weatherFile,'>',mtx_file])
     # command = ' '.join([gendaymtx_exe, '-A -m 1 -D -n -O1 ', weatherFile, '>', mtx_file])
@@ -182,6 +213,21 @@ def cum_sky(location, weatherFile):
 
 
 def includeEpw(epw_file, city=None):
+    """
+    Process an EPW file and generate associated weather data files.
+    
+    Parameters
+    ----------
+    epw_file : str
+        Path to the input EPW file. Must have a '.epw' extension.
+    city : str, optional
+        Name of the city to assign in the location data. If not provided, the original city name from the EPW file is retained.
+    
+    Returns
+    -------
+    str
+        The station ID extracted from the EPW file's location data.
+    """
     if epw_file[-4:] != '.epw':
         raise Exception(f'******includeEpw wrong file type: {epw_file}')
     location = epw2location(epw_file)
@@ -214,6 +260,21 @@ def includeEpw(epw_file, city=None):
 
 
 def fix_rad(calculate: np.ndarray, observe: np.ndarray):
+    """
+    Corrects calculated radiation values using observed data and solar position.
+    
+    Parameters
+    ----------
+    calculate : numpy.ndarray
+        Array of calculated radiation values to be corrected.
+    observe : numpy.ndarray
+        Array of observed radiation values used for correction.
+    
+    Returns
+    -------
+    numpy.ndarray
+        Corrected radiation values after applying the scaling factor derived from observed and calculated data.
+    """
     with open(sun_position, 'r+') as f:
         position = f.read().split('\n')
         position = [li.split(',') for li in position if len(li) > 0]

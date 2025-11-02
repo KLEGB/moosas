@@ -60,6 +60,25 @@ def simModel(model: MoosasModel, date: datetime, skyType, lat=39.93, lon=116.28,
 
 
 def _generateRadGeo(roof, floor, others):
+    """
+    Generate a Radiance geometry string from roof, floor, and other building elements.
+    
+    Parameters
+    ----------
+    roof : list of MeshFace
+        List of mesh faces representing the roof elements.
+    floor : list of MeshFace
+        List of mesh faces representing the floor elements.
+    others : list of MeshFace
+        List of mesh faces representing other elements (e.g., walls, glazing).
+        The category attribute of each face determines its treatment:
+        category 0 for walls, category 1 for glazing.
+    
+    Returns
+    -------
+    str
+        A string containing the Radiance-formatted geometry representation.
+    """
     geoStr = ''
     ids = 0
     for moFace in floor:
@@ -79,6 +98,31 @@ def _generateRadGeo(roof, floor, others):
 
 def modelToRad(model: MoosasModel, date: datetime, skyType, lat, lon, diff=10000,
                radPath=rf"{path.libDir}\rad\model.rad"):
+    """
+    Convert a MoosasModel to a Radiance input file (.rad) string and write it to disk.
+    
+    Parameters
+    ----------
+    model : MoosasModel
+        The building model containing spaces, walls, glazing, and other geometry.
+    date : datetime
+        The date and time for which the sky conditions are generated.
+    skyType : object
+        Specifies the type of sky (e.g., sunny, cloudy) for Radiance sky generation.
+    lat : float or int
+        Latitude of the site in degrees, used for solar position calculation.
+    lon : float or int
+        Longitude of the site in degrees, used for solar position calculation.
+    diff : int, optional
+        Diffuse solar irradiance value (in W/m²). Default is 10000.
+    radPath : str, optional
+        File path where the generated .rad file will be saved. Default is a path within `path.libDir`.
+    
+    Returns
+    -------
+    str
+        The complete Radiance input string containing sky, materials, and geometry definitions.
+    """
     roof, floor, others = [], [], []
     for spc in model.spaceList:
         faces = spc.getAllFaces(to_dict=True)
@@ -106,6 +150,21 @@ def modelToRad(model: MoosasModel, date: datetime, skyType, lat, lon, diff=10000
     return radStr
 
 def triOpaque(moFace:MoosasElement)->list[pygeos.Geometry]:
+    """
+    Compute triangulated opaque geometry from a MoosasElement face.
+    
+    Parameters
+    ----------
+    moFace : MoosasElement
+        The input MoosasElement containing the face and glazing elements. The face is used to generate base geometry,
+        and its normal is used for projection. Glazing elements are treated as holes in the base face.
+    
+    Returns
+    -------
+    list[pygeos.Geometry]
+        A list of pygeos Geometry objects representing the triangulated opaque regions in world coordinates,
+        with glazing areas subtracted as holes and projected back from UV to 3D space.
+    """
     proj = Projection(origin=np.mean(pygeos.get_coordinates(moFace.face, include_z=True), axis=0), unitZ=moFace.normal)
     baseFace = mixItemListToList(moFace.face)
     baseBrep,holes=[],[]
@@ -125,6 +184,31 @@ def triOpaque(moFace:MoosasElement)->list[pygeos.Geometry]:
     return baseBrep
 def spaceToRad(space: MoosasSpace, date: datetime, skyType, lat, lon, diff=10000,
                radPath=rf"{path.libDir}\rad\model.rad"):
+    """
+    Generate a Radiance input file string and write it to disk based on the provided space geometry and environmental conditions.
+    
+    Parameters
+    ----------
+    space : MoosasSpace
+        The space object containing the 3D geometry, from which faces are extracted.
+    date : datetime
+        The date and time for which the sky conditions are computed.
+    skyType : object
+        Specifies the type of sky model to use (e.g., sunny, cloudy); passed to `_getSky`.
+    lat : float or int
+        Latitude of the location, used in sky calculation.
+    lon : float or int
+        Longitude of the location, used in sky calculation.
+    diff : int, optional
+        Diffuse solar radiation value (in Wh/m²), default is 10000.
+    radPath : str, optional
+        File path where the Radiance script will be saved. Defaults to a path in `path.libDir`.
+    
+    Returns
+    -------
+    str
+        The complete Radiance input string, including sky, materials, and geometry definitions.
+    """
     roof, floor, others = [], [], []
     faces = space.getAllFaces(to_dict=True)
     for moface in faces["MoosasCeiling"]:
@@ -147,6 +231,25 @@ def spaceToRad(space: MoosasSpace, date: datetime, skyType, lat, lon, diff=10000
 
 
 def writeGrid(element: MoosasElement, gridPath=rf"{path.libDir}\rad\grid.input", normal=None, append=True):
+    """
+    Write grid points and their normal vectors to a file.
+    
+    Parameters
+    ----------
+    element : MoosasElement
+        The element used to generate the grid.
+    gridPath : str, optional
+        Path to the output file where grid data will be written. Default is constructed using `path.libDir`.
+    normal : array-like or Vector, optional
+        Normal vector to be written with each point; if None, uses the grid's default normal. Default is None.
+    append : bool, optional
+        If True, appends to the file; otherwise, overwrites it. Default is True.
+    
+    Returns
+    -------
+    list of str
+        List of formatted strings representing grid points and normals written to the file.
+    """
     if append:
         mode = 'a+'
     else:

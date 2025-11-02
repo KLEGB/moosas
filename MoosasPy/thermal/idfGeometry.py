@@ -9,6 +9,20 @@ import re
 
 class ZoneTemplate():
     def __init__(self, idf: IDF):
+        """
+        Initialize the object by extracting and processing construction and zone-related data from an IDF file.
+        
+        Parameters
+        ----------
+        idf : IDF
+            The IDF object containing the building energy model data, used to extract constructions, zones, 
+            and related objects for further processing.
+        
+        Returns
+        -------
+        None
+            This constructor does not return a value.
+        """
         self.idf = idf
         self.constructionList: list[Construction] = []
         for obj in idf.idfobjects['Construction']:
@@ -56,6 +70,26 @@ class ZoneTemplate():
                 typeLimit.applyToIDF(idf)
 
     def getConstruction(self, _type, UFactor, SHGC=None):
+        """
+        Find or create a construction by type and U-factor.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the construction list and IDF.
+        _type : str
+            The type of construction to find or create.
+        UFactor : float or str
+            The U-factor value for the construction; will be converted to float.
+        SHGC : float, optional
+            The Solar Heat Gain Coefficient (SHGC) for the new construction. Default is None.
+        
+        Returns
+        -------
+        Construction
+            The existing construction with closest U-factor match or a newly created 
+            and added Construction object.
+        """
         UFactor = float(UFactor)
         constr = [construction for construction in self.constructionList if construction.type == _type]
         if len(constr)>0:
@@ -68,6 +102,24 @@ class ZoneTemplate():
         return construction
 
     def appliedToZone(self, zone: MoosasSpace):
+        """
+        Apply zone-specific settings and schedules to an IDF model.
+        
+        Parameters
+        ----------
+        zone : MoosasSpace
+            A zone object containing settings such as work hours, temperature setpoints,
+            occupancy, equipment, lighting, infiltration, ventilation, and other zone-level
+            parameters. The settings are used to construct schedules and apply HVAC and load
+            specifications.
+        
+        Returns
+        -------
+        None
+            This function does not return a value. It modifies the internal IDF model by applying
+            schedules, load definitions, HVAC configurations, and zone control settings based on
+            the provided zone data.
+        """
         # construct schedule
         for idx in zone.settings.keys():
             try:
@@ -205,6 +257,29 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
                          Construction_Name="Office_External_Wall",
                          Construction_Name_Window="Office_External_Window",
                          normal=None):
+    """
+    Create a thermal surface in an EnergyPlus IDF file based on a MoosasElement.
+    
+    Parameters
+    ----------
+    idf : IDF
+        The EnergyPlus Input Data File (IDF) object to which the thermal surface will be added.
+    element : MoosasElement
+        The building element (e.g., wall, floor) used to create the thermal surface. Must have valid space and geometric properties.
+    surfaceType : str, optional
+        Type of the surface, one of 'Floor', 'Wall', 'Ceiling', or 'Roof'. Default is 'Floor'.
+    Construction_Name : str, optional
+        Name of the construction used for the main surface. Default is "Office_External_Wall".
+    Construction_Name_Window : str, optional
+        Name of the construction used for any associated window surfaces. Default is "Office_External_Window".
+    normal : Vector, optional
+        Normal vector to define the orientation of the surface. If None, it is automatically determined based on geometry and surface type.
+    
+    Returns
+    -------
+    list
+        A list of IDF objects (surfaces) created, including the main thermal surface and any associated window surfaces. Returns None if the element is invalid or belongs to a void space.
+    """
     model = element.parent
     space0 = model.spaceIdDict[element.space[0]]
     if len(element.space) == 2:
@@ -277,6 +352,24 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
 
 
 def encodeFace(obj: MoosasSettings, polygon: pygeos.Geometry, normal: Vector):
+    """
+    Encode face geometry into a given settings object by storing vertex coordinates.
+    
+    Parameters
+    ----------
+    obj : MoosasSettings
+        The settings object where face parameters will be stored.
+    polygon : pygeos.Geometry
+        A polygonal geometry whose coordinates define the face.
+    normal : Vector
+        A vector used to determine the orientation of the face; 
+        if the dot product with the face normal is negative, vertex order is reversed.
+    
+    Returns
+    -------
+    None
+        This function modifies the `obj` in place and does not return a value.
+    """
     coordinates = pygeos.get_coordinates(polygon, include_z=True)
     if Vector.dot(faceNormal(polygon), normal) < 0:
         coordinates = coordinates[::-1]
@@ -290,6 +383,29 @@ def encodeFace(obj: MoosasSettings, polygon: pygeos.Geometry, normal: Vector):
 def createWindowSurface(idf: IDF, element: MoosasElement, parentElement: MoosasElement,
                         Construction_Name="Office_External_Wall",
                         normal=None):
+    """
+    Create window surface(s) in an EnergyPlus IDF file based on element geometry and thermal settings.
+    
+    Parameters
+    ----------
+    idf : IDF
+        The EnergyPlus Input Data File (IDF) object to which the surface will be added.
+    element : MoosasElement
+        The element representing the window geometry to be encoded.
+    parentElement : MoosasElement
+        The parent building element (e.g., wall) that hosts the window; used to derive space and boundary information.
+    Construction_Name : str, optional
+        The name of the construction to be assigned to the window surface. Default is "Office_External_Wall".
+    normal : array-like, optional
+        The normal vector to the surface face; used during geometry encoding. If not provided, inferred from geometry.
+    
+    Returns
+    -------
+    list of Surface
+        A list containing one or two Surface objects added to the IDF:
+        - One surface for outer (exterior) parent elements.
+        - Two surfaces (with opposite orientations and linked boundary conditions) for inner (interior) parent elements.
+    """
     kwargs = {'Name': parentElement.space[0] + '-' + parentElement.Uid + '-' + element.Uid,
               "Building_Surface_Name": parentElement.space[0] + '-' + parentElement.Uid,
               "Construction_Name": Construction_Name}

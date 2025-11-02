@@ -4,6 +4,23 @@ from ..utils import pygeos,np
 class BasicOptions:
     @staticmethod
     def left_on(p1, p2, p3):
+        """Determine if point p3 is to the left of the line formed by points p1 and p2 in 2D space.
+        
+            Parameters
+            ----------
+            p1 : array-like, shape (N,) or (2,)
+                First point in N-dimensional space; only the first two coordinates are used.
+            p2 : array-like, shape (N,) or (2,)
+                Second point in N-dimensional space; only the first two coordinates are used.
+            p3 : array-like, shape (N,) or (2,)
+                Third point in N-dimensional space; only the first two coordinates are used.
+        
+            Returns
+            -------
+            bool
+                True if p3 is strictly to the left of the directed line from p1 to p2,
+                False otherwise (including collinear or right-side cases).
+        """
 
         p1_2d = p1[:2]
         p2_2d = p2[:2]
@@ -15,6 +32,25 @@ class BasicOptions:
     
     @staticmethod
     def angle(p1, p2, p3):
+        """
+        Calculate the signed angle in degrees between three points in 2D or 3D space.
+        
+        Parameters
+        ----------
+        p1 : array_like
+            First point (tail of the first vector).
+        p2 : array_like
+            Second point (vertex of the angle, shared by both vectors).
+        p3 : array_like
+            Third point (tip of the second vector).
+        
+        Returns
+        -------
+        float
+            The signed angle in degrees between the vectors (p2 - p1) and (p3 - p2). 
+            Positive if the rotation from v1 to v2 is counterclockwise (right-hand rule), 
+            negative if clockwise. Returns 0 if the vectors are colinear or nearly so.
+        """
         v1 = p2 - p1
         v2 = p3 - p2
         if len(v1) == 2: v1 = np.append(v1, 0)
@@ -35,21 +71,88 @@ class BasicOptions:
 
     @staticmethod
     def get_angle_tan(p1, p2, verts_all):
+        """
+        Calculate the angle of the vector between two points using arctangent.
+        
+        Parameters
+        ----------
+        p1 : int
+            Index of the first point in verts_all.
+        p2 : int
+            Index of the second point in verts_all.
+        verts_all : numpy.ndarray
+            Array of vertex coordinates, where each vertex is a row with at least 2D coordinates.
+        
+        Returns
+        -------
+        float
+            The angle in radians between the vector from p1 to p2 and the positive x-axis.
+        """
         vec = verts_all[p2] - verts_all[p1]
         return np.arctan2(vec[1], vec[0])
     
     @staticmethod
     def is_obtuse(v1, v2, v3):
+        """Check if the angle formed by three points is obtuse.
+        
+        Parameters
+        ----------
+        v1 : array-like
+            First point in space.
+        v2 : array-like
+            Second point (vertex of the angle).
+        v3 : array-like
+            Third point in space.
+        
+        Returns
+        -------
+        bool
+            True if the angle at v2 formed by v1, v2, and v3 is greater than 90 degrees, False otherwise.
+        """
         return BasicOptions.angle(v1, v2, v3) > 90
 
     @staticmethod
     def collinear(p1, p2, p3):
+        """
+        Check if three points are approximately collinear.
+        
+        Parameters
+        ----------
+        p1 : numpy.ndarray
+            First point in 2D or 3D space.
+        p2 : numpy.ndarray
+            Second point in 2D or 3D space.
+        p3 : numpy.ndarray
+            Third point in 2D or 3D space.
+        
+        Returns
+        -------
+        bool
+            True if the points are approximately collinear, False otherwise.
+        """
         area = np.cross(p2 - p1, p3 - p2)
         dist = area / (np.dot(p1, p2 - p1) + 1e-6)
         return np.abs(dist) < 1e-3
 
     @staticmethod
     def between(p1, p2, p3):
+        """
+        Check if point p3 lies between points p1 and p2 along one axis in 2D space.
+        
+        Parameters
+        ----------
+        p1 : array-like
+            First 2D point, represented as a sequence of at least two coordinates (x, y).
+        p2 : array-like
+            Second 2D point, represented as a sequence of at least two coordinates (x, y).
+        p3 : array-like
+            Query 2D point, represented as a sequence of at least two coordinates (x, y).
+        
+        Returns
+        -------
+        bool
+            True if p3 lies between p1 and p2 along the x-axis (if x differs) or y-axis (if x is same), False otherwise.
+        """
 
         p1_2d = p1[:2]
         p2_2d = p2[:2]
@@ -61,6 +164,25 @@ class BasicOptions:
 
     @staticmethod
     def intersect(a, b, c, d):
+        """
+        Determine if two line segments intersect in 2D space.
+        
+        Parameters
+        ----------
+        a : array-like
+            The first endpoint of the first line segment, as a 2D point (x, y).
+        b : array-like
+            The second endpoint of the first line segment, as a 2D point (x, y).
+        c : array-like
+            The first endpoint of the second line segment, as a 2D point (x, y).
+        d : array-like
+            The second endpoint of the second line segment, as a 2D point (x, y).
+        
+        Returns
+        -------
+        bool
+            True if the two line segments intersect, False otherwise.
+        """
 
         a_2d = a[:2]
         b_2d = b[:2]
@@ -80,7 +202,45 @@ class BasicOptions:
         
     @staticmethod
     def diagonal(verts: np.ndarray, indices: np.ndarray, ia: int, ib: int) -> bool:
+        """
+        Check if the line segment between two vertices is a valid diagonal in a polygon.
+        
+        Parameters
+        ----------
+        verts : numpy.ndarray
+            Array of vertex coordinates, where each row represents a point in 2D space.
+        indices : numpy.ndarray
+            Array of indices defining the order of vertices in the polygon.
+        ia : int
+            Index of the first vertex in the diagonal.
+        ib : int
+            Index of the second vertex in the diagonal.
+        
+        Returns
+        -------
+        bool
+            True if the segment between verts[ia] and verts[ib] is a valid diagonal; False otherwise.
+        """
         def in_cone(verts: np.ndarray, indices: np.ndarray, ia: int, ib: int) -> bool:
+            """
+            Check whether a given edge is inside the cone formed by a vertex and its neighbors.
+            
+            Parameters
+            ----------
+            verts : numpy.ndarray
+                Array of vertex coordinates, where each vertex is represented by its coordinates.
+            indices : numpy.ndarray
+                Array of indices referencing vertices in `verts`, representing a polygon or cycle.
+            ia : int
+                Index into `indices` for the central vertex of the cone.
+            ib : int
+                Index into `indices` for the vertex to check if it lies within the cone.
+            
+            Returns
+            -------
+            bool
+                True if the vertex `ib` lies within the cone defined by `ia` and its adjacent vertices; False otherwise.
+            """
             # Check whether (ia, ib) is in cone of (ia-, ia, ia+)
             n = len(indices)
             ia_prev = ia - 1 if ia - 1 >= 0 else n - 1
@@ -100,6 +260,25 @@ class BasicOptions:
 
             
         def diagonalie(verts: np.ndarray, indices: np.ndarray, ia: int, ib: int) -> bool:
+            """Check if a diagonal between two vertices lies strictly inside a polygon.
+            
+                Parameters
+                ----------
+                verts : np.ndarray
+                    Array of shape (N, 2) representing the coordinates of the polygon's vertices.
+                indices : np.ndarray
+                    Array of integers representing the indices of vertices forming the polygon boundary.
+                ia : int
+                    Index into `verts` array for the first endpoint of the diagonal.
+                ib : int
+                    Index into `verts` array for the second endpoint of the diagonal.
+            
+                Returns
+                -------
+                bool
+                    True if the diagonal between vertices `ia` and `ib` does not intersect any edge of the polygon 
+                    (except at endpoints) and lies entirely within the polygon; False otherwise.
+            """
             n = len(indices)
             for now_i in range(n):
                 # exclude edges contains point a and point b
@@ -123,6 +302,22 @@ class BasicOptions:
 class Geometry_Option:
     @staticmethod
     def reorder_vertices(face, is_upward):
+        """
+        Re-order vertices of a face to make the normal face upward or downward.
+        
+        Parameters
+        ----------
+        face : numpy.ndarray
+            Array of shape (n, 3) representing the sequence of vertices of a face.
+        is_upward : bool
+            If True, reorders vertices so that the face normal points upward;
+            if False, reorders for downward normal.
+        
+        Returns
+        -------
+        reordered_face : numpy.ndarray
+            Array of shape (n, 3) with vertices reordered according to the specified normal direction.
+        """
         """Re-order vertices of a face to make the normal face upward or downward.
         
         Args:
@@ -146,6 +341,23 @@ class Geometry_Option:
 
     @staticmethod
     def is_same_polygon(polygon1, polygon2, projection=False):
+        """
+        Check if two polygons are the same, with support for 2D projection or 3D coordinates.
+        
+        Parameters
+        ----------
+        polygon1 : numpy.ndarray
+            A numpy array of shape (n, 2) or (n, 3) representing the first polygon.
+        polygon2 : numpy.ndarray
+            A numpy array of the same shape as polygon1 representing the second polygon.
+        projection : bool
+            If True, only the first two columns (x, y) are compared (projection on xoy plane).
+        
+        Returns
+        -------
+        bool
+            True if the polygons are the same, considering point order and reverse order (with fixed first point), otherwise False.
+        """
         """
         判断两个多边形是否相同，可以处理2D投影或3D坐标。
         允许多边形的点顺序不同，但第一个点固定，其他点可以逆序排列。
@@ -187,6 +399,25 @@ class Geometry_Option:
     @staticmethod
     def process_hole(hole, faces, check_projection=True):
         """
+        Process a hole to determine if it should be skipped based on geometric conditions.
+        
+        Parameters
+        ----------
+        hole : numpy.ndarray
+            A 2D array of shape (n, 3) representing the 3D coordinates of the hole polygon.
+        faces : list of numpy.ndarray
+            A list of 2D arrays, each representing a 3D face polygon with shape (m, 3).
+        check_projection : bool, optional
+            If True, checks whether the projection of the hole overlaps with projections of other faces.
+            Default is True.
+        
+        Returns
+        -------
+        bool
+            True if the hole should be skipped (i.e., it fully coincides with a face and meets projection criteria),
+            False otherwise.
+        """
+        """
         处理洞的逻辑，判断是否跳过当前 hole。
 
         条件：
@@ -226,6 +457,25 @@ class Geometry_Option:
     
     @staticmethod
     def merge_holes(verts_poly: np.ndarray, verts_holes: dict[int, np.ndarray]) -> np.ndarray:
+        """
+        Merge holes into a polygon by finding the shortest valid connection lines.
+        
+        Parameters
+        ----------
+        verts_poly : np.ndarray
+            Array of vertices representing the outer polygon boundary.
+        verts_holes : dict[int, np.ndarray]
+            Dictionary mapping hole indices to their respective vertex arrays; each key is an integer 
+            identifying a hole, and the corresponding value is a NumPy array of its vertices.
+        
+        Returns
+        -------
+        tuple[np.ndarray, list[np.ndarray]]
+            A tuple containing:
+            - indices_all: Array of merged vertices including both polygon and hole vertices in traversal order.
+            - diagonals: List of connection line segments represented as arrays of two points, 
+              each connecting a polygon vertex to a hole vertex.
+        """
         """
         为每个洞找到最短的有效连接线。
         
@@ -366,6 +616,25 @@ class Geometry_Option:
     @staticmethod
     def split_poly(verts: np.ndarray, indices: np.ndarray) -> Union[List[np.ndarray], List[Tuple[int, int]]]:
         """
+        Split a simple polygon into convex polygons using a divide-and-conquer approach.
+        
+        Parameters
+        ----------
+        verts : np.ndarray
+            Array of shape (#verts, 2) containing the 2D coordinates of vertices.
+        indices : np.ndarray
+            Array of shape (#verts,) containing the indices of vertices forming the polygon, 
+            referencing rows in `verts`.
+        
+        Returns
+        -------
+        list of np.ndarray, list of tuple of int
+            A tuple containing two elements:
+            - A list of arrays, each array containing indices of `verts` that form a convex polygon.
+            - A list of tuples, each tuple representing a diagonal (split edge) by vertex indices 
+              used to partition the original polygon.
+        """
+        """
         Turn a simple polygon into a list of convex polygons that shares the same area.
         This divide-and-conquer methods base on Arkin, Ronald C.'s report (1987).
         "Path planning for a vision-based autonomous robot"
@@ -463,6 +732,22 @@ class Geometry_Option:
         """
         Split a convex polygon into triangles or convex quadrilaterals without obtuse angles.
         
+        Parameters
+        ----------
+        verts : np.ndarray, shape (N, 2)
+            Array of 2D vertex positions, where N is the number of vertices.
+        indices : np.ndarray, shape (M,)
+            Array of indices referring to vertices in `verts` that form the convex polygon.
+        
+        Returns
+        -------
+        list of np.ndarray or list of tuple of int
+            List of sub-polygons, each represented as an array (or tuple) of vertex indices;
+            each sub-polygon is either a triangle or a convex quadrilateral.
+        """
+        """
+        Split a convex polygon into triangles or convex quadrilaterals without obtuse angles.
+        
         :param verts: np.ndarray (#verts, 2) - a list of 2D vertices positions
         :param indices: np.ndarray (#verts,) - a list of polygon vertex indices (referring to the array `verts`)
         :return: List of np.ndarray - each sub-array corresponds to the indices of a triangle or quadrilateral
@@ -491,6 +776,31 @@ class Geometry_Option:
 class MoosasConvexify:
     @staticmethod
     def convexify_faces(idd, normal, faces, holes):
+        """
+        Convexify polygonal faces with holes by reordering vertices, merging holes, and applying a divide-and-conquer convex decomposition.
+        
+        Parameters
+        ----------
+        idd : list of str
+            List of identifiers for each face. These are preserved or modified when splitting faces.
+        normal : list of array-like of shape (3,)
+            List of normal vectors for each face, used to determine orientation (e.g., upward direction).
+        faces : list of list of array-like of shape (3,)
+            List of outer boundary vertices for each face, where each face is represented as a list of 3D points.
+        holes : list of list of list of array-like of shape (3,)
+            List containing hole definitions for each face; each element is a list of holes, and each hole is a list of 3D points.
+        
+        Returns
+        -------
+        convex_idd : list of str
+            Updated identifiers for the resulting convex faces, with new labels assigned for split subfaces.
+        convex_normal : list of array-like of shape (3,)
+            Normal vectors corresponding to each output convex face, preserving input normals.
+        convex_faces : list of list of array-like of shape (3,)
+            List of convex polygons generated from the input faces, with holes merged and non-convex regions split.
+        divide_lines : list of numpy.ndarray of shape (2, 3)
+            List of line segments (pairs of 3D points) representing internal diagonals or merge lines introduced during convexification.
+        """
         
         """
         MAIN FUNCTION FOR CONVEXIFY 非凸多边形优化主函数
@@ -585,6 +895,28 @@ class MoosasConvexify:
 
 def triangulate2dFace(boundary: pygeos.Geometry, holes: np.ndarray[pygeos.Geometry] = None) -> (
 np.ndarray[pygeos.Geometry], np.ndarray[pygeos.Geometry]):
+    """
+    Triangulate a 2D face defined by a boundary and optional holes into convex faces and dividing lines.
+    
+    Parameters
+    ----------
+    boundary : pygeos.Geometry
+        The outer boundary of the 2D face, represented as a PyGEOS geometry object.
+        Must be a linear ring or polygon; will be converted to 3D with z=0 if necessary.
+    holes : numpy.ndarray of pygeos.Geometry, optional
+        Array of PyGEOS geometry objects representing holes within the boundary.
+        Each hole is expected to be a linear ring or polygon.
+        If None, no holes are assumed (default is None).
+    
+    Returns
+    -------
+    tuple of numpy.ndarray
+        A tuple containing two arrays:
+        - convexFaces: numpy.ndarray of pygeos.Geometry
+          Convex polygonal faces resulting from the decomposition.
+        - dividedLines: numpy.ndarray of pygeos.Geometry
+          Linestrings representing the internal edges introduced during decomposition.
+    """
     """
     give a boundary and return split boundaries and the divided lines.
     """

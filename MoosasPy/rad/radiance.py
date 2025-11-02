@@ -4,6 +4,25 @@ from ..geometry import Projection
 
 
 def _meshToRadObject(geos, material, id):
+    """
+    Convert a mesh geometry to a Radiance object string representation.
+    
+    Parameters
+    ----------
+    geos : pygeos.Geometry or list of pygeos.Geometry
+        Input geometry or list of geometries to convert.
+    material : str
+        Material name to assign to the Radiance object.
+    id : str
+        Identifier prefix for the generated polygons.
+    
+    Returns
+    -------
+    str
+        Radiance-formatted string representation of the mesh geometry, including material,
+        polygon identifiers, and vertex coordinates. Returns an empty string if no valid
+        triangles are generated.
+    """
     if isinstance(geos, pygeos.Geometry):
         geos = [geos]
     geoStr = []
@@ -32,6 +51,19 @@ def _meshToRadObject(geos, material, id):
 
 
 def _materialLib():
+    """
+    Return a string containing Radiance material definitions for common building materials.
+    
+    Parameters
+    ----------
+    None
+    
+    Returns
+    -------
+    str
+        A string defining materials (plastic and glass) in Radiance format, including default_floor,
+        default_roof, default_wall with specified reflectances, and a base glazing material.
+    """
     """
             Visible Light Transmittance (VLT) : Tn
         =>    void glass sketch_win 0 0 3 tn tn tn
@@ -65,6 +97,28 @@ void glass glazing_
 
 
 def _getSky(date: datetime, skyType, lat, lon, diff=10000):
+    """
+    Generate a Radiance sky description string for a given date and location.
+    
+    Parameters
+    ----------
+    date : datetime
+        The date and time for which the sky is generated, used to determine month, day, and hour.
+    skyType : str
+        Type of sky model to generate (e.g., "-c" for cloudy, other values for different sky types).
+    lat : float or str
+        Latitude of the location in degrees, used in the sky generation command.
+    lon : float or str
+        Longitude of the location in degrees, used in the sky generation command.
+    diff : float, optional
+        Diffuse solar irradiance value (in W/m²). Used only if skyType is "-c". Default is 10000.
+    
+    Returns
+    -------
+    str
+        A formatted string containing the Radiance sky definition commands, including gensky command
+        and associated glow and source elements for sky and ground.
+    """
     skyStr = f"!gensky {str(date.month).zfill(2)} {str(date.day).zfill(2)} {str(date.hour).zfill(2)} {skyType} -a {lat} -o {lon} -g 0.200"
     if skyType == "-c":
         skyStr += f" -B {diff / 179.0}"

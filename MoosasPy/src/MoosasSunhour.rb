@@ -6,6 +6,16 @@ class MoosasSunHour
     # Called when the menu item is clicked, this sets up the parameters dialog and passes the parameters
     # to sunlight_analyse_grids_params.
     def self.sunhour_analyse_grids(params="default 1 21 12 21 12 1 1 7 00 18 00 t t t t t t t 1 f f")
+    # Function:
+    # Performs solar hour analysis on selected grid entities within a SketchUp model. If no grids are selected, attempts to automatically retrieve or fit grids. The analysis evaluates sunlight exposure over specified time periods and configures visual output based on sun exposure conditions.
+    # 
+    # Parameters:
+    # params : String, optional
+    # A string containing space-separated parameters that define the analysis settings, such as date ranges, time intervals, and display options. Default value is "default 1 21 12 21 12 1 1 7 00 18 00 t t t t t t t 1 f f".
+    # 
+    # Returns:
+    # nil
+    # This method does not return a value. It performs operations within the SketchUp model environment and modifies grid entities based on solar exposure analysis.
         Sketchup.active_model.start_operation("日照分析", true)
 
         model = Sketchup.active_model
@@ -48,6 +58,40 @@ class MoosasSunHour
     #                       Determine if the node is in the sun
     #   Colour the grid
     def self.sunhour_analyse_grids_params(parameters_string, grids)
+    # Function
+    # --------
+    # Performs a solar insolation (sunlight hour) analysis on specified grids within a SketchUp model, calculating total, minimum, and maximum sunlight exposure over defined time periods. The method processes input parameters to configure the simulation, including date ranges, time intervals, weekdays, and temporal resolution. It temporarily hides grid geometry to prevent shadow interference during ray testing, computes sun exposure using ray tracing against the sun's position, stores results in grid attributes, updates visual representation, and outputs statistical summaries.
+    # 
+    # Parameters
+    # ----------
+    # parameters_string : str
+    # A space-separated string containing configuration parameters for the analysis. Expected format includes:
+    # - Action name (ignored in current implementation)
+    # - Number of date periods (integer)
+    # - For each date period: start day, start month, end day, end month (integers)
+    # - Number of time types (integer)
+    # - For each type: number of time periods, followed by start hour, start minute, end hour, end minute for each period
+    # - For each type: seven boolean flags ('t' or not) indicating which weekdays to include
+    # - Time step granularity in hours (float)
+    # - Flag indicating whether to compute minima ('t' for true)
+    # - Flag indicating whether to compute maxima ('t' for true)
+    # 
+    # grids : Array<Sketchup::Entity>
+    # An array of SketchUp entities representing analysis grids. Each grid must have an attribute dictionary named "grid" containing:
+    # - 'nodes': 2D array of 3D points defining the grid layout
+    # - 'is_surface': boolean indicating if the grid lies on a surface
+    # - 'norm': normal vector of the grid plane
+    # - Optionally, 'id': unique identifier; assigned automatically if missing
+    # 
+    # Returns
+    # -------
+    # None
+    # This method does not return a value. Instead, it modifies the model state by:
+    # - Storing sun hour results in each grid's attribute dictionary under 'results'
+    # - Setting metadata such as 'valueRange', 'old_grid', and 'type'
+    # - Updating the visual coloration of grids based on results
+    # - Displaying summary statistics and rendering a scale panel
+    # - Showing progress via the status bar and potential error messages via UI dialogs
         
         begin
             model = Sketchup.active_model

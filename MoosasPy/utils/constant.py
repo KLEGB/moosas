@@ -44,6 +44,21 @@ class geom:
 
     @staticmethod
     def round(num,precision):
+        """
+        Round the input number or array to the specified precision using floor rounding.
+        
+        Parameters
+        ----------
+        num : array-like or scalar
+            The number or array of numbers to be rounded.
+        precision : float
+            The precision to which the numbers are to be rounded down.
+        
+        Returns
+        -------
+        float or numpy.ndarray
+            The rounded number or array, where each element is rounded down to the nearest multiple of precision.
+        """
         return np.floor(np.array(num)/precision)*precision
 
 class settings:

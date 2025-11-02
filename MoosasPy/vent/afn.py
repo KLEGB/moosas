@@ -27,6 +27,23 @@ class AfnZone(MoosasSpace):
     __slots__ = ['username', 'temperature', 'prjIndex', 'heatLoad']
 
     def __init__(self, space: MoosasSpace, name=None, temperature=27):
+        """
+        Initialize an AfnZone instance with space data and settings.
+        
+        Parameters
+        ----------
+        space : MoosasSpace
+            The space object containing geometry, settings, and parent project information.
+        name : str, optional
+            Custom name for the zone. If not provided, defaults to the space ID.
+        temperature : float or int, optional
+            Operating temperature of the zone in degrees Celsius. Default is 27.
+        
+        Returns
+        -------
+        None
+            This constructor does not return a value.
+        """
         spaceId = space.parent.spaceList.index(space)
         if space.settings['zone_summerrad'] is None:
             try:
@@ -48,13 +65,56 @@ class AfnZone(MoosasSpace):
 
     @property
     def volume(self):
+        """
+        Volume of the object calculated as the product of area and height.
+        
+        Returns
+        -------
+        float or int
+            The volume, computed as area multiplied by height.
+        """
         return self.area * self.height
 
     @property
     def position(self) -> Vector:
+        """
+        Return the position of the floor's weight center as a Vector.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `position` property.
+            It is expected to have a `floor` attribute with a `getWeightCenter` method.
+        
+        Returns
+        -------
+        Vector
+            A Vector object representing the weight center of the floor.
+        """
         return Vector(self.floor.getWeightCenter())
 
     def calculateHeatLoad(self):
+        """
+        Calculate the total heat load for a thermal zone.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the settings and area attributes.
+            - self.settings (dict): A dictionary containing various zone settings including:
+                - 'zone_summerrad' (float): Summer radiation value for the zone.
+                - 'zone_ppsm' (float): People per square meter in the zone.
+                - 'zone_popheat' (float): Heat gain per person (W/person).
+                - 'zone_equipment' (float): Equipment power density (W/m²).
+                - 'zone_lighting' (float): Lighting power density (W/m²).
+            - self.area (float): Floor area of the zone in square meters.
+        
+        Returns
+        -------
+        float
+            The total heat load in watts (W), calculated as the sum of solar, occupant,
+            equipment, and lighting heat gains.
+        """
         heat = 0
         heat += self.settings['zone_summerrad'] / (MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY) * 1000
         heat += float(self.settings['zone_ppsm']) * float(self.settings['zone_popheat']) * self.area
@@ -63,6 +123,22 @@ class AfnZone(MoosasSpace):
         return heat
 
     def printHeatLoad(self):
+        """
+        Prints the breakdown of heat load components for the zone.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the method. It is expected to have
+            attributes `settings`, `area`, and a method `calculateHeatLoad`. The `settings`
+            dictionary should contain keys 'zone_summerrad', 'zone_ppsm', 'zone_popheat',
+            'zone_equipment', and 'zone_lighting'.
+        
+        Returns
+        -------
+        None
+            This function does not return any value. It prints the heat load details to stdout.
+        """
         print('\nzone total', self.calculateHeatLoad())
         print('solar heat',
               self.settings['zone_summerrad'] / (MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY) * 1000)
@@ -72,6 +148,28 @@ class AfnZone(MoosasSpace):
         print('area', self.area)
 
     def dump(self):
+        """
+        Dump the zone data into a formatted string for network file input.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the zone data. Expected attributes include:
+            - username (str): User-defined zone name.
+            - prjIndex (int): Project index used to generate zone ID.
+            - heatLoad (float): Total heat load in Watts (W).
+            - temperature (float): Initial zone temperature in Celsius (C).
+            - volume (float): Zone volume in cubic meters (m³).
+            - position (object): Object with x, y, z attributes representing position in meters (m).
+            - edge (pygeos geometry): Geometry representing the zone boundary; must have `force_2d()` method and coordinates accessible via `pygeos.get_coordinates()`.
+        
+        Returns
+        -------
+        str
+            A comma-separated string containing the zone name, index, heat load, temperature,
+            volume, position coordinates (x, y, z), and flattened boundary polygon coordinates in meters (m),
+            with space-separated coordinate pairs.
+        """
         """
             input for networkFile(zones):
             zoneName: user define zoneName
@@ -108,6 +206,29 @@ class AfnPath(MoosasGlazing):
 
     def __init__(self, moGeometry: MoosasGlazing | MoosasSkylight, model, pathName=None, fromZone=None, toZone=None,
                  pressure=0.0):
+        """
+        Initialize an AfnPath object for airflow network modeling.
+        
+        Parameters
+        ----------
+        moGeometry : MoosasGlazing or MoosasSkylight
+            The geometry object representing a glazing or skylight, providing face ID, Uid, space, parent face, shading, and orientation.
+        model : object
+            The model instance to which this path belongs; passed to the parent class constructor.
+        pathName : str, optional
+            Name identifier for the path. If None, defaults to the Uid of moGeometry.
+        fromZone : object, optional
+            The zone from which air flows. Default is None.
+        toZone : object, optional
+            The zone to which air flows. Default is None.
+        pressure : float, optional
+            Pressure difference across the path, used in airflow calculations. Default is 0.0.
+        
+        Returns
+        -------
+        None
+            This method initializes the object and does not return a value.
+        """
         super(AfnPath, self).__init__(model, moGeometry.faceId)
         self.winType = 1 if isinstance(moGeometry, MoosasGlazing) else 0
         self.Uid = moGeometry.Uid
@@ -127,6 +248,22 @@ class AfnPath(MoosasGlazing):
 
     @property
     def width(self):
+        """
+        Calculate the width of the face along the minimum Z-plane.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `face` attribute. The `face` is a geometry object 
+            compatible with pygeos, representing a 3D planar face.
+        
+        Returns
+        -------
+        float
+            The length (magnitude) of the vector representing the width of the face, computed as the 
+            distance between the first and last points in the sorted 2D projection of the face's 
+            boundary points lying on the minimum Z-plane.
+        """
         coordinates = pygeos.get_coordinates(self.face, include_z=True)
         minZ = np.min(coordinates[:, 2])
         sortlist = [[coor[0], coor[1]] for coor in coordinates if
@@ -136,13 +273,63 @@ class AfnPath(MoosasGlazing):
 
     @property
     def pathHeight(self):
+        """
+        Height of the path calculated as the ratio of 3D area to width.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this property. It is expected to have
+            `area3d` and `width` attributes used in the computation.
+        
+        Returns
+        -------
+        float
+            The height of the path, computed as the 3D area divided by the width.
+        """
         return self.area3d() / self.width
 
     @property
     def position(self) -> Vector:
+        """
+            Get the position of the weight center as a Vector object.
+        
+            Parameters
+            ----------
+            self : object
+                The instance of the class containing this property. Assumes the instance has a method `getWeightCenter`.
+        
+            Returns
+            -------
+            Vector
+                A Vector object representing the weight center position.
+        """
         return Vector(self.getWeightCenter())
 
     def dump(self):
+        """
+        Dump the path data into a comma-separated string format for network file input.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the path data. Expected attributes include:
+            - pathName (str): User-defined name for the path.
+            - prjIndex (int): Project index used to generate a formatted identifier.
+            - pathHeight (float): Height of the aperture in meters (m).
+            - width (float): Width of the aperture in meters (m).
+            - position (object): Object with attributes x, y, z representing the 3D position in meters (m).
+            - fromZone (int or None): Index of the originating zone; must not be None.
+            - toZone (int or None): Index of the destination zone; must not be None.
+            - pressure (float): Wind pressure value if the path is connected to the outdoor environment.
+            - winType (int or str): Type identifier for the window or opening.
+        
+        Returns
+        -------
+        str
+            A comma-separated string containing the formatted path data, including generated ID,
+            dimensions, position, zone indices, pressure, and window type.
+        """
         """
             input for networkFile(paths):
             pathName: user define pathName
@@ -173,6 +360,21 @@ class AfnNetwork:
     __slots__ = ('zones', 'paths', 'model')
 
     def __init__(self, model):
+        """
+        Initialize the object with a model and construct airflow network paths and zones.
+        
+        Parameters
+        ----------
+        model : object
+            The model containing space and glazing information used to create airflow network 
+            paths and zones. Expected to have a `spaceList` attribute with spaces that provide 
+            face data via `getAllFaces()`.
+        
+        Returns
+        -------
+        None
+            This method does not return a value.
+        """
         self.model = model
         self.paths: list[AfnPath] = []
         self.zones: list[AfnZone] = []
@@ -187,10 +389,44 @@ class AfnNetwork:
         self.paths, self.zones = cleanseNetwork(self.paths, self.zones)
 
     def applyWindPressure(self, windVector: Vector, speed=None, airDensity=1.205, alpha=0.22):
+        """
+        Apply wind pressure to the paths of the object.
+        
+        Parameters
+        ----------
+        windVector : Vector
+            A vector representing the direction and magnitude of the wind.
+        speed : float, optional
+            The speed of the object relative to the wind. If not provided, defaults to None.
+        airDensity : float, default=1.205
+            The density of air in kg/m³. Default corresponds to standard conditions at sea level.
+        alpha : float, default=0.22
+            A coefficient representing the aerodynamic properties of the object.
+        
+        Returns
+        -------
+        None
+            This method modifies the `paths` attribute in place and does not return a value.
+        """
         """connect to applyWindPressure()"""
         self.paths = applyWindPressure(self.paths, windVector=windVector, speed=speed, airDensity=airDensity,
                                        alpha=alpha)
     def applyZoneHeat(self,zoneInfoFile):
+        """
+        Copy heat information from a zone info file to corresponding zones.
+        
+        Parameters
+        ----------
+        zoneInfoFile : str
+            Path to the file containing zone information, including heat load and zone names.
+            The file is parsed to extract heat data which is then applied to zones.
+        
+        Returns
+        -------
+        None
+            This function does not return any value. It modifies the `heatLoad` attribute of 
+            each zone in `self.zones` if the zone's username matches an entry in the heat info.
+        """
         """copy the heat information in zoneInfoFile"""
         zoneInfo = parseFile(zoneInfoFile)[0]
         heatIdx,nameIdx = 2,3
@@ -218,6 +454,27 @@ class AfnNetwork:
 
 def applyWindPressure(pathList: list[AfnPath], windVector: Vector, speed: float = None,
                       airDensity=1.205, alpha=0.22) -> list[AfnPath]:
+    """
+    Apply wind pressure to a list of AfnPath objects based on wind conditions.
+    
+    Parameters
+    ----------
+    pathList : list of AfnPath
+        List of AfnPath objects to which wind pressure will be applied.
+    windVector : Vector
+        Direction and magnitude of the wind. If `speed` is provided, the vector is scaled accordingly.
+    speed : float, optional
+        Wind speed in m/s. If None, the magnitude of `windVector` is used as the wind speed.
+    airDensity : float, default=1.205
+        Air density in kg/m³, used in pressure calculation.
+    alpha : float, default=0.22
+        Empirical exponent related to altitude effects on wind pressure.
+    
+    Returns
+    -------
+    list of AfnPath
+        The input list of AfnPath objects with updated `pressure` attributes.
+    """
     """apply wind pressure to paths.
 
     -------------------------------------------
@@ -252,6 +509,21 @@ def applyWindPressure(pathList: list[AfnPath], windVector: Vector, speed: float 
 
 
 def getZoneAndPath(model):
+    """
+    Constructs zone and path lists from a building model for airflow network analysis.
+    
+    Parameters
+    ----------
+    model : object
+        A building model object containing a list of spaces (spaceList). The model is used to extract spaces and their glazing elements to construct zones and airflow paths.
+    
+    Returns
+    -------
+    zoneList : list of AfnZone
+        List of AfnZone objects created from the spaces in the model. Each zone is assigned a unique project index.
+    pathList : list of AfnPath
+        List of AfnPath objects representing airflow paths through glazing and skylight elements. The list is processed to establish topological relationships between paths and zones.
+    """
     pathList: list[AfnPath] = []
     zoneList: list[AfnZone] = []
     for s in model.spaceList:
@@ -266,6 +538,24 @@ def getZoneAndPath(model):
 
 
 def pathTopology(pathList: list[AfnPath], zoneList: list[AfnZone]) -> list[AfnPath]:
+    """
+    Determine the zone topology for a list of paths based on their connected spaces.
+    
+    Parameters
+    ----------
+    pathList : list of AfnPath
+        List of AfnPath objects, each representing a path with a `space` attribute 
+        containing connected space IDs, and `fromZone` and `toZone` attributes to be set.
+    zoneList : list of AfnZone
+        List of AfnZone objects, each having an `id` attribute used to map space IDs to zone indices.
+    
+    Returns
+    -------
+    list of AfnPath
+        Filtered list of AfnPath objects with valid spaces (non-empty), where `fromZone` 
+        and `toZone` are set to the corresponding zone indices from `zoneList`. Paths 
+        with no connected spaces are excluded.
+    """
     zoneUid = [zone.id for zone in zoneList]
     invalidPath = []
 
@@ -337,6 +627,22 @@ def buildNetworkFile(model=None, pathList: list[AfnPath] = None, zoneList: list[
 
 
 def cleanseNetwork(pathList: list[AfnPath], zoneList: list[AfnZone]) -> (list[AfnPath], list[AfnZone]):
+    """
+    Clean the zones that are not linked to the ambient and remove associated paths.
+    
+    Parameters
+    ----------
+    pathList : list of AfnPath
+        List of path objects representing connections between zones. Each path has 'fromZone' and 'toZone' attributes indicating connectivity.
+    zoneList : list of AfnZone
+        List of zone objects. Each zone object must have an 'id' attribute. Zones not connected to the ambient (index -1) are considered invalid.
+    
+    Returns
+    -------
+    tuple of (list of AfnPath, list of AfnZone)
+        A tuple containing the filtered pathList and zoneList with unconnected (invalid) zones and their associated paths removed.
+        Zone indices in paths are remapped to reflect the new positions after deletion.
+    """
     """clean the zones that are not linked to the ambient.
     those zones will cause error in ContamX and their air change is 0.
     """
@@ -382,6 +688,41 @@ def buildPrj(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone]
              prjFilePath=None, networkFilePath=None, split=False,
              t0=25, windVector: Vector = None,airDensity=1.205, alpha=0.22,
              simulate=False, resultFile=None) -> list[str]:
+    """
+    Build one or more CONTAM *.prj file(s) from a model or provided path and zone lists.
+    
+    Parameters
+    ----------
+    model : MoosasModel, optional
+        A model object obtained from transforming.transform(). Used to derive zone and path data if pathList and zoneList are not provided.
+    pathList : list of AfnPath, optional
+        List of AfnPath objects representing airflow paths. Can be constructed using getZoneAndPath().
+    zoneList : list of AfnZone, optional
+        List of AfnZone objects representing zones. Can be constructed using getZoneAndPath().
+    prjFilePath : str, optional
+        File path for the output *.prj file. If None, defaults to a temporary directory under 'data\\vent'.
+    networkFilePath : str, optional
+        File path for the generated network (.net) input file for MoosasAFN.exe. If None, defaults to a temporary location.
+    split : bool, default False
+        If True, the network is split into isolated parts and multiple files are generated.
+    t0 : float or int, default 25
+        Outdoor temperature in degrees Celsius.
+    windVector : Vector, optional
+        Wind vector defining direction and speed for simulation.
+    airDensity : float, default 1.205
+        Air density in kg/m³.
+    alpha : float, default 0.22
+        Power law exponent for airflow modeling.
+    simulate : bool, default False
+        If True, runs CONTAM simulation after building the project and collects results.
+    resultFile : str, optional
+        Custom file path to save simulation results. If not specified, defaults to the project directory.
+    
+    Returns
+    -------
+    list of str
+        A list containing the path(s) to the generated *.prj file(s).
+    """
     """
         Build *.prj file(s) from model or pathList/zoneList.
         networkFile,model and pathList/zoneList cannot be all None.
@@ -447,6 +788,27 @@ def buildPrj(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone]
 
 def buildZoneInfoFile(model=None, zoneList: list[AfnZone] = None, networkFilePath=None, pathList: list[AfnPath] = None,
                       zoneInfoFilePath=None) -> str:
+    """
+    Builds a zone information file (.info) for thermal zone data based on model, zone list, and network file inputs.
+    
+    Parameters
+    ----------
+    model : MoosasModel, optional
+        The transformed model object obtained from the `transform()` method. Used to extract zone and path data if not provided directly.
+    zoneList : list of AfnZone, optional
+        List of AfnZone objects representing thermal zones. If not provided, will be extracted from the model.
+    networkFilePath : str, optional
+        Path to the network file (.net). If not provided, a temporary network file will be generated using `buildNetworkFile()`.
+    pathList : list of AfnPath, optional
+        List of AfnPath objects representing airflow paths. Required if generating a network file.
+    zoneInfoFilePath : str, optional
+        Output file path for the generated zone info file. If not specified, a temporary file path is created.
+    
+    Returns
+    -------
+    str
+        The file path to the generated zone info file containing zone name, heat load, and user-defined name in CSV format.
+    """
     """
         This method can build the zoneInfo file by:
         model: MoosasModel, given by transforming.transform() method

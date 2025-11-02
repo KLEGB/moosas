@@ -146,6 +146,21 @@ def geoLegacyToGeo(file_path, geo_path=None):
 
 def _readGeo(file_path) -> list[MoosasGeometry]:
     """
+    Read a .geo file and return a list of MoosasGeometry objects representing the geometric data.
+    
+    Parameters
+    ----------
+    file_path : str
+        Path to the .geo file to be read. The .geo format is a custom simplified format used by moosasPy 
+        for efficient I/O, containing polygon definitions, normals, vertices, and apertures.
+    
+    Returns
+    -------
+    list of MoosasGeometry
+        A list of MoosasGeometry instances constructed from the parsed faces in the .geo file. 
+        Each geometry includes vertex data, normal vectors, category, ID, and optional holes. 
+        Invalid geometries are skipped with a warning printed to stdout.
+
     .geo is a moosasPy dedicated file format, which uses a simplified file structure to increase I/O speed......
     The .geo file format is:
     f,{polygon type cat},{polygon number idd}
@@ -272,27 +287,21 @@ def _roundPolygons(polygons: np.ndarray[pygeos.Geometry], precision: float) -> n
 
 
 def _readGeoLegacy(file_path) -> list[MoosasGeometry]:
-    '''
-    .geo为moosasPy专用文件格式，为增加IO速度使用极简的文件结构……
-    .geo文件格式为：(cat: 0为不透光面，1为透光面)
-    Face{面类型cat} {面编号idd}
-    Normal
-    {法向量x} {法向量y} {法向量z}
-    Vertices
-    {顶点1x} {顶点1y} {顶点1z}
-    ...
-    {顶点nx} {顶点ny} {顶点nz}
-
-    例如：
-    Face1 0
-    Normal
-    1.0 1.2031856992204363e-15 -6.09788937479567e-16
-    Vertices
-    15.500000000000002 10.000000000000004 2.2
-    15.500000000000002 10.000000000000004 0.0
-    15.499999999999998 10.800000000000004 0.0
-    15.500000000000002 10.800000000000004 2.2
-    '''
+    """
+    Reads a legacy .geo file format used by moosasPy and returns a list of MoosasGeometry objects.
+    
+    Parameters
+    ----------
+    file_path : str
+        Path to the .geo file to be read. The file contains geometric data in a custom plain text format,
+        with face type (cat), ID, normal vector, and vertices defined per face.
+    
+    Returns
+    -------
+    list[MoosasGeometry]
+        A list of MoosasGeometry instances constructed from the parsed faces, each containing
+        geometry, identifier, normal vector, and category as specified in the input file.
+    """
     cat, idd, normal, faces = [], [], [], []
     with open(file_path, "r", encoding='utf-8') as f:
         read = f.readline()

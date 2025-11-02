@@ -23,6 +23,23 @@ template = dict({})
 
 
 def loadBuildingTemplate(templateFile)->dict:
+    """
+    Load a building template from a CSV file and return it as a dictionary.
+    
+    Parameters
+    ----------
+    templateFile : str
+        Path to the CSV file containing the building template. The file should have 
+        a header row with column names, where columns prefixed with 'zone_' are treated 
+        as values, and others are used as keys.
+    
+    Returns
+    -------
+    dict
+        A nested dictionary where each key is formed by joining non-'zone_' column values 
+        with underscores, and each value is a dictionary mapping 'zone_' column names to 
+        their respective values for that row.
+    """
     try:
         with open(templateFile, 'r') as f:
             title = f.readline().strip('\n').split(',')
@@ -47,6 +64,22 @@ def loadBuildingTemplate(templateFile)->dict:
 
 
 def searchTemplate(str_list, templatelist=template):
+    """
+    Search for template names matching any of the given tags using regular expressions.
+    
+    Parameters
+    ----------
+    str_list : list of str
+        List of strings (tags) to search for within template names.
+    templatelist : dict, optional
+        Dictionary of templates where keys are template names (str) and values are associated data.
+        Default is the global `template` dictionary.
+    
+    Returns
+    -------
+    list
+        List of template values whose names match any of the provided tags via regex search.
+    """
     result = []
     for tag in str_list:
         result += [templatelist[_name] for _name in templatelist.keys() if re.search(tag, _name) is not None]

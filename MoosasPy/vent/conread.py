@@ -12,6 +12,23 @@ AIR_DENSITY = 1.204
 
 
 def exe_simread(simread_path, file_path, responseFile):
+    """
+    Execute simread command with specified input files.
+    
+    Parameters
+    ----------
+    simread_path : str
+        Path to the simread executable.
+    file_path : str
+        Path to the input file to be processed by simread.
+    responseFile : str
+        Path to the response file containing additional input for the simulation.
+    
+    Returns
+    -------
+    None
+        This function does not return any value.
+    """
     """simread.exe"""
     # print(simread_path + ' ' + file_path+'<'+responseFile)
     callCmd([simread_path, file_path, ' < ' ,responseFile])
@@ -74,6 +91,22 @@ def read_topology(file_path):
 
 def build_matrix(file_path):
     """
+    Build an airflow network (AFN) matrix from *.lfr, *.nfr, and *.prj files with unit conversion.
+    
+    Parameters
+    ----------
+    file_path : str
+        Path to the input .prj file. Must have a '.prj' extension. The corresponding 
+        .lfr and .nfr files are expected to be in the same directory with matching base name.
+    
+    Returns
+    -------
+    numpy.ndarray
+        A 2D square matrix of shape (n, n), where n is the number of zones (rooms) plus ambient.
+        The matrix represents airflow rates between zones in cubic meters per hour (m³/h),
+        converted from the original kg/s using a factor of 3600.0 / AIR_DENSITY.
+    """
+    """
         build AFN matrix from *.lfr,*.nfr and *.prj files
         the result's unit is transformed from kg/s into m3/h
     """
@@ -106,6 +139,23 @@ def build_matrix(file_path):
     return np.array(matrix) * 3600.0 / AIR_DENSITY
 
 def read_file(path):
+    """
+    Split a project file into head, temperature definition, and rear sections.
+    
+    Parameters
+    ----------
+    path : str
+        Path to the project file to be read and split.
+    
+    Returns
+    -------
+    head : str
+        Content of the file from the beginning up to and including the line after the 'zones' line.
+    temp : str
+        Content following the 'zones' section up to (but not including) the '-999' line.
+    rear : str
+        Remaining content of the file starting from the '-999' line to the end.
+    """
     """
     We need to change the temperature in the project file for each iteration.
     therefore we need to split the head, temperature definition, and rear part of the prj file.
@@ -141,6 +191,21 @@ def read_file(path):
 
 def read_zone(path):
     """
+    Extract zone names and volumes from a project file.
+    
+    Parameters
+    ----------
+    path : str
+        Path to the project file to be read.
+    
+    Returns
+    -------
+    tuple of numpy.ndarray
+        A tuple containing two arrays:
+        - zone_volumes (numpy.ndarray): Array of zone volumes extracted from column 8.
+        - zone_names (numpy.ndarray): Array of zone names extracted from column 11.
+    """
+    """
     get the zone name and zone volume in the project file
     zone[:, 8] is the volume, zone[:, 11] is the zone name
     """
@@ -150,6 +215,25 @@ def read_zone(path):
 
 
 def write_file(path, head, temp, rear):
+    """
+    Write header, temperature, and rear content to a file.
+    
+    Parameters
+    ----------
+    path : str
+        The file path to write to.
+    head : str
+        The header content to write at the beginning of the file.
+    temp : str
+        The temperature-related content to write after the header.
+    rear : str
+        The trailing content to write after the temperature section.
+    
+    Returns
+    -------
+    str
+        The file path that was written to.
+    """
     """
     write the new header, temperature and rear into the project file.
     """
@@ -161,6 +245,22 @@ def write_file(path, head, temp, rear):
 
 
 def read_result(path):
+    """
+    Read and parse simulation results from a text file exported by CONTAMW.
+    
+    Parameters
+    ----------
+    path : str
+        Path to the input text file containing the CONTAMW simulation results.
+    
+    Returns
+    -------
+    tuple of (numpy.ndarray, numpy.ndarray, numpy.ndarray)
+        A tuple containing:
+        - First column (index 1) of the parsed data as strings: numpy.ndarray of str
+        - Last column converted to float values: numpy.ndarray of float
+        - Middle columns (from index 2 to second-to-last) converted to float values: numpy.ndarray of float
+    """
     """
     legacy method to read result in the txt file exported by contamW.
     """

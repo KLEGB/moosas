@@ -1,7 +1,6 @@
 beautifulsoup4==4.8.0
 colorama==0.4.6
 Cython==3.0.11
-pydot3k @ file:///D:/moosas/setup/pydot3k-1.0.17.tar.gz#sha256=3931a30bc87383c9b2c89752f6beb0d3be5a8f1065211ec9ad61df1c79d656c7
 eppy ==0.5.63
 joblib==1.4.2
 kiwisolver==1.4.8

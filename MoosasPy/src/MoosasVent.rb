@@ -2,6 +2,30 @@ class MoosasVent
     Ver='0.6.4'
     require 'json'
     def self.analysis()
+    # Function
+    # --------
+    # Perform wind condition input, thermal ventilation simulation setup, and ventilation analysis
+    # for a building model. This method collects user inputs for wind speed, wind direction,
+    # and optional thermal ventilation parameters via UI prompts, adjusts directional values,
+    # executes a ventilation simulation, calculates air changes per hour (ACH), visualizes results,
+    # and outputs performance metrics.
+    # 
+    # Parameters
+    # ----------
+    # None :
+    # This is a class method that takes no arguments. It retrieves configuration from global
+    # variables (`$language`, `$current_model`) and interacts with the user through dialog boxes
+    # to obtain input values.
+    # 
+    # Returns
+    # -------
+    # None :
+    # The method does not return a value. It performs side effects including:
+    # - Displaying input dialogs to collect wind and temperature data.
+    # - Executing ventilation simulations by calling external methods.
+    # - Calculating and printing air change rate (ACH).
+    # - Visualizing airflow paths.
+    # - Printing execution time of the analysis.
         # 朝向转换角度：西向（0）、南向（90）、东向（180）、北向（270）
         if $language == 'Chinese'
             prompts = ["风速：", "风向：", "计算热压通风"]
@@ -47,6 +71,27 @@ class MoosasVent
     end
 
     def self.calculate_ach(path_result)
+    # """
+    # Function
+    # --------
+    # calculate_ach
+    # Calculates the air changes per hour (ACH) based on airflow to and from the ambient environment and the total volume of spaces in the model.
+    # 
+    # Parameters
+    # ----------
+    # path_result : Hash
+    # A hash where keys are path identifiers and values are hashes containing flow information.
+    # Each flow hash must include:
+    # - 'from' (String): the source zone of the flow.
+    # - 'to' (String): the destination zone of the flow.
+    # - 'flow' (Numeric or String): the volumetric flow rate; positive values indicate flow out, negative values indicate flow in.
+    # 
+    # Returns
+    # -------
+    # Float
+    # The calculated air changes per hour (ACH), defined as the total absolute airflow (into and out of ambient) divided by the total volume of all spaces.
+    # Returns 0.0 if total_volume is zero to avoid division by zero.
+    # """
         total_flow,total_volume = 0.0,0.0
         path_result.each do |path,flow|
             if flow['from']=='ambient'
@@ -68,6 +113,31 @@ class MoosasVent
     end
 
     def self.call_vent(wind_speed, wind_direction, out_temp,in_temp,alpha,thermal)
+    # Function
+    # --------
+    # Call ventilation simulation with given environmental conditions and thermal parameters,
+    # generate necessary input files, execute the simulation process, and return parsed path results.
+    # 
+    # Parameters
+    # ----------
+    # wind_speed : float
+    # The speed of the wind in meters per second (m/s).
+    # wind_direction : float
+    # The direction of the wind in degrees, where 0° is North and increases clockwise.
+    # out_temp : float
+    # Outdoor temperature in degrees Celsius.
+    # in_temp : float
+    # Initial indoor zone temperature in degrees Celsius.
+    # alpha : float
+    # Empirical coefficient used in wind pressure calculation.
+    # thermal : bool
+    # Flag indicating whether to include thermal effects (e.g., radiant heat gain) in the simulation.
+    # 
+    # Returns
+    # -------
+    # dict
+    # Parsed JSON object containing path result data from the ventilation simulation,
+    # loaded from the generated 'path.json' file after execution.
         if thermal
             p 'calculating radiance heat gain...'
             # BuildZoneHeatFile
@@ -135,6 +205,32 @@ class MoosasVent
     end
 
     def self.run_vent_legacy(model, wind_speed, wind_direction,out_temp,in_temp, alpha,thermal)
+    # Function:
+    # Executes a legacy ventilation simulation using empirical wind pressure models and external tools (XGBoost, CONTAM).
+    # This method calculates airflow through building openings based on wind speed, direction, thermal conditions,
+    # and geometric properties. It interfaces with Python-based XGBoost for wind pressure prediction and runs
+    # airflow network simulations via afn.exe. Optionally performs thermal iteration and visualizes results.
+    # 
+    # Parameters:
+    # model : OpenStudio::Model
+    # The building energy model containing spaces, surfaces, and glazing definitions.
+    # wind_speed : Float
+    # Wind speed in meters per second (m/s) used to calculate dynamic pressure.
+    # wind_direction : Float
+    # Wind direction in degrees relative to the building's orientation (0-360).
+    # out_temp : Float
+    # Outdoor air temperature in degrees Celsius for thermal calculations.
+    # in_temp : Float
+    # Indoor air temperature in degrees Celsius for thermal buoyancy and heating calculations.
+    # alpha : Float
+    # Empirical exponent for height-dependent wind pressure adjustment (typically 0.2–0.5).
+    # thermal : Boolean
+    # Flag indicating whether to include thermal effects (buoyancy, internal heat gains) in the simulation.
+    # 
+    # Returns:
+    # Float
+    # Air changes per hour (ACH), calculated as total volumetric airflow divided by total building volume,
+    # rounded to two decimal places. Represents the overall ventilation rate of the building.
         zones, paths, paths_inner, bdh, params, heights, rv = [], [], {}, calculate_bdh(model), "", [], 0
         for i in 0..model.spaces.length - 1 do
             s = model.spaces[i]
@@ -236,6 +332,20 @@ class MoosasVent
     end
 
     def self.visualize_path(path_result,airVol)
+    # Function:
+    # Visualizes airflow paths and ventilation rates in a building model based on simulation results.
+    # Draws directional arrows on glazing surfaces to represent air movement and computes room-specific ventilation metrics.
+    # 
+    # Parameters:
+    # path_result : Hash
+    # A dictionary containing airflow data for glazing elements, indexed by glazing UID.
+    # Each entry includes 'flow' (volume flow rate in m³/h), 'from' (source space or 'ambient'), and 'to' (destination space or 'ambient').
+    # airVol : float or int
+    # Scaling factor or threshold value used in flow visualization; exact usage depends on downstream `flow_visualization` method.
+    # 
+    # Returns:
+    # None
+    # This method produces visual output (e.g., 3D arrows in the model) via side effects and does not return a value.
         arrowLines = {}
         vent = {}
         $current_model.spaces.each do |s|
@@ -245,21 +355,28 @@ class MoosasVent
                 nor.length=1
                 b.glazings.each do |g|
                     if path_result.has_key?(g.uid)
-                        vel = path_result[g.uid]['flow']
-                        if path_result[g.uid]['from'] == 'ambient'
-                            fromP = g.get_weight_center()
-                        else
-                            fromP = $current_model%(path_result[g.uid]['from'])
-                            fromP = fromP.get_weight_center()
-                        end
-                        if path_result[g.uid]['to'] == 'ambient'
-                            toP = g.get_weight_center()
-                        else
-                        toP = $current_model%(path_result[g.uid]['to'])
-                        toP = toP.get_weight_center()
-                        end
-                        p toP,fromP,toP-fromP
-                        if nor.dot(toP-fromP)<0
+                        vel = path_result[g.uid]['flow']/3600/g.area_m
+                        # p path_result[g.uid]
+                        # if path_result[g.uid]['from'] == 'ambient'
+                        #     fromP = g.face.vertices[0]
+                        # else
+                        #     fromP = $current_model%(path_result[g.uid]['from'])
+                        #     p fromP.id
+                        #     fromP = fromP.get_weight_center()
+                        # end
+                        # if path_result[g.uid]['to'] == 'ambient'
+                        #     toP = g.face.vertices[0]
+                        # else
+                        #     toP = $current_model%(path_result[g.uid]['to'])
+                        #     p toP.id
+                        #     toP = toP.get_weight_center()
+                        # end
+                        # nor_other = [fromP[0]-toP[0],fromP[1]-toP[1],fromP[2]-toP[2]]
+                        #
+                        # if nor.dot(toP-fromP)<0
+                        #     nor.length=-1
+                        # end
+                        unless path_result[g.uid]['from'] == s.id
                             nor.length=-1
                         end
                         airVol_space += vel.abs() if b.is_internal_edge == false
@@ -273,6 +390,22 @@ class MoosasVent
         # self.room_visulization(vent)
     end
     def self.visualization(model,airVol)
+    # Function:
+    # Generates a visualization of airflow characteristics within a building model based on air velocity data.
+    # Reads air velocity values from a file, computes airflow volume per space, and creates arrow-based visual representations
+    # of airflow direction and magnitude across glazing surfaces. Also calculates ventilation rates for each space.
+    # 
+    # Parameters:
+    # model : OpenStudio::Model::Model
+    # The building energy model containing spaces, surfaces, and glazings used for spatial and geometric calculations.
+    # airVol : Float
+    # A scaling or threshold parameter related to air volume, passed to the flow visualization function;
+    # purpose may depend on downstream visualization logic.
+    # 
+    # Returns:
+    # None
+    # This method does not return a value. It produces side effects including file reading, internal data processing,
+    # and triggering visualization routines that may generate graphical output or files.
         airVel = {}
         File.open("airVel","r") do |file|
             while line = file.gets
@@ -302,6 +435,25 @@ class MoosasVent
         #self.room_visulization(vent)
     end
     def self.calculate_bdh(model)
+    # """
+    # Function
+    # --------
+    # calculate_bdh : Calculates the bounding dimensions (length, width, height) of a 3D model based on its spatial geometry.
+    # 
+    # Parameters
+    # ----------
+    # model : OpenStudio::Model::Model
+    # The OpenStudio model object containing spaces and associated geometry from which bounding dimensions are computed.
+    # It is expected to have defined spaces with floor surfaces and vertices.
+    # 
+    # Returns
+    # -------
+    # Array<Float>
+    # A three-element array representing the overall dimensions of the model in meters:
+    # - [0]: Length (difference in X-axis: max - min)
+    # - [1]: Width (difference in Y-axis: max - min)
+    # - [2]: Height (difference in Z-axis: adjusted max - min, accounting for space height)
+    # """
         domain = [1e+9, -1e+9, 1e+9, -1e+9, 1e+9, -1e+9]
         model.spaces.each do |s|
             vertices_=[]
@@ -331,6 +483,18 @@ class MoosasVent
     end
 
     def self.calculate_midpoint(vertices)
+    # Function:
+    # Calculate the midpoint (centroid) of a set of 3D vertices, converting coordinates from inches to centimeters.
+    # 
+    # Parameters:
+    # vertices : Array<Vertex>
+    # An array of vertex objects, each having a `position` attribute that returns an array-like structure
+    # containing three numerical values representing x, y, z coordinates in inches.
+    # 
+    # Returns:
+    # String
+    # A comma-separated string representing the rounded midpoint coordinates (x, y, z) in centimeters.
+    # The format is "x,y,z" where each coordinate is rounded to the nearest integer.
         c, x, y ,z = 0, 0, 0, 0
         vertices.each do |v|
             c += 1
@@ -342,6 +506,26 @@ class MoosasVent
     end
 
     def self.calculate_height(vertices)
+    # """
+    # Function
+    # --------
+    # calculate_height
+    # Calculates the height based on the Z-coordinate differences between specified vertices,
+    # converts the result from inches to meters, and returns the rounded value.
+    # 
+    # Parameters
+    # ----------
+    # vertices : Array<Vertex>
+    # An array of vertex objects, each having a `position` attribute that is an array-like
+    # structure where the third element (index 2) represents the Z-coordinate in inches.
+    # 
+    # Returns
+    # -------
+    # Float
+    # The calculated height in meters, converted from the largest of two consecutive
+    # Z-coordinate differences (between vertices[1] and vertices[0], or vertices[2] and vertices[1]),
+    # rounded to two decimal places.
+    # """
         height = (vertices[1].position[2].to_f - vertices[0].position[2].to_f).abs
         backup = (vertices[2].position[2].to_f - vertices[1].position[2].to_f).abs
         if height < backup
@@ -351,6 +535,33 @@ class MoosasVent
     end
 
     def self.pressure_input(wind_direction, bdh, b, g)
+    # Function:
+    # Computes normalized input parameters for pressure analysis based on wind direction, building dimensions,
+    # geometric data, and orientation. The method calculates ratios of building height and depth, adjusts for
+    # wind incidence angle, normalizes coordinates, and determines vertical and horizontal positions within
+    # a defined domain.
+    # 
+    # Parameters:
+    # wind_direction : float
+    # The direction of the wind in degrees (0-360), used to compute the relative angle with the building orientation.
+    # bdh : array_like of float
+    # A 3-element array representing building depth, height, and another dimension (e.g., [depth, height, ?]).
+    # Used to calculate aspect ratios.
+    # b : object
+    # A building-like object containing wall and face geometry information. Must have a `normal` property
+    # and a `walls` collection where the first wall's vertices define a spatial domain.
+    # g : object
+    # A geometric face object (e.g., roof or surface) with vertices used to compute average height and horizontal
+    # position. Must have a `face.vertices` collection with positional data.
+    # 
+    # Returns:
+    # list
+    # A two-element list:
+    # - The first element is a comma-separated string of five normalized values:
+    # db (normalized depth ratio), hb (normalized height ratio), theta (normalized wind angle),
+    # height (relative vertical position), and horizon (relative horizontal position).
+    # All values are rounded to two decimal places and scaled to the range [0,1], with horizon possibly flipped.
+    # - The second element is the average z-coordinate (height in meters) of the vertices in `g.face.vertices`.
         ori, db, hb, index, reverse = calculate_orientation(b.normal), 0, 0, 0, 0
         if (ori > 45 and ori <= 135) or (ori > 225 and ori <= 315)
             db, hb = bdh[1] / bdh[0], bdh[2] / bdh[0]
@@ -406,6 +617,24 @@ class MoosasVent
     end
 
     def self.calculate_orientation(n)
+    # """
+    # Function
+    # --------
+    # calculate_orientation
+    # Calculates the orientation angle in degrees from a 2D vector.
+    # 
+    # Parameters
+    # ----------
+    # n : Array<Numeric>
+    # A two-element array representing a 2D vector, where n[0] is the x-component
+    # and n[1] is the y-component.
+    # 
+    # Returns
+    # -------
+    # Numeric
+    # The orientation angle in degrees, measured clockwise from the positive x-axis,
+    # normalized to the range [0, 360). If the angle is exactly 360, it is returned as 0.
+    # """
         o = Math.acos((-1) * (n[0]) / Math.sqrt((n[0])**2 + (n[1])**2)) * 180 / Math::PI
         if n[1] > 0
             o = 360-o
@@ -417,6 +646,30 @@ class MoosasVent
     end
 
     def self.draw_arrow(g,vel,nor)
+    # Function
+    # --------
+    # Computes and returns the centroid of a given geometry, along with a scaled direction vector
+    # based on surface normal and velocity. This method is typically used to determine an arrow's
+    # position and orientation in 3D space.
+    # 
+    # Parameters
+    # ----------
+    # g : Sketchup::Group or Sketchup::Face
+    # The geometric entity (group or face) whose transformation and vertices are used
+    # to compute the centroid and orientation.
+    # vel : Float
+    # The magnitude (length) of the output vector. If zero, it is set to 0.01 to avoid null vectors.
+    # nor : Array<Float> or Geom::Vector3d
+    # A 3D vector representing the normal direction. It will be converted into a Geom::Vector3d
+    # and resized to the specified velocity magnitude.
+    # 
+    # Returns
+    # -------
+    # Array
+    # An array containing:
+    # - centroid (Geom::Point3d): The average center point of the face vertices in world coordinates.
+    # - vector (Geom::Vector3d): The normalized normal vector scaled by `vel`.
+    # - vel (Float): The applied velocity (vector magnitude), after correction if originally zero.
         #p nor
         vel=0.01 if vel==0
         c, x, y ,z = 0, 0, 0, 0
@@ -447,10 +700,24 @@ class MoosasVent
     end
 
     def self.flow_visualization(arrowLines,airVol)
+    # Function:
+    # Generates a 3D visualization of airflow patterns on windows in a SketchUp model, using arrow glyphs to represent air velocity and direction.
+    # The method creates a legend panel with a color scale based on velocity magnitude and annotates each arrow with its corresponding speed.
+    # 
+    # Parameters:
+    # arrowLines (Array<Array>): A list of arrays, where each sub-array contains three elements:
+    # - centroid (Geom::Point3d): The base point of the airflow arrow.
+    # - direction_vector (Geom::Vector3d): The directional vector of the airflow.
+    # - velocity (Numeric): The magnitude of airflow velocity (in m/s), used for scaling and coloring.
+    # airVol (Numeric): The total air change per hour (ACH), displayed in the description panel.
+    # 
+    # Returns:
+    # Sketchup::Entities — The entities collection within a newly created group that contains all visual elements (arrows, text labels, and legend panel) added to the active model.
         scale = 3/0.0254
         ent = Sketchup.active_model.entities.add_group
         ent=ent.entities
 
+        # calculate the maximum
         vel_max = 0
         for i in 0..arrowLines.length - 1 do
             al = arrowLines[i]
@@ -461,6 +728,7 @@ class MoosasVent
         scaleRender=MoosasGridScaleRender.new(0,vel_max,description = description,unit='m/s',colors=[Sketchup::Color.new("Blue"),Sketchup::Color.new("Green"), Sketchup::Color.new("Yellow"),Sketchup::Color.new("Red")])
         scaleRender.draw_panel(Sketchup.active_model.selection)
 
+        # draw arrow
         for i in 0..arrowLines.length - 1 do
             al = arrowLines[i]
 
@@ -492,6 +760,20 @@ class MoosasVent
     end
 
     def self.room_visulization(vent)
+    # Function:
+    # Visualizes air change rates (in ACH) for rooms in a SketchUp model using colored 3D text labels.
+    # The method creates a group of entities, assigns colors based on ventilation values,
+    # and places labeled 3D text at the center of each room to represent its air change coefficient.
+    # 
+    # Parameters:
+    # vent : Hash
+    # A dictionary mapping space IDs to their respective air change per hour (ACH) values.
+    # Keys are identifiers for spaces, and values are numerical air change coefficients.
+    # 
+    # Returns:
+    # None
+    # This method does not return a value. It modifies the SketchUp model by adding visual elements
+    # (colored 3D text labels) to represent ventilation data within the model space.
         ent = Sketchup.active_model.entities.add_group
         ent=ent.entities
         description="Air Change Coefficiency of Rooms\nLocation:#{MoosasWeather.singleton.station_info["city"]}\nCodition:Wind pressure natural ventilation\nPriod:Summer"
@@ -509,6 +791,32 @@ class MoosasVent
     end
 
     def self.run_auto_contamx(prjdict,t0 = 20,max_iteration = 10)
+    # """
+    # Function
+    # --------
+    # Run the automatic CONTAM simulation process using a generated Python script.
+    # 
+    # This method generates a Python script that executes CONTAM simulations by calling
+    # the `iterateProjects` function from the `MoosasPy` module. It prepares the script
+    # with project and zone file lists from a specified directory and runs it via the
+    # system's Python interpreter. The working directory is temporarily changed to the
+    # Python scripts location during execution, and restored afterward.
+    # 
+    # Parameters
+    # ----------
+    # prjdict : str
+    # Directory path containing the project (.prj) and zone (.heat) files for simulation.
+    # t0 : float, optional
+    # Outdoor temperature setting for the simulation (default is 20°C).
+    # max_iteration : int, optional
+    # Maximum number of iterations allowed in the simulation process (default is 10).
+    # 
+    # Returns
+    # -------
+    # bool
+    # Returns True if the simulation script executes successfully without exceptions.
+    # Returns False if an exception occurs during system execution, after logging the error.
+    # """
         Dir.chdir MPath::PYTHON
         File.open(MPath::DATA+"script/auto_contam.pyw","w+") do |f|
             f.puts "import os\n"
@@ -529,6 +837,19 @@ class MoosasVent
     end
 
     def self.calculate_rooomheat(model)
+    # Function:
+    # Calculate the total heat load for each room in the building model, including solar radiation, occupant heat gain, equipment heat gain, and lighting heat gain.
+    # 
+    # Parameters:
+    # model : OpenStudio::Model::Model
+    # The OpenStudio model object containing the building spaces and thermal zones.
+    # Used to access space-level settings and geometric properties for heat load calculation.
+    # 
+    # Returns:
+    # roomheat : Array<Float>
+    # An array of total heat loads in watts for each space in the model.
+    # Each element represents the summed heat gain from solar radiation, occupants,
+    # equipment, and lighting for the corresponding space.
 
         t2 = Time.new
             $current_model.spaces.each{ |s| 

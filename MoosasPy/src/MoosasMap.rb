@@ -21,6 +21,25 @@ class MoosasMap
 
 
     def self.show_ui()
+    # """
+    # Function
+    # --------
+    # Displays the user interface dialog and sets up callback for importing urban building data.
+    # 
+    # The method initializes the dialog with a specific 3D model URL, registers an action callback
+    # to handle urban building data import from JSON when triggered, and then displays the dialog
+    # either as a modal (on Unix systems) or a standard window depending on the operating system.
+    # 
+    # Parameters
+    # ----------
+    # None
+    # This is a class method with no parameters.
+    # 
+    # Returns
+    # -------
+    # None
+    # This method does not return any value.
+    # """
 
         @dialog.set_file("http://www.moosas.cn/3dmap/skp")
 
@@ -35,6 +54,21 @@ class MoosasMap
     end
 
     def self.get_long_value(element_id)
+    # """
+    # Function
+    # --------
+    # Retrieves the long value of a specified element from the dialog.
+    # 
+    # Parameters
+    # ----------
+    # element_id : int or string
+    # The identifier of the element whose value is to be retrieved.
+    # 
+    # Returns
+    # -------
+    # int or nil
+    # The long value of the specified element, or nil if the element does not exist or has no value.
+    # """
         return @dialog.get_element_value(element_id)
     end
 

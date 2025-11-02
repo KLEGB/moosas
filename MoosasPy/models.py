@@ -47,6 +47,19 @@ class MoosasModel(MoosasContainer):
     """
 
     def __init__(self):
+        """
+        Initialize the MoosasModel with default lists and assign types to these lists.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the MoosasModel class being initialized.
+        
+        Returns
+        ------
+        None
+            This constructor does not return any value.
+        """
         """initialize the MoosasModel with default list, and apply type to these list"""
         super(MoosasModel, self).__init__()
 
@@ -54,6 +67,36 @@ class MoosasModel(MoosasContainer):
         self.__template = loadBuildingTemplate(path.dataBaseDir+r'\building_template.csv')
     @property
     def buildingTemplate(self) -> dict:
+        """
+        Get a dictionary containing all building template data from the database.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the template data.
+        
+        Returns
+        -------
+        dict
+            A dictionary with string keys representing template parameters and corresponding
+            values for each parameter. The dictionary includes:
+            - "zone_wallU": Exterior wall U-value
+            - "zone_winU": Exterior window U-value
+            - "zone_win_SHGC": Exterior window Solar Heat Gain Coefficient
+            - "zone_c_temp": Cooling set point temperature
+            - "zone_h_temp": Heating set point temperature
+            - "zone_collingEER": Cooling COP (Coefficient of Performance)
+            - "zone_HeatingEER": Heating COP
+            - "zone_work_start": Working schedule start time
+            - "zone_work_end": Working schedule end time
+            - "zone_ppsm": Population per square meter
+            - "zone_pfav": Ventilation rate per person (ACH)
+            - "zone_popheat": Heat generation per person (W)
+            - "zone_equipment": Equipment heat generation (W)
+            - "zone_lighting": Lighting heat generation (W)
+            - "zone_infiltration": Infiltration air change coefficient (ACH)
+            - "zone_nightACH": Nighttime air change coefficient (ACH)
+        """
         """get a dictionary showing all template in the database
 
         Returns:
@@ -81,8 +124,37 @@ class MoosasModel(MoosasContainer):
         return self.__template
 
     def includeTemplate(self, templateName: str,templateDict:dict):
+        """
+        Include a template in the internal template dictionary.
+        
+        Parameters
+        ----------
+        templateName : str
+            The name of the template to be added.
+        templateDict : dict
+            The dictionary containing the template data.
+        
+        Returns
+        -------
+        None
+            This function does not return any value.
+        """
         self.__template[templateName] = templateDict
     def loadWeatherData(self, stationIdOrPath: str = '545110') -> MoosasWeather:
+        """
+        Load weather data from the database or import an external EPW file.
+        
+        Parameters
+        ----------
+        stationIdOrPath : str, optional
+            The ID of the weather station or the file path to an EPW file. If a valid file path is provided, 
+            the EPW file will be imported using `includeEpw`. Default is '545110'.
+        
+        Returns
+        -------
+        MoosasWeather
+            An instance of MoosasWeather containing the loaded weather data.
+        """
         """load weather data from the database,
         or import an external epw file using weather.includeEpw method
 
@@ -98,6 +170,23 @@ class MoosasModel(MoosasContainer):
         return self.weather
 
     def loadCumSky(self, stationIdOrPath: str = '545110') -> dict:
+        """
+        Load cumulative sky data for a given station or EPW file.
+        
+        Parameters
+        ----------
+        stationIdOrPath : str, optional
+            The ID of the weather station or the file path to an EPW file. If a valid file path is provided, 
+            the EPW file will be imported and processed. Default is '545110'.
+        
+        Returns
+        -------
+        dict
+            A dictionary containing the loaded cumulative sky data with the following keys:
+            - 'annualCumSky': annual cumulative sky dome (numpy array or similar structure)
+            - 'summerCumSky': summer period cumulative sky dome
+            - 'winterCumSky': winter period cumulative sky dome
+        """
         """load cumSky data from the database,
                 or import an external epw file using weather.includeEpw method
 
@@ -125,6 +214,20 @@ class MoosasModel(MoosasContainer):
         return self.cumSky
 
     def plotPlan(self, level_index: int, show=True) -> None:
+        """
+        Plot the plan view for a specified level index.
+        
+        Parameters
+        ----------
+        level_index : int
+            The index of the level to plot, corresponding to an entry in self.levelList.
+        show : bool, optional
+            Whether to display the figure immediately. Default is True.
+        
+        Returns
+        -------
+        None
+        """
         """plot the plan view for defined level index in self.levelList
         since the pythonDist folder does not contain matplotlib package,
         we need to import the package inside this method
@@ -161,6 +264,24 @@ class MoosasModel(MoosasContainer):
                     lineType=['-', '-', '-', '--'], show=show)
 
     def summary(self,wall_count=None):
+        """
+        Prints a formatted summary of building elements by level.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the lists of building elements.
+            Must have attributes: `levelList`, `wallList`, `glazingList`, `skylightList`,
+            `faceList`, and `spaceList`.
+        wall_count : list of int, optional
+            A list specifying the previous count of walls per level for change tracking.
+            If provided, differences in wall counts are displayed in parentheses.
+        
+        Returns
+        -------
+        None
+            This function does not return a value. It prints the summary directly to stdout.
+        """
         print('LEVEL\t\tWALL\t\tGLS\t\tSKY\t\tFACE\t\tSPACE\t\tAREA')
 
         for i, bld_level in enumerate(self.levelList):
@@ -211,6 +332,20 @@ class MoosasModel(MoosasContainer):
         #           f"MainSpace {len(MainSpace)} area: {np.sum([s.area for s in MainSpace])}")
 
     def buildXml(self, writeGeometry=False) -> ET.Element:
+        """
+        Build an XML element tree representing the model information.
+        
+        Parameters
+        ----------
+        writeGeometry : bool, optional
+            Whether to include geometry data in the XML output. Default is False.
+        
+        Returns
+        -------
+        ET.Element
+            The root element of the constructed XML tree containing model data including faces, 
+            topology, spaces, settings, and shading information.
+        """
         """build a xmlTree for the model information.
         the XML file have 3 level of data:
         <face>
@@ -309,6 +444,22 @@ class MoosasModel(MoosasContainer):
         return root
 
     def buildGeojson(self, mask=None) -> dict:
+        """
+        Build a GeoJSON dictionary from the model's geometry library.
+        
+        Parameters
+        ----------
+        mask : array-like, optional
+            A mask to filter faces. If provided, only faces matching the mask are included.
+            Default is None, which includes all faces.
+        
+        Returns
+        -------
+        dict
+            A dictionary representing a GeoJSON FeatureCollection, containing features 
+            with properties such as normal vector, face ID, category (is_glazing), 
+            and polygon geometry defined by coordinates.
+        """
         """build a geojson from the model's geometry library.
         the geojson file can be read by gis software or by pygeos package.
 

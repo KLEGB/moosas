@@ -3,6 +3,18 @@ class MoosasRadiance
     Ver='0.6.4'
 
     def self.calculate_radiance()
+    # Function:
+    # Performs a solar radiance analysis on selected or generated grids within the SketchUp model.
+    # If no valid grids are found in the current selection, the method attempts to generate them.
+    # After calculating radiance values, it visualizes results using a color scale and updates the selection.
+    # 
+    # Parameters:
+    # None
+    # 
+    # Returns:
+    # None
+    # The method does not return a value. It modifies the model state by performing radiance calculations,
+    # updating the selection with grid entities, and rendering a color-coded visualization panel.
         Sketchup.active_model.start_operation("辐射分析", true)
 
         t1 = Time.new
@@ -50,6 +62,37 @@ class MoosasRadiance
     end
 
     def self.calculate_position_radiance(position,model,cum_sky)
+    # """
+    # Function
+    # --------
+    # calculate_position_radiance : float
+    # Calculates the total radiance at a given position by testing visibility
+    # against a cumulative sky model. Radiance is accumulated from sky segments
+    # that are directly visible (i.e., not obstructed by geometry).
+    # 
+    # Parameters
+    # ----------
+    # position : Geom::Point3d or Array-like or nil
+    # The 3D position in space where radiance is to be calculated.
+    # If nil or false, the function returns 0.
+    # 
+    # model : Sketchup::Model or Array<Face>
+    # The 3D model or a collection of faces used for ray intersection testing.
+    # If it is a Sketchup::Model, raytest is performed using the model's geometry.
+    # Otherwise, a custom intersection method is used with the provided face list.
+    # 
+    # cum_sky : Array<Array<Geom::Point3d, Float>>
+    # A list of sky patches, where each element is an array containing:
+    # - [0] : Geom::Point3d representing the direction/position of the sky patch
+    # - [1] : Float representing the radiance value of that sky patch
+    # 
+    # Returns
+    # -------
+    # Float
+    # The total radiance at the given position, summed over all unobstructed
+    # sky patches. Returns 0 if the position is nil, false, or no valid
+    # intersections could be computed.
+    # """
         #model = Sketchup.active_model
         if position != nil and position != false
             #begin
@@ -85,6 +128,28 @@ class MoosasRadiance
     end
 
     def self.calculate_grid_radiance(grids)
+    # """
+    # Function
+    # --------
+    # calculate_grid_radiance
+    # 
+    # Calculate solar radiation values for a set of grids in the SketchUp model based on sky luminance data and grid geometry.
+    # The method computes radiance at each node of the grid by projecting cumulative sky radiation onto grid normals, stores
+    # results in attribute dictionaries, updates min/max/average statistics, and triggers visualization via coloring.
+    # 
+    # Parameters
+    # ----------
+    # grids : Array<Sketchup::Group>
+    # An array of SketchUp group entities representing grids. Each grid must contain an attribute dictionary named "grid"
+    # with keys including "nodes" (2D array of 3D coordinates), "norm" (normal vector), and optionally "id". The grids are
+    # processed sequentially to compute radiance values at each node.
+    # 
+    # Returns
+    # -------
+    # Array<Array<Array<Float>>>
+    # A 3D array where each element corresponds to a grid, containing a 2D matrix (rows x columns) of radiance values
+    # (in kWh/m²) calculated at each node. This result can be used for further analysis or visualization.
+    # """
 
         model = Sketchup.active_model
         model_dict = model.attribute_dictionary("Grids", false)
@@ -184,6 +249,24 @@ class MoosasRadiance
     end
 
     def self.intersection(ray,model)
+    # Function:
+    # Determines if a given ray intersects with any face of a 3D model.
+    # 
+    # Parameters:
+    # ray : Array
+    # A two-element array representing the ray, where the first element is the origin
+    # (a Geom::Point3d or array-like point) and the second element is the direction vector
+    # (a Geom::Vector3d or array-like vector).
+    # model : Enumerable
+    # An enumerable collection of faces (e.g., SketchUp faces) that represent the 3D model.
+    # Each face is expected to have a `normal`, `vertices`, and `classify_point` method.
+    # 
+    # Returns:
+    # Boolean
+    # Returns true if the ray intersects any face of the model at a point inside the face
+    # (not on edge or corner), and the intersection occurs in the positive direction of the ray.
+    # Returns false if no such intersection exists, including cases where the ray is parallel
+    # to the face or intersects behind the ray origin.
         model.each do |face|
             n = face.normal
             u = ray[1]

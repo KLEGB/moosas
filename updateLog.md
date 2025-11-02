@@ -2,6 +2,7 @@
 # AFN update 10.31
 - 0.8.2.1 include skylight in MoosasAFN.go and fix their bug. The funcs in MoosasPy.ventilation have been included in MoosasPy.vent
 - 0.8.2.2 update src redirecting to python vent
+- 0.8.2.3 visualization of the ventilation arrow has been fixed.
 
 --0.8.1
 # IDF update 10.26

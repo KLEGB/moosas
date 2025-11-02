@@ -18,6 +18,23 @@ INCH_METER_MULTIPLIER_SQR = 1
 
 
 def _getElement(*key: str, dictionary: dict, strict=True) -> np.ndarray:
+    """
+    Get values from a dictionary corresponding to given keys and return as a numpy array.
+    
+    Parameters
+    ----------
+    *key : str
+        Variable length argument list of keys to look up in the dictionary.
+    dictionary : dict
+        The dictionary from which to retrieve values using the provided keys.
+    strict : bool, optional
+        If True, raises an error when a key is not found. If False, returns an array with None if any key is missing. Default is True.
+    
+    Returns
+    -------
+    np.ndarray
+        A numpy array containing the values from the dictionary corresponding to the input keys. If `strict` is False and a key is missing, returns an array with a single None value.
+    """
     l = []
     for k in key:
         if k not in dictionary.keys():
@@ -39,6 +56,29 @@ class MoosasGeometry(object):
     def __init__(self, face: pygeos.Geometry | np.ndarray, faceId, normal: pygeos.Geometry | Vector | np.ndarray = None,
                  category=0,
                  holes: list[pygeos.Geometry | np.ndarray] = None, errors='ignore'):
+        """
+        Initialize a polygon object with face geometry, identifier, normal vector, and optional holes.
+        
+        Parameters
+        ----------
+        face : pygeos.Geometry or np.ndarray
+            The outer boundary of the polygon as a geometry object or coordinate array.
+        faceId : hashable
+            Identifier for the face, converted to string internally.
+        normal : pygeos.Geometry or Vector or np.ndarray, optional
+            Normal vector of the face; if None, computed automatically using faceNormal.
+        category : int, default 0
+            Category label associated with the face.
+        holes : list of pygeos.Geometry or np.ndarray, optional
+            List of inner boundaries (holes) within the face; defaults to empty list.
+        errors : {'ignore', 'raise'}, default 'ignore'
+            Specifies behavior when invalid geometry is detected: 'ignore' prints a warning,
+            'raise' throws a GeometryError.
+        
+        Returns
+        -------
+        None
+        """
         if normal is None:
             normal = faceNormal(face)
         if not holes:
@@ -65,6 +105,22 @@ class MoosasGeometry(object):
 
     @staticmethod
     def _treatFace(face) -> np.ndarray:
+        """
+        Preprocess a face or hole by converting and validating its coordinates.
+        
+        Parameters
+        ----------
+        face : array-like or pygeos.Geometry
+            The input face or hole, either as a PyGEOS geometry object or a sequence of coordinate points.
+            If it is a PyGEOS geometry, coordinates are extracted using `pygeos.get_coordinates` with Z included.
+        
+        Returns
+        -------
+        numpy.ndarray
+            A 2D NumPy array of shape (N, 3) containing the processed (x, y, z) coordinates of the face,
+            with duplicate consecutive points removed and missing Z-coordinates filled with 0.
+            Raises `GeometryError` if the resulting coordinate list has fewer than 3 unique non-collinear points.
+        """
         """preprocess the face or holes."""
         face = pygeos.get_coordinates(face, include_z=True) if isinstance(face, pygeos.Geometry) else face
         _coordinates = []
@@ -83,6 +139,22 @@ class MoosasGeometry(object):
         return np.array(_coordinates)
 
     def invalid(self) -> str | None:
+        """
+        Check for invalid polygon geometries such as self-intersections.
+        
+        Parameters
+        ----------
+        self : object
+            The instance containing the geometry data. Must have `__face` and `__holes` 
+            attributes, where `__face` is the outer boundary and `__holes` is a list 
+            of inner hole coordinates.
+        
+        Returns
+        -------
+        str or None
+            Returns a string describing the validation error if an invalid condition 
+            (e.g., self-intersection) is found; otherwise, returns None if the geometry is valid.
+        """
         geos = [self.__face] + self.__holes
         for geo in geos:
             # if not pygeos.points(geo[-1]) == pygeos.points(geo[0]):
@@ -96,15 +168,59 @@ class MoosasGeometry(object):
 
     @property
     def face(self) -> pygeos.Geometry:
+        """
+        Return the face geometry of the object as a polygon.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the boundary and holes attributes.
+        
+        Returns
+        -------
+        pygeos.Geometry
+            A PyGEOS geometry representing the polygon formed by the boundary and optional holes.
+        """
         holes = self.holes if len(self.__holes) > 0 else None
         return pygeos.polygons(geometries=self.boundary, holes=holes)
 
     @property
     def boundary(self):
+        """
+        Boundary of the face as a LinearRing.
+        
+        Returns a LinearRing geometry representing the boundary of the face
+        using the pygeos.linearrings function applied to the internal face data.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `__face` attribute.
+        
+        Returns
+        -------
+        pygeos.Geometry
+            A LinearRing geometry representing the boundary of the face.
+        """
         return pygeos.linearrings(self.__face)
 
     @property
     def normal(self) -> pygeos.Geometry:
+        """
+        Geometry of the normal vector, optionally flipped.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this property. It is expected to have
+            attributes `__normal` (with a `geometry` attribute) and `flip` (boolean).
+        
+        Returns
+        -------
+        pygeos.Geometry
+            The geometry of the normal vector. If `self.flip` is True, returns the negated
+            normal's geometry; otherwise, returns the original normal's geometry.
+        """
         if self.flip:
             return (-self.__normal).geometry
         else:
@@ -112,24 +228,57 @@ class MoosasGeometry(object):
 
     @property
     def faceId(self) -> str:
+        """
+        Get the face ID as a string.
+        
+        Returns
+        -------
+        str
+            The face ID.
+        """
         return self.__faceId
 
     @property
     def category(self) -> int:
         """
-            -2 == ignore faces (would not be included in calculation)
-            -1 == shading faces (included as shading element)
-            0 == opaque surface
-            1 == translucent surface
-            2 == the air wall
-            3 == wall element.MoosasWall
-            4 == plane element.MoosasFace
-            5 == glazing element.MoosasGlazing
-            6 == skylight element.MoosasSkylight
+        Category identifier for the surface element.
+        
+        Returns the category of the surface as an integer, where each value represents 
+        a specific type of surface or element (e.g., opaque, translucent, shading, etc.).
+        
+        Returns
+        -------
+        int
+            The category code:
+            - -2: Ignore faces (excluded from calculations)
+            - -1: Shading faces (included as shading elements)
+            -  0: Opaque surface
+            -  1: Translucent surface
+            -  2: Air wall
+            -  3: Wall element (MoosasWall)
+            -  4: Plane element (MoosasFace)
+            -  5: Glazing element (MoosasGlazing)
+            -  6: Skylight element (MoosasSkylight)
         """
         return self.__category
 
     def setCategory(self,cat=None) -> None:
+        """
+        Set the category attribute based on input or predefined conditions.
+        
+        Parameters
+        ----------
+        cat : int, optional
+            The category value to set. If not provided, the category is determined
+            based on the current value of `self.category` using internal rules:
+            - If `self.category` is 3, 4, or -1, sets `self.__category` to 0.
+            - If `self.category` is greater than or equal to 5, sets `self.__category` to 1.
+            Default is None.
+        
+        Returns
+        -------
+        None
+        """
         if cat:
             self.__category = cat
         else:
@@ -140,6 +289,21 @@ class MoosasGeometry(object):
 
     @property
     def holes(self) -> list[pygeos.Geometry]:
+        """
+        List of hole geometries as linearrings.
+        
+        Returns a list of hole geometries in the object, converted to linearrings using pygeos.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the private attribute __holes.
+        
+        Returns
+        -------
+        list of pygeos.Geometry
+            A list of pygeos Geometry objects representing the holes as linearrings.
+        """
         return [pygeos.linearrings(hole) for hole in self.__holes]
 
     def getEdgeStr(self) -> list[str]:
@@ -235,6 +399,32 @@ class MoosasElement(object):
                  glazingId: str | list[str] | np.ndarray[str] = None,
                  glazingElement: MoosasElement | list[MoosasElement] | np.ndarray[MoosasElement] = None, space=None,
                  uid=None):
+        """
+        Initialize a new instance with model, geometry, and optional parameters for shading and glazing.
+        
+        Parameters
+        ----------
+        model : MoosasContainer
+            The container model that holds the geometry and other elements.
+        faceId : str or list of str or numpy.ndarray of str or MoosasGeometry or list of MoosasGeometry or numpy.ndarray of MoosasGeometry
+            Identifier(s) or geometry object(s) representing faces; if string, must exist in model's geoId.
+        level : float, optional
+            Elevation level of the face(s), by default None.
+        offset : float, optional
+            Offset distance from the face(s), by default None.
+        glazingId : str or list of str or numpy.ndarray of str, optional
+            Identifier(s) for glazing elements to be associated, by default None.
+        glazingElement : MoosasElement or list of MoosasElement or numpy.ndarray of MoosasElement, optional
+            Predefined glazing element(s) to be associated, by default None.
+        space : list of str, optional
+            List of space identifiers this object belongs to, by default None.
+        uid : str, optional
+            Unique identifier for the instance; if not provided, a 6-character code is generated.
+        
+        Returns
+        -------
+        None
+        """
         self.parent: MoosasContainer = model  # this is MoosasModel !!!
         self.Uid: str = generate_code(6) if uid is None else uid
         self.level: float = level
@@ -293,6 +483,17 @@ class MoosasElement(object):
         return proj.toWorld(mergedUVFace)
     @property
     def holes(self) -> pygeos.Geometry | np.ndarray[pygeos.Geometry]:
+        """
+        List of hole geometries from all polygons in the collection.
+        
+        Returns a flattened list of hole geometries extracted from each polygon 
+        in the internal geometries array. Each hole is represented as a pygeos Geometry object.
+        
+        Returns
+        -------
+        pygeos.Geometry or numpy.ndarray of pygeos.Geometry
+            A list or array containing the hole geometries from all polygons.
+        """
         return [h for geo in self.__geometries for h in geo.holes]
 
     @property
@@ -342,6 +543,27 @@ class MoosasElement(object):
 
     @property
     def wwr(self) -> float:
+        """
+        Calculate the Window-to-Wall Ratio (WWR) based on projected areas.
+        
+        The WWR is computed as the ratio of glazing area to the total wall surface area,
+        using 3D projections onto wall surfaces. The calculation does not use the exact
+        surface area of window objects, but rather their projection on the wall.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the method. Expected to have:
+            - `glazingElement`: iterable of objects with a `face` attribute representing glazing geometry.
+            - `face`: geometric representation of wall faces, possibly nested.
+            - `area3d(faces)` method: computes the 3D area of given faces.
+        
+        Returns
+        -------
+        float
+            The Window-to-Wall Ratio (WWR), defined as the ratio of projected glazing area 
+            to the total projected wall surface area.
+        """
         """calculate Window Wall Ratio based on self.area3d()
         the wwr is not based on exact surface area of the window object, but based on the projection on the wall surface.
         """
@@ -355,6 +577,28 @@ class MoosasElement(object):
 
     @property
     def firstFaceId(self):
+        """
+        First face ID from the object.
+        
+        Returns the first face ID from the object, which can accelerate calculations 
+        and prevent errors in contexts where only a single face ID is expected. 
+        This is particularly useful for objects containing only one face, such as 
+        MoosasGlazing, MoosasSkylight, or MoosasFace, and ensures compatibility 
+        with functions like `searchBy` in `utils.tools` that expect a single attribute.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `faceId` attribute. 
+            It is expected to have a `faceId` attribute which is either 
+            a scalar value or a numpy ndarray.
+        
+        Returns
+        -------
+        scalar or int or any
+            The first face ID. If `faceId` is not a numpy array, returns `self.faceId`. 
+            Otherwise, returns the first element of `self.faceId` (i.e., `self.faceId[0]`).
+        """
         """give a single faceid,
         which can accelerate the calculation and avoid error sometimes.
         for example, the MoosasGlazing/MoosasSkylight/MoosasFace object are all contain only one face.
@@ -367,6 +611,19 @@ class MoosasElement(object):
             return self.faceId[0]
 
     def glazingElementFromId(self, glazingIds) -> list[MoosasGlazing | MoosasSkylight]:
+        """
+        Get glazing elements by their IDs.
+        
+        Parameters
+        ----------
+        glazingIds : list or array-like
+            List of glazing element IDs (Uid) to search for. Can be a mix of types that is converted to a flat list.
+        
+        Returns
+        -------
+        list of MoosasGlazing or MoosasSkylight
+            A list of glazing objects (either MoosasGlazing or MoosasSkylight instances) matching the provided IDs.
+        """
         """get the glazing object in a ndarray
         the glazing are searchBy firstFaceId, since all glazing only contains one face.
         """
@@ -381,6 +638,20 @@ class MoosasElement(object):
         return list(gls)
 
     def replaceGeo(self, geoId):
+        """
+        Replace the current geometries with new ones based on provided geometry IDs.
+        
+        Parameters
+        ----------
+        geoId : int or list of int
+            Geometry ID(s) to be used for replacing the current geometries. 
+            If a single integer is provided, it will be treated as a list with one element.
+        
+        Returns
+        -------
+        None
+            This function does not return any value. It modifies the internal `__geometries` attribute in place.
+        """
         # get the geometry(s)
         faceId = mixItemListToList(geoId)
         self.__geometries: np.ndarray[MoosasGeometry] = np.array([])
@@ -392,6 +663,21 @@ class MoosasElement(object):
             self.__geometries: np.ndarray[MoosasGeometry] = np.append(self.__geometries, self.parent.geometryList[idd])
 
     def delete(self):
+        """
+        Delete all geometries in the object by setting their delete flag to True.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the geometries to be marked for deletion.
+            It is expected to have a private attribute `__geometries` which is an iterable
+            of geometry objects that each support assignment to a `delete` attribute.
+        
+        Returns
+        -------
+        None
+            This function does not return any value.
+        """
         for geo in self.__geometries:
             geo.delete = True
 
@@ -409,6 +695,21 @@ class MoosasElement(object):
         return area
 
     def faceUV(self, uniform=False) -> list[pygeos.Geometry]:
+        """
+        Get the UV-projected faces of a surface, optionally normalized to a unit square.
+        
+        Parameters
+        ----------
+        uniform : bool, optional
+            If True, the UV coordinates are normalized to fit within the unit square [0, 1] 
+            based on the bounding box of all faces. Default is False.
+        
+        Returns
+        -------
+        list of pygeos.Geometry
+            A list of 2D geometries representing the UV-projected faces. If `uniform` is True,
+            the coordinates are scaled to the unit square; otherwise, they are in raw UV space.
+        """
         """Ver1.3 The projection class is added to perform UV expression on the surface and the glass surface
         get the UV faces
         """
@@ -432,6 +733,23 @@ class MoosasElement(object):
             return faces
 
     def glazingUV(self, uniform=False) -> list[pygeos.Geometry]:
+        """
+        Get UV-projected glazing faces from the surface.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing glazing elements and geometric data.
+        uniform : bool, optional
+            If True, normalizes the UV coordinates to the unit square [0, 1] based on the bounding box 
+            of the input faces. Default is False.
+        
+        Returns
+        -------
+        list of pygeos.Geometry
+            A list of geometries representing the UV-projected glazing faces. If `uniform` is True, 
+            the coordinates are normalized; otherwise, they are in raw UV space.
+        """
         """Ver1.3 The projection class is added to perform UV expression on the surface and the glass surface
             get the UV glazing faces
         """
@@ -466,10 +784,40 @@ class MoosasElement(object):
         return list(edge_str_s)
 
     def getWeightCenter(self) -> np.ndarray[np.ndarray]:
+        """
+        Compute the weight center (centroid) of a 3D face.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `face` attribute, which is a geometric object 
+            supported by pygeos representing a 2D or 3D polygonal face.
+        
+        Returns
+        -------
+        np.ndarray
+            A 1D numpy array of shape (3,) containing the x, y, and z coordinates of the centroid, 
+            computed as the mean of the face's vertex coordinates.
+        """
         point_list = pygeos.get_coordinates(self.face, include_z=True)[:-1]
         return np.array([np.mean(point_list.T[0]), np.mean(point_list.T[1]), np.mean(point_list.T[2])])
 
     def add_glazing(self, glazingObject: MoosasGlazing | MoosasSkylight):
+        """
+        Add a glazing object to the current element.
+        
+        Parameters
+        ----------
+        glazingObject : MoosasGlazing or MoosasSkylight
+            The glazing object to be added. This object will be appended to the 
+            internal list of glazing elements and its parentFace attribute will 
+            be set to the current instance.
+        
+        Returns
+        -------
+        None
+            This function does not return any value.
+        """
         self.__glazingElement = list(np.append(self.__glazingElement, glazingObject))
         glazingObject.parentFace = self
 
@@ -494,6 +842,24 @@ class MoosasElement(object):
             return
 
     def _merge(self, other):
+        """
+        Merge another object into this one by aligning face normals and combining geometries.
+        
+        Parameters
+        ----------
+        other : object
+            Another object to merge with this one. Must have methods `getEdgeStr`, 
+            `getWeightCenter`, and attributes `__geometries`, `normal`, `offset`, 
+            `level`, and `glazingElement`. The `getEdgeStr` method should return a 
+            list of edge strings, and `getWeightCenter` should return the center point.
+        
+        Returns
+        -------
+        None
+            This function modifies the current instance in place by merging geometries, 
+            adjusting offset and level, flipping normals if necessary, and adding 
+            glazing elements from the other object.
+        """
         """flip all face to the same side normal"""
         edgeStr = list(set(self.getEdgeStr()) & set(other.getEdgeStr()))[0]
         edgeStr = np.array([int(dim) / 100 for dim in edgeStr.split('_')[:-1]])
@@ -565,6 +931,25 @@ class MoosasElement(object):
                         element.add_glazing(model.builtData.glazing[ids])
 
     def to_xml(self, model: MoosasContainer, element_tag='geometry', writeGeometry=False) -> ET.Element:
+        """
+        Convert the MoosasFace object to an XML element representation.
+        
+        Parameters
+        ----------
+        model : MoosasContainer
+            The container model associated with the geometry.
+        element_tag : str, optional
+            The tag name for the root XML element (default is 'geometry').
+        writeGeometry : bool, optional
+            If True, includes the detailed geometric coordinates in the XML output (default is False).
+        
+        Returns
+        -------
+        xml.etree.ElementTree.Element
+            An XML Element representing the MoosasFace object with attributes such as Uid, faceId,
+            level, offset, area, glazingId, height, normal, external, space, and neighbor edges.
+            Optionally includes geometric point data if writeGeometry is True.
+        """
         """get a dictionary of all information we get for this object.
         it can be translated to json by toDictionary() func in the uitls package
         """
@@ -611,6 +996,33 @@ class MoosasFace(MoosasElement):
                  offset: float = None, glazingId=None,
                  glazingElement: MoosasElement | list[MoosasElement] | np.ndarray[MoosasElement] = None, space=None,
                  uid=None):
+        """
+        Initialize a MoosasFace object with geometric and structural properties.
+        
+        Parameters
+        ----------
+        model : MoosasContainer
+            The container model to which the face belongs.
+        faceId : str or MoosasGeometry
+            Identifier or geometry object representing the face. Must not be a list or array.
+        level : float, optional
+            The level (elevation) of the face. If not provided, inferred from geometry.
+        offset : float, optional
+            Vertical offset of the face relative to its level. Calculated if not provided.
+        glazingId : Any, optional
+            Identifier for glazing associated with the face. Default is None.
+        glazingElement : MoosasElement or list[MoosasElement] or np.ndarray[MoosasElement], optional
+            Glazing element(s) attached to the face. Default is None.
+        space : Any, optional
+            Spatial context or zone to which the face belongs. Default is None.
+        uid : str, optional
+            Unique identifier for the face. Generated if not provided.
+        
+        Returns
+        -------
+        None
+            This constructor does not return a value.
+        """
         if isinstance(faceId, list) or isinstance(faceId,np.ndarray):
             raise ValueError("MoosasFace should only contain one geometry")
         if isinstance(faceId,MoosasGeometry):
@@ -641,6 +1053,21 @@ class MoosasFace(MoosasElement):
 
     @classmethod
     def fromDict(cls, elementDict, model: MoosasContainer):
+        """
+        Create a MoosasFace instance from a dictionary representation.
+        
+        Parameters
+        ----------
+        elementDict : dict
+            Dictionary containing the element data.
+        model : MoosasContainer
+            Model container that holds the built data and manages elements.
+        
+        Returns
+        -------
+        MoosasFace
+            An instance of MoosasFace initialized with data from elementDict and associated with the given model.
+        """
         element = super(MoosasFace, cls).fromDict(elementDict, model)
         faceElement = cls(model, element.faceId, element.glazingId)
         for fid in mixItemListToList(element.faceId):
@@ -648,19 +1075,78 @@ class MoosasFace(MoosasElement):
         return faceElement
 
     def force_2d(self, region=True) -> pygeos.Geometry:
+        """
+        Force the geometry into 2 dimensions.
+        
+        Parameters
+        ----------
+        region : bool, optional
+            Placeholder argument for consistency; has no effect on the operation.
+        
+        Returns
+        -------
+        pygeos.Geometry
+            The input geometry converted to 2D.
+        """
         # region is an useless arg to ensure consistency
 
         return pygeos.force_2d(self.face)
 
     def to_xml(self, model: MoosasContainer, Element_tag='face', writeGeometry=False):
+        """
+        Convert the MoosasFace object to an XML representation.
+        
+        Parameters
+        ----------
+        model : MoosasContainer
+            The container model containing the face data to be converted.
+        Element_tag : str, optional
+            The XML tag name for the element, default is 'face'.
+        writeGeometry : bool, optional
+            If True, includes geometry information in the XML output; default is False.
+        
+        Returns
+        -------
+        face_xml : Element
+            The XML element representing the face, possibly including geometry based on writeGeometry flag.
+        """
         face_xml = super(MoosasFace, self).to_xml(model, Element_tag, writeGeometry=writeGeometry)
 
         return face_xml
 
     def dissolve(self, wall):
+        """
+        Dissolves the specified wall from the structure.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class calling this method.
+        wall : str or int
+            Identifier for the wall to be dissolved. Can be a name (string) or index (integer).
+        
+        Returns
+        -------
+        None
+            This function does not return any value but raises an exception when called.
+        """
         raise Exception("MoosasFace cannot used to dissolve")
 
     def representation(self) -> pygeos.Geometry:
+        """
+        Return a 3D geometric representation of the object with specified elevation.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing `force_2d` and `elevation` attributes.
+            Must have methods `force_2d()` and attribute `elevation` defined.
+        
+        Returns
+        -------
+        pygeos.Geometry
+            A 3D geometry created by converting the 2D forced geometry to 3D using the given elevation.
+        """
         return pygeos.force_3d(self.force_2d(), z=self.elevation)
 
 
@@ -674,6 +1160,32 @@ class MoosasSkylight(MoosasFace):
                  offset: float = None, glazingId=None,
                  glazingElement: MoosasElement | list[MoosasElement] | np.ndarray[MoosasElement] = None, space=None,
                  uid=None):
+        """
+        Initialize a MoosasSkylight object.
+        
+        Parameters
+        ----------
+        model : MoosasContainer
+            The container model to which the skylight belongs.
+        faceId : str or MoosasGeometry
+            Identifier or geometry object representing the skylight's face. Must not be a list.
+        level : float, optional
+            Elevation level of the skylight. Default is None.
+        offset : float, optional
+            Vertical offset from the base level. Default is None.
+        glazingId : object, optional
+            Identifier for the glazing material or component. Default is None.
+        glazingElement : MoosasElement or list of MoosasElement or np.ndarray of MoosasElement, optional
+            Glazing element(s) associated with the skylight. Default is None.
+        space : object, optional
+            Space to which the skylight belongs. Default is None.
+        uid : str, optional
+            Unique identifier for the skylight. If not provided, it is generated based on `faceId`.
+        
+        Returns
+        -------
+        None
+        """
         if isinstance(faceId, list):
             raise ValueError("MoosasFace should only contain one geometry")
         if isinstance(faceId, MoosasGeometry):
@@ -686,14 +1198,56 @@ class MoosasSkylight(MoosasFace):
 
     @property
     def orientation(self):
+        """
+        Return the orientation vector based on the normal.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `normal` attribute.
+        
+        Returns
+        -------
+        Vector
+            A Vector object created from the `normal` attribute of the instance.
+        """
         return Vector(self.normal)
 
     def apply_to_face(self, face: MoosasFace):
+        """
+        Apply the glazing to a given face.
+        
+        Parameters
+        ----------
+        face : MoosasFace
+            The face object to which the glazing will be added.
+        
+        Returns
+        -------
+        None
+            This function does not return any value.
+        """
         face.add_glazing(self)
         # self.parentFace = face
         # face.glazingId.append(self.Uid)
 
     def to_xml(self, model: MoosasContainer, Element_tag='skylight', writeGeometry=False):
+        """Convert the MoosasSkylight object to an XML element representation.
+        
+                Parameters
+                ----------
+                model : MoosasContainer
+                    The container model to which the skylight belongs.
+                Element_tag : str, optional
+                    The tag name for the XML element, default is 'skylight'.
+                writeGeometry : bool, optional
+                    If True, geometry information will be included in the XML output, default is False.
+        
+                Returns
+                -------
+                xml_element : xml.etree.ElementTree.Element
+                    The XML element representing the skylight, with parent face UID and shading ID as sub-elements.
+                """
         skylightXml = super(MoosasSkylight, self).to_xml(model, Element_tag, writeGeometry=writeGeometry)
         ET.SubElement(skylightXml, "parentFace").text = str(self.parentFace.Uid)
         ET.SubElement(skylightXml, "shadingid").text = ' '.join(np.array(self.shading).astype(str))
@@ -716,6 +1270,32 @@ class MoosasWall(MoosasElement):
                  offset: float = None, glazingId=None,
                  glazingElement: MoosasElement | list[MoosasElement] | np.ndarray[MoosasElement] = None, space=None,
                  uid=None):
+        """
+        Initialize a MoosasWall instance with geometric and spatial properties.
+        
+        Parameters
+        ----------
+        model : MoosasContainer
+            The container model that holds the wall and associated level information.
+        faceId : str or list of str or numpy.ndarray of str
+            Identifier(s) for the face(s) representing the wall geometry.
+        level : float, optional
+            The base level (elevation) of the wall. If not provided, inferred from geometry and model levels.
+        offset : float, optional
+            Vertical offset from the base level. If not provided, calculated from geometry.
+        glazingId : object, optional
+            Identifier for glazing elements associated with the wall. Default is None.
+        glazingElement : MoosasElement or list of MoosasElement or numpy.ndarray of MoosasElement, optional
+            Glazing element(s) attached to the wall. Default is None.
+        space : object, optional
+            Spatial context or enclosure to which the wall belongs. Default is None.
+        uid : str, optional
+            Unique identifier for the wall. If not provided, generated based on faceId.
+        
+        Returns
+        -------
+        None
+        """
         if isinstance(faceId, MoosasGeometry):
             uid = f"wall_{faceId.faceId}" if uid is None else uid
         else:
@@ -768,6 +1348,21 @@ class MoosasWall(MoosasElement):
 
     @classmethod
     def fromDict(cls, elementDict, model: MoosasContainer):
+        """
+        Create a MoosasWall instance from a dictionary representation.
+        
+        Parameters
+        ----------
+        elementDict : dict
+            Dictionary containing the element's data.
+        model : MoosasContainer
+            Model container to which the element belongs.
+        
+        Returns
+        -------
+        MoosasWall
+            A new MoosasWall instance initialized from the provided dictionary and model.
+        """
         element = super(MoosasWall, cls).fromDict(elementDict, model)
         faceElement = cls(model, element.faceId, element.glazingId)
         for fid in mixItemListToList(element.faceId):
@@ -777,6 +1372,27 @@ class MoosasWall(MoosasElement):
     @classmethod
     def fromProjection(cls, prjLine: pygeos.Geometry, bottom: float, top: float, model: MoosasContainer,
                        airBoundary=False):
+        """
+        Create a wall or glazing object from a 2D projection line and elevation bounds.
+        
+        Parameters
+        ----------
+        prjLine : pygeos.Geometry
+            A 2D line geometry representing the projection of the wall.
+        bottom : float
+            The bottom elevation (z-coordinate) of the wall.
+        top : float
+            The top elevation (z-coordinate) of the wall.
+        model : MoosasContainer
+            The model container to which the geometry will be added.
+        airBoundary : bool, optional
+            If True, creates an air boundary with glazing; if False, creates a standard wall. Default is False.
+        
+        Returns
+        -------
+        wall : cls
+            An instance of the class (e.g., Wall) created from the projected geometry and added to the model.
+        """
         stPoint, edPoint = pygeos.get_coordinates(prjLine)
         airBound = [
             np.append(stPoint, bottom),
@@ -799,6 +1415,24 @@ class MoosasWall(MoosasElement):
 
     @classmethod
     def break_(cls, wall: MoosasWall, breakPoints: list[pygeos.Geometry] | pygeos.Geometry):
+        """
+        Break a wall into multiple segments at specified break points.
+        
+        Parameters
+        ----------
+        cls : type
+            The class instance (used as part of a classmethod).
+        wall : MoosasWall
+            The wall object to be broken into segments. Must have 2D geometry and level/top-level attributes.
+        breakPoints : list[pygeos.Geometry] or pygeos.Geometry
+            A single point or a list of pygeos geometry points where the wall should be broken.
+        
+        Returns
+        -------
+        list
+            A list of new wall objects (type determined by `cls`) created by breaking the original wall at the specified points.
+            If insufficient break points are provided, returns a list containing the original unbroken wall.
+        """
         twins = pygeos.get_coordinates(wall.force_2d())
         if len(twins) < 2:
             return [wall]
@@ -829,6 +1463,28 @@ class MoosasWall(MoosasElement):
     @classmethod
     def fromSeriesPoint(cls, breakPoints: list[pygeos.Geometry] | pygeos.Geometry, bottom: float, top: float,
                         gls: list[MoosasGlazing], model: MoosasContainer) -> list[MoosasWall]:
+        """
+        Partition walls based on break points and reassign glazing elements.
+        
+        Parameters
+        ----------
+        breakPoints : list[pygeos.Geometry] or pygeos.Geometry
+            A geometry or list of geometries representing the points where walls are to be split.
+        bottom : float
+            The bottom elevation for the generated wall segments.
+        top : float
+            The top elevation for the generated wall segments.
+        gls : list[MoosasGlazing]
+            List of glazing elements to be reassigned to the new wall segments after partitioning.
+        model : MoosasContainer
+            The model container that holds the glazing list and other contextual data.
+        
+        Returns
+        -------
+        list[MoosasWall]
+            A list of newly created wall segments formed by partitioning at the given break points,
+            with glazing elements appropriately reassigned based on spatial containment.
+        """
         """partition the walls by sorting their coordinates and making polygon using the top and bottom boundaries
         the glazing of all walls will be collected and try to attach to the new wall again.
         """
@@ -857,11 +1513,48 @@ class MoosasWall(MoosasElement):
 
     @property
     def height(self):
+        """
+        Height of the element including glazing elements.
+        
+        Calculates the total height by finding the difference between the maximum top level 
+        (including top offset and toplevel) and the minimum bottom level (including offset and level) 
+        across the main element and all associated glazing elements.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the height property. Must have attributes
+            `toplevel`, `topoffset`, `level`, `offset`, and `glazingElement`. The `glazingElement`
+            attribute should be an iterable of objects with `toplevel`, `topoffset`, `level`, and `offset` attributes.
+        
+        Returns
+        -------
+        float or int
+            The calculated height as the difference between the highest top and lowest bottom position.
+        """
         top = [self.toplevel + self.topoffset] + [g.toplevel + g.topoffset for g in self.glazingElement]
         bot = [self.level + self.offset] + [g.level + g.offset for g in self.glazingElement]
         return np.max(top) - np.min(bot)
 
     def prepareProjection(self):
+        """
+        Prepare top and bottom projections of the face geometry.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the face attribute and methods.
+            Must have a `face` attribute accessible via `self.face` that represents
+            a geometry object compatible with pygeos, and a `geom.POINT_PRECISION`
+            constant for precision control.
+        
+        Returns
+        -------
+        None
+            This function does not return any value. It modifies the instance attributes
+            `__botProjection` and `__topProjection` by setting them to lists of projected
+            2D points (with Z-coordinate filtered) at specified precision.
+        """
         pointlist = pygeos.get_coordinates(self.face, include_z=True)
         bottom = np.min(pointlist[:, 2])
         above = np.max(pointlist[:, 2])
@@ -876,6 +1569,23 @@ class MoosasWall(MoosasElement):
 
     # conceptual method in the based class
     def force_2d(self, top=False, region=False) -> pygeos.Geometry | None:
+        """
+        Project the 3D geometry into a 2D representation based on top or bottom projections.
+        
+        Parameters
+        ----------
+        top : bool
+            If True, use the top projection of the geometry; otherwise, use the bottom projection.
+        region : bool
+            If True, combine top and bottom projections to form a 2D region (e.g., polygon or closed line);
+            if False, return the 2D representation of the specified projection (top or bottom).
+        
+        Returns
+        -------
+        pygeos.Geometry or None
+            A 2D geometric object representing the projected line, point, or polygon;
+            returns None if the projection cannot be computed.
+        """
         if region:
             lBot, lTop = self.force_2d(False, False), self.force_2d(True, False)
             if not pygeos.disjoint(lBot, lTop):
@@ -919,6 +1629,24 @@ class MoosasWall(MoosasElement):
                 return pygeos.points(p1)
 
     def to_xml(self, model: MoosasContainer, Element_tag='wall', writeGeometry=False):
+        """
+        Convert the MoosasWall object to an XML element representation.
+        
+        Parameters
+        ----------
+        model : MoosasContainer
+            The container model to which the XML element will be added.
+        Element_tag : str, optional
+            The tag name for the XML element (default is 'wall').
+        writeGeometry : bool, optional
+            If True, geometry information is included in the XML (default is False).
+        
+        Returns
+        -------
+        xml.etree.ElementTree.Element
+            The XML element representing the wall, with attributes such as length, 
+            force2d coordinates, toplevel, and topoffset converted to inches.
+        """
         wall = super(MoosasWall, self).to_xml(model, Element_tag, writeGeometry=writeGeometry)
         'faces, faceId, normal, glazingId=None, _area=None'
         ET.SubElement(wall, 'length').text = str(pygeos.length(self.force_2d()) / INCH_METER_MULTIPLIER)
@@ -930,6 +1658,20 @@ class MoosasWall(MoosasElement):
         return wall
 
     def dissolve(self, wall: MoosasWall | list[MoosasWall]):
+        """
+        Merge the current MoosasWall with one or more other MoosasWall objects into a single entity.
+        
+        Parameters
+        ----------
+        wall : MoosasWall or list of MoosasWall
+            The wall or walls to be merged with the current instance. If a single MoosasWall is provided,
+            it is converted into a list for uniform processing.
+        
+        Returns
+        -------
+        None
+            This function does not return any value.
+        """
         if isinstance(wall, MoosasWall):
             wall = [wall]
         if len(wall) == 0:
@@ -943,6 +1685,21 @@ class MoosasWall(MoosasElement):
         self.prepareProjection()
 
     def representation(self) -> pygeos.Geometry:
+        """
+        Return a 3D polygon representation of the glazing element.
+        
+        Parameters
+        ----------
+        self : MoosasGlazing
+            The instance of MoosasGlazing containing geometric and level data for generating the 3D polygon.
+            Must have methods `force_2d`, `level`, `offset`, `toplevel`, and `topoffset`.
+        
+        Returns
+        -------
+        pygeos.Geometry
+            A 3D pygeos polygon representing the vertical extrusion of the glazing element,
+            constructed from bottom and top boundary coordinates.
+        """
         lBot = pygeos.force_3d(self.force_2d(False, False), z=self.level + self.offset)
         lTop = pygeos.force_3d(self.force_2d(True, False), z=self.toplevel + self.topoffset)
 
@@ -967,6 +1724,34 @@ class MoosasGlazing(MoosasWall):
                  offset: float = None, glazingId=None,
                  glazingElement: MoosasElement | list[MoosasElement] | np.ndarray[MoosasElement] = None, space=None,
                  uid=None):
+        """
+        Initialize a MoosasGlazing object with geometric and structural properties.
+        
+        Parameters
+        ----------
+        model : MoosasContainer
+            The container model to which the glazing belongs.
+        faceId : str or list of str or numpy.ndarray of str
+            Identifier(s) for the associated face(s). If a MoosasGeometry object is passed,
+            its faceId is used.
+        level : float, optional
+            Elevation level of the bottom of the glazing. If not provided, defaults to None.
+        offset : float, optional
+            Vertical offset from the base level. If not provided, defaults to None.
+        glazingId : any, optional
+            User-defined identifier for the glazing element. Defaults to None.
+        glazingElement : MoosasElement or list of MoosasElement or numpy.ndarray of MoosasElement, optional
+            The glazing element(s) defining the geometry and properties. Defaults to None.
+        space : any, optional
+            Associated space for the glazing. Defaults to None.
+        uid : str, optional
+            Unique identifier for the glazing. If not provided, it is generated based on faceId.
+        
+        Returns
+        -------
+        None
+            This constructor does not return a value.
+        """
         if isinstance(faceId, MoosasGeometry):
             uid = f"gls_{faceId.faceId}" if uid is None else uid
         else:
@@ -988,6 +1773,27 @@ class MoosasGlazing(MoosasWall):
     @classmethod
     def fromProjection(cls, prjLine: pygeos.Geometry, bottom: float, top: float, model: MoosasContainer,
                        airBoundary=False):
+        """
+        Create an instance from a projection line with defined bottom and top elevations.
+        
+        Parameters
+        ----------
+        prjLine : pygeos.Geometry
+            A linestring geometry representing the projection; must have sufficient length.
+        bottom : float
+            The bottom elevation (z-coordinate) of the generated geometry.
+        top : float
+            The top elevation (z-coordinate) of the generated geometry.
+        model : MoosasContainer
+            The model container used to include the generated geometry.
+        airBoundary : bool, optional
+            If True, includes an air boundary; defaults to False.
+        
+        Returns
+        -------
+        gls : cls or None
+            An instance of the class created from the projection, or None if the input line is too short.
+        """
         if pygeos.length(prjLine) < geom.POINT_PRECISION:
             return None
         stPoint, edPoint = pygeos.get_coordinates(prjLine)
@@ -1003,9 +1809,41 @@ class MoosasGlazing(MoosasWall):
         return gls
 
     def force_2d(self, top=False, region=False):
+        """
+        Force the geometry into a 2D representation.
+        
+        Parameters
+        ----------
+        top : bool, optional
+            If True, project to the top view. Default is False.
+        region : bool, optional
+            If True, return as a 2D region. Default is False.
+        
+        Returns
+        -------
+        object
+            A 2D representation of the geometry, type depends on implementation in parent class.
+        """
         return super(MoosasGlazing, self).force_2d(top, region)
 
     def to_xml(self, model, Element_tag='glazing', writeGeometry=False):
+        """
+        Convert the MoosasGlazing object to an XML representation.
+        
+        Parameters
+        ----------
+        model : object
+            The model context in which the XML is generated; passed to the parent class method.
+        Element_tag : str, optional
+            The tag name for the XML element representing the glazing. Default is 'glazing'.
+        writeGeometry : bool, optional
+            If True, geometry information will be included in the XML output. Default is False.
+        
+        Returns
+        -------
+        xml_element : xml.etree.ElementTree.Element
+            The XML element representing the glazing, with additional subelements for 'parentFace' and 'shadingid'.
+        """
         glazingXml = super(MoosasGlazing, self).to_xml(model, Element_tag, writeGeometry=writeGeometry)
         ET.SubElement(glazingXml, "parentFace").text = self.parentFace.Uid
         ET.SubElement(glazingXml, "shadingid").text = ' '.join(np.array(self.shading).astype(str))
@@ -1047,6 +1885,20 @@ class MoosasFloor:
     __slots__ = ['face', 'Uid']
 
     def __init__(self, faces: list[MoosasFace]):
+        """
+        Initialize a new instance with a list of MoosasFace objects.
+        
+        Parameters
+        ----------
+        faces : list of MoosasFace
+            A list of MoosasFace instances to be associated with this object. 
+            The input may be a nested list, which will be flattened using mixItemListToList.
+        
+        Returns
+        -------
+        None
+            This constructor does not return a value.
+        """
         faces = mixItemListToList(faces)
         self.Uid = generate_code(4)
         self.face: list[MoosasFace] = faces
@@ -1055,23 +1907,88 @@ class MoosasFloor:
 
     @classmethod
     def fromDict(cls, floorDict, model: MoosasContainer):
+        """
+        Create a new instance from a dictionary representation of a floor.
+        
+        Parameters
+        ----------
+        floorDict : dict
+            Dictionary containing floor data, must include 'face' key with list of face data.
+        model : MoosasContainer
+            Model container used for creating MoosasFace instances.
+        
+        Returns
+        -------
+        cls
+            A new instance of the class initialized with MoosasFace objects created from the input dictionary.
+        """
         faces = _getElement('face', dictionary=floorDict)
         return cls([MoosasFace.fromDict(f, model) for f in faces])
 
     @property
     def area(self) -> float:
+        """
+        Compute the total area of all faces in the object.
+        
+        Returns
+        -------
+        float
+            The sum of the areas of all faces in the object.
+        """
         return np.sum([f.area for f in self.face]).item()
 
     @property
     def level(self) -> float:
+        """
+        Level of the face.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the face attribute.
+        
+        Returns
+        -------
+        float
+            The level value of the first face in the face list.
+        """
         return self.face[0].level
 
     @property
     def offset(self) -> float:
+        """
+        Mean offset value across all faces in the object.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `face` attribute, which is expected to be 
+            a collection of objects each having an `offset` property.
+        
+        Returns
+        -------
+        float
+            The mean value of the `offset` attribute from all faces, converted to a Python float.
+        """
         return np.mean([f.offset for f in self.face]).item()
 
     @property
     def glazingId(self) -> list[str]:
+        """
+        Get the list of glazing IDs from all faces.
+        
+        Returns a concatenated list of glazing IDs by iterating over each face in the object's `face` attribute and collecting their `glazingId` values.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `face` attribute, which is expected to be an iterable of objects each having a `glazingId` property.
+        
+        Returns
+        -------
+        list of str
+            A list of glazing IDs extracted from each face.
+        """
         glsId = []
         for f in self.face:
             glsId = np.append(glsId, f.glazingId)
@@ -1079,16 +1996,58 @@ class MoosasFloor:
 
     @property
     def glazingElement(self) -> list[MoosasSkylight]:
+        """
+        Get all glazing elements from the faces.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `face` attribute, which is expected to be an iterable 
+            of objects each having a `glazingElement` property.
+        
+        Returns
+        -------
+        list of MoosasSkylight
+            A list containing all glazing elements extracted from each face in `self.face`.
+        """
         glsObj = []
         for f in self.face:
             glsObj = np.append(glsObj, f.glazingElement)
         return glsObj
 
     def getWeightCenter(self) -> np.ndarray:
+        """
+        Compute the weighted center of all faces in the object.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing a list of face objects, each with a `getWeightCenter` method.
+        
+        Returns
+        -------
+        np.ndarray
+            A 1D numpy array representing the mean coordinates (center) across all face centers.
+        """
         center = np.array([face.getWeightCenter() for face in self.face])
         return np.array([np.mean(x) for x in center.T])
 
     def force_2d(self) -> pygeos.Geometry:
+        """
+        Force the geometry into a 2D representation and return the union of all faces.
+        
+        Parameters
+        ----------
+        self : object
+            The object containing a `face` attribute, which is a collection of geometric faces.
+            Each face must have a `force_2d` method that returns a 2D geometry.
+        
+        Returns
+        -------
+        pygeos.Geometry
+            A single 2D geometry representing the union of all faces. If the union fails,
+            a multipolygon composed of the individual 2D faces is returned instead.
+        """
         faces = [f.force_2d() for f in self.face]
         try:
             return pygeos.union_all(faces, grid_size=geom.POINT_PRECISION)
@@ -1096,6 +2055,23 @@ class MoosasFloor:
             return pygeos.multipolygons(faces)
 
     def to_xml(self, model: MoosasContainer, Element_tag='floor', writeGeometry=False) -> ET.Element:
+        """
+        Construct an XML element representing the floor with face UIDs as subelements.
+        
+        Parameters
+        ----------
+        model : MoosasContainer
+            The container model containing the data to be represented in XML.
+        Element_tag : str, optional
+            The tag name for the root XML element (default is 'floor').
+        writeGeometry : bool, optional
+            If True, includes geometric data in the XML output (default is False).
+        
+        Returns
+        -------
+        ET.Element
+            An XML element with the specified tag containing face UIDs as text subelements.
+        """
         floor = ET.Element(Element_tag)
         for f in self.face:
             ET.SubElement(floor, "face").text = f.Uid
@@ -1121,6 +2097,18 @@ class MoosasEdge:
     __slots__ = ('wall', 'Uid', '__botBound', '__topBound','internalMass')
 
     def __init__(self, walls: list[MoosasWall]):
+        """
+        Initialize a boundary object composed of walls.
+        
+        Parameters
+        ----------
+        walls : list of MoosasWall
+            List of MoosasWall objects that form the boundary. Must contain at least 3 walls.
+        
+        Returns
+        -------
+        None
+        """
         self.wall: list[MoosasWall] = walls
         self.__botBound = []
         self.__topBound = []
@@ -1134,6 +2122,30 @@ class MoosasEdge:
             self.internalMass+=w.shading
 
     def prepareBoundary(self):
+        """
+        Prepare boundary polygons for walls and glazings.
+        
+        This method processes wall elements to generate bottom and top boundary polygons
+        using 2D force representations, and assigns orientation factors to walls and their glazing elements.
+        If top boundary generation fails, it defaults to the bottom boundary.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the method. Expected attributes include:
+            - wall (list): List of wall objects, each having `force_2d`, `glazingElement`, and `orientation` attributes.
+            - FactorOfWall (list): List of orientation factors corresponding to each wall.
+            - __botBound (list): Internal list to store bottom boundary points.
+            - __topBound (list): Internal list to store top boundary points.
+            - get_polygon (callable): Method to convert a list of points into a polygon.
+        
+        Returns
+        -------
+        None
+            This function does not return any value. It modifies the instance's
+            `__botBound` and `__topBound` attributes in place and updates the orientation
+            of walls and their glazing elements.
+        """
         for _wall in self.wall:
             self.__botBound.append(_wall.force_2d())
             self.__topBound.append(_wall.force_2d(top=True))
@@ -1154,11 +2166,41 @@ class MoosasEdge:
 
     @classmethod
     def fromDict(cls, floorDict, model):
+        """
+        Create a class instance from a dictionary representation of a floor.
+        
+        Parameters
+        ----------
+        floorDict : dict
+            Dictionary containing floor data, expected to include a 'face' key.
+        model : object
+            Model object passed to the creation of individual MoosasWall instances.
+        
+        Returns
+        -------
+        cls
+            A new instance of the class, initialized with a list of MoosasWall objects created from the input dictionary.
+        """
         faces = _getElement('face', dictionary=floorDict)
         return cls([MoosasWall.fromDict(f, model) for f in faces])
 
     @classmethod
     def difference(cls, mainEdge: MoosasEdge, subBoundary: pygeos.Geometry):
+        """
+        Compute the geometric difference between a main edge and a sub-boundary.
+        
+        Parameters
+        ----------
+        mainEdge : MoosasEdge
+            The primary edge geometry to be processed. Must be valid.
+        subBoundary : pygeos.Geometry
+            The sub-boundary geometry to subtract from the main edge. Must fully overlap with the 2D projection of mainEdge.
+        
+        Returns
+        -------
+        pygeos.Geometry
+            The resulting geometry after subtracting subBoundary from mainEdge.
+        """
         if not mainEdge.is_valid():
             raise GeometryError(mainEdge, "invalid boundary:{}")
         if overlapArea(mainEdge.force_2d(), subBoundary) != pygeos.area(subBoundary):
@@ -1167,6 +2209,22 @@ class MoosasEdge:
 
     @classmethod
     def selectWall(cls, boundary: pygeos.Geometry, walls: list[MoosasWall]):
+        """
+        Select walls that match the edges of a given boundary or create new ones if no match is found.
+        
+        Parameters
+        ----------
+        boundary : pygeos.Geometry
+            A geometry object representing the boundary whose edges are used to select or create walls.
+        walls : list of MoosasWall
+            A list of wall objects to be matched against the boundary edges. Must not be empty.
+        
+        Returns
+        -------
+        cls
+            An instance of the class (typically a collection of walls) constructed from the valid walls 
+            that match the boundary edges or newly created walls where no match was found.
+        """
         walls = np.array(walls).flatten()
         boundary = pygeos.get_coordinates(boundary)
         # from ..visual.geometry import plot_object
@@ -1194,22 +2252,99 @@ class MoosasEdge:
 
     @property
     def parent(self):
+        """
+        The parent object of the wall associated with this instance.
+        
+        Parameters
+        ----------
+        None
+        
+        Returns
+        -------
+        object
+            The parent object of the first element in the wall list.
+        """
         return self.wall[0].parent
 
     @property
     def level(self) -> float:
+        """
+        Minimum level value among all walls.
+        
+        Returns the minimum level value computed across all wall objects 
+        contained in the instance's `wall` attribute.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `wall` attribute, which 
+            is expected to be an iterable of objects each having a `level` 
+            attribute.
+        
+        Returns
+        -------
+        float
+            The minimum level value from the `level` attributes of all walls.
+        """
         return np.min([w.level for w in self.wall])
 
     @property
     def toplevel(self) -> float:
+        """
+        Maximum top level among all walls.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `wall` attribute, which is a collection 
+            of wall objects each having a `toplevel` property.
+        
+        Returns
+        -------
+        float
+            The maximum value of the `toplevel` property across all walls in `self.wall`.
+        """
         return np.max([w.toplevel for w in self.wall])
 
     @property
     def elevation(self) -> float:
+        """
+        Mean elevation of all walls.
+        
+        Returns the average elevation value computed from the `elevation` 
+        attribute of each wall in the `self.wall` collection.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `wall` attribute, which is 
+            expected to be a collection of objects each having an `elevation` property.
+        
+        Returns
+        -------
+        float
+            The mean elevation of all walls in the collection.
+        """
         return np.mean([w.elevation for w in self.wall]).item()
 
     @property
     def FactorOfWall(self) -> np.ndarray[Vector]:
+        """
+        Compute the normal factor vectors for wall edges based on polygon orientation.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the boundary and orientation methods.
+            Must have a `__botBound` attribute accessible via `self.__botBound` and an `is_ccw()` method.
+        
+        Returns
+        -------
+        np.ndarray[Vector]
+            An array of Vector objects representing the cross product of the orientation 
+            factor (determined by clockwise or counter-clockwise polygon winding) and 
+            each edge vector of the polygon boundary.
+        """
         poly_coordinates = pygeos.get_coordinates(self.__botBound)
         if self.is_ccw():
             factor = np.array([0, 0, -1])
@@ -1220,12 +2355,57 @@ class MoosasEdge:
 
     @property
     def area(self) -> float:
+        """
+        Area of the geometry.
+        
+        Returns the area of the 2D projection of the geometry.
+        
+        Parameters
+        ----------
+        self : object
+            The geometry object on which the property is accessed. Must have `force_2d` method.
+        
+        Returns
+        -------
+        float
+            The area of the geometry in 2D.
+        """
         return pygeos.area(self.force_2d())
 
     def getWeightCenter(self) -> np.ndarray:
+        """
+        Compute the weight center of wall force coordinates.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `wall` attribute, which is a collection 
+            of wall objects that have a `force_2d` method returning 2D coordinate data.
+        
+        Returns
+        -------
+        np.ndarray
+            A 1D NumPy array containing the mean (center) coordinates along axis 0 
+            of the 2D force coordinates extracted from all walls.
+        """
         return np.mean(pygeos.get_coordinates([w.force_2d() for w in self.wall]), axis=0)
 
     def is_ccw(self) -> bool:
+        """
+        Determine if the polygon boundary is oriented counter-clockwise (CCW).
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the polygon boundary.
+            It must have a private attribute `__botBound` that represents
+            the boundary geometry compatible with pygeos.
+        
+        Returns
+        -------
+        bool
+            True if the polygon is oriented counter-clockwise, False otherwise.
+        """
         # Improved method for pygeos.is_ccw()
         # accepts both convex & non-convex polygons，but maintains lower efficiency
         poilist = pygeos.get_coordinates(self.__botBound)
@@ -1241,7 +2421,33 @@ class MoosasEdge:
         return ccw > 0
 
     def get_polygon(self, target) -> pygeos.Geometry:
+        """
+        Get the polygon geometry for a given target.
+        
+        Parameters
+        ----------
+        target : str or int
+            The identifier or name of the target polygon to retrieve.
+        
+        Returns
+        -------
+        pygeos.Geometry
+            A PyGEOS geometry object representing the requested polygon.
+        """
         def reverseTwin(point_twin):
+            """
+            Reverse the elements of a two-element list in place.
+            
+            Parameters
+            ----------
+            point_twin : list
+                A list with exactly two elements that will be swapped in place.
+            
+            Returns
+            -------
+            list
+                The same list with its two elements swapped.
+            """
             tmp = point_twin[0]
             point_twin[0] = point_twin[1]
             point_twin[1] = tmp
@@ -1276,6 +2482,19 @@ class MoosasEdge:
         return polyg
 
     def force_2d(self, top=False) -> pygeos.Geometry:
+        """
+        Force the geometry into a 2D representation.
+        
+        Parameters
+        ----------
+        top : bool
+            If True, returns the top boundary; otherwise, returns the bottom boundary.
+        
+        Returns
+        -------
+        pygeos.Geometry
+            The 2D geometry representing either the top or bottom boundary.
+        """
         if top:
             target = self.__topBound
         else:
@@ -1286,6 +2505,21 @@ class MoosasEdge:
         return target
 
     def is_valid(self) -> bool:
+        """
+        Check if the geometry is valid based on area, dimensions, and self-intersection.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing geometric data. Must have attributes `area`, `level`, 
+            and method `force_2d()`. The `force_2d()` method should return a geometry object compatible with pygeos.
+        
+        Returns
+        -------
+        bool
+            True if the geometry meets minimum area and dimension requirements and has no self-intersections; 
+            False otherwise.
+        """
         try:
             if self.area < geom.ROOM_MIN_AREA:
                 print('******Warning: GeometryError, area invalid, floor:', self.level)
@@ -1307,6 +2541,23 @@ class MoosasEdge:
         return True
 
     def to_xml(self, model: MoosasContainer, Element_tag='edge', writeGeometry=False):
+        """
+        Convert the MoosasSpace object's edge and wall data into an XML element representation.
+        
+        Parameters
+        ----------
+        model : MoosasContainer
+            The container model providing context for the XML conversion.
+        Element_tag : str, optional
+            The tag name for the root XML element (default is 'edge').
+        writeGeometry : bool, optional
+            If True, includes geometric data in the XML output (default is False).
+        
+        Returns
+        -------
+        xml.etree.ElementTree.Element
+            An XML element representing the edge and its walls with associated properties.
+        """
         edge = ET.Element(Element_tag)
         for w, factor in zip(self.wall, self.FactorOfWall):
             factor = factor.array
@@ -1330,6 +2581,24 @@ class MoosasSpace(object):
 
     def __init__(self, _floor: MoosasFloor | None, _edge: MoosasEdge, _ceiling: MoosasFloor | None,
                  void: list[MoosasSpace] = None):
+        """
+        Initialize a new instance with floor, edge, ceiling, and optional void spaces.
+        
+        Parameters
+        ----------
+        _floor : MoosasFloor or None
+            The floor object associated with the space, or None if not present.
+        _edge : MoosasEdge
+            The edge object defining the boundary and internal mass of the space.
+        _ceiling : MoosasFloor or None
+            The ceiling object associated with the space, or None if not present.
+        void : list of MoosasSpace, optional
+            A list of void spaces within the zone. Defaults to an empty list if None.
+        
+        Returns
+        -------
+        None
+        """
         self.floor: MoosasFloor | None = _floor
         self.edge: MoosasEdge = _edge
         self.ceiling: MoosasFloor | None = _ceiling
@@ -1355,6 +2624,22 @@ class MoosasSpace(object):
 
     @classmethod
     def fromDict(cls, spaceDict, model: MoosasContainer):
+        """
+        Construct a Space object from a dictionary representation.
+        
+        Parameters
+        ----------
+        spaceDict : dict
+            Dictionary containing space elements such as 'edge', 'ceiling', 'floor', 
+            'internalMass', and 'void'.
+        model : MoosasContainer
+            Model container providing context for constructing associated objects.
+        
+        Returns
+        -------
+        Space
+            A new Space instance constructed from the provided dictionary and model.
+        """
         edge = _getElement('edge', dictionary=spaceDict)[0]
         ceiling = _getElement('ceiling', dictionary=spaceDict, strict=False)[0]
         floor = _getElement('floor', dictionary=spaceDict, strict=False)[0]
@@ -1381,22 +2666,81 @@ class MoosasSpace(object):
 
     @property
     def neighbor(self) -> dict:
+        """
+        Dictionary of neighbors associated with the object.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the neighbor property.
+        
+        Returns
+        -------
+        dict
+            A dictionary representing the neighbors.
+        """
         return self.__neighbor
 
     @property
     def void(self) -> list[MoosasSpace]:
+        """
+        List of MoosasSpace objects representing the void.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the void property.
+        
+        Returns
+        -------
+        list[MoosasSpace]
+            A list of MoosasSpace objects stored in the private __void attribute.
+        """
         return self.__void
 
     @property
     def parent(self):
+        """
+        Parent property of the edge.
+        
+        Returns the parent node associated with the edge of this instance.
+        
+        Returns
+        -------
+        object
+            The parent node of the edge.
+        """
         return self.edge.parent
 
     @property
     def id(self) -> str:
+        """
+        Return the ID of the object as a string.
+        
+        Returns
+        -------
+        str
+            The private attribute `__id` representing the object's ID.
+        """
         return self.__id
 
     @property
     def area(self) -> float:
+        """
+        Compute the effective area of the object, accounting for any voids.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `edge` and `void` attributes.
+            It is expected to have an `edge` attribute with an `area` property,
+            and a `void` attribute which is a collection of objects each having an `area` property.
+        
+        Returns
+        -------
+        float
+            The effective area, calculated as the area of the edge minus the sum of the areas of all voids.
+        """
         area = self.edge.area
         if len(self.void) > 0:
             for _void in self.void:
@@ -1405,10 +2749,40 @@ class MoosasSpace(object):
 
     @property
     def level(self) -> float:
+        """
+        Level of the edge.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `edge` attribute.
+        
+        Returns
+        -------
+        float
+            The level value from the associated edge.
+        """
         return self.edge.level
 
     @property
     def topLevel(self) -> float:
+        """
+        Top-level elevation of the structure, depending on whether it is void or not.
+        
+        Returns the top-level elevation based on the object's state: if the object is void,
+        returns the toplevel from the edge; otherwise, returns the ceiling level.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this property. Assumes the presence
+            of `is_void()`, `edge.toplevel`, and `ceiling.level` attributes/methods.
+        
+        Returns
+        -------
+        float
+            The top-level elevation value, either from `edge.toplevel` (if void) or `ceiling.level`.
+        """
         if self.is_void():
             return self.edge.toplevel
         else:
@@ -1416,6 +2790,24 @@ class MoosasSpace(object):
 
     @property
     def height(self) -> float:
+        """
+        Height of the object calculated based on edge, ceiling, and floor levels and offsets.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the height property. It is expected to have
+            methods `is_void()` and attributes `edge`, `ceiling`, and `floor`. The `edge`
+            attribute should have `toplevel` and `level` properties. The `ceiling` and `floor`
+            attributes should each have `level` and `offset` properties.
+        
+        Returns
+        -------
+        float
+            The computed height. If the instance is void (determined by `is_void()`), returns
+            the difference between `toplevel` and `level` of the edge. Otherwise, returns the
+            difference between the adjusted ceiling level and the adjusted floor level.
+        """
         if self.is_void():
             return self.edge.toplevel - self.edge.level
         else:
@@ -1423,6 +2815,22 @@ class MoosasSpace(object):
 
     @property
     def spaceType(self) -> str:
+        """
+        Determine the type of space based on geometric properties of 2D faces.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `force_2d` method and geometric data.
+            It is assumed that `self` has a method `force_2d()` which returns a 2D geometric representation,
+            and that `pygeos` and `bBox` utilities are available for area and bounding box computations.
+        
+        Returns
+        -------
+        str
+            The classified space type, one of 'Corridor', 'MainSpace', or 'privateSpace',
+            based on area, aspect ratio, and dimensional thresholds of decomposed convex faces.
+        """
         """Select one of the following types of the space:
         Corridor: most of the pieces are narrow and long
         MainSpace: the main space in the building, like the living room or the hall
@@ -1474,6 +2882,18 @@ class MoosasSpace(object):
         return self.__id
 
     def add_void(self, void: MoosasSpace) -> None:
+        """
+        Add a void space to the collection of voids and update space attributes in all faces.
+        
+        Parameters
+        ----------
+        void : MoosasSpace
+            The void space object to be added to the internal void list.
+        
+        Returns
+        -------
+        None
+        """
         """add void to self.__void, and change the space attribute in self.getAllFaces()
         """
         self.__void.append(void)
@@ -1481,6 +2901,21 @@ class MoosasSpace(object):
         self.regenerateId()
 
     def force_2d(self, top=False) -> pygeos.Geometry:
+        """
+        Project the geometry to 2D and return a 2D polygon.
+        
+        Parameters
+        ----------
+        top : bool, optional
+            If True, project to the top plane; otherwise, use default 2D projection.
+            Default is False.
+        
+        Returns
+        -------
+        pygeos.Geometry
+            A 2D polygon geometry. If the object has voids, a polygon with holes is constructed;
+            otherwise, the 2D version of the edge is returned directly.
+        """
         if len(self.void) > 0:
             outerRing = pygeos.linearrings(pygeos.get_coordinates(self.edge.force_2d(top)))
             innerRing = [pygeos.linearrings(pygeos.get_coordinates(v.edge.force_2d(top))) for v in self.void]
@@ -1490,6 +2925,24 @@ class MoosasSpace(object):
         return polygon
 
     def is_void(self):
+        """
+        Check if the space is considered void based on floor and ceiling area conditions.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the attributes `floor`, `ceiling`, `area`, 
+            where `floor` and `ceiling` are objects with an `area` attribute, and `area` 
+            represents the reference area of the space. It is assumed that `geom.AREA_PRECISION` 
+            is a predefined constant used for numerical precision tolerance.
+        
+        Returns
+        -------
+        bool
+            True if the space is considered void (i.e., either floor or ceiling is missing, 
+            or their area is less than the space's area within the given precision), 
+            False otherwise.
+        """
         if not self.floor or not self.ceiling:
             return True
         if self.floor.area < self.area - geom.AREA_PRECISION:
@@ -1500,12 +2953,44 @@ class MoosasSpace(object):
         return False
 
     def boundBox(self) -> np.ndarray:
+        """
+        Compute the axis-aligned bounding box of all faces in the object.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `getAllFaces` method, which returns a list of face objects.
+            Each face object must have a `face` attribute compatible with `pygeos.get_coordinates`.
+        
+        Returns
+        -------
+        numpy.ndarray
+            A 2x3 array containing the minimum and maximum coordinates of the bounding box.
+            The first row is the minimum (x, y, z) corner, and the second row is the maximum (x, y, z) corner.
+        """
         facesCoor = [pygeos.get_coordinates(moface.face, include_z=True) for moface in self.getAllFaces(to_dict=False)]
         facesCoorMin = np.min([np.min(coor, axis=0) for coor in facesCoor], axis=0)
         facesCoorMax = np.max([np.max(coor, axis=0) for coor in facesCoor], axis=0)
         return np.array([facesCoorMin, facesCoorMax])
 
     def applySettings(self, buildingTemplateHint):
+        """
+        Apply settings based on a building template hint.
+        
+        Parameters
+        ----------
+        buildingTemplateHint : str or dict
+            The hint used to locate the appropriate building template. If a string, 
+            it can be an exact key or a regex pattern matching a key in 
+            `self.parent.buildingTemplate`. If a dictionary, it is treated as 
+            the template itself, and the corresponding key is inferred.
+        
+        Returns
+        -------
+        None
+            This function does not return any value. It updates `self.settings` 
+            with the zone template and other settings from the matched template.
+        """
         if not isinstance(buildingTemplateHint, dict):
             if not isinstance(buildingTemplateHint, str):
                 raise Exception(f'Key Error: template key error {buildingTemplateHint}')
@@ -1524,12 +3009,40 @@ class MoosasSpace(object):
         for key in template.keys():
             self.settings[key] = template[key]
     def add_neighbor(self, neighbor_id, element: MoosasElement):
+        """
+        Add a neighbor element to the specified neighbor ID.
+        
+        Parameters
+        ----------
+        neighbor_id : hashable
+            The identifier for the neighbor group to which the element will be added.
+        element : MoosasElement
+            The element to be added to the neighbor list associated with neighbor_id.
+        
+        Returns
+        -------
+        None
+            This function does not return any value.
+        """
         if neighbor_id not in self.neighbor:
             self.neighbor[neighbor_id] = [element]
         else:
             self.neighbor[neighbor_id] += [element]
 
     def addInternalMass(self, wall: MoosasWall):
+        """
+        Add an internal mass wall to the current object.
+        
+        Parameters
+        ----------
+        wall : MoosasWall
+            The wall object representing internal mass to be added.
+        
+        Returns
+        -------
+        None
+            This function does not return any value.
+        """
         self.internalMass.append(wall)
 
     def getAllFaces(self, to_dict=False) -> list[MoosasElement] | dict:
@@ -1582,6 +3095,21 @@ class MoosasSpace(object):
             return [item for subList in list(faces.values()) for item in subList]
 
     def open_edges(self):
+        """
+        Return a dictionary of open edges from the geometry faces.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the method. It is expected to have
+            methods `getAllFaces` and access to face geometry objects with `getEdgeStr`.
+        
+        Returns
+        -------
+        dict
+            A dictionary where keys are edge strings and values are the corresponding
+            geometry objects (`moGeometry`) that are not shared (i.e., open edges).
+        """
         edges = {}
         for moGeometry in self.getAllFaces(False):
             for edge_str in moGeometry.getEdgeStr():
@@ -1653,9 +3181,39 @@ class MoosasSpace(object):
         return string_out
 
     def __repr__(self):
+        """Return a string representation of the object using its 'id' attribute.
+        
+                Parameters
+                ----------
+                self : object
+                    The instance of the class containing the 'id' attribute.
+        
+                Returns
+                -------
+                str
+                    The string value of the instance's 'id' attribute.
+                """
         return self.id
 
     def to_xml(self, model: MoosasContainer = None, xml_tag="space", writeGeometry=False):
+        """
+        Convert the object to an XML element representation.
+        
+        Parameters
+        ----------
+        model : MoosasContainer, optional
+            The container model holding global variables and geometry lists. If not provided, uses the parent attribute of the object.
+        xml_tag : str, default="space"
+            The tag name for the root XML element.
+        writeGeometry : bool, default=False
+            If True, includes geometric data in the XML output.
+        
+        Returns
+        -------
+        xml.etree.ElementTree.Element
+            The XML element representing the object, containing attributes such as id, area, height, boundary coordinates,
+            settings, topology (floor, ceiling, edge), neighbors, and internal mass elements.
+        """
         if not model:
             model = self.parent
         root = ET.Element(xml_tag)
@@ -1731,6 +3289,20 @@ class MoosasContainer(object):
     """
 
     def __init__(self):
+        """
+        Initialize the MoosasModel with default lists and assign appropriate types to these lists.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the MoosasModel class being initialized. This method sets up all the 
+            internal list attributes used to store geometric and structural components of the model.
+        
+        Returns
+        -------
+        None
+            This method does not return any value.
+        """
         """initialize the MoosasModel with default list, and apply type to these list"""
         self.geoId = []
         self.geometryList: list[MoosasGeometry] = []
@@ -1788,6 +3360,27 @@ class MoosasContainer(object):
         return space
 
     def update(self) -> None:
+        """
+        Update the builtData attribute to reflect current elements and glazing.
+        
+        This method initializes the element and glazing dictionaries in builtData if they do not exist,
+        then populates them with face and glazing data from the instance's glazingList, skylightList,
+        and all faces obtained via getAllFaces.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the method. It is expected to have the following attributes:
+            - builtData: an object that will be updated with 'element' and 'glazing' dictionaries.
+            - glazingList: a list of objects, each having a 'glazingId' attribute.
+            - skylightList: a list of objects, each having a 'glazingId' attribute.
+            - getAllFaces(): a method returning a collection of face objects, each with a 'faceId' attribute.
+            - mixItemListToList: a function used to convert faceId items into a flat list.
+        
+        Returns
+        -------
+        None
+        """
         """update self.builtData, which is used to record current elements and glazing when creating space manually.
         builtData.element is a dictionary: {MoosasElement.faceId:MoosasElement}
         builtData.glazing is a dictionary: {MoosasGlazing.faceId:MoosasElement}
@@ -1859,6 +3452,19 @@ class MoosasContainer(object):
         return self.geoId[-1]
 
     def removeGeo(self, geo: MoosasGeometry | pygeos.Geometry | str):
+        """
+        Remove a geometry from the internal geometry list.
+        
+        Parameters
+        ----------
+        geo : MoosasGeometry or pygeos.Geometry or str
+            The geometry to be removed. Can be a MoosasGeometry object, a pygeos.Geometry object, 
+            or a string representing the face ID of the geometry.
+        
+        Returns
+        -------
+        None
+        """
         if isinstance(geo, pygeos.Geometry):
             for geoItems in self.geometryList:
                 if geoItems.face == geo:

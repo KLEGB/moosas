@@ -7,6 +7,33 @@ class MoosasRender
     $backup_materials = {}
 
     def self.update_define_materials(face,cat)
+    # """
+    # Function
+    # --------
+    # Updates the defined materials mapping for a given face with the specified category.
+    # 
+    # Parameters
+    # ----------
+    # face : Sketchup::Face
+    # The face entity whose persistent ID will be used as the key in the material mapping.
+    # cat : Integer or String
+    # The category identifier to associate with the face. If provided as a string,
+    # it will be converted to an integer.
+    # 
+    # Returns
+    # -------
+    # nil
+    # This method does not return a value. It modifies the global `$define_materials` hash
+    # by setting the entry keyed by `face.persistent_id` to the integer value of `cat`,
+    # but only if `cat` exists as a key in the `@entity_materials` hash.
+    # 
+    # Notes
+    # -----
+    # - The method ensures `@entity_materials` is loaded by calling `load_entity_materials`
+    # if it is not already initialized.
+    # - The update only occurs if the category (after type conversion) exists as a key
+    # in the `@entity_materials` hash.
+    # """
         if @entity_materials == nil
             self.load_entity_materials
         end
@@ -19,6 +46,22 @@ class MoosasRender
     end
 
     def self.mark_face(cat)
+    # Function
+    # ----------
+    # Marks faces in the active SketchUp model selection by applying defined materials based on category mapping.
+    # Applies a material with prefix 'moosas_' to both front and back of each face, backed up original materials if not already saved.
+    # 
+    # Parameters
+    # ----------
+    # cat : Object
+    # A category identifier used to determine which materials to apply to the selected faces.
+    # Expected to be used as a key in material definition lookups.
+    # 
+    # Returns
+    # -------
+    # nil
+    # This method does not return a value. It performs side effects by modifying face materials
+    # and updating global state ($backup_materials, $define_materials).
         entities = Sketchup.active_model.selection
         self.traverse_faces(entities) do |face,path|
             self.update_define_materials(face,cat)
@@ -34,6 +77,24 @@ class MoosasRender
     end
 
     def self.visualize_repeat(model)
+    # """
+    # Function
+    # --------
+    # Toggle visualization state for a given model entity type. If already visualized,
+    # it attempts to disable the visualization; otherwise, it attempts to enable it.
+    # 
+    # Parameters
+    # ----------
+    # model : object
+    # The model entity type to be visualized or whose visualization is to be disabled.
+    # Expected to be a valid entity type supported by the visualization system.
+    # 
+    # Returns
+    # -------
+    # None
+    # This method does not return a value. It performs side effects by modifying
+    # the internal visualization state and attempting to visualize or hide the model.
+    # """
         if @visulized
             begin
                 self.disable_visualize_entity_type(model)
@@ -54,6 +115,19 @@ class MoosasRender
     end
 
     def self.visualize_entity_type(model)
+    # Function:
+    # Visualizes the type of each face in the model by applying specific materials based on predefined entity types.
+    # This method temporarily changes the material of faces to reflect their semantic classification (e.g., shading, surrounding),
+    # stores original materials for later restoration, and marks the model as visualized.
+    # 
+    # Parameters:
+    # model : Sketchup::Model
+    # The SketchUp model object whose entities (specifically faces) will be traversed and visually marked according to their entity type.
+    # Although passed as a parameter, the method internally uses Sketchup.active_model instead of this argument.
+    # 
+    # Returns:
+    # None
+    # This method does not return a value. It modifies the model's face materials and updates internal state (@backup_materials, @visulized).
 
         if @entity_materials == nil
             self.load_entity_materials
@@ -106,6 +180,21 @@ class MoosasRender
 
 
     def self.disable_visualize_entity_type(model)
+    # Function:
+    # Disables the visualization of entity types by restoring face materials to their original values
+    # from a backup hash and marking the visualization state as inactive. This method traverses
+    # all faces in the model's entities and resets their material and back_material properties
+    # if a backup exists for the face.
+    # 
+    # Parameters:
+    # model : Sketchup::Model
+    # The SketchUp model whose entities are to be processed. If not provided or nil,
+    # defaults to Sketchup.active_model within the method.
+    # 
+    # Returns:
+    # nil
+    # Returns nil if @visulized is false at the start of the method.
+    # Otherwise, performs material restoration on faces and returns nil after completion.
         return if !@visulized
         model = Sketchup.active_model
         self.traverse_faces(model.entities) do |face,path|
@@ -134,6 +223,23 @@ class MoosasRender
     end
 
     def self.show_entity_type(model,type_index)
+    # """
+    # Function
+    # --------
+    # Displays faces of a specified type in the model while hiding all others.
+    # 
+    # Parameters
+    # ----------
+    # model : Sketchup::Model
+    # The Sketchup model containing the faces to be processed.
+    # type_index : Integer
+    # The type index used to filter and show only faces matching this type.
+    # 
+    # Returns
+    # -------
+    # None
+    # This method does not return a value. It modifies the visibility of faces in the model.
+    # """
         Sketchup.active_model.start_operation("标记面的类型#{type_index}", true)
         self.hide_all_face
         moosas_faces = model.get_all_face
@@ -146,6 +252,34 @@ class MoosasRender
     end
 
     def self.traverse_faces(entity, path=[], &func)
+    # """
+    # Function
+    # --------
+    # Recursively traverses a hierarchy of SketchUp entities to find and process all Face objects.
+    # 
+    # This method is designed to walk through groups, component instances, and collections of entities,
+    # applying a given function to each Sketchup::Face encountered. The traversal maintains the path
+    # from the root to the current face, which can be passed to the provided function.
+    # 
+    # Parameters
+    # ----------
+    # entity : Sketchup::Entity or Enumerable
+    # The starting entity or collection to traverse. Can be a single entity such as a Face,
+    # Group, or ComponentInstance, or a collection such as Entities, Selection, or any Enumerable.
+    # path : Array, optional
+    # A list representing the ancestral path of groups or components leading to the current entity.
+    # Used internally during recursion to track context. Defaults to an empty array.
+    # func : Proc or lambda
+    # A callable that will be invoked for each Sketchup::Face found. Its argument signature determines
+    # how it's called:
+    # - If `func.arity == 1`, it is called with just the face: `func.call(face)`
+    # - Otherwise, it is called with both the face and the path: `func.call(face, path)`
+    # 
+    # Returns
+    # -------
+    # None
+    # This method does not return a value. It is intended for side effects via the provided function.
+    # """
         case entity
         when Sketchup::Face
             func.arity == 1 ? func.call(entity) : func.call(entity, path)
@@ -159,12 +293,50 @@ class MoosasRender
     end
 
     def self.show_all_face
+    # """
+    # Function
+    # --------
+    # show_all_face :
+    # Displays all hidden faces in the active SketchUp model by setting their hidden attribute to false.
+    # 
+    # Parameters
+    # ----------
+    # None
+    # This is a class method that operates on the active model's entities. It does not take any explicit parameters.
+    # 
+    # Returns
+    # -------
+    # nil
+    # This method does not return a value. It performs an action (modifying entity visibility) within the SketchUp model.
+    # """
         self.traverse_faces(Sketchup.active_model.entities) do |e,path|
             e.hidden = false
         end
     end
 
     def self.show_space(model,id)
+    # """
+    # Function
+    # --------
+    # show_space
+    # Finds the index of a space in the model by its ID, stores the index in a global variable,
+    # and selects the walls of that space using an external module function.
+    # 
+    # Parameters
+    # ----------
+    # model : object
+    # A model object that contains a collection of spaces. It is expected to have a `spaces`
+    # attribute which behaves like a list or array of space objects.
+    # id : int
+    # The unique identifier of the space to be found within the model's spaces collection.
+    # 
+    # Returns
+    # -------
+    # None
+    # This method does not return any value. Its primary effect is modifying the global
+    # variable `$space_select_index` and invoking `MMR.select_space_walls` to select walls
+    # associated with the identified space.
+    # """
         for i in 0..model.spaces.length-1
             if model.spaces[i].id==id
                 $space_select_index=i
@@ -175,11 +347,34 @@ class MoosasRender
     end
 
     def self.hide_all_face
+    # Function:
+    # Hides all faces within the active model's entities by traversing through them and setting their visibility to hidden.
+    # 
+    # Parameters:
+    # None
+    # 
+    # Returns:
+    # nil : This method does not return a value.
         self.traverse_faces(Sketchup.active_model.entities) do |e,path|
             e.hidden = true
         end
     end
     def self.hide_glazing
+    # """
+    # Function
+    # --------
+    # Hides all glazing faces within the active SketchUp model by traversing the entities collection.
+    # 
+    # Parameters
+    # ----------
+    # None
+    # This is a class method that operates on the active model's entities. It does not accept any parameters.
+    # 
+    # Returns
+    # -------
+    # nil
+    # This method does not return a value. It performs an action (hiding glazing faces) and returns nil implicitly.
+    # """
         self.traverse_faces(Sketchup.active_model.entities) do |e,path|
             if MMR.is_glazing(e)
                 e.hidden = true
@@ -188,6 +383,27 @@ class MoosasRender
     end
 
     def self.load_entity_materials
+    # """
+    # Function
+    # --------
+    # Load and initialize entity-specific materials in the SketchUp model.
+    # 
+    # This method checks if entity materials have already been loaded into the class variable `@entity_materials`.
+    # If not, it calculates a texture size based on the model's bounding box diagonal, then creates or updates
+    # SketchUp materials for various building elements (e.g., walls, glazing, floors) using predefined image textures.
+    # Each material is assigned a unique name prefixed with 'moosas_' and linked to a corresponding PNG texture file.
+    # 
+    # Parameters
+    # ----------
+    # None
+    # 
+    # Returns
+    # -------
+    # Hash[int => String]
+    # A hash mapping integer constants (from MoosasConstant) representing entity types to string identifiers
+    # used in material naming and texture lookup. The keys are entity type constants, and the values are
+    # lowercase string labels (e.g., "wall", "glazing") used to construct texture paths and material names.
+    # """
         if @entity_materials != nil
             return @entity_materials
         end
@@ -235,6 +451,16 @@ class MoosasRender
     end
 
     def self.moosas_material_lib
+    # Function:
+    # Returns the material library for entities, initializing it if necessary.
+    # 
+    # Parameters:
+    # None
+    # 
+    # Returns:
+    # Hash: A hash containing entity materials. If the material library has not been initialized,
+    # it is loaded by calling `load_entity_materials` before being returned. The instance
+    # variable `@entity_materials` holds the material data.
         if @entity_materials == nil
             self.load_entity_materials
         end

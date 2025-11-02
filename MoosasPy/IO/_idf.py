@@ -13,6 +13,23 @@ idd = os.path.join(_ENERGYPLUS_DIR, "Energy+.idd")
 IDF.setiddname(idd)
 
 def writeIDF(outputPath: str, model):
+    """
+    Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
+    
+    Parameters
+    ----------
+    outputPath : str
+        Path to save the generated IDF file. The directory must be writable.
+    model : MoosasModel
+        A model instance containing building geometry and settings to be converted into IDF format.
+        Must provide methods `getAllFaces`, `spaceIdDict`, and `spaceList`, and associated attributes
+        for space and surface properties.
+    
+    Returns
+    -------
+    None
+        This function does not return any value. It writes the IDF file to the specified path and prints progress information.
+    """
     from ..models import MoosasModel
     model: MoosasModel = model
     print('IDF: initialization from IDF file...')
@@ -75,12 +92,47 @@ def writeIDF(outputPath: str, model):
     print()
 
 def encodeURI(hint):
+    """
+    Encode a string into a URI by replacing spaces with underscores and converting to a URIRef object.
+    
+    Parameters
+    ----------
+    hint : str
+        The input string to be encoded into a URI. It will be stripped of leading/trailing whitespace 
+        and have spaces replaced with underscores.
+    
+    Returns
+    -------
+    rdflib.term.URIRef
+        A URIRef object created from the processed hint string.
+    
+    Raises
+    ------
+    Exception
+        If the input string contains an exclamation mark ('!').
+    """
     hint = re.sub(' ','_',str(hint).strip())
     if "!" in hint:
         raise Exception
     return URIRef(hint)
 
 def IDFtoOWL(idfTemplatePath):
+    """
+    Translate an IDF (Input Data File) knowledge base into an OWL (Web Ontology Language) RDF graph.
+    
+        Parameters
+        ----------
+        idfTemplatePath : str
+            Path to the IDF template file to be converted. The file contains building energy model input data
+            structured according to EnergyPlus Input/Output Reference definitions.
+    
+        Returns
+        -------
+        Graph
+            An RDFlib Graph object representing the IDF data as an OWL ontology. The graph includes classes,
+            properties, and instances derived from the IDF file, with semantics aligned to the EnergyPlus
+            InputOutputReference documentation. Subjects are defined under the 'idf' namespace.
+    """
     """
     Translate and IDF knowledgebase into OWL graph.
     All subjects were defined under idf namespace with:
@@ -157,6 +209,22 @@ def IDFtoOWL(idfTemplatePath):
 
 
 def OWLtoIDF(owl:Graph,outFile):
+    """
+    Convert an OWL ontology graph to an IDF (Input Data File) format used by EnergyPlus.
+    
+    Parameters
+    ----------
+    owl : Graph or str
+        An RDFlib Graph object containing the OWL ontology data, or a string path to an OWL file.
+    outFile : str
+        Path to the output file where the generated IDF will be saved.
+    
+    Returns
+    -------
+    IDF
+        An IDF object representing the EnergyPlus input data file, populated with objects 
+        derived from the input OWL graph and saved to the specified output path.
+    """
     # copy the graph into a MoosasGraph
     if isinstance(owl,str):
         newowl = Graph()

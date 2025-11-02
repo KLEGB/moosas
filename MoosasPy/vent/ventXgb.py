@@ -18,6 +18,23 @@ def _modelBoundBox(model) -> np.ndarray:
 
 
 def _calculate_orientation(normal) -> int:
+    """
+    Calculate the orientation of a facade based on its normal vector.
+    
+    Parameters
+    ----------
+    normal : Vector
+        A vector object representing the normal direction of the facade. 
+        Must have an attribute `array` that returns a 3-element array-like 
+        containing the x, y, z components of the vector.
+    
+    Returns
+    -------
+    int
+        The orientation angle in degrees, ranging from 0 to 360, representing 
+        the compass direction of the facade. Returns 0 if the normal is parallel 
+        to the positive z-axis ([0,0,1]).
+    """
     if Vector.parallel(normal,[0,0,1]):
         return 0
     normal = normal.array

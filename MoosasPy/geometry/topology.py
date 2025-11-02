@@ -10,6 +10,20 @@ class TopoEdge(object):
     __slots__ = ('modelId', 'fromLocation', 'toLocation', 'uid', 'fromP', 'toP')
 
     def __init__(self, idd, edge: MoosasWall):
+        """
+        Initialize a new instance with model ID and edge geometry.
+        
+        Parameters
+        ----------
+        idd : Any
+            The model identifier.
+        edge : MoosasWall
+            The edge object representing a wall, used to extract 2D geometry and UID.
+        
+        Returns
+        -------
+        None
+        """
         self.modelId = idd
         line2d = edge.force_2d()
         self.fromLocation = pygeos.set_precision(pygeos.get_point(line2d, 0), geom.POINT_PRECISION)
@@ -20,6 +34,22 @@ class TopoEdge(object):
 
     @property
     def valid(self):
+        """
+        Check if the fromLocation and toLocation are valid and sufficiently distant.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this property. It is expected to have
+            `fromLocation` and `toLocation` attributes, which are geometric points,
+            and access to `pygeos` and `geom.POINT_PRECISION` for distance evaluation.
+        
+        Returns
+        -------
+        bool
+            True if both locations are not None and are separated by more than
+            POINT_PRECISION; False otherwise.
+        """
         if self.fromLocation is None or self.toLocation is None:
             return False
         if pygeos.dwithin(self.fromLocation, self.toLocation, geom.POINT_PRECISION):
@@ -28,14 +58,59 @@ class TopoEdge(object):
 
     @property
     def fromPStr(self):
+        """
+        Get a string representation of the coordinates of the fromLocation attribute.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `fromLocation` attribute. It is expected to have a `fromLocation` 
+            property accessible, which can be processed by `pygeos.get_coordinates`.
+        
+        Returns
+        -------
+        str
+            A string formed by joining the coordinates of `fromLocation` with underscores, where each coordinate value 
+            is converted to its string representation.
+        """
         return '_'.join(pygeos.get_coordinates(self.fromLocation)[0].astype(str))
 
     @property
     def toPStr(self):
+        """
+        Return a string representation of the first coordinate of the location, joined by underscores.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `toLocation` attribute. It is expected to have a `toLocation` 
+            property or attribute that returns a geometry object compatible with `pygeos.get_coordinates`.
+        
+        Returns
+        -------
+        str
+            A string formed by converting the first coordinate point (x, y) to strings and joining them with an underscore.
+        """
         return '_'.join(pygeos.get_coordinates(self.toLocation)[0].astype(str))
 
     @staticmethod
     def overlap(this: TopoEdge, other: TopoEdge):
+        """
+        Check if two TopoEdge objects overlap based on their endpoint proximity.
+        
+        Parameters
+        ----------
+        this : TopoEdge
+            The first edge to compare.
+        other : TopoEdge
+            The second edge to compare.
+        
+        Returns
+        -------
+        bool
+            True if the endpoints of the two edges are within POINT_PRECISION distance 
+            of each other, indicating overlap; False otherwise.
+        """
         if pygeos.dwithin(this.fromLocation, other.fromLocation, geom.POINT_PRECISION) or pygeos.dwithin(
                 this.fromLocation, other.toLocation,
                 geom.POINT_PRECISION):
@@ -47,6 +122,21 @@ class TopoEdge(object):
 
     @staticmethod
     def isolateEdge(edge_list: Iterable[TopoEdge]):
+        """
+        Identify indices of edges that are isolated, i.e., connected to nodes with degree less than 2.
+        
+        Parameters
+        ----------
+        edge_list : Iterable[TopoEdge]
+            An iterable of TopoEdge objects, each representing an edge with 'fromPStr' and 'toPStr' 
+            attributes indicating the start and end node strings.
+        
+        Returns
+        -------
+        list of int
+            A list of indices corresponding to edges in edge_list that are isolated, meaning at least 
+            one of their connecting nodes has a degree less than 2.
+        """
         nodeList = {}
         for i, edge in enumerate(edge_list):
             fromP = edge.fromPStr
@@ -69,6 +159,13 @@ class TopoEdge(object):
         return delEdges
 
     def __str__(self):
+        """Return a string representation of the TopoNode instance.
+        
+        Returns
+        -------
+        str
+            A string describing the TopoNode, including its idd and location.
+        """
         return f"EdgeId {self.modelId} from {self.fromP} to {self.toP}"
 
 
@@ -76,6 +173,20 @@ class TopoNode(object):
     __slots__ = ('idd', 'connectedEdges', 'neighbor', 'neiAngle', 'location')
 
     def __init__(self, idd, location: pygeos.Geometry):
+        """
+        Initialize a TopoNode instance with an identifier, location, and empty lists for neighbors, angles, and connected edges.
+        
+        Parameters
+        ----------
+        idd : hashable
+            Unique identifier for the node.
+        location : pygeos.Geometry
+            Geometric representation of the node's location.
+        
+        Returns
+        -------
+        None
+        """
         self.idd = idd
         self.location = location
         self.neighbor: list[TopoNode] = []
@@ -83,6 +194,26 @@ class TopoNode(object):
         self.connectedEdges: list[TopoEdge] = []
 
     def sortNeighbor(self):
+        """
+        Sort the neighbors according to their angle to the x-axis.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the attributes to be sorted.
+            Must have the following attributes:
+            - neighbor : list
+                List of neighbor elements to be sorted.
+            - neiAngle : list of float
+                List of angles corresponding to each neighbor, used as the sorting key.
+            - connectedEdges : list
+                List of edge connections associated with each neighbor, sorted to match the new order.
+        
+        Returns
+        -------
+        None
+            This function modifies the object's attributes in place and does not return any value.
+        """
         """sort the neighbor according to their angle to x-axis"""
         argsort = np.argsort(self.neiAngle)
         self.neighbor = list(np.array(self.neighbor)[argsort])
@@ -90,6 +221,18 @@ class TopoNode(object):
         self.connectedEdges = list(np.array(self.connectedEdges)[argsort])
 
     def __repr__(self):
+        """String representation of the TopoNetwork object.
+        
+        Parameters
+        ----------
+        self : TopoNetwork
+            The instance of TopoNetwork to represent as a string.
+        
+        Returns
+        -------
+        str
+            A string representation of the TopoNetwork in the format "N" followed by the string representation of its `idd` attribute.
+        """
         return "N" + self.idd.__repr__()
 
 
@@ -97,6 +240,26 @@ class TopoNetwork(object):
     __slots__ = ('edges', 'nodes')
 
     def __init__(self, edges=None, nodes=None):
+        """
+        Initialize the network topology from given edges or nodes.
+        
+        Parameters
+        ----------
+        edges : list[TopoEdge], optional
+            List of TopoEdge objects representing the edges in the network. Each edge contains information about its endpoints.
+            If provided, the nodes will be derived from these edges using `_nodeFromEdge`.
+        nodes : list[TopoNode], optional
+            List of TopoNode objects representing the unique nodes in the network. Each node contains:
+            - a unique ID,
+            - a list of neighboring TopoNode objects,
+            - a list of edge IDs connecting to those neighbors (in corresponding order),
+            - a list of dot products representing angles between the node and its neighbors relative to the x-axis.
+            If provided and edges are not, the edges will be derived using `_edgeFromNode`.
+        
+        Returns
+        -------
+        None
+        """
         """initialize the network:
             get 2 things recording the topology of the network:
             self.edges:list[TopoEdge] records the edges' id and their end points' location
@@ -122,6 +285,27 @@ class TopoNetwork(object):
 
     # function to initialize TopoNode list
     def _nodeFromEdge(self) -> None:
+        """
+        Construct the node list from valid and processed topological edges.
+        
+        This method processes the topological edges by removing invalid and duplicate edges,
+        merges spatially close nodes, removes isolated edges, and constructs a node network
+        with neighbor relationships and angular information relative to the x-axis.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `edges` attribute (list of TopoEdge objects)
+            and `nodes` attribute (to be populated with TopoNode objects). The method modifies
+            `self.edges` and `self.nodes` in place.
+        
+        Returns
+        -------
+        None
+            This function does not return any value. It modifies the object's state by updating
+            the `edges` and `nodes` attributes to reflect the cleaned edge list and constructed
+            topological node network.
+        """
         """construct the nodeList(self.nodes)
         1. find the unique nodes from all TopoEdges, and put the neighbor of the nodes in TopoNode.neighbor
         2. get the locations of that unique nodes,
@@ -212,6 +396,22 @@ class TopoNetwork(object):
         return
 
     def _edgeFromNode(self) -> None:
+        """
+        Extract unique edge list from node.edgeId.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing nodes and edges attributes.
+            It is expected to have a `nodes` attribute which is an iterable of objects,
+            each having a `connectedEdges` attribute that yields TopoEdge instances.
+        
+        Returns
+        -------
+        None
+            This function does not return a value. It modifies the instance by setting
+            the `edges` attribute to a list of unique TopoEdge objects.
+        """
         """Extract unique edge list from node.edgeId"""
         edges: set[TopoEdge] = set()
         for node in self.nodes:
@@ -243,6 +443,18 @@ class TopoNetwork(object):
 
     @classmethod
     def splitNetwork(cls, oriNetwork: TopoNetwork) -> list[TopoNetwork]:
+        """Split the network into several isolated subnetworks.
+        
+            Parameters
+            ----------
+            oriNetwork : TopoNetwork
+                The original network to be split into isolated parts.
+        
+            Returns
+            -------
+            list of TopoNetwork
+                A list of isolated subnetworks derived from the original network.
+            """
         """split the network into several isolate part
         this method can be improved consider the stability facing strange network,
         especially those with self-interest part
@@ -282,6 +494,26 @@ class TopoNetwork(object):
         return [cls(nodes=nodes) for nodes in groups]
 
     def outerBoundary(self) -> list[TopoBound]:
+        """
+        Calculate the outer boundary(s) of the network.
+        
+        This method computes the outer boundary of the network by traversing nodes in a clockwise manner,
+        starting from the node with maximum x and minimum y among those with maximum x. It handles cases
+        where the boundary may self-intersect, potentially resulting in multiple boundary loops.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the network topology, with attributes:
+            - nodes (list): A list of TopoNode objects representing the network nodes.
+            - Other attributes used during traversal (e.g., neighbor relationships, angles).
+        
+        Returns
+        -------
+        list[TopoBound]
+            A list of TopoBound objects representing the outer boundary or boundaries of the network.
+            Returns an empty list if there are fewer than 3 nodes.
+        """
         """calculate the outer boundary(s) of this network
         sometime it will have several boundaries instead of one
         when the outer boundary is self-interest.
@@ -355,6 +587,20 @@ class TopoBound(object):
     __slots__ = ('nodeLoop', 'edgeLoop')
 
     def __init__(self, nodes: list[TopoNode] = None, edges: list[TopoEdge] = None):
+        """
+        Initialize a new instance with optional lists of nodes and edges.
+        
+        Parameters
+        ----------
+        nodes : list of TopoNode, optional
+            List of TopoNode objects to initialize the node loop. If not provided, nodeLoop is set to None.
+        edges : list of TopoEdge, optional
+            List of TopoEdge objects to initialize the edge loop. If not provided, edgeLoop is set to None.
+        
+        Returns
+        -------
+        None
+        """
         self.nodeLoop = list(nodes) if nodes is not None else None
         self.edgeLoop = list(edges) if edges is not None else None
         if nodes is not None and edges is None:
@@ -363,6 +609,23 @@ class TopoBound(object):
             self.initNodeLoop()
 
     def initEdgeLoop(self):
+        """
+        Extract edges from the node loop to form an edge loop.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the nodeLoop and edgeLoop attributes.
+            It is expected to have a `nodeLoop` attribute which is a list of nodes,
+            each having `neighbor` and `connectedEdges` properties.
+        
+        Returns
+        -------
+        None
+            This function does not return a value. It modifies the `edgeLoop` attribute
+            of the instance in place, populating it with TopoEdge objects extracted
+            based on connectivity between consecutive nodes in `nodeLoop`.
+        """
         """extract the edges from nodeLoop"""
         self.edgeLoop: list[TopoEdge] = []
         for i in range(len(self.nodeLoop) - 1):
@@ -370,6 +633,27 @@ class TopoBound(object):
             self.edgeLoop.append(self.nodeLoop[i].connectedEdges[neiIdx])
 
     def initNodeLoop(self):
+        """
+        Initialize and construct the node loop from the edge loop.
+        
+        This method constructs a list of unique nodes (`nodeLoop`) by iterating over the edges 
+        in `edgeLoop`, adding both the start (`fromP`) and end (`toP`) points of each edge. 
+        It then adjusts the order of the first two nodes based on connectivity with the second edge, 
+        and if the edge loop is closed (i.e., first and last edges share a common node), 
+        it appends the first node to the end of the node loop to close it.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this method. Expected to have the following attributes:
+            - edgeLoop : list of edge objects, each with 'fromP' and 'toP' attributes representing connected points.
+            - nodeLoop : list, will be initialized as an empty list and populated with node points.
+        
+        Returns
+        -------
+        None
+            This function does not return a value. It modifies the `nodeLoop` attribute of the instance in place.
+        """
         self.nodeLoop = []
         """open nodeLoop"""
         for edge in self.edgeLoop:
@@ -387,12 +671,39 @@ class TopoBound(object):
             self.nodeLoop.append(self.nodeLoop[0])
 
     def reverse(self):
+        """
+        Reverse the boundary by reversing the order of nodes and edges in the loops.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the nodeLoop and edgeLoop attributes.
+            It is expected to have `nodeLoop` and `edgeLoop` as list-like attributes that support reverse().
+        
+        Returns
+        -------
+        None
+            This function modifies the object in place and does not return a value.
+        """
         """reverse boundary"""
         self.nodeLoop.reverse()
         self.edgeLoop.reverse()
 
     @classmethod
     def fromTopoEdge(cls, edge: TopoEdge):
+        """
+        Create an instance from a TopoEdge.
+        
+        Parameters
+        ----------
+        edge : TopoEdge
+            The TopoEdge object to create the instance from. Contains fromP and toP node attributes.
+        
+        Returns
+        -------
+        cls
+            A new instance of the class initialized with nodes [edge.fromP, edge.toP] and edges [edge].
+        """
         return cls(nodes=[edge.fromP, edge.toP], edges=[edge])
 
     def isClose(self):
@@ -422,6 +733,19 @@ class TopoBound(object):
             return pygeos.linestrings(loc)
 
     def __repr__(self):
+        """
+        Return a string representation of the object by joining string representations of nodes in the loop.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `nodeLoop` attribute, which is an iterable of nodes.
+        
+        Returns
+        -------
+        str
+            A string formed by joining the string representations of each node in `nodeLoop` with spaces.
+        """
         return " ".join([node.__repr__() for node in self.nodeLoop])
 
     @classmethod
@@ -458,6 +782,22 @@ class TopoBound(object):
     # Ver1.3 break the self intersection point
     @classmethod
     def selfIntersect(cls, oriBoundary) -> list[TopoBound]:
+        """
+        Check if a boundary self-intersects and split it at intersection points.
+        
+        Parameters
+        ----------
+        cls : type
+            The class instance, used to create new instances of the boundary.
+        oriBoundary : object
+            An object with a `nodeLoop` attribute containing a sequence of `TopoNode` objects representing the boundary.
+        
+        Returns
+        -------
+        list of TopoBound
+            A list of `TopoBound` instances created from the split segments of the original boundary. 
+            The main segment starting with `oriBoundary.nodeLoop[0]` is located at `validBound[-1]`.
+        """
         """check the boundary if self intersect, and break it on the intersect point(s)
         the main part (start with self.nodeLoop[0]) will be located in validBound[-1]
         this method can work with both closed and open linestring.

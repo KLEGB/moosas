@@ -18,6 +18,18 @@ class MoosasCumSky(object):
     WINTER_END_HOY = 1416
 
     def __init__(self, cumValue=None):
+        """
+        Initialize the object with cumulative value and load sun position data.
+        
+        Parameters
+        ----------
+        cumValue : optional
+            Initial cumulative value to assign to the instance. Default is None.
+        
+        Returns
+        -------
+        None
+        """
         self.value = cumValue
         self.position = []
         with open(os.path.join(path.libDir, r'weather\sun_position.csv')) as f:
@@ -25,6 +37,23 @@ class MoosasCumSky(object):
 
     @classmethod
     def fromPeriod(cls, cumValue, stDateTime: DateTime | int, edDateTime: DateTime | int):
+        """
+        Create an instance from a cumulative value array over a specified time period.
+        
+        Parameters
+        ----------
+        cumValue : numpy.ndarray
+            Array of cumulative values, typically radiation data, with shape (n, m) where n is the number of samples.
+        stDateTime : DateTime or int
+            Start time of the period. If DateTime, converted to hour of year (hoy); if int, assumed to be hour of year.
+        edDateTime : DateTime or int
+            End time of the period. If DateTime, converted to hour of year (hoy); if int, assumed to be hour of year.
+        
+        Returns
+        -------
+        cls
+            A new instance of the class initialized with the normalized cumulative value over the specified period.
+        """
         if isinstance(stDateTime, DateTime):
             stDateTime = stDateTime.hoy
         if isinstance(edDateTime, DateTime):
@@ -41,6 +70,26 @@ def loadCumSky(stationid: str,
                stDateTime: DateTime | int | Iterable[DateTime] | Iterable[int] = None,
                edDateTime: DateTime | int | Iterable[DateTime] | Iterable[int] = None) -> MoosasCumSky | list[
     MoosasCumSky]:
+    """
+    Load cumulative sky data for a given station over specified time periods.
+    
+    Parameters
+    ----------
+    stationid : str
+        The identifier for the weather station whose cumulative sky data is to be loaded.
+    stDateTime : DateTime or int or Iterable[DateTime] or Iterable[int], optional
+        Start time(s) for the period(s) of interest. Can be a single DateTime/int or an iterable of DateTimes/ints.
+        If int, it is interpreted as an hour index (0-8759). Default is None.
+    edDateTime : DateTime or int or Iterable[DateTime] or Iterable[int], optional
+        End time(s) for the period(s) of interest. Must match the type and length of stDateTime.
+        If int, it is interpreted as an hour index (1-8760). Default is None.
+    
+    Returns
+    -------
+    MoosasCumSky or list[MoosasCumSky]
+        A single MoosasCumSky object if one period is requested, otherwise a list of MoosasCumSky objects,
+        each representing cumulative sky data for the corresponding time period.
+    """
     m_cumSky = []
     with open(os.path.join(path.dataBaseDir, f'cum_sky\\cumsky_{stationid}.csv')) as f:
         cumValue = np.array([line.split(',') for line in f.read().split('\n') if len(line) > 1]).astype(float)

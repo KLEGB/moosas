@@ -27,6 +27,36 @@ def energyAnalysis(model: MoosasModel, core=buildingType.RESIDENTIAL,
                    requireRadiation=False,
                    inputPath=os.path.join(energyDataDir, "Energy.i"),
                    resultPath=os.path.join(energyDataDir, "Energy.o")) -> dict:
+    """
+    Quick energy analysis function.
+    
+    Performs an energy demand analysis on a building model using specified core type and radiation settings.
+    
+    Parameters
+    ----------
+    model : MoosasModel
+        The building model to be analyzed.
+    core : buildingType, optional
+        Specifies the analysis core to use; choose between `buildingType.RESIDENTIAL` and other types. 
+        Default is `buildingType.RESIDENTIAL`.
+    requireRadiation : bool, optional
+        If True, performs accurate radiation calculation using MoosasRad. If False, uses default solar heat estimation based on Beijing's cumSky. 
+        Default is False.
+    inputPath : str, optional
+        Path to save the input file for the energy simulation. 
+        Default is "data\\energy\\Energy.i".
+    resultPath : str, optional
+        Path to save the output result file from the energy simulation. 
+        Default is "data\\energy\\Energy.o".
+    
+    Returns
+    -------
+    dict
+        A dictionary containing the energy analysis results with the following structure:
+        - 'total': dict with keys 'cooling', 'heating', 'lighting', and 'total' representing annual energy demands.
+        - 'spaces': list of ThermalSettings objects, with energy loads recorded in their `load` attribute.
+        - 'months': dict for each month (Jan, Feb, ...) with daily energy demand breakdown including 'cooling', 'heating', 'lighting', and 'total'.
+    """
     """Quick energy analysis function.
 
     It takes two different cores for residential buildings and others.
@@ -88,6 +118,25 @@ def energyAnalysis(model: MoosasModel, core=buildingType.RESIDENTIAL,
 
 
 def parseEnergyOutput(resultPath, zoneList: list[ThermalSettings] = None):
+    """
+    Parse the output file from MoosasResidential.exe or MoosasPublic.exe.
+    
+    Parameters
+    ----------
+    resultPath : str
+        Path to the result file to parse.
+    zoneList : list of ThermalSettings, optional
+        List of ThermalSettings objects to record the results. If None, results are returned as dictionaries.
+        Default is None.
+    
+    Returns
+    -------
+    e_data : dict
+        A dictionary containing the parsed energy results with the following keys:
+        - 'total': dict with keys 'cooling', 'heating', 'lighting', and 'total' representing total energy demands.
+        - 'spaces': list of ThermalSettings (if zoneList provided) with load attributes set, or list of dicts with energy demands per space.
+        - 'months': dict mapping month names to their respective energy demand dictionaries (cooling, heating, lighting, total).
+    """
     """Parse the output file from MoosasResidential.exe or MoosasPublic.exe
 
     Args:
@@ -155,6 +204,23 @@ def parseEnergyOutput(resultPath, zoneList: list[ThermalSettings] = None):
 
 
 def getEnergyInput(model: MoosasModel, require_radiation=False):
+    """
+    Get the energy input configuration for a given MoosasModel.
+    
+    Parameters
+    ----------
+    model : MoosasModel
+        The model for which to generate the energy input file.
+    require_radiation : bool, optional
+        If True, enables accurate radiation calculation using MoosasRad. Default is False.
+    
+    Returns
+    -------
+    dict
+        A dictionary containing the energy input configuration with the following keys:
+        - 'zones': list of ThermalSettings objects representing thermal settings for each zone.
+        - 'args': list of command-line arguments including weather file, latitude, altitude, and shape factor.
+    """
     """Parse the output file from MoosasResidential.exe or MoosasPublic.exe
 
         Args:
@@ -176,6 +242,20 @@ def getEnergyInput(model: MoosasModel, require_radiation=False):
             >>>     print(z)
     """
     def calculate_orientation(n):
+        """
+        Calculate the orientation angle in degrees from a 2D vector.
+        
+        Parameters
+        ----------
+        n : array_like
+            A 2-element array or list representing a 2D vector [n[0], n[1]].
+        
+        Returns
+        -------
+        int
+            The orientation angle in degrees, measured clockwise from the positive y-axis, 
+            ranging from 0 to 360 degrees.
+        """
         o = int((np.arccos((-1) * n[0] / np.sqrt(n[0] ** 2 + n[1] ** 2)) * 180 / np.pi).round())
         if n[1] > 0:
             o = 360 - o
@@ -184,6 +264,19 @@ def getEnergyInput(model: MoosasModel, require_radiation=False):
         return o
 
     def non(x):
+        """
+        Return the input value if it is positive, otherwise return 0.
+        
+        Parameters
+        ----------
+        x : float or int
+            The input number to be evaluated.
+        
+        Returns
+        -------
+        int or float
+            The input value `x` if it is greater than 0, otherwise 0.
+        """
         return x if x > 0 else 0
 
     if require_radiation:

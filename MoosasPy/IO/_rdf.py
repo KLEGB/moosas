@@ -8,6 +8,25 @@ from rdflib.namespace import RDF, RDFS, GEO, BRICK, WGS
 
 class MoosasGraph(Graph):
     def __init__(self, model: MoosasModel = None, dumpUseless=True,ExportIFC=False):
+        """
+        Initialize the MoosasGraph instance with optional model encoding and namespace bindings.
+        
+        Parameters
+        ----------
+        model : MoosasModel, optional
+            The model to encode into the graph. If provided, the model is encoded using the `encodeModel` method.
+            Default is None.
+        dumpUseless : bool, default True
+            If True, useless or redundant information is excluded during model encoding. 
+            This parameter is passed to the `encodeModel` method.
+        ExportIFC : bool, default False
+            If True, enables IFC-specific export features during model encoding.
+            This parameter is passed to the `encodeModel` method.
+        
+        Returns
+        -------
+        None
+        """
         super(MoosasGraph, self).__init__()
         # create namespace
         self.bot = Namespace("https://w3id.org/bot#")
@@ -37,11 +56,44 @@ class MoosasGraph(Graph):
 
     @classmethod
     def load(cls, filePath, fileFormat='turtle'):
+        """
+        Load a graph from a file.
+        
+        Parameters
+        ----------
+        filePath : str
+            Path to the file containing the serialized graph.
+        fileFormat : str, optional
+            Serialization format of the file (e.g., 'turtle', 'xml', 'n3'). Default is 'turtle'.
+        
+        Returns
+        -------
+        rdflib.Graph
+            A new instance of the class populated with the parsed data.
+        """
         g = cls()
         g.parse(filePath, format=fileFormat)
         return g
 
     def encodeModel(self, model: MoosasModel, dumpUseless=True,ExportIFC=False):
+        """
+        Encode a MoosasModel into the ontology representation.
+        
+        Parameters
+        ----------
+        model : MoosasModel
+            The model to be encoded, containing building elements, geometry, spaces, and other data.
+        dumpUseless : bool, optional
+            If True, retrieves all faces including those marked as useless; otherwise, uses only specific element lists.
+            Default is True.
+        ExportIFC : bool, optional
+            If True, enables IFC-specific export logic during encoding. Default is False.
+        
+        Returns
+        -------
+        None
+            This function does not return any value.
+        """
         self.buildOntology(model)
         self.encodeStorey(model)
         if model.weather:
@@ -77,6 +129,22 @@ class MoosasGraph(Graph):
                 self.encodeElement(face, "Skylight", uidSet,ExportIFC)
 
     def buildOntology(self, model: MoosasModel):
+        """
+        Constructs an ontology hierarchy for classes in Moosas based on the provided model.
+        
+        Parameters
+        ----------
+        model : MoosasModel
+            The input model containing building templates and other information used to construct 
+            the ontology. The model's `buildingTemplate` attribute is accessed to extract zone 
+            information, which is used to define properties and relationships in the ontology.
+        
+        Returns
+        -------
+        None
+            This function modifies the internal state of the object by adding RDF triples to represent 
+            the ontology but does not return any value.
+        """
         """constructing hierarchy for class in moosas
         """
         # program
@@ -153,6 +221,22 @@ class MoosasGraph(Graph):
         self.add((self.moosas.altitute, self.rdfs.subPropertyOf, self.bot.Storey))
 
     def ifcOntology(self):
+        """
+        Add IFC4.0 ontology definitions to the current graph for data coupling and semantic interoperability.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing namespaces (ifc, rdfs, moosas) and an `add` method 
+            for adding RDF triples. It is assumed that this object has attributes `ifc`, `rdfs`, 
+            `moosas`, and a method `add(triple)` that accepts an RDF triple.
+        
+        Returns
+        -------
+        None
+            This function does not return any value. It modifies the state of the instance by adding 
+            RDF triples representing IFC4.0 ontology elements and their relationships.
+        """
         # adding ifc definition for future data coupling and transition
         self.add((self.ifc.IfcExternalSpatialElement, self.rdfs.comment,
                   Literal(f"representing external of the building according to IFC4.0")))
@@ -200,6 +284,21 @@ class MoosasGraph(Graph):
         self.add((self.ifc.CorrespondingBoundary, self.rdfs.range, self.ifc.IfcRelSpaceBoundary2ndLevel))
 
     def encodeWeather(self, model: MoosasModel):
+        """
+        Encode weather data from a MoosasModel into RDF triples.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing this method, providing access to RDF graph and namespaces.
+        model : MoosasModel
+            An instance of MoosasModel containing weather data to be encoded, including location and file information.
+        
+        Returns
+        -------
+        None
+            This function does not return any value. It modifies the internal RDF graph by adding weather-related triples.
+        """
         wea = URIRef(model.weather.location.stationId)
         site = self.getSubject(self.rdf.type, self.bot.Site)
         self.add((wea, self.rdf.type, self.pgd.Weather))
@@ -216,12 +315,44 @@ class MoosasGraph(Graph):
         self.add((URIRef(str(site)), self.pgd.state, Literal(model.weather.location.state)))
 
     def encodeProgram(self, pgName: str, pgDict: dict):
+        """
+        Encode a program into the RDF graph with associated metadata.
+        
+        Parameters
+        ----------
+        pgName : str
+            The name of the program, used as a term and UID in the RDF graph.
+        pgDict : dict
+            A dictionary containing metadata or properties of the program, where keys are 
+            predicate names and values are corresponding literals to be added as triples.
+        
+        Returns
+        -------
+        None
+            This function modifies the instance's RDF graph in place and does not return a value.
+        """
         self.add((self.moosas.term(pgName), self.rdf.type, self.moosas.Program))
         self.add((self.moosas.term(pgName), self.moosas.Uid, Literal(pgName)))
         for zInfo in pgDict.keys():
             self.add((self.moosas.term(pgName), self.moosas.term(zInfo), Literal(pgDict[zInfo])))
 
     def encodeGeo(self, geo: MoosasGeometry):
+        """
+        Encode a geometric object into RDF triples.
+        
+        Parameters
+        ----------
+        geo : MoosasGeometry
+            The geometric object to encode, containing attributes such as faceId, category, 
+            boundary, and holes. The object is converted into RDF triples representing 
+            its properties and geometry in WKT format.
+        
+        Returns
+        -------
+        None
+            This function does not return a value. It modifies the internal state by adding 
+            RDF triples to the instance.
+        """
         self.add((URIRef(geo.faceId), self.rdf.type, self.moosas.Geometry))
         self.add((URIRef(geo.faceId), self.moosas.Category, Literal(geo.category)))
         self.add((URIRef(geo.faceId), self.moosas.faceId, Literal(geo.faceId)))
@@ -235,6 +366,25 @@ class MoosasGraph(Graph):
                           Literal(pygeos.polygons(hole).__str__(), datatype=self.geo.wktLiteral)))
 
     def encodeElement(self, Element: MoosasElement, typeName: str = "rawElement", mask=None, ExportIFC=False):
+        """
+        Encode a MoosasElement into RDF triples within the graph.
+        
+        Parameters
+        ----------
+        Element : MoosasElement
+            The element to be encoded, containing properties such as Uid, offset, area, normal, etc.
+        typeName : str, optional
+            The type name of the element (e.g., 'rawElement', 'Wall', 'Glazing'), used to assign semantic type. Default is "rawElement".
+        mask : set or list, optional
+            A collection of neighbor element identifiers to filter which neighbors are added. If provided, only neighbors in the mask are included. Default is None.
+        ExportIFC : bool, optional
+            If True, generates IFC-compliant RDF triples for the element, including GlobalID and corresponding IFC types. Default is False.
+        
+        Returns
+        -------
+        None
+            This function does not return a value. It modifies the internal RDF graph by adding triples.
+        """
         self.add((URIRef(f"element_{Element.Uid}"), self.rdf.type, self.bot.Element))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.Uid, Literal(Element.Uid)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.Offset, Literal(Element.offset)))
@@ -278,6 +428,23 @@ class MoosasGraph(Graph):
                 self.add((URIRef(f"ifcElement_{Element.Uid}"), self.rdf.type, self.ifc.IfcVirtualElement))
 
     def encodeStorey(self, model: MoosasModel):
+        """
+        Encode building storeys and their associated spaces into the RDF graph.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the method. Holds the RDF graph and namespaces.
+        model : MoosasModel
+            The model containing level and space information to be encoded. Must have `levelList` 
+            and `spaceList` attributes, where `levelList` contains elevation levels and `spaceList` 
+            contains space objects with 'level' and 'id' properties.
+        
+        Returns
+        -------
+        None
+            This function modifies the RDF graph in place and does not return any value.
+        """
         for bld_level in model.levelList:
             bld = self.getSubject(self.rdf.type, self.bot.Building)
             self.add((URIRef(f"Level_{bld_level}"), self.rdf.type, self.bot.Storey))
@@ -288,6 +455,24 @@ class MoosasGraph(Graph):
                 self.add((URIRef(f"Level_{bld_level}"), self.bot.hasSpace, URIRef(f"Space_{space.id}")))
 
     def encode2LSB(self, spaceId: str, element: MoosasElement):
+        """
+        Encode a building element into a second-level space boundary representation using RDF triples.
+        
+        Parameters
+        ----------
+        spaceId : str
+            Identifier for the space, used to construct URIs and determine spatial relationships.
+            Special value 'outer' indicates an external spatial element.
+        element : MoosasElement
+            The building element to encode, containing properties such as Uid, category, level,
+            normal vector, space membership, and glazing elements.
+        
+        Returns
+        -------
+        None
+            This function does not return a value. It modifies the internal state by adding RDF triples
+            representing the IfcRelSpaceBoundary2ndLevel relationship.
+        """
         gbID = generate_code(22)
         self.add((URIRef(f"{spaceId}_{element.Uid}"), self.rdf.type, self.ifc.IfcRelSpaceBoundary2ndLevel))
         self.add((URIRef(f"{spaceId}_{element.Uid}"), self.ifc.GlobalID, Literal(gbID)))
@@ -326,6 +511,21 @@ class MoosasGraph(Graph):
             self.add((URIRef(f"{spaceId}_{glsEle.Uid}"), self.ifc.ParentBoundary, URIRef(f"{spaceId}_{element.Uid}")))
 
     def encodeSpace(self, space: MoosasSpace, ExportIFC=False):
+        """
+        Encode a MoosasSpace object into RDF triples within the graph, optionally exporting to IFC format.
+        
+        Parameters
+        ----------
+        space : MoosasSpace
+            The space object to be encoded, containing properties such as id, area, height, ceiling, floor, edge, and voids.
+        ExportIFC : bool, optional
+            If True, exports the space and associated elements to IFC-compatible RDF triples. Default is False.
+        
+        Returns
+        -------
+        None
+            This function does not return any value. It modifies the graph state by adding RDF triples.
+        """
         self.add((URIRef(f"Space_{space.id}"), self.rdf.type, self.bot.Space))
         self.add((URIRef(f"Space_{space.id}"), self.moosas.Uid, Literal(space.id)))
         self.add((URIRef(f"Space_{space.id}"), self.moosas.Program, self.moosas.term(space.settings["zone_template"])))
@@ -370,6 +570,21 @@ class MoosasGraph(Graph):
                 self.encode2LSB(space.id, element)
 
     def decodeGeo(self, geoUri, model: MoosasModel = None) -> MoosasGeometry:
+        """
+        Decode a geographic URI into a MoosasGeometry object.
+        
+        Parameters
+        ----------
+        geoUri : str or rdflib.term.URIRef
+            The geographic URI to decode. If a string is provided, it will be converted to a URIRef.
+        model : MoosasModel, optional
+            An optional model used to look up the face by face ID. If provided and a matching geometry is found, it will be returned directly.
+        
+        Returns
+        -------
+        MoosasGeometry
+            A MoosasGeometry object representing the decoded geometry, including face, face ID, category, and any holes.
+        """
         if isinstance(geoUri, str):
             geoUri = URIRef(str(geoUri))
         faceId = self.getObject(geoUri, self.moosas.faceId)
@@ -392,6 +607,22 @@ class MoosasGraph(Graph):
         return MoosasGeometry(face=face, faceId=faceId, category=cat, holes=holes, errors="ignore")
 
     def decodeElement(self, elementUri, model: MoosasModel = None) -> MoosasElement | None:
+        """
+        Decode an element from its URI by retrieving and interpreting semantic information.
+        
+        Parameters
+        ----------
+        elementUri : str or rdflib.term.URIRef
+            The URI reference of the element to decode. If a string is provided, it will be converted to a URIRef.
+        model : MoosasModel, optional
+            The model instance containing element lists (e.g., faceList, wallList). Used to search for existing elements. 
+            If not provided, a new element will be constructed based on retrieved properties.
+        
+        Returns
+        -------
+        MoosasElement or None
+            The decoded MoosasElement instance if found or successfully created; otherwise, None.
+        """
         if isinstance(elementUri, str):
             elementUri = URIRef(str(elementUri))
         surfaceType = URIRef(str(self.getObject(elementUri, self.pgd.hasSurfaceType)))
@@ -427,15 +658,61 @@ class MoosasGraph(Graph):
         return element
 
     def isClass(self, _from: str, _class: URIRef) -> bool:
+        """Check if the given subject is an instance of the specified class.
+        
+            Parameters
+            ----------
+            _from : str
+                The subject URI as a string.
+            _class : rdflib.term.URIRef
+                The class URI to check against, represented as a URIRef.
+        
+            Returns
+            -------
+            bool
+                True if the subject has the specified class as its type, False otherwise.
+        """
         return self.getObject(_from, self.rdf.type) == _class
 
     def getObject(self, _from, _property):
+        """
+        Get a list of objects associated with a given subject and property.
+        
+        Parameters
+        ----------
+        self : object
+            The instance of the class containing the `objects` method and `mixItemListToObject` function.
+        _from : hashable
+            The subject or source entity from which to retrieve associated objects.
+        _property : hashable
+            The property or predicate used to filter the relationships.
+        
+        Returns
+        -------
+        list
+            A list of objects obtained by collecting unique values from the `objects` generator and converting them using `mixItemListToObject`.
+        """
         objects = set()
         for o in self.objects(_from, _property):
             objects.add(o)
         return mixItemListToObject(list(objects))
 
     def getSubject(self, _property, _to):
+        """
+        Get a list of subjects for a given property and object, returned as a mixed item list converted to objects.
+        
+        Parameters
+        ----------
+        _property : str or rdflib.term.URIRef
+            The property (predicate) to match in the RDF triples.
+        _to : str or rdflib.term.Identifier
+            The object value to match in the RDF triples.
+        
+        Returns
+        -------
+        list
+            A list of subject objects obtained from matching triples, with mixed items converted into objects.
+        """
         objects = set()
         for o in self.subjects(_property, _to):
             objects.add(o)
@@ -443,6 +720,19 @@ class MoosasGraph(Graph):
         return mixItemListToObject(list(objects))
 
     def getRelate(self, node) -> list:
+        """
+        Get all nodes related to the given node through outgoing or incoming triples.
+        
+        Parameters
+        ----------
+        node : hashable
+            The node for which related nodes are to be retrieved. Can be any hashable type representing a subject or object in the triples.
+        
+        Returns
+        -------
+        list
+            A list of nodes that are related to the input node, either as objects in subject-predicate-node triples or as subjects in node-predicate-object triples. Duplicates are removed using a set.
+        """
         related = set()
         for s, p, o in self.triples((node, None, None)):
             related.add(o)
@@ -452,12 +742,48 @@ class MoosasGraph(Graph):
 
 
 def writeRDF(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseless=True,ExportIFC=False):
+    """
+    Serialize a MoosasModel to an RDF file in the specified format.
+    
+    Parameters
+    ----------
+    model : MoosasModel
+        The MoosasModel instance to be serialized into RDF.
+    out_path : str
+        The file path where the RDF output will be written.
+    fileFormat : str, optional
+        The serialization format for the RDF output (e.g., 'turtle', 'xml'). Default is "turtle".
+    dumpUseless : bool, optional
+        If True, includes unnecessary or auxiliary information in the output. Default is True.
+    ExportIFC : bool, optional
+        If True, exports IFC-related data in the RDF output. Default is False.
+    
+    Returns
+    -------
+    MoosasGraph
+        The generated MoosasGraph object that was serialized to the file.
+    """
     g = MoosasGraph(model, dumpUseless,ExportIFC)
     g.serialize(out_path, format=fileFormat)
     return g
 
 
 def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
+    """
+    Load RDF data from a file and construct a MoosasModel instance.
+    
+    Parameters
+    ----------
+    input_path : str
+        Path to the input RDF file.
+    fileFormat : str, optional
+        Format of the RDF file (default is "turtle").
+    
+    Returns
+    -------
+    MoosasModel
+        A constructed MoosasModel instance populated with data from the RDF file.
+    """
     rdfGraph = MoosasGraph.load(input_path, fileFormat=fileFormat)
     model = MoosasModel()
 

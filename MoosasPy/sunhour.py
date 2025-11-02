@@ -16,6 +16,36 @@ def positionSunHour(positionRay: Ray | Iterable[Ray], location: Location = None,
                     periodEnd: datetime | DateTime = DateTime(12, 31, 23),
                     leapYear: bool = False)->Iterable[float]:
     """
+    Direct sun hour calculation for given positions considering shadows and orientation.
+    
+    Parameters
+    ----------
+    positionRay : Ray or Iterable[Ray]
+        Position(s) defined as Ray objects with origin and direction. Each Ray may include a weighting factor.
+        Can be a single Ray or an iterable of Rays.
+    location : Location, optional
+        Location object containing latitude and longitude. Used to create the MoosasDirectSky if sky is not provided.
+        If both location and sky are None, an exception is raised.
+    sky : MoosasDirectSky, optional
+        Predefined direct sun sky model. If not provided, a new MoosasDirectSky is created from the location.
+    model : MoosasModel, optional
+        Model containing geometry for reflectance and shadow testing. Required if geo_path is not provided.
+    geo_path : str, optional
+        Path to a *.geo file representing the scene geometry for ray tracing. If not provided, generated from model.
+    periodStart : datetime or DateTime, default=DateTime(1, 1, 0)
+        Start time of the analysis period. Defaults to beginning of the year.
+    periodEnd : datetime or DateTime, default=DateTime(12, 31, 23)
+        End time of the analysis period. Defaults to end of the year.
+    leapYear : bool, default=False
+        Whether to consider a leap year in the sky matrix generation and day count.
+    
+    Returns
+    -------
+    Iterable[float]
+        Average daily sun hours for each position, in units of hours per day.
+        The result accounts for shading, orientation, and valid sun exposure during the specified period.
+    """
+    """
         Direct sun hour for positions with factors.
         The position are defined as Ray class with origins and directions.
         list or ndarry or Ray can be given as positionRay.

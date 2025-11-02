@@ -45,6 +45,25 @@ class MoosasStandard
     end
 
     def self.load_building_template()
+    # """
+    # Function
+    # --------
+    # Loads building template data from a CSV file and organizes it into a global hash structure.
+    # 
+    # Parameters
+    # ----------
+    # None
+    # This is a class method with no parameters. It reads data from a fixed CSV file located at
+    # '../db/building_template.csv' relative to the current file's directory.
+    # 
+    # Returns
+    # -------
+    # Hash or nil
+    # Returns the global variable `$template` as a nested hash where:
+    # - Each key is a string formed by joining values from columns not prefixed with 'zone_' (using '_').
+    # - The corresponding value is another hash mapping 'zone_'-prefixed column names to their respective row values.
+    # If an error occurs during file reading, the method logs the exception and returns nil implicitly after printing an error message.
+    # """
         $template = {}
         begin
             File.open(File.dirname(__FILE__)+"/../db/building_template.csv","r") do |file|  
@@ -80,6 +99,19 @@ class MoosasStandard
     end
 
     def self.search_template(str_list)
+    # Function:
+    # Searches for template names that match all given hints from a global template dictionary.
+    # 
+    # Parameters:
+    # str_list : Array of strings
+    # A list of string hints used to filter template names. A template name must include each hint
+    # substring to be included in the final result.
+    # 
+    # Returns:
+    # Array of strings or nil
+    # Returns an array of template names (strings) that contain all the provided hints as substrings.
+    # If at any point no templates match the current hint, returns nil. The search is case-sensitive
+    # and based on substring inclusion.
         namelist = $template.keys.map{ |k| k }
         str_list.each{ |hint| 
             if namelist.length == 0

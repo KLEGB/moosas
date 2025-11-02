@@ -37,6 +37,18 @@ class MoosasCIESky
     DOM=[31,28,31,30,31,30,31,31,30,31,30,31]
 
     def initialize(skytype,uni_diff=15000)
+    # Function:
+    # Initialize the object with sky type and diffuse light intensity, while setting up geographic coordinates and calculating effective diffuse illumination.
+    # 
+    # Parameters:
+    # skytype : str
+    # The type of sky condition, used to define the illumination model.
+    # uni_diff : int or float, optional
+    # Uniform diffuse light intensity in lumens (default is 15000). This value is normalized by dividing by 179 to compute visual efficacy.
+    # 
+    # Returns:
+    # None
+    # This constructor does not return a value. It initializes instance variables including latitude, longitude, sky type, and normalized diffuse light efficacy.
         #更新经纬度数据
         # datetime格式（来自输入：mm-dd-hr:min）"01-20-14:00"
         # 转换为0=>month 1=>day 2=>hr
@@ -50,6 +62,22 @@ class MoosasCIESky
     end
 
     def gen_sun(lat,lng,datetime)
+    # Function:
+    # Calculate solar position and related parameters for a given location and datetime.
+    # 
+    # Parameters:
+    # lat : float
+    # Latitude of the location in degrees. Positive values indicate northern hemisphere.
+    # lng : float
+    # Longitude of the location in degrees. Positive values indicate eastern longitude.
+    # datetime : DateTime or String
+    # Date and time object or string representation in format 'YYYY-MM-DD HH:MM:SS'.
+    # 
+    # Returns:
+    # tc : float
+    # Solar noon time in hours (local solar time), representing when the sun reaches its highest point.
+    # Note: The function computes several intermediate values including day of year (n), solar declination angle (asol),
+    # solar altitude at noon (hm), and day length (ts), but only returns the solar noon time (tc).
         datetime=datetime.to_s.split('-')
         datetime[2]=datetime[2].split(':')[0]
         # 太阳日
@@ -73,6 +101,27 @@ class MoosasCIESky
         tc=12+(lng-120)/360*1440/60
     end
     def gen_sky_from_date(datetime)
+    # Function:
+    # Generate a Radiance sky description string based on a given date and time, adjusted for longitude to determine the correct hour angle. The method constructs a sky simulation command using the gensky tool, incorporating location parameters (latitude and longitude), sky type, and optional diffuse brightness. It also appends standard glow and source elements for sky and ground.
+    # 
+    # Parameters:
+    # datetime : Array[String]
+    # A list containing date and time components in the format [year, month, day, hour], where each element is a string representation of the respective value.
+    # @lng : String or Numeric
+    # Longitude of the site in degrees (instance variable), used to adjust the local solar time relative to Greenwich Mean Time.
+    # @sky_type : String
+    # Type of sky model to generate; valid options include "-c" for cloudy sky, which may trigger inclusion of diffuse irradiance.
+    # @lat : String or Numeric
+    # Latitude of the site in degrees (instance variable), used as input for the gensky command.
+    # @diff : String or Numeric, optional
+    # Diffuse horizontal irradiance value (instance variable), included only if sky_type is "-c".
+    # 
+    # Returns:
+    # sky_str : String
+    # A multiline string representing a Radiance scene file with:
+    # - A '!gensky' command line configured with date, time, location, and sky conditions.
+    # - Glow and source material definitions for sky and ground appearance.
+    # The output can be used directly as input for Radiance-based lighting simulations.
         hour=datetime[2].to_i
         # 格林威治时间
         hour_standard=hour+(@lng.to_f/15).round(0)
@@ -96,6 +145,22 @@ class MoosasCIESky
         return sky_str
     end
     def gen_sky()
+    # Function
+    # --------
+    # Generate a Radiance-formatted sky description string based on Perez all-weather model parameters and geometric attributes. The method constructs a complete sky definition including glow sources, sky, ground, and directional light components using instance variables for solar position and sky type.
+    # 
+    # Parameters
+    # ----------
+    # None
+    # 
+    # Returns
+    # -------
+    # str
+    # A multiline string formatted for Radiance simulation, defining the sky and ground components. Includes:
+    # - A '!gensky' command line with altitude, azimuth, and sky type.
+    # - Optional diffuse horizontal irradiance component if sky type is overcast ('-c').
+    # - Glow and source definitions for sky, ground, and directional lighting in Radiance input format.
+    # The returned string can be used directly as part of a Radiance scene file or input to rtrace for daylight simulations.
         sky_str=["!gensky","-ang",@alt.to_s,@az.to_s,@sky_type].join(" ")
         if @sky_type=="-c"
             sky_str=sky_str+" -B #{@diff.to_s}"
@@ -164,6 +229,30 @@ class MoosasCumSky
     @doIlluminance = true #if true, output luminance instead of radiance
 
     def get_cum_sky(normal,cum_sky_value=@m_CumSky)
+    # Function
+    # ----------
+    # Computes the cumulative sky contribution for a given surface normal direction.
+    # 
+    # This method calculates the weighted sky vectors from a predefined set of sky patches that are oriented toward the given normal vector. Only sky patches with a positive dot product relative to the normal are included, and their contributions are scaled by the corresponding cumulative sky values and the cosine of the angle between the normal and sky vector.
+    # 
+    # Parameters
+    # ----------
+    # normal : Geom::Vector3d
+    # The surface normal vector used to determine visible sky patches.
+    # Must be a unit vector or normalized 3D geometric vector.
+    # 
+    # cum_sky_value : Array<Float>, optional
+    # An array of cumulative sky values corresponding to each sky patch (default is @m_CumSky).
+    # Length must match the number of sky patches (145 elements expected, indexed 0..144).
+    # 
+    # Returns
+    # -------
+    # Array<Array<Geom::Vector3d, Float>>
+    # A list of pairs, each containing:
+    # - A sky vector (Geom::Vector3d) representing the direction of a sky patch.
+    # - A weighted value (Float) equal to the product of the cumulative sky value and the dot product,
+    # rounded to two decimal places.
+    # Only includes entries where the dot product between the normal and sky vector is positive.
         cum_sky=[]
         for i in 0..144 do
             sky_vector=Geom::Vector3d.new([@m_ptx[i].round(2),@m_pty[i].round(2),@m_ptz[i].round(2)])
@@ -175,6 +264,28 @@ class MoosasCumSky
     end
 
     def initialize(sid)
+    # Function
+    # ----------
+    # Initializes the sky model by loading solar position data and cumulative irradiance values for a given station ID.
+    # The method reads sun position coordinates (x, y, z) from a CSV file and computes annual, summer, and winter cumulative
+    # sky irradiance values from another CSV file specific to the station. Data is stored in instance variables for later use.
+    # Error handling is implemented to log exceptions and print error messages if file loading fails.
+    # 
+    # Parameters
+    # ----------
+    # sid : String or Integer
+    # The station identifier used to locate the corresponding cumsky data file (`cumsky_{sid}.csv`).
+    # This determines which weather station's solar data will be loaded into the model.
+    # 
+    # Returns
+    # -------
+    # None
+    # This constructor does not return a value. It initializes instance variables including:
+    # - `@m_CumSky`: Annual cumulative irradiance per sky patch (in kWh/m²)
+    # - `@summer_CumSky`: Summer season cumulative irradiance per sky patch
+    # - `@winter_CumSky`: Winter season cumulative irradiance per sky patch
+    # - `@m_ptx`, `@m_pty`, `@m_ptz`: Arrays of 3D sun position coordinates
+    # Any file reading errors are caught and logged, with an error message printed to stdout.
         #加载天空模型数据
         begin
             @m_CumSky = []
