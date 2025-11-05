@@ -40,7 +40,7 @@ shutil.copy(r'.\setup\python311._pth', r'.\python\python311._pth')
 with open(r'python\setupEnv.bat','w+') as f:
        f.write('python get-pip.py\n')
        f.write('.\python.exe -m pip install pydot==4.0.1\n')
-       f.write(f'.\python.exe -m pip install {os.path.abspath(r"setup\pydot3k-1.0.17.tar.gz")}\n')
+       f.write(f'.\python.exe -m pip install '+os.path.abspath(r"setup\pydot3k-1.0.17.tar.gz")+'\n')
        f.write(f'.\python.exe -m pip install -r {os.path.abspath("requirement.txt")} --no-warn-script-location\n')
 os.chdir('python')
 os.system('setupEnv.bat')
