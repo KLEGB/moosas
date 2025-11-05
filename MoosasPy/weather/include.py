@@ -5,8 +5,8 @@ import re
 from ..utils.tools import path, callCmd
 from .dest import Location, temp_dic, weather_dic, stationInfo
 
-epw2wea_exe = os.path.join(path.libDir, 'weather/epw2wea.exe')
-gendaymtx_exe = os.path.join(path.libDir, 'weather/gendaymtx.exe')
+epw2wea_exe = os.path.join(path.libDir, r'weather\epw2wea.exe')
+gendaymtx_exe = os.path.join(path.libDir, r'weather\gendaymtx.exe')
 sun_position = os.path.join(path.libDir, r'weather\sun_position.csv')
 
 TREGENZA_COEFFICIENTS = \
@@ -180,11 +180,12 @@ def cum_sky(location, weatherFile):
     # command = ' '.join([gendaymtx_exe, '-A -m 1 -D -n -O1 ', weatherFile, '>', mtx_file])
     # command = ' '.join([gendaymtx_exe, '-m 1 -D -n -O1 ', weatherFile, '>', mtx_file])
     # print(command)
+
     # os.popen(command)
     callCmd([gendaymtx_exe, '-m 1 -D -n -O1 ', weatherFile, '>', mtx_file])
     mtx = []
-
     # 读取matrix文件
+    wait(mtx_file)
     with open(mtx_file, encoding='utf-8') as f:
         mtx_data = [f.readline() for i in range(1279114)]
         mtx = mtx_data[8:]
@@ -288,3 +289,26 @@ def fix_rad(calculate: np.ndarray, observe: np.ndarray):
                 fixArr.append(o / c)
         calculate *= np.array(fixArr)
         return calculate
+
+
+def wait(file):
+    """
+    Wait for a file to exist by checking at regular intervals.
+
+    Parameters
+    ----------
+    file : str
+        The path of the file to wait for.
+
+    Returns
+    -------
+    bool
+        True if the file exists within the waiting period.
+    """
+    for i in range(100):
+        if os.path.exists(file):
+            return True
+        else:
+            print('waiting:', file)
+            time.sleep(0.1)
+    raise Exception('Return file error:', file)

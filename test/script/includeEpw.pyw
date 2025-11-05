@@ -3,7 +3,7 @@ try:
 	from MoosasPy.weather import includeEpw
 	from MoosasPy.utils import path
 	import time
-	sid=includeEpw(r"C:\EnergyPlusV22-2-0\WeatherData\SGP_Singapore.486980_IWEC.epw","sg")
+	sid=includeEpw(r"C:\EnergyPlusV22-2-0\WeatherData\CHN_Shanghai.Shanghai.583620_CSWD.epw","shanghai")
 	with open(path.tempDir+'\sid.txt','w+') as f:
 	    f.write(str(sid))
 	time.sleep(0.1)

@@ -22,28 +22,31 @@ from MoosasPy import IO,geometry,preprocess,vent
 # print(eng)
 from MoosasPy import loadModel,vent
 from MoosasPy.geometry import Vector
+import MoosasPy
 
-# f = r'C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm-moosas\data\geometry\selection0.geo'
-# model = transform(f,solve_duplicated=True,
-#                   solve_contains=True, divided_zones=False, break_wall_horizontal=True, solve_redundant=True,
-#                   attach_shading=False, standardize=False)
+f = r'C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm-moosas\data\geometry\selection0.geo'
+f = r'\\166.111.40.8\home\2025_MoosasEnergy\zhonghairuzhen.geo'
+model = transform(f,solve_duplicated=True,
+                  solve_contains=True, divided_zones=False, break_wall_horizontal=True, solve_redundant=True,
+                  attach_shading=False, standardize=False)
 # saveModel(model,r'C:/Users/Lenovo/AppData/Roaming/SketchUp/SketchUp 2022/SketchUp/Plugins/pkpm-moosas/data/geometry/selection0.owl')
-model = loadModel(r'C:/Users/Lenovo/AppData/Roaming/SketchUp/SketchUp 2022/SketchUp/Plugins/pkpm-moosas/data/geometry/selection0.owl')
-raise Exception
-model.loadWeatherData()
-model.loadCumSky()
+# model = loadModel(r'C:/Users/Lenovo/AppData/Roaming/SketchUp/SketchUp 2022/SketchUp/Plugins/pkpm-moosas/data/geometry/selection0.owl')
+# raise Exception
+MoosasPy.weather.includeEpw(r'C:\EnergyPlusV22-2-0\WeatherData\CHN_Shanghai.Shanghai.583620_CSWD.epw','shanghai')
+model.loadWeatherData('583620')
+model.loadCumSky('583620')
 eng = energyAnalysis(model,core="办公建筑")
 print(eng)
-
-
-Network = vent.afn.AfnNetwork(model)
-
-prjFile = r'E:\PycharmProjects\moosas\test\contamTest\afn_0x8028.prj'
-print(prjFile)
-# afn=vent.runFile(prjFile)
-# print(afn)
-flow = vent.readPathResult(prjFile,prjFile[:-4]+'.net')
-print(flow)
-# 		total horizontal faces: 22 skylights: 3
-# LOADING: Break walls 84/84			add walls:0
-# 		total vertical faces: 42 glazings: 35
+#
+#
+# Network = vent.afn.AfnNetwork(model)
+#
+# prjFile = r'E:\PycharmProjects\moosas\test\contamTest\afn_0x8028.prj'
+# print(prjFile)
+# # afn=vent.runFile(prjFile)
+# # print(afn)
+# flow = vent.readPathResult(prjFile,prjFile[:-4]+'.net')
+# print(flow)
+# # 		total horizontal faces: 22 skylights: 3
+# # LOADING: Break walls 84/84			add walls:0
+# # 		total vertical faces: 42 glazings: 35

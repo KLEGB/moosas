@@ -49,7 +49,7 @@ print('Deploy MoosasPy...')
 os.chdir(moosasPath)
 shutil.copytree('MoosasPy', r'python\Lib\MoosasPy')
 with open(r'python\Lib\MoosasPy\utils\_.pth','w+') as f:
-       f.write(moosasPath)
+       f.write('..\\..\\..\\..\\')
 for _dir in ['db','doc','libs','data','src']:
        shutil.copytree(rf'python\Lib\MoosasPy\{_dir}', os.path.abspath(_dir))
 
