@@ -62,6 +62,9 @@ module MoosasIDF
         outs.push(out)
       end
       summary = MPath::DATA + 'energy/idf_summary/'
+      unless Dir.exist?(summary)
+        Dir.mkdir(summary)
+      end
 
       total_energy = sum_multiple_csvs(outs, summary + 'raw.csv')
       process_hourly(summary + 'raw.csv', summary + 'hourly.csv')
