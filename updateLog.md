@@ -4,6 +4,7 @@
 - 0.8.2.2 update src redirecting to python vent
 - 0.8.2.3 visualization of the ventilation arrow has been fixed.
 - 0.8.2.4 fixing the path issue
+- 0.8.2.5 new visualization on the Moosas IDF
 
 --0.8.1
 # IDF update 10.26

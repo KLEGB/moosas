@@ -165,13 +165,14 @@ module MoosasUI
         toolbar = toolbar.add_item cmd
 
         cmd = UI::Command.new(tooltip_name[2]) {
-            MMR.recognize_floor(remodel=false)  if MoosasLock.valid()
+            MMR.update_model  if MoosasLock.valid()
+            MoosasIDF.run_idf
             #UI.messagebox("模型识别完成！")
         }
         cmd.small_icon = "#{image_fodler}/Recognized.png"
         cmd.large_icon = "#{large_image_fodler}/Recognized.png"
         cmd.tooltip = tooltip_name[2]
-        cmd.status_bar_text = "快速模型识别 | Quick model transformationto Moosas."
+        cmd.status_bar_text = "模型转换为IDF | Transform to IDF."
         cmd.menu_text = tooltip_name[2]
         toolbar = toolbar.add_item cmd
 

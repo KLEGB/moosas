@@ -789,16 +789,26 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
 
     print(f'\rLOADING: searching Objects', end='')
     geoList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.moosas.Geometry)
+    geoList = mixItemListToList(geoList)
     levelList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.bot.Storey)
+    levelList = mixItemListToList(levelList)
     moFaceList = rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.Face)
+    moFaceList = mixItemListToList(moFaceList)
     moWallList = rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.Wall)
+    moWallList = mixItemListToList(moWallList)
     glsList = rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.Glazing)
+    glsList = mixItemListToList(glsList)
     glsList = np.append(glsList, rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.AirWall))
     skyList = rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.Skylight)
+    skyList = mixItemListToList(skyList)
     skyList = np.append(skyList, rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.AirSkylight))
     pgList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.moosas.Program)
+    pgList = mixItemListToList(pgList)
     spList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.bot.Space)
+    spList = mixItemListToList(spList)
     weather = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.pgd.Weather)
+
+
     if isinstance(weather, str):
         weatherPath = rdfGraph.getObject(URIRef(str(weather)), rdfGraph.pgd.fileStoreAt)
         if isinstance(weatherPath, str) and str(weatherPath).endswith('epw'):
@@ -877,7 +887,6 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
         model.includeTemplate(pgName, pgDict)
         print(f'\rLOADING: program {i + 1}/{len(pgList)}', end='')
     print()
-
     # load Space
     for i, spaceUri in enumerate(spList):
         spaceUri = URIRef(str(spaceUri))
@@ -890,7 +899,6 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
             subElement = [rdfGraph.decodeElement(URIRef(subE), model) for subE in subElement]
             subElement = {subE.Uid: subE for subE in subElement}
             topoElementType = rdfGraph.getObject(topoElement, rdfGraph.pgd.hasSurfaceType)
-
 
             if URIRef(str(topoElementType)) == rdfGraph.moosas.Edge:
                 loop = str(rdfGraph.getObject(topoElement, rdfGraph.moosas.subElementOrder)).split(',')

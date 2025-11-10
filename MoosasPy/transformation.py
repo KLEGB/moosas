@@ -69,8 +69,9 @@ def saveModel(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseles
 
 def transform(input_path: str, output_path: str = None, geo_path: str = None, input_type: str = None,
               output_type: str = None, method=CCRSpaceGeneration,
-              solve_duplicated=True, solve_redundant=True, solve_contains=True, triangulate_faces=True,
-              break_wall_vertical=True, break_wall_horizontal=True, attach_shading=False,
+              solve_duplicated=True, solve_redundant=True, solve_overlap=True, triangulate_faces=True,
+              break_wall_vertical=True, break_wall_horizontal=True,
+              attach_shading=False,
               divided_zones=False, standardize=False,
               stdout=sys.stdout) -> MoosasModel:
     """
@@ -116,7 +117,7 @@ def transform(input_path: str, output_path: str = None, geo_path: str = None, in
     solve_redundant : bool, optional
         Merge coplanar faces/walls (default: True).
 
-    solve_contains : bool, optional
+    solve_overlap : bool, optional
         Detect wall overlaps/containments (default: True).
 
     triangulate_faces : bool, optional
@@ -183,7 +184,7 @@ def transform(input_path: str, output_path: str = None, geo_path: str = None, in
         return
 
     # transformation
-    model = structured(model, solve_duplicated, solve_redundant, solve_contains, triangulate_faces, break_wall_vertical,
+    model = structured(model, solve_duplicated, solve_redundant, solve_overlap, triangulate_faces, break_wall_vertical,
                        break_wall_horizontal, attach_shading, divided_zones, standardize, generationMethod=method)
 
     # export the model
@@ -198,7 +199,7 @@ def transform(input_path: str, output_path: str = None, geo_path: str = None, in
 
 
 def structured(model: MoosasModel,
-               solve_duplicated=True, solve_redundant=False, solve_contains=False, triangulate_faces=True,
+               solve_duplicated=True, solve_redundant=False, solve_overlap=False, triangulate_faces=True,
                break_wall_vertical=True, break_wall_horizontal=False, attach_shading=True, divided_zones=False,
                standardize=False, generationMethod=CCRSpaceGeneration) -> MoosasModel:
     """
@@ -222,7 +223,7 @@ def structured(model: MoosasModel,
     solve_redundant : bool, optional
         Merge coplanar faces/walls (default: True).
 
-    solve_contains : bool, optional
+    solve_overlap : bool, optional
         Detect wall overlaps/containments (default: True).
 
     triangulate_faces : bool, optional
@@ -310,7 +311,7 @@ def structured(model: MoosasModel,
     model = cleanseInvalidFace(model)
 
     """solve contained walls that the 2d projections are overlapped by others."""
-    if solve_contains:
+    if solve_overlap:
         model = cleanseOverlapWall(model)
         model = cleanseOverlapFace(model)
 
@@ -406,9 +407,9 @@ def structured(model: MoosasModel,
         1.4 Two models. Moosasfloor is combined with a model.Moosasedge to form a model.MoosasSpace
     """
     model = packing_edges(model, divided_zones)
-    if solve_contains:
+    if solve_overlap:
         model = solveIntersectionHorizontal(model)
-    model = _packing_model(model)
+    model = _packing_model(model,solve_overlap)
     t5 = time.time()
 
 
@@ -800,7 +801,7 @@ def _break_vertical_faces(model: MoosasModel, faceId) -> MoosasModel:
     return model
 
 
-def _packing_model(model: MoosasModel) -> MoosasModel:
+def _packing_model(model: MoosasModel,solve_overlap) -> MoosasModel:
     """
         Packaging MoosasSpace:
             1.1 searching floor and ceiling shadow the MoosasEdge, and use the edge to split those faces.
@@ -841,7 +842,7 @@ def _packing_model(model: MoosasModel) -> MoosasModel:
                         matchFaces.append(model.faceList[j])
 
                 floorFaces = MoosasFloor(matchFaces)
-                if totalShadowArea < model.edgeList[i].area - geom.AREA_PRECISION:
+                if solve_overlap and totalShadowArea < model.edgeList[i].area - geom.AREA_PRECISION:
                     floorFaces = _capFloorSimple(model.edgeList[i].force_2d(), bld_level, model, floorFaces)
                 topology[i]['floor'] = floorFaces
                 model.floorList.append(floorFaces)

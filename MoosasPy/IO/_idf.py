@@ -11,8 +11,7 @@ global _ENERGYPLUS_DIR
 _ENERGYPLUS_DIR = r"C:/EnergyPlusV23-1-0"
 idd = os.path.join(_ENERGYPLUS_DIR, "Energy+.idd")
 IDF.setiddname(idd)
-
-def writeIDF(outputPath: str, model):
+def writeIDF(outputPath: str, model,idfTemplatePath = None):
     """
     Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
     
@@ -39,7 +38,8 @@ def writeIDF(outputPath: str, model):
         return
 
     # Properly handle paths for cross-platform compatibility
-    idfTemplatePath = os.path.join(_ENERGYPLUS_DIR, "ExampleFiles", "Moosas.idf")
+    if not idfTemplatePath:
+        idfTemplatePath = os.path.join(path.dataBaseDir, "default.idf")
 
     # IDF.setiddname(r'C:\EnergyPlusV8-9-0\Energy+.idd')
 

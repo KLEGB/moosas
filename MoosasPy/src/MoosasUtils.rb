@@ -78,6 +78,9 @@ class MoosasUtils
 			f.puts("\t\tf.write(traceback.format_exc())\n")
 			f.puts("\twith open('status.log','w+') as f:\n")
 			f.puts("\t\tf.write('0')\n")
+			if console
+				f.puts("\tinput('******Severe Error******')\n")
+				end
 		end
 		begin
 			if console

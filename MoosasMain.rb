@@ -39,6 +39,7 @@ begin
     Sketchup.require("#{SOURCE}/MoosasVent.#{SUFFIX}")
     Sketchup.require("#{SOURCE}/MoosasFoam.#{SUFFIX}")
     Sketchup.require("#{SOURCE}/MoosasAnalysis.#{SUFFIX}")
+    Sketchup.require("#{SOURCE}/MoosasIDF.#{SUFFIX}")
     
     #反向优化设计模块：遗传算法、NSGA2算法、性能算子、形体参数化函数、优化控制器
     Sketchup.require("#{SOURCE}/MoosasGA.#{SUFFIX}")
@@ -74,7 +75,7 @@ module MoosasMain
 	def self.init_plugin
 		Sketchup.send_action "showRubyPanel:"
 		
-		p "MOOSAS Ver 0.6.1 Initialization....."
+		p "MOOSAS Ver 0.8.2 Initialization....."
         
 		
 		MoosasWeather.load_data

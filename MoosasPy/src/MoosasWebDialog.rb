@@ -17,7 +17,7 @@ class MoosasWebDialog
     @height = MoosasUtils.is_unix() == true ? MoosasConstant::MAC_UI_HEIGHT : MoosasConstant::WIN_UI_HEIGHT
     @dialog = UI::HtmlDialog.new(
         {
-          :dialog_title => "MOOSAS Ver.0.6.1",
+          :dialog_title => "MOOSAS Ver.0.8.2",
           :preferences_key => "PkpmMoosasPlugin",
           :scrollable => true,
           :resizable => true,
