@@ -1262,8 +1262,11 @@ def spaceTopology(model: MoosasModel, break_wall_vertical=True) -> MoosasModel:
 
         print()
     print(f'\r2LSB: Recording Boundary topology', end='')
+    # regenerate id and record space-face topology
     for spId, space in enumerate(model.spaceList):
-        space.regenerateId()
+        ids = space.regenerateId()
+
+    for spId, space in enumerate(model.spaceList):
         print(f"\r2LSB: Recording Boundary topology {spId}/{len(model.spaceList)}", end='')
         moFaces = space.getAllFaces(to_dict=True)
 

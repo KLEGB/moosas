@@ -2877,8 +2877,9 @@ class MoosasSpace(object):
         for moface in self.getAllFaces(to_dict=False):
             if originalId != "" and originalId in moface.space:
                 moface.space.remove(originalId)
-            if not self.id in moface.space:
-                moface.space.append(self.id)
+            if not self.is_void():
+                if not self.id in moface.space:
+                    moface.space.append(self.id)
         return self.__id
 
     def add_void(self, void: MoosasSpace) -> None:
