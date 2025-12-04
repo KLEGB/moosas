@@ -33,7 +33,7 @@ class geom:
     INCH_METER_MULTIPLIER_SQR = 0.0254 * 0.0254
     # Maximum offset height (m),
     # which can also be understood as the minimum floor height
-    LEVEL_MAX_OFFSET = 1.2
+    LEVEL_MAX_OFFSET = 1.5
     # validation of the room
     ROOM_MIN_AREA = 1.0
     ROOM_MIN_DIMENSION = 0.9

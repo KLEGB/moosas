@@ -2,6 +2,7 @@ from ..utils import np, pygeos, GeometryError
 from ..utils import path, parseFile, mixItemListToList
 from ..utils.constant import geom
 from ..geometry.element import MoosasGeometry
+from ..geometry.geos import simplify,Vector
 from ._obj import _readObj
 
 
@@ -81,7 +82,7 @@ def writeGeo(file_path, model=None, geoList=None, mask=None) -> str:
     if not geoList:
         geoList = []
     if mask and model:
-        geoList += model.findFace(mask)
+        geoList = model.findFace(mask)
     elif model:
         geoIdSet = set([])
         for f in model.getAllFaces():
@@ -90,9 +91,10 @@ def writeGeo(file_path, model=None, geoList=None, mask=None) -> str:
         geoList += list(np.array(model.geometryList)[list(geoIdSet)])
     geoStr = ''
     for geo in geoList:
+
         faceStr = 'f,' + str(geo.category) + ',' + str(geo.faceId) + '\n'
         faceStr += 'fn,'
-        faceStr += ','.join([str(x) for x in pygeos.get_coordinates(geo.normal, include_z=True)[0]]) + '\n'
+        faceStr += ','.join([str(x) for x in Vector(geo.normal).array]) + '\n'
         rings = pygeos.get_rings(geo.face)
         for poi in pygeos.get_coordinates(rings[0], include_z=True)[:-1]:
             faceStr += 'fv,' + ','.join(poi.astype(str)) + '\n'
@@ -100,6 +102,7 @@ def writeGeo(file_path, model=None, geoList=None, mask=None) -> str:
             for i in range(1, len(rings)):
                 for poi in pygeos.get_coordinates(rings[i], include_z=True)[:-1]:
                     faceStr += f'fh,{i - 1},' + ','.join(poi.astype(str)) + '\n'
+
         geoStr += faceStr + ';\n'
     with open(file_path, 'w+') as f:
         f.write(geoStr)
@@ -244,10 +247,18 @@ def _readGeo(file_path) -> list[MoosasGeometry]:
     geos: list[MoosasGeometry] = []
     for f, i, n, c, h in zip(faces, idd, normal, cat, holes):
         if c==-2: continue
+
+        # simplifying geometry
+        # try:
+        #     f = simplify(f,include_z=True)
+        # except GeometryError as gE:
+        #     print(f"******Waring: FileError: failed to simplified {i}: {gE.reason}")
+
         try:
             geos.append(MoosasGeometry(f, i, n, c, h, errors='raise'))
         except GeometryError as gE:
             print(f"******Waring: FileError: ignore face {i}: {gE.reason}")
+
     # for aperture,nor in zip (holes,normal):
     #    for aper in aperture:
     #        geos.append(Geometry(aper,str(len(geos)),nor,2))

@@ -300,16 +300,18 @@ class Vector(object):
             return Vector(np.cross(vec1, vec2))
 
     @staticmethod
-    def parallel(vec1, vec2):
+    def parallel(vec1, vec2,tolerance = None):
         """test if two vector is parallel, based on their dot value"""
+        if not tolerance:
+            tolerance = Vector.ANGLE_TOLERANCE
         vec1 = Vector(vec1)
         vec2 = Vector(vec2)
         if vec1.length() == 0 or vec2.length() == 0:
             return True
         dot = pow(vec1 * vec2, 2) / vec2.length(True) / vec1.length(True)
-        if 1.0 + Vector.ANGLE_TOLERANCE > dot > 1.0 - Vector.ANGLE_TOLERANCE:
+        if 1.0 + tolerance > dot > 1.0 - tolerance:
             return True
-        if -1.0 + Vector.ANGLE_TOLERANCE > dot > -1.0 - Vector.ANGLE_TOLERANCE:
+        if -1.0 + tolerance > dot > -1.0 - tolerance:
             return True
         return False
 
@@ -1182,7 +1184,7 @@ def overlapArea(geo1: pygeos.Geometry, geo2: pygeos.Geometry) -> float:
     return area1
 
 
-def makeValid(geo: pygeos.Geometry, error='raise') -> pygeos.Geometry:
+def makeValid(geo: pygeos.Geometry, error='raise') -> list[pygeos.Geometry] | None:
     """revise method of pygeos.make_valid()"""
     geos = pygeos.make_valid(geo)
     geos = [g for g in pygeos.get_parts(geos) if pygeos.get_dimensions(g) == 2]
@@ -1273,30 +1275,108 @@ def equals(geo1: pygeos.Geometry, geo2: pygeos.Geometry):
         return False
 
 
-def faceNormal(face: pygeos.Geometry) -> Vector:
-    """Calculate the normal vector of a face using cross product of non-parallel edges.
-    
-        Parameters
-        ----------
-        face : pygeos.Geometry
-            A geometry object representing a face or linestring. Coordinates are extracted to compute edge vectors.
-    
-        Returns
-        -------
-        Vector
-            A unit vector representing the normal to the face, computed via the cross product of two non-parallel edges.
-            If no such pair is found, returns a Vector constructed directly from the face.
-        """
-    """calculate the face normal by cross calculation.
-    we only need to find two edges that do not parallel.
-    in this case, this method is valid even if a linestring is provided
+def faceNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vector:
     """
-    coordinates = pygeos.get_coordinates(face, include_z=True)
-    edges = [coordinates[i] - coordinates[i + 1] for i in range(len(coordinates) - 1)]
-    for i in range(1, len(edges)):
-        if not Vector.parallel(edges[i], edges[0]):
-            return Vector(np.cross(edges[i], edges[0])).unit()
-    return Vector(face)
+    Compute stable normal vector for 3D polygon (handles non-convex/non-coplanar vertices)
+
+    Parameters
+    ----------
+    poly : pygeos.Geometry
+        3D polygon geometry with z-coordinates (pygeos.Polygon type)
+    EPS : float, optional
+        Floating point precision threshold (default: 1e-9)
+
+    Returns
+    -------
+    np.ndarray
+        Unit normal vector (x, y, z) of shape (3,)
+        Returns None if computation fails (invalid input/insufficient vertices)
+
+    Notes
+    -----
+    - Uses PCA + SVD for non-coplanar vertices (most stable method)
+    - Falls back to edge cross product for triangular faces (faster)
+    - Ensures consistent orientation via right-hand rule
+    """
+    # ------------------- Step 1: Validate input and extract 3D coordinates -------------------
+
+    # Extract 3D coordinates (remove closing duplicate point)
+    coords = pygeos.get_coordinates(poly, include_z=True)
+    if coords.shape[1] != 3:
+        return Vector(0,0,1)
+
+    # Remove duplicate closing point and filter valid vertices
+    vertices = coords[:-1] if np.allclose(coords[0], coords[-1], atol=EPS) else coords
+    vertices = np.unique(vertices, axis=0)  # Remove duplicate vertices
+    n_vertices = len(vertices)
+
+    if n_vertices < 3:
+        return Vector(0,0,1)  # Need at least 3 unique vertices
+
+    # ------------------- Step 2: Fast path for triangular faces (3 vertices) -------------------
+    if n_vertices == 3:
+        # Compute two edge vectors
+        v1 = vertices[1] - vertices[0]
+        v2 = vertices[2] - vertices[0]
+
+        # Cross product for normal
+        normal = np.cross(v1, v2)
+        norm = np.linalg.norm(normal)
+
+        if norm < EPS:
+            print("******GeometryError: invalid face results in zero normal")
+            return Vector(0,0,1)  # Collinear vertices
+        return Vector(normal / norm)
+
+    # ------------------- Step 3: PCA + SVD for non-coplanar polygons (stable method) -------------------
+    # Center vertices (remove translation)
+    centroid = np.mean(vertices, axis=0)
+    centered = vertices - centroid
+
+    # Compute covariance matrix (3x3, symmetric)
+    cov_matrix = np.dot(centered.T, centered) / (n_vertices - 1)
+
+    # SVD decomposition (stable for small matrices)
+    _, _, vh = np.linalg.svd(cov_matrix)
+    normal = vh[-1]  # Normal = eigenvector with smallest eigenvalue (best fit plane)
+
+    # ------------------- Step 4: Ensure consistent orientation -------------------
+    # Use right-hand rule with first two edges for orientation consistency
+    edge1 = vertices[1] - vertices[0]
+    edge2 = vertices[2] - vertices[0]
+    reference_normal = np.cross(edge1, edge2)
+
+    # Flip normal if it opposes reference orientation
+    if np.dot(normal, reference_normal) < 0:
+        normal = -normal
+
+    # ------------------- Step 5: Normalize and return unit vector -------------------
+    norm = np.linalg.norm(normal)
+    return normal / norm if norm > EPS else None
+# def faceNormalLegacy(face: pygeos.Geometry) -> Vector:
+# #     """Calculate the normal vector of a face using cross product of non-parallel edges.
+# #
+# #         Parameters
+# #         ----------
+# #         face : pygeos.Geometry
+# #             A geometry object representing a face or linestring. Coordinates are extracted to compute edge vectors.
+# #
+# #         Returns
+# #         -------
+# #         Vector
+# #             A unit vector representing the normal to the face, computed via the cross product of two non-parallel edges.
+# #             If no such pair is found, returns a Vector constructed directly from the face.
+# #         """
+# #     """calculate the face normal by cross calculation.
+# #     we only need to find two edges that do not parallel.
+# #     in this case, this method is valid even if a linestring is provided
+# #     """
+# #     coordinates = pygeos.get_coordinates(face, include_z=True)
+# #     edges = [coordinates[i] - coordinates[i + 1] for i in range(len(coordinates) - 1)]
+# #     for i in range(1, len(edges)):
+# #         if not Vector.parallel(edges[i], edges[0]):
+# #             return Vector(np.cross(edges[i], edges[0])).unit()
+# #     return Vector(face)
 
 
 """constructive methods"""
@@ -1418,9 +1498,19 @@ def rayFaceIntersect(ray: Ray, face: pygeos.Geometry,
 
 def simplify(geo: pygeos.Geometry, include_z=False) -> pygeos.Geometry:
     """simplified the geometry to remove redundant points where the last and next directions are parallel"""
+
     coordinates = pygeos.get_coordinates(geo, include_z=include_z)[:-1]
     points = pygeos.points(coordinates)
+    delPoints = []
+    # remove overlap points
+    for i in range(1,len(points)):
+        if Vector(coordinates[i] - coordinates[i - 1]).length(power=True)==0:
+            delPoints.append(i)
+    points = np.delete(points, delPoints)
+    coordinates = pygeos.get_coordinates(points, include_z=include_z)
     edges = [coordinates[i] - coordinates[i - 1] for i in range(len(coordinates))]
+
+    # remove parallel redundant points
     delPoints = []
     for i in range(1, len(edges)):
         if Vector.parallel(edges[i - 1], edges[i]):
@@ -1432,8 +1522,8 @@ def simplify(geo: pygeos.Geometry, include_z=False) -> pygeos.Geometry:
     if pygeos.get_dimensions(geo) == 2:
         try:
             return pygeos.polygons(pygeos.get_coordinates(points, include_z=include_z))
-        except:
-            raise GeometryError(geo, "")
+        except Exception as e:
+            raise GeometryError(geo, str(e))
 
 
 def split(geo: pygeos.Geometry, spliter: Ray | pygeos.Geometry, normal=None) -> list[list[pygeos.Geometry]]:
@@ -1677,45 +1767,185 @@ def splitByCurveLagacy(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list
             geoCollection[group][i] = faceWorld
 
     return geoCollection
-
-
-def splitByCurve(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list[list[pygeos.Geometry]]:
+def splitOnZ(geoBase: pygeos.Geometry, level: float, EPS: float = 1e-9) -> list[list[pygeos.Geometry]]:
     """
-    Split a geometric object by a curve using projection and intersection analysis.
-    
+    Simple logic for 3D polygon cutting: insert intersection points → reorder path → split segments → close to rings → classify output
+
     Parameters
     ----------
     geoBase : pygeos.Geometry
-        The base geometry to be split, typically a polygon or linestring in 3D space.
-        It serves as the input shape that will be divided based on its intersection with the curve.
-    curve : pygeos.Geometry
-        A curve (linestring) used to split the geoBase. This curve is projected into the same
-        plane as geoBase for intersection calculations.
-    
+        3D simple polygon (no inner rings) with z-coordinates
+    level : float
+        Cutting height (z-coordinate value)
+    EPS : float, optional
+        Floating point precision threshold, default 1e-9
+
     Returns
     -------
-    list of list of pygeos.Geometry
-        A list containing two groups of geometries resulting from the split operation.
-        Each group is a list of pygeos.Geometry objects representing polygons.
-        The first sublist typically represents one side of the split, and the second sublist
-        the other side, with holes properly subtracted based on containment relationships.
+    list[list[pygeos.Geometry]]
+        List containing two sublists:
+        - First sublist: Upper polygons (z > level)
+        - Second sublist: Lower polygons (z < level)
+        Returns original polygon wrapped in GeometryCollection if cutting fails
+
+    Notes
+    -----
+    The algorithm follows these key steps:
+    1. Detect intersections between polygon edges and z=level plane
+    2. Reorder polygon path to start from first intersection point
+    3. Split path into segments separated by intersection points
+    4. Close segments to form valid rings
+    5. Classify rings into upper/lower groups based on z-coordinates
     """
-    """
-        This function is part of the split function. It should not be used directly.
-    """
-    proj = Projection(
-        origin=pygeos.points(pygeos.get_coordinates(geoBase, include_z=True)[0]),
-        unitZ=faceNormal(geoBase)
-    )
-    # z=pygeos.get_coordinates(geoBase, include_z=True)
-    # print(z.min(),z.max())
-    # print(curve)
-    geoBaseProj = proj.toUV(geoBase)
-    curveProj = proj.toUV(curve)
+
+    # ------------------- Step 1: Extract coordinates and insert intersection points -------------------
+    # Get original 3D coordinates (remove closing point which duplicates first point)
+    coords = pygeos.get_coordinates(geoBase, include_z=True)[:-1].tolist()
+    new_coords = []
+    intersections = []  # Store all intersection points with z=level plane
+
+    for i in range(len(coords)):
+        p1 = coords[i]
+        p2 = coords[(i + 1) % len(coords)]
+        z1, z2 = p1[2], p2[2]
+
+        # Add current vertex to new coordinate list
+        new_coords.append(p1)
+        if np.abs(z1 - level)<EPS:
+            intersections.append(p1)
+            continue
+        if np.abs(z2 - level)<EPS:
+            continue
+        # Check if edge intersects z=level plane (exclude endpoints on plane)
+        if (z1 - level) * (z2 - level) < -EPS and abs(z1 - z2) > EPS:
+            # Calculate intersection using linear interpolation
+            t = (level - z1) / (z2 - z1)
+            intersect_pt = [
+                p1[0] + t * (p2[0] - p1[0]),
+                p1[1] + t * (p2[1] - p1[1]),
+                level
+            ]
+            # Insert intersection point and record
+            new_coords.append(intersect_pt)
+            intersections.append(intersect_pt)
+
+    # Return original polygon if insufficient intersections
+
+    if len(intersections) < 2:
+        return [
+            [geoBase],  # Upper group (original)
+            []  # Lower group (empty)
+        ]
+    # ------------------- Step 2: Reorder path to start from first intersection -------------------
+    # Find position of first intersection point
+    start_idx = -1
+    for i, pt in enumerate(new_coords):
+        if any(np.linalg.norm(np.array(pt) - np.array(ip)) < EPS for ip in intersections):
+            start_idx = i
+            break
+
+    if start_idx == -1:
+        return [
+            [geoBase],
+            []
+        ]
+
+    # Reorder coordinates to start from first intersection
+    shifted_coords = new_coords[start_idx:] + new_coords[:start_idx]
+
+    # Close the reordered path
+    shifted_coords.append(shifted_coords[0])
+
+    # ------------------- Step 3: Split path into segments at intersection points -------------------
+    segments = []
+    current_segment = []
+
+    for pt in shifted_coords:
+        current_segment.append(pt)
+
+        # Split segment when encountering intersection (not first point)
+        is_intersect = any(np.linalg.norm(np.array(pt) - np.array(ip)) < EPS for ip in intersections)
+        if is_intersect and len(current_segment) > 1:
+            segments.append(current_segment)
+            current_segment = [pt]  # Start new segment with intersection point
+
+    # Handle last segment
+    if len(current_segment) > 1:
+        segments.append(current_segment)
+
+    # ------------------- Step 4: Close segments to form rings -------------------
+    # Close each segment by appending first point to end
+    rings = [seg + [seg[0]] for seg in segments]
+
+    # ------------------- Step 5: Classify rings into upper/lower groups -------------------
+    def classify_ring(ring, level):
+        """Classify ring as 'upper' (z > level) or 'lower' (z < level)
+
+        Parameters
+        ----------
+        ring : list
+            List of 3D points forming a closed ring
+        level : float
+            Cutting height threshold
+
+        Returns
+        -------
+        str
+            'upper' if average z > level, 'lower' if average z < level, 'unknown' otherwise
+        """
+        # Calculate average z-value excluding intersection points (z=level)
+        z_values = []
+        for pt in ring:
+            if abs(pt[2] - level) > EPS:
+                z_values.append(pt[2])
+
+        if not z_values:
+            return 'unknown'
+        avg_z = np.mean(z_values)
+        return 'upper' if avg_z > level else 'lower'
+
+    upper_rings = []
+    lower_rings = []
+
+    for ring in rings:
+        category = classify_ring(ring, level)
+        if category == 'upper':
+            upper_rings.append(ring)
+        elif category == 'lower':
+            lower_rings.append(ring)
+
+    # ------------------- Generate final polygons -------------------
+    final_polygons_upper = []
+    final_polygons_lower = []
+
+    # Create upper polygons
+    for ring in upper_rings:
+        try:
+            poly = pygeos.polygons(ring)
+            final_polygons_upper.append(poly)
+        except Exception:
+            continue
+
+    # Create lower polygons
+    for ring in lower_rings:
+        try:
+            poly = pygeos.polygons(ring)
+            final_polygons_lower.append(poly)
+        except Exception:
+            continue
+
+    # Return original polygon if no valid polygons generated
+    if len(final_polygons_upper) + len(final_polygons_lower) == 0:
+        return [[geoBase], []]
+
+    return [final_polygons_upper, final_polygons_lower]
+
+def splitFace2d(geoBaseProj:pygeos.Geometry,curveProj:pygeos.Geometry)-> list[list[pygeos.Geometry]]:
     points = pygeos.points(pygeos.get_coordinates(geoBaseProj, include_z=True))
     geoCollection = [[], []]
     pointOnCurve = []
     curveWithBreakPoint = list(np.array(points))
+
     # Start by adding breakPoints
     for i in range(len(points) - 1):
         # If the current point is on the split line, append to pointOnCurve and continue
@@ -1733,11 +1963,11 @@ def splitByCurve(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list[list[
                 pointOnCurve.append(i + 1 + shift)
 
     if len(pointOnCurve) < 2:
-        print("******Warning: Failed to split the polygon since no break point")
+        print("******GeometryError: Failed to split: no break point")
         return None
     elif len(pointOnCurve) == 2:
         if np.abs(pointOnCurve[0] - pointOnCurve[1]) == 1:
-            print("******Warning: Failed to split the polygon since no break point")
+            print("******GeometryError: Failed to split: overlap")
             return None
 
     if pygeos.covers(curveProj, points[-1]):
@@ -1782,7 +2012,7 @@ def splitByCurve(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list[list[
         voidVolume = [1 for i in geoCollection[group]]
         diffDict = {i: [] for i in range(len(geoCollection[group]))}
         for i in range(len(geoCollection[group])):
-            for j in range(i, len(geoCollection[group])):
+            for j in range(i + 1, len(geoCollection[group])):
                 if pygeos.contains(geoCollection[group][i], geoCollection[group][j]):
                     voidVolume[j] *= -1
                     diffDict[i].append(j)
@@ -1798,7 +2028,46 @@ def splitByCurve(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list[list[
                 thisGeo = difference(thisGeo, geoCollection[group][j])
             collection.append(thisGeo)
         geoCollection[group] = collection
+    return geoCollection
 
+def splitByCurve(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list[list[pygeos.Geometry]]:
+    """
+    Split a geometric object by a curve using projection and intersection analysis.
+    
+    Parameters
+    ----------
+    geoBase : pygeos.Geometry
+        The base geometry to be split, typically a polygon or linestring in 3D space.
+        It serves as the input shape that will be divided based on its intersection with the curve.
+    curve : pygeos.Geometry
+        A curve (linestring) used to split the geoBase. This curve is projected into the same
+        plane as geoBase for intersection calculations.
+    
+    Returns
+    -------
+    list of list of pygeos.Geometry
+        A list containing two groups of geometries resulting from the split operation.
+        Each group is a list of pygeos.Geometry objects representing polygons.
+        The first sublist typically represents one side of the split, and the second sublist
+        the other side, with holes properly subtracted based on containment relationships.
+    """
+    """
+        This function is part of the split function. It should not be used directly.
+    """
+    proj = Projection(
+        origin=pygeos.points(pygeos.get_coordinates(geoBase, include_z=True)[0]),
+        unitZ=faceNormal(geoBase)
+    )
+    # z=pygeos.get_coordinates(geoBase, include_z=True)
+    # print(z.min(),z.max())
+    # print(curve)
+    geoBaseProj = proj.toUV(geoBase)
+    curveProj = proj.toUV(curve)
+
+    geoCollection = splitFace2d(geoBaseProj, curveProj)
+
+    if geoCollection is None:
+        return None
     # Reproject the curve to worldXY
     for group in [0, 1]:
         for i in range(len(geoCollection[group])):

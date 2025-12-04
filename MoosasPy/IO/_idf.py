@@ -8,7 +8,7 @@ from rdflib.namespace import RDF, RDFS
 from rdflib import Graph, Namespace, Literal, URIRef
 import re
 global _ENERGYPLUS_DIR
-_ENERGYPLUS_DIR = r"C:/EnergyPlusV23-1-0"
+_ENERGYPLUS_DIR = path.dataBaseDir
 idd = os.path.join(_ENERGYPLUS_DIR, "Energy+.idd")
 IDF.setiddname(idd)
 def writeIDF(outputPath: str, model,idfTemplatePath = None):

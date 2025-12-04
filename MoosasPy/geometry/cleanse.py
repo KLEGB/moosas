@@ -524,11 +524,11 @@ def cleanseInvalidWall(model: MoosasContainer) -> MoosasContainer:
                 searchLevel = [model.levelList[searchLevel] + wall.level]
 
                 """find a wall to dissolve this invalid wall"""
-                checkWall = [index for index in searchBy('level', searchLevel, model.wallList) if
+                checkWall = [index for index in searchBy('level', wall.level, model.wallList) if
                              not (index in del_face)]
                 for j in checkWall:
                     if overlapEdge(wall.face, model.wallList[j].face):
-                        if model.wallList[j].height <= wall.height:
+                        # if model.wallList[j].height <= wall.height:
                             model.wallList[j].dissolve(wall)
                             check_list.append(j)
                             break

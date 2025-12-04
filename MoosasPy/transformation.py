@@ -9,6 +9,9 @@ import os.path
 import sys
 import time
 
+import numpy as np
+import pygeos
+
 from .geometry.geos import *
 from .models import MoosasModel
 from .geometry.cleanse import *
@@ -20,7 +23,7 @@ from .encoding.convexify import triangulate2dFace
 from .geometry.spaceGen import BTGSpaceGeneration, CCRSpaceGeneration, VFGSpaceGeneration
 
 
-def loadModel(filePath:str, fileFormat='turtle') -> MoosasModel:
+def loadModel(filePath: str, fileFormat='turtle') -> MoosasModel:
     """
     Loading MoosasModel from rdf format file. See doc/MoosasRDF for file namespace and description.
 
@@ -66,6 +69,7 @@ def saveModel(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseles
         None
     """
     writeRDF(model, out_path, fileFormat=fileFormat, dumpUseless=dumpUseless)
+
 
 def transform(input_path: str, output_path: str = None, geo_path: str = None, input_type: str = None,
               output_type: str = None, method=CCRSpaceGeneration,
@@ -174,7 +178,7 @@ def transform(input_path: str, output_path: str = None, geo_path: str = None, in
             stdout = open(stdout, 'w+')
     sysout = sys.stdout
     sys.stdout = stdout
-
+    t0 = time.time()
     # load model from file
     print('LOADING: ', end='')
     model = modelFromFile(input_path, input_type)
@@ -185,7 +189,7 @@ def transform(input_path: str, output_path: str = None, geo_path: str = None, in
 
     # transformation
     model = structured(model, solve_duplicated, solve_redundant, solve_overlap, triangulate_faces, break_wall_vertical,
-                       break_wall_horizontal, attach_shading, divided_zones, standardize, generationMethod=method)
+                       break_wall_horizontal, attach_shading, divided_zones, standardize, generationMethod=method,t0=t0)
 
     # export the model
     if output_path:
@@ -201,7 +205,7 @@ def transform(input_path: str, output_path: str = None, geo_path: str = None, in
 def structured(model: MoosasModel,
                solve_duplicated=True, solve_redundant=False, solve_overlap=False, triangulate_faces=True,
                break_wall_vertical=True, break_wall_horizontal=False, attach_shading=True, divided_zones=False,
-               standardize=False, generationMethod=CCRSpaceGeneration) -> MoosasModel:
+               standardize=False, generationMethod=CCRSpaceGeneration,t0=0) -> MoosasModel:
     """
     Convert a draft model with unstructured geometric data to structured spatial model with optional processing.
 
@@ -256,8 +260,9 @@ def structured(model: MoosasModel,
     """
     if model is None:  # zero len space will cause several errors
         return
-    t0 = time.time()
+
     t1 = time.time()
+
     model = _classification(model, triangulate_faces, break_wall_vertical)
 
     model.faceList = np.array(model.faceList)
@@ -302,6 +307,7 @@ def structured(model: MoosasModel,
     if solve_redundant:
         model = cleanseCoplannerLine(model)
 
+
     """solve duplicated walls that the 2d projections are the same."""
     if solve_duplicated:
         model = cleanseDuplicatedWall(model)
@@ -320,6 +326,9 @@ def structured(model: MoosasModel,
         model = solveIntersectionVertical(model)
         model = cleanseInvalidWall(model)
     t3 = time.time()
+
+
+
 
     """Floor identification of closed areas: // This is the hatch algorithm of AutoCAD, and the effect is average 
     when there are too many chaotic lines, so it is necessary to add the impurity removal process 
@@ -409,9 +418,8 @@ def structured(model: MoosasModel,
     model = packing_edges(model, divided_zones)
     if solve_overlap:
         model = solveIntersectionHorizontal(model)
-    model = _packing_model(model,solve_overlap)
+    model = _packing_model(model, solve_overlap)
     t5 = time.time()
-
 
     """2nd level space boundaries topology"""
     model = spaceTopology(model, break_wall_vertical)
@@ -426,7 +434,9 @@ def structured(model: MoosasModel,
 
     print("-" * 20)
     print('Program finish. Summary:')
-    model.summary(originalWall)
+    # originalWall
+    model.setCategory(False)
+    model.summary()
     print('-' * 20)
     print(f"I/O                {'%.3fs' % (t1 - t0)}\t{'%.1f' % ((t1 - t0) / (t7 - t0) * 100)}%\t",
           '\u25A0' * int((t1 - t0) / (t7 - t0) * 50))
@@ -448,6 +458,7 @@ def structured(model: MoosasModel,
 
 
 def _classification(model: MoosasModel, triangulate_faces=True, break_wall_vertical=True) -> MoosasModel | None:
+
     """
         Structuring data by elevation:
         In principle, all changes are made only for MoosasGeometry, ensuring a unique faceId
@@ -477,12 +488,52 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
         MoosasModel
             The model for further transformation or analysis.
     """
+    # predefine faces with the note of category.
+    print(f'\rLOADING: Predefining existing tag on faces...', end='')
+    ClearId = []
+    for i in range(len(model.geoId)):
+        geo = model.geometryList[i]
+        if geo.category == -1:
+            geo.setCategory()
+            model.shadingList.append(MoosasElement(model, geo))
+            ClearId.append(geo.faceId)
 
+        elif geo.category == 4:
+            ClearId.append(geo.faceId)
+            geo.setCategory()
+            face = MoosasFace(model, geo)
+            model.faceList.append(face)
+            if not face.level in model.levelList:
+                model.levelList.append(face.level)
+                model.levelList.sort()
+
+        elif geo.category == 6:
+            ClearId.append(geo.faceId)
+            geo.setCategory()
+            face = MoosasSkylight(model, geo)
+            model.skylightList.append(face)
+            if not face.level in model.levelList:
+                model.levelList.append(face.level)
+                model.levelList.sort()
+
+
+    for i in range(len(model.geoId)):
+        geo = model.geometryList[i]
+        if geo.category == 3:
+            ClearId.append(geo.faceId)
+            geo.setCategory()
+            model.wallList.append(MoosasWall(model, geo))
+        elif geo.category == 5:
+            ClearId.append(geo.faceId)
+            geo.setCategory()
+            model.glazingList.append(MoosasGlazing(model, geo))
+
+    print()
     # triangulate the faces with holes
     if triangulate_faces:
         delfaces = []
-        for i in range(len(model.geoId)):
-            geo = model.geometryList[i]
+        for i, geo in enumerate(model.geometryList):
+            if geo.faceId in ClearId: continue
             print(f'\rLOADING: triangulate horizontal faces {i + 1}/{len(model.geoId)}', end='')
             if np.abs(Vector.dot(geo.normal, pygeos.points([0, 0, 1]))) >= geom.HORIZONTAL_ANGLE_THRESHOLD:
                 if len(geo.holes) > 0:
@@ -502,53 +553,14 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
         model.geometryList = list(np.delete(model.geometryList, delfaces))
         print(f'\t\tprocessing faces: {len(delfaces)}')
 
-    # predefine faces with the note of category.
-    print(f'\rLOADING: Predefining existing tag on faces...', end='')
-    unClearId1 = []
-    for i in range(len(model.geoId)):
-        geo = model.geometryList[i]
-        if geo.category == -1:
-            geo.setCategory()
-            model.shadingList.append(MoosasElement(model,geo))
 
-        elif geo.category == 4:
-            geo.setCategory()
-            face = MoosasFace(model,geo)
-            model.faceList.append(face)
-            if not face.level in model.levelList:
-                model.levelList.append(face.level)
-                model.levelList.sort()
 
-        elif geo.category == 6:
-            geo.setCategory()
-            face = MoosasSkylight(model, geo)
-            model.skylightList.append(face)
-            if not face.level in model.levelList:
-                model.levelList.append(face.level)
-                model.levelList.sort()
-        else:
-            unClearId1.append(i)
-
-    unClearId2 = []
-    for i in range(len(model.geoId)):
-        geo = model.geometryList[i]
-        if geo.category == 3:
-            geo.setCategory()
-            model.wallList.append(MoosasWall(model,geo))
-        elif geo.category == 5:
-            geo.setCategory()
-            model.glazingList.append(MoosasGlazing(model,geo))
-        else:
-            unClearId2.append(i)
-
-    unClearId = list(set(unClearId1) & set(unClearId2))
-    print()
     # print('wall:', len(model.wallList))
     # print('glazing:', len(model.glazingList))
     # print('skylight:', len(model.skylightList))
     # print('face:', len(model.faceList))
-    for i in unClearId:
-        geo = model.geometryList[i]
+    for i,geo in enumerate(model.geometryList):
+        if geo.faceId in ClearId:continue
         print(f'\rLOADING: Filtering horizontal faces {i + 1}/{len(model.geoId)}', end='')
         if np.abs(Vector.dot(geo.normal, pygeos.points([0, 0, 1]))) >= 0.99:
             if geo.category != 0:
@@ -565,8 +577,8 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
                 model.levelList.sort()
     print()
     # Ver1.3 move the incline wall here
-    for i in unClearId:
-        geo = model.geometryList[i]
+    for i,geo in enumerate(model.geometryList):
+        if geo.faceId in ClearId:continue
         print(f'\rLOADING: Filtering inclined faces {i + 1}/{len(model.geoId)}', end='')
         if 0.99 > np.abs(Vector.dot(geo.normal, pygeos.points([0, 0, 1]))) >= geom.HORIZONTAL_ANGLE_THRESHOLD:
             # horizontal faces!
@@ -588,12 +600,14 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
 
     model = cleanseDuplicatedLevel(model)
     print(f'\t\ttotal horizontal faces: {len(model.faceList)} skylights: {len(model.skylightList)}')
+
     if break_wall_vertical:
         # Ver2.0 break the walls into each level
         wallList = [model.geoId[i] for i in range(len(model.geoId)) if
                     np.abs(Vector.dot(model.geometryList[i].normal,
                                       pygeos.points([0, 0, 1]))) < geom.HORIZONTAL_ANGLE_THRESHOLD]
         for i, idd in enumerate(wallList):
+            if idd in ClearId: continue
             model = _break_vertical_faces(model, idd)
             print(f'\rLOADING: Break walls {i + 1}/{len(wallList)}', end='')
         wallList_new = [model.geoId[i] for i in range(len(model.geoId)) if
@@ -602,8 +616,8 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
         # print(f'break walls: {len(wallList) - wallcount}')
         print(f'\t\t\tadd walls:{len(wallList_new) - len(wallList)}')
 
-    for i in unClearId:
-        geo = model.geometryList[i]
+    for i,geo in enumerate(model.geometryList):
+        if geo.faceId in ClearId:continue
         print(f'\rLOADING: Filtering vertical faces {i + 1}/{len(model.geoId)}', end='')
         if np.abs(Vector.dot(geo.normal, pygeos.points([0, 0, 1]))) < geom.HORIZONTAL_ANGLE_THRESHOLD:
             # this is the vertical face！
@@ -616,6 +630,86 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
                 model.wallList.append(MoosasWall(model, geo))
 
     print(f"\t\ttotal vertical faces: {len(model.wallList)} glazings: {len(model.glazingList)}")
+
+    # from .IO import writeGeo
+    # geoList = []
+    # for ele in list(model.wallList)+list(model.glazingList)+list(model.faceList)+list(model.skylightList):
+    #     geoList += mixItemListToList(ele.geometry)
+    # writeGeo(r'E:\PycharmProjects\moosas\test\breakwall.geo', geoList=geoList)
+    # raise Exception
+
+    # # force2d for each wall and glazing, identify the isolated elements
+    # print("LOADING: Identifying shadings",end='')
+    # def validIntersect(geo1, geo2):
+    #     intersect = pygeos.intersection(geo1, geo2)
+    #     if pygeos.get_dimensions(intersect) == 0:
+    #         twins = pygeos.points(pygeos.get_coordinates(geo1))
+    #         if pygeos.distance(twins[0],intersect) < geom.POINT_PRECISION:
+    #             return 1
+    #         if pygeos.distance(twins[1],intersect) < geom.POINT_PRECISION:
+    #             return 1
+    #         return 2
+    #     return 0
+    #
+    # # examining method predefining shading
+    # prs,total = 0,len(model.wallList)+len(model.glazingList)
+    # for bld_level in model.levelList:
+    #     wallShading,glsShading = [],[]
+    #     wallsIdx,glazingsIdx = searchBy('level', bld_level,model.wallList),searchBy('level', bld_level,model.glazingList)
+    #     walls,glazings = np.array(model.wallList)[wallsIdx],np.array(model.glazingList)[glazingsIdx]
+    #
+    #     w2d,g2d = [ele.force_2d() for ele in walls], [ele.force_2d() for ele in glazings]
+    #
+    #     # treat wall
+    #     for wi,wall in enumerate(w2d):
+    #         prs+=1
+    #         print(f"\rLOADING: Identifying shadings: {prs}/{total}", end='')
+    #         isoWall=0
+    #         for wallOther in w2d[wi+1:]:
+    #             if isoWall >= 2:
+    #                 break
+    #             else:
+    #                 isoWall+=validIntersect(wall,wallOther)
+    #
+    #         if isoWall < 2:
+    #             for glsOther in g2d:
+    #                 if isoWall >= 2:
+    #                     break
+    #                 else:
+    #                     isoWall += validIntersect(wall, glsOther)
+    #         if isoWall<2:
+    #             wallShading.append(wallsIdx[wi])
+    #
+    #     # treat gls
+    #     for gi,gls in enumerate(g2d):
+    #         prs += 1
+    #         print(f"\rLOADING: Identifying shadings: {prs}/{total}", end='')
+    #         isoWall=0
+    #         for glsOther in g2d[gi+1:]:
+    #             if isoWall >= 2:
+    #                 break
+    #             else:
+    #                 isoWall += validIntersect(gls, glsOther)
+    #         if isoWall < 2:
+    #             for wallOther in w2d:
+    #                 if isoWall >= 2:
+    #                     break
+    #                 else:
+    #                     isoWall += validIntersect(gls, wallOther)
+    #         if isoWall<2:
+    #             glsShading.append(glazingsIdx[gi])
+    #
+    #     shadingElements = np.append(np.array(model.wallList)[wallShading],np.array(model.glazingList)[glsShading])
+    #     model.wallList = list(np.delete(model.wallList, wallShading))
+    #     model.glazingList = list(np.delete(model.glazingList, glsShading))
+    #     model.shadingList = list(np.append(model.shadingList, shadingElements))
+    #     from .IO import writeGeo
+    #     geoList = []
+    #     for geo in model.shadingList:
+    #         geoList += mixItemListToList(geo.geometry)
+    #     writeGeo(r'E:\PycharmProjects\moosas\test\breakwall.geo', geoList=model.shadingList)
+    #     raise Exception
+    # print(f"\t\ttotal shadings: {len(model.shadingList)}")
 
     return model
 
@@ -638,11 +732,12 @@ def _matchFaceGlazing(face: MoosasFace | MoosasWall, glazing: MoosasSkylight | M
     bool
         True if successfully matched.
     """
+
     a = face.force_2d(region=True)
     b = glazing.force_2d(region=True)
     if pygeos.get_dimensions(a) == pygeos.get_dimensions(b) and pygeos.get_dimensions(a) == 1:
         for p in pygeos.points(pygeos.get_coordinates(b)):
-            if not pygeos.distance(a, p) <= 2*geom.POINT_PRECISION:
+            if not pygeos.distance(a, p) <= 2 * geom.POINT_PRECISION:
                 return False
         face.add_glazing(glazing)
         return True
@@ -684,13 +779,14 @@ def _glazingToFace(model: MoosasModel) -> MoosasModel:
     for bld_level in model.levelList:
         windowList = np.array(model.glazingList)[searchBy('level', bld_level, model.glazingList)]
         wallList = np.array(model.wallList)[searchBy('level', bld_level, model.wallList)]
+        w2d = [w.force_2d() for w in wallList]
         for window in windowList:
             glsCount += 1
             print(f"\rLOADING: Matching glazing {glsCount}/{len(model.glazingList)}", end='')
             located = False
-            dist = np.argsort([pygeos.distance(window.force_2d(), w.force_2d()) for w in wallList])
+            dist = np.argsort([pygeos.distance(window.force_2d(), w) for w in w2d])
             # print(pygeos.distance(window.force_2d(), wallList[dist][0].force_2d()))
-            for wall in wallList[dist][:min(5,len(wallList))]:
+            for wall in wallList[dist][:min(5, len(wallList))]:
                 if _matchFaceGlazing(wall, window):
                     located = True
                     validGlsCount += 1
@@ -742,66 +838,77 @@ def _break_vertical_faces(model: MoosasModel, faceId) -> MoosasModel:
             The model for further transformation or analysis.
     """
 
-    geo: pygeos.Geometry = model.geometryList[model.geoId.index(faceId)]
+    geo: MoosasGeometry = model.geometryList[model.geoId.index(faceId)]
     cat = geo.category
-    geo = geo.face
+    geo: pygeos.Geometry = geo.face
     z = [coor[2] for coor in pygeos.get_coordinates(geo, include_z=True)]
 
+    # check where the wall's bottom lays
     top = np.max(z)
     bot = np.min(z)
-    bot_level, top_level = 0, len(model.levelList) - 1
-    for bldLevelIndex in range(1, len(model.levelList)):
-        if bot > model.levelList[bldLevelIndex] - geom.LEVEL_MAX_OFFSET:
+    bot_level, top_level = -1, len(model.levelList) - 1
+    for bldLevelIndex in range(len(model.levelList)):
+        if bot >= model.levelList[bldLevelIndex]:
             bot_level = bldLevelIndex
-        if top > model.levelList[bldLevelIndex - 1] + geom.LEVEL_MAX_OFFSET:
+        if top >= model.levelList[bldLevelIndex]:
             top_level = bldLevelIndex
 
-    if top_level - bot_level <= 1: return model
-    try:
-        geo = makeValid(geo)[0]
-    except GeometryError:
+    if bot_level == len(model.levelList) - 1:
+        # the wall is located above the roof
         return model
-    # print('\n', bot_level, top_level, bot, top)
-    """Pseudo-dynamic array working_faces:
-    # The cut newFace is appended to the end of the working_faces and then checked;
-    # Faces that cannot be cut are placed in finishfaces
-    """
-    finish_faces = []
-    working_faces = [geo]
-    while len(working_faces) > 0:
-        face = working_faces.pop()
-        miniFace = True
-        z = [coor[2] for coor in pygeos.get_coordinates(face, include_z=True)]
-        for bld_level_index in range(bot_level + 1, top_level + 1):
-            bld_level = model.levelList[bld_level_index]
-            if np.min(z) + geom.LEVEL_MAX_OFFSET < bld_level < np.max(z) - geom.LEVEL_MAX_OFFSET:
-                spliter = section(face, bld_level, segment=False)
-                if spliter is not None:
-                    splitfaces = splitByCurve(face, spliter)
-                    if splitfaces is not None:
-                        if len(splitfaces[0]) * len(splitfaces[1]) > 0:
-                            # z = [coor[2] for coor in pygeos.get_coordinates(splitfaces[0][0], include_z=True)]
-                            # z = [coor[2] for coor in pygeos.get_coordinates(splitfaces[1][0], include_z=True)]
-                            # print(len(splitfaces[0]),len(splitfaces[1]),bld_level, cat)
-                            working_faces = list(np.append(working_faces, splitfaces[0]))
-                            working_faces = list(np.append(working_faces, splitfaces[1]))
-                            miniFace = False
-                            break
-        if miniFace:
-            finish_faces.append(face)
-    working_faces = finish_faces
-    if len(working_faces) > 1:
-        model.removeGeo(faceId)
-    for face in working_faces:
-        try:
-            model.includeGeo(face, cat=cat)
-        except GeometryError:
-            pass
+    elif top <= model.levelList[bot_level + 1]:
+        # a typical wall do not cross a floor
+        return model
+    else:
+        # print(pygeos.get_coordinates(geo, include_z=True))
+        # # try making the wall valid
+        # try:
+        #     geo: pygeos.Geometry = makeValid(geo)[0]
+        #     if geo is None:
+        #         return model
+        # except GeometryError:
+        #     return model
 
-    return model
+        # Pseudo-dynamic array working_faces:
+        # The cut newFace is appended to the end of the working_faces and then checked;
+        # Faces that cannot be cut are placed in finished_faces
+        finish_faces = []
+        working_faces = [geo]
+        while len(working_faces) > 0:
+            face = working_faces.pop()
+            miniFace = True  # hint decides that whether the face has been cut
+            z = [coor[2] for coor in pygeos.get_coordinates(face, include_z=True)]
+
+            for bld_level in model.levelList[bot_level + 1: top_level + 1]:
+                if np.min(z) + geom.POINT_PRECISION < bld_level < np.max(z) - geom.POINT_PRECISION:  # valid cutting level
+                    # spliter = section(face, bld_level, segment=False)
+                    # if spliter is not None:
+                        splitfaces = splitOnZ(face, bld_level)
+                        if splitfaces is not None:
+                            if len(splitfaces[0]) * len(splitfaces[1]) > 0:
+                                # z = [coor[2] for coor in pygeos.get_coordinates(splitfaces[0][0], include_z=True)]
+                                # z = [coor[2] for coor in pygeos.get_coordinates(splitfaces[1][0], include_z=True)]
+                                # print(len(splitfaces[0]),len(splitfaces[1]),bld_level, cat)
+                                working_faces = list(np.append(working_faces, splitfaces[0]))
+                                working_faces = list(np.append(working_faces, splitfaces[1]))
+                                miniFace = False
+                                break
+            if miniFace:
+                finish_faces.append(face)
+        working_faces = finish_faces
+        # print(faceId,bot,top,model.levelList[bot_level],model.levelList[bot_level + 1],len(working_faces))
+        # if faceId=='0_19':raise Exception
+        if len(working_faces) > 1:
+            model.removeGeo(faceId)
+            for face in working_faces:
+                try:
+                    model.includeGeo(face, cat=cat)
+                except GeometryError:
+                    pass
+        return model
 
 
-def _packing_model(model: MoosasModel,solve_overlap) -> MoosasModel:
+def _packing_model(model: MoosasModel, solve_overlap) -> MoosasModel:
     """
         Packaging MoosasSpace:
             1.1 searching floor and ceiling shadow the MoosasEdge, and use the edge to split those faces.
@@ -874,26 +981,28 @@ def _packing_model(model: MoosasModel,solve_overlap) -> MoosasModel:
                     intersectArea = overlapArea(edge2d, model.faceList[j].force_2d())
                     if intersectArea > geom.AREA_PRECISION:
                         totalShadowArea += intersectArea
-                        if intersectArea < model.faceList[j].area - geom.AREA_PRECISION:
-                            # this holes need continue dividing
-                            theFloor = model.faceList[j].parentFloors
-                            for fl in theFloor:
-                                try:
-                                    fl.face.remove(model.faceList[j])
-                                except:
-                                    pass
-                            newF = splitFaces(model.faceList[j], model.edgeList[i])
-                            if newF is not None:
-                                newFin, newFout = newF
-                                for fl in theFloor:
-                                    for fc in [newFin] + newFout:
-                                        fl.face.append(fc)
-                                        fc.parentFloors.append(fl)
-                                matchFaces.append(newFin)
-                            else:
-                                matchFaces.append(model.faceList[j])
-                        else:
-                            matchFaces.append(model.faceList[j])
+                        # if intersectArea < model.faceList[j].area - geom.AREA_PRECISION and solve_overlap:
+                        #     # this holes need continue dividing
+                        #     theFloor = model.faceList[j].parentFloors
+                        #     for fl in theFloor:
+                        #         try:
+                        #             fl.face.remove(model.faceList[j])
+                        #         except:
+                        #             pass
+                        #     newF = splitFaces(model.faceList[j], model.edgeList[i])
+                        #     if newF is not None:
+                        #         newFin, newFout = newF
+                        #         for fl in theFloor:
+                        #             for fc in [newFin] + newFout:
+                        #                 fl.face.append(fc)
+                        #                 fc.parentFloors.append(fl)
+                        #         matchFaces.append(newFin)
+                        #     else:
+                        #         matchFaces.append(model.faceList[j])
+                        # else:
+                        #     matchFaces.append(model.faceList[j])
+
+                        matchFaces.append(model.faceList[j])
 
                 if len(matchFaces) > 0:
                     floorFaces = MoosasFloor(matchFaces)
@@ -907,18 +1016,19 @@ def _packing_model(model: MoosasModel,solve_overlap) -> MoosasModel:
                     f'\rPACKING: Match ceilings:{prs}/{len(model.edgeList)}\t\ttotal ceils {len(model.ceilingList)} ',
                     end='')
             except GeometryError:
-                print(f'\n******Warning: GeometryError, ceiling faces, pass')
+                print(f'******Warning: GeometryError, ceiling faces, pass')
                 pass
     model.face_remain = list(faceSet)
+    model.shadingList = np.append(model.shadingList,list(faceSet))
     spaceToAdd = []
     for i, edge in enumerate(model.edgeList):
-        if topology[i]['floor'] is not None:
-            if makeValid(topology[i]['floor'].force_2d(), error='') is None:
-                topology[i]['floor'] = None
-
-        if topology[i]['ceiling'] is not None:
-            if makeValid(topology[i]['ceiling'].force_2d(), error='') is None:
-                topology[i]['ceiling'] = None
+        # if topology[i]['floor'] is not None:
+        #     if makeValid(topology[i]['floor'].force_2d(), error='') is None:
+        #         topology[i]['floor'] = None
+        #
+        # if topology[i]['ceiling'] is not None:
+        #     if makeValid(topology[i]['ceiling'].force_2d(), error='') is None:
+        #         topology[i]['ceiling'] = None
 
         spaceToAdd += [MoosasSpace(
             topology[i]['floor'],
@@ -1159,7 +1269,7 @@ def _findCoCeiling(spaceBottom: MoosasSpace, spaceTop: MoosasSpace) -> (MoosasFl
     co2 = spaceTop.floor.face if spaceTop.floor else []
     allCoFaces = list(set(co1) | set(co2))
     intersection = pygeos.intersection(spaceBottom.force_2d(True), spaceTop.force_2d(), grid_size=geom.POINT_PRECISION)
-    print(spaceBottom.force_2d(True), spaceTop.force_2d(),intersection)
+    print(spaceBottom.force_2d(True), spaceTop.force_2d(), intersection)
     ceilingFace = pygeos.difference(spaceBottom.force_2d(True), intersection, grid_size=geom.POINT_PRECISION)
     floorFace = pygeos.difference(spaceTop.force_2d(), intersection, grid_size=geom.POINT_PRECISION)
     ceilingFace = pygeos.force_3d(ceilingFace, z=z)

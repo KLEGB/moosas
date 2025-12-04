@@ -122,7 +122,15 @@ class MoosasGeometry(object):
             Raises `GeometryError` if the resulting coordinate list has fewer than 3 unique non-collinear points.
         """
         """preprocess the face or holes."""
-        face = pygeos.get_coordinates(face, include_z=True) if isinstance(face, pygeos.Geometry) else face
+
+        # force planner by project and reproject
+        face = pygeos.polygons(face) if not isinstance(face, pygeos.Geometry) else face
+        proj = Projection(origin=pygeos.get_coordinates(face,include_z=True)[0],unitZ=faceNormal(face))
+        face = proj.toUV(face)
+        face = pygeos.force_3d(pygeos.force_2d(face),z=0)
+        face = proj.toWorld(face)
+
+        face = pygeos.get_coordinates(face, include_z=True)
         _coordinates = []
         for point in face:
             if len(point) == 2:
@@ -136,6 +144,8 @@ class MoosasGeometry(object):
                 raise GeometryError(face, "too few points")
         if len(_coordinates) < 3:
             raise GeometryError(face, "too few points")
+
+
         return np.array(_coordinates)
 
     def invalid(self) -> str | None:
@@ -454,6 +464,9 @@ class MoosasElement(object):
                 raise TypeError("idd must be either a string or a MoosasGeometry")
 
     @property
+    def geometry(self):
+        return self.__geometries
+    @property
     def glazingElement(self) -> list[MoosasGlazing | MoosasSkylight]:
         """protect the __glazingElement attribute"""
         return mixItemListToList(self.__glazingElement)
@@ -531,6 +544,9 @@ class MoosasElement(object):
         """
         return mixItemListToObject([geo.category for geo in self.__geometries])
 
+    def setCategory(self, cat=None):
+        for idx,geometry in enumerate(self.__geometries):
+            self.__geometries[idx].setCategory(cat)
     @property
     def area(self) -> float:
         """quick link to self.area3d"""
@@ -3495,3 +3511,32 @@ class MoosasContainer(object):
             except:
                 print(f"the geo: {idd} not in the geometry library.")
         return [self.geometryList[idd] for idd in _faceId]
+
+    def setCategory(self,reset=False):
+        """
+                Returns
+        -------
+        int
+            The category code:
+            - -2: Ignore faces (excluded from calculations)
+            - -1: Shading faces (included as shading elements)
+            -  0: Opaque surface
+            -  1: Translucent surface
+            -  2: Air wall
+            -  3: Wall element (MoosasWall)
+            -  4: Plane element (MoosasFace)
+            -  5: Glazing element (MoosasGlazing)
+            -  6: Skylight element (MoosasSkylight)
+        """
+        if reset:
+            for geo in self.getAllFaces():
+                geo.setCategory()
+        else:
+            for geo in self.getAllFaces():
+                geo.setCategory(-1)
+            almoface = self.getAllFaces(dumpUseless=True)
+            refs= {'MoosasFace': 4, 'MoosasSkylight': 6, 'MoosasWall': 3, 'MoosasGlazing': 5}
+            for key in almoface.keys():
+                for item in almoface[key]:
+                    if mixItemListToList(item.category)[0]!= 2:
+                        item.setCategory(refs[key])

@@ -558,6 +558,7 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
                 print(f'\rTOPOLOGY: in {bldLevel}: Dividing zones {edgeIdx}/{len(edges)}', end='')
 
     model.wall_remain = list(faceSet)
+    model.shadingList = np.append(model.shadingList, list(faceSet))
     print()
     print('PACKING: Identified boundaries', len(model.edgeList))
     return model

@@ -297,9 +297,9 @@ class MoosasModel(MoosasContainer):
             print(f"\t\t{len(searchBy('level', bld_level, self.glazingList))}", end='')
             print(f"\t\t{len(searchBy('level', bld_level, self.skylightList))}", end='')
             print(f"\t\t{len(searchBy('level', bld_level, self.faceList))}", end='')
-            print(f"\t\t{len(searchBy('level', bld_level, self.spaceList))}", end='')
+            print(f"\t\t{len(searchBy('level', bld_level, self.spaceList))}({len(searchBy('level', bld_level, self.voidList))})", end='')
             print(
-                f"\t\t{np.round(np.sum([self.spaceList[i].area for i in searchBy('level', bld_level, self.spaceList)]), 1)}\n",
+                f"\t\t{np.round(np.sum([self.spaceList[i].area for i in searchBy('level', bld_level, self.spaceList)]), 1)}({np.round(np.sum([self.voidList[i].area for i in searchBy('level', bld_level, self.voidList)]), 1)})\n",
                 end='')
 
         if wall_count:
@@ -309,7 +309,7 @@ class MoosasModel(MoosasContainer):
                 f"\t\t{len(self.skylightList)}"
                 f"\t\t{len(self.faceList)}"
                 f"\t\t{len(self.spaceList)}"
-                f"\t\t{np.round(np.sum([s.area for s in self.spaceList]), 1)}")
+                f"\t\t{np.round(np.sum([s.area for s in self.spaceList]), 1)}({np.round(np.sum([s.area for s in self.voidList]), 1)})")
 
         else:
             print(
@@ -318,7 +318,7 @@ class MoosasModel(MoosasContainer):
                 f"\t\t{len(self.skylightList)}"
                 f"\t\t{len(self.faceList)}"
                 f"\t\t{len(self.spaceList)}"
-                f"\t\t{np.round(np.sum([s.area for s in self.spaceList]), 1)}")
+                f"\t\t{np.round(np.sum([s.area for s in self.spaceList]), 1)}({np.round(np.sum([s.area for s in self.voidList]), 1)})")
 
         # for bld_level in self.levelList:
         #     spaceList = searchBy("level", bld_level,self.spaceList,asObject=True)

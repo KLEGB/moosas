@@ -1,3 +1,7 @@
+--0.8.3
+# Transformation final update 12.04
+- 0.8.3.1 include the geo flags in the output geos.
+
 --0.8.2
 # AFN update 10.31
 - 0.8.2.1 include skylight in MoosasAFN.go and fix their bug. The funcs in MoosasPy.ventilation have been included in MoosasPy.vent
