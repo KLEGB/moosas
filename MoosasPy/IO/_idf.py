@@ -6,11 +6,9 @@ from eppy.modeleditor import IDF
 import re, os
 from rdflib.namespace import RDF, RDFS
 from rdflib import Graph, Namespace, Literal, URIRef
-import re
-global _ENERGYPLUS_DIR
-_ENERGYPLUS_DIR = path.dataBaseDir
-idd = os.path.join(_ENERGYPLUS_DIR, "Energy+.idd")
-IDF.setiddname(idd)
+
+
+
 def writeIDF(outputPath: str, model,idfTemplatePath = None):
     """
     Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
@@ -33,15 +31,11 @@ def writeIDF(outputPath: str, model,idfTemplatePath = None):
     model: MoosasModel = model
     print('IDF: initialization from IDF file...')
 
-    if not _ENERGYPLUS_DIR:
-        print("***Warning: ENERGYPLUS_DIR is not set. Please set it to your EnergyPlus installation folder.")
-        return
-
     # Properly handle paths for cross-platform compatibility
     if not idfTemplatePath:
-        idfTemplatePath = os.path.join(path.dataBaseDir, "default.idf")
-
-    # IDF.setiddname(r'C:\EnergyPlusV8-9-0\Energy+.idd')
+        idfTemplatePath = os.path.join(path.dataBaseDir, "in.idf")
+        idd = os.path.join(path.dataBaseDir, "Energy+.idd")
+        IDF.setiddname(idd)
 
     idf = IDF(idfTemplatePath)
     moElements = model.getAllFaces(dumpUseless=True)
