@@ -27,11 +27,11 @@ import MoosasPy
 f = r'C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm-moosas\data\geometry\selection0.geo'
 f = r'\\166.111.40.8\home\2025_MoosasEnergy\zhonghairuzhen.geo'
 f = rf'\\166.111.40.8\home\2024_MOOSASIDF_BS2025\test\dataset3\_7_in.geo'
+f = rf'test\example0_c.geo'
 # stdout = sys.stdout
 
 model = transform(f,
-                  output_path=rf'\\166.111.40.8\home\2024_MOOSASIDF_BS2025\test\dataset3\_7_topology.xml',
-                  geo_path=rf'\\166.111.40.8\home\2024_MOOSASIDF_BS2025\test\dataset3\_7_out.geo',
+                  geo_path=rf'test\example0_out.geo',
                   triangulate_faces=False,
                   solve_duplicated=True,solve_overlap=True, divided_zones=False,break_wall_vertical=True, break_wall_horizontal=True, solve_redundant=True,
                   attach_shading=False, standardize=False)
@@ -41,10 +41,10 @@ model = transform(f,
 # model = loadModel(r'C:/Users/Lenovo/AppData/Roaming/SketchUp/SketchUp 2022/SketchUp/Plugins/pkpm-moosas/data/geometry/selection0.owl')
 # raise Exception
 # MoosasPy.weather.includeEpw(r'C:\EnergyPlusV22-2-0\WeatherData\CHN_Shanghai.Shanghai.583620_CSWD.epw','shanghai')
-model.loadWeatherData('583620')
-model.loadCumSky('583620')
-
-IO.writeIDF(r'test/testIDF.idf',model)
+# model.loadWeatherData('583620')
+# model.loadCumSky('583620')
+#
+# IO.writeIDF(r'test/testIDF.idf',model)
 # eng = energyAnalysis(model,core="办公建筑")
 # print(eng)
 #
