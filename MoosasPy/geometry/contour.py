@@ -505,6 +505,7 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
         The updated model with validated and potentially subdivided edges, newly added air walls (if applicable),
         and remaining unassigned walls marked in `wall_remain`.
     """
+
     faceSet = set([member for member in model.wallList])
     for edge in model.boundaryList:
         # print(edge)
@@ -512,7 +513,6 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
             print("******Warning: TopologyError, boundary less than 3 edges")
             continue
         try:
-
             the_edge = MoosasEdge(edge)
             if the_edge.is_valid():
                 model.edgeList.append(the_edge)
@@ -522,6 +522,7 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
 
         except GeometryError:
             print("******Warning: GeometryError, something occurred and the boundary was skipped")
+
 
     """Divide the boundaries into simple polygons"""
     if divided_zones:
