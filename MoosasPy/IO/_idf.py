@@ -1,7 +1,7 @@
 from ..thermal import idfGeometry, construction
 from ._rdf import MoosasGraph
 from ..utils import path
-
+from ..models import *
 from eppy.modeleditor import IDF
 import re, os
 from rdflib.namespace import RDF, RDFS
@@ -9,26 +9,24 @@ from rdflib import Graph, Namespace, Literal, URIRef
 
 
 
-def writeIDF(outputPath: str, model,idfTemplatePath = None):
+def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath = None):
     """
     Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
     
     Parameters
     ----------
-    outputPath : str
-        Path to save the generated IDF file. The directory must be writable.
     model : MoosasModel
         A model instance containing building geometry and settings to be converted into IDF format.
         Must provide methods `getAllFaces`, `spaceIdDict`, and `spaceList`, and associated attributes
         for space and surface properties.
+    outputPath : str
+        Path to save the generated IDF file. The directory must be writable.
     
     Returns
     -------
     None
         This function does not return any value. It writes the IDF file to the specified path and prints progress information.
     """
-    from ..models import MoosasModel
-    model: MoosasModel = model
     print('IDF: initialization from IDF file...')
 
     # Properly handle paths for cross-platform compatibility
@@ -40,6 +38,8 @@ def writeIDF(outputPath: str, model,idfTemplatePath = None):
     idf = IDF(idfTemplatePath)
     moElements = model.getAllFaces(dumpUseless=True)
     zTemplate = idfGeometry.ZoneTemplate(idf)
+
+    print (zTemplate.constructionDict.keys())
     hint = []
     zName = [obj['Name'] for obj in idf.idfobjects['Zone']]+[obj['Name'] for obj in idf.idfobjects['Space']]
     for key in idf.idfobjects:
