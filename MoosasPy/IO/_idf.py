@@ -37,9 +37,9 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath = None):
 
     idf = IDF(idfTemplatePath)
     moElements = model.getAllFaces(dumpUseless=True)
+    
     zTemplate = idfGeometry.ZoneTemplate(idf)
-
-    print (zTemplate.constructionDict.keys())
+    
     hint = []
     zName = [obj['Name'] for obj in idf.idfobjects['Zone']]+[obj['Name'] for obj in idf.idfobjects['Space']]
     for key in idf.idfobjects:
@@ -55,6 +55,7 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath = None):
         print(f"\rIDF: cleaning existing objects: {h}", end='')
     print()
     for wi, wall in enumerate(moElements['MoosasWall']):
+        print (wall)
         print(f"\rIDF: encoding walls: {wi}/{len(moElements['MoosasWall'])}", end='')
         space = model.spaceIdDict[wall.space[0]]
         if not space.is_void():
@@ -62,6 +63,7 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath = None):
             wallConstruction = zTemplate.getConstruction('opaque', wallU)
             windowConstruction = zTemplate.getConstruction('window', winU,SHGC)
             idfGeometry.createThermalSurface(idf,wall,'Wall',wallConstruction.params['Name'],windowConstruction.params['Name'])
+
     print()
     for fi, face in enumerate(moElements['MoosasFace']):
         print(f"\rIDF: encoding faces: {fi}/{len(moElements['MoosasFace'])}", end='')
