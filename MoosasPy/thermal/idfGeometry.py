@@ -1,13 +1,18 @@
-from ..geometry.element import MoosasSpace, MoosasElement
-from ..geometry.geos import faceNormal, Vector
-from .settings import *
-from .construction import Construction
-from .schedule import dailySchedule, schType, schDesignDay,typeLimitSettings
-from eppy.modeleditor import IDF
-from ..utils import pygeos, GeometryError, FileError,generate_code
 import re
 
+from eppy.modeleditor import IDF
+
+from .construction import Construction
+from .schedule import typeLimitSettings
+from .settings import *
+from ..geometry.element import MoosasSpace, MoosasElement
+from ..geometry.geos import faceNormal, Vector
+from ..utils import pygeos
+
+
 class ZoneTemplate():
+    __slots__ = ("idf", "zoneObject", "objectList", "constructionList", "scheduleList")
+
     def __init__(self, idf: IDF):
         """
         Initialize the object by extracting and processing construction and zone-related data from an IDF file.
@@ -30,44 +35,57 @@ class ZoneTemplate():
             if con:
                 self.constructionList.append(con)
         self.zoneObject = MoosasSettings.fromIdfObject(idf.idfobjects['Zone'][0])
-        oriZoneList = [idfobj['Name'] for idfobj in idf.idfobjects['Zone']]
-        self.objectHint = ['ZoneInfiltration:DesignFlowRate',
-                           'ZoneVentilation:DesignFlowRate',
-                           'ZoneVentilation:WindandStackOpenArea',
-                           'OtherEquipment',
-                           'ElectricEquipment',
-                           'People',
-                           'Lights',
-                           'Sizing:Zone',
-                           'DesignSpecification:OutdoorAir',
-                           'DesignSpecification:ZoneAirDistribution',
-                           'ZoneControl:Thermostat',
-                           'ThermostatSetpoint:DualSetpoint',
-                           'ZoneHVAC:EquipmentConnections',
-                           'ZoneHVAC:EquipmentList',
-                           'ZoneHVAC:IdealLoadsAirSystem',
-                           'NodeList']
-        self.objectList: list[MoosasSettings] = []
-        found,unfound = [],[]
-        for objHint in self.objectHint:
+
+        # Extract zone objects
+        objectHint = ['ZoneInfiltration:DesignFlowRate',
+                      'ZoneVentilation:DesignFlowRate',
+                      'ZoneVentilation:WindandStackOpenArea',
+                      'OtherEquipment',
+                      'ElectricEquipment',
+                      'People',
+                      'Lights',
+                      'Sizing:Zone',
+                      'DesignSpecification:OutdoorAir',
+                      'DesignSpecification:ZoneAirDistribution',
+                      'ZoneControl:Thermostat',
+                      'ThermostatSetpoint:DualSetpoint',
+                      'ZoneHVAC:EquipmentConnections',
+                      'ZoneHVAC:EquipmentList',
+                      'ZoneHVAC:IdealLoadsAirSystem',
+                      'NodeList']
+        self.objectList = {}
+        found, unfound = [], []
+        for objHint in objectHint:
             try:
                 template = MoosasSettings.fromIdfObject(idf.idfobjects[objHint][0])
-                for key in template.params.keys():
-                    for spc in oriZoneList:
-                        if re.search(spc,str(template.params[key]),re.IGNORECASE) is not None:
-                            template.params[key] = ''
-                self.objectList.append(template)
+                # for key in template.params.keys():
+                #     for spc in oriZoneList:
+                #         if re.search(spc,str(template.params[key]),re.IGNORECASE) is not None:
+                #             template.params[key] = ''
+                self.objectList[objHint] = template
 
                 found.append(objHint)
             except IndexError:
                 unfound.append(objHint)
-                self.objectList.append(None)
         print('foundObj:', found)
         print('unfoundObj:', unfound)
+
+        # get type limits
         typeLimitsName = [idfobj['Name'] for idfobj in idf.idfobjects['ScheduleTypeLimits']]
         for typeLimit in typeLimitSettings:
             if typeLimit.params['Name'] not in typeLimitsName:
                 typeLimit.applyToIDF(idf)
+
+        # get schedules
+        self.scheduleList = {}
+        # locate schedule
+        for objHint in self.objectList:
+            self.scheduleList[objHint] = {}
+            for field in self.objectList[objHint]:
+                if re.search("Schedule_Name", field, re.IGNORECASE):
+                    ref_obj = idf.idfobjects[objHint][0].get_referenced_object(field)
+                    self.scheduleList[objHint][field] = MoosasSettings.fromIdfObject(idf.idfobjects[objHint][0][field])
+                    self.scheduleList[objHint][field]["Name"] = ""
 
     def getConstruction(self, _type, UFactor, SHGC=None):
         """
@@ -92,7 +110,7 @@ class ZoneTemplate():
         """
         UFactor = float(UFactor)
         constr = [construction for construction in self.constructionList if construction.type == _type]
-        if len(constr)>0:
+        if len(constr) > 0:
             Ufc = [abs(construction.UFactor - UFactor) for construction in constr]
             return np.array(constr)[np.argmin(Ufc)]
 
@@ -121,136 +139,138 @@ class ZoneTemplate():
             the provided zone data.
         """
         # construct schedule
-        for idx in zone.settings.keys():
-            try:
-                zone.settings[idx] = float(zone.settings[idx])
-            except:
-                pass
-        routine = ([0 for _ in range(int(zone.settings['zone_work_start']))] +
-                   [1.0 for _ in range(int(zone.settings['zone_work_start']), int(zone.settings['zone_work_end']))] +
-                   [0 for _ in range(int(zone.settings['zone_work_end']), 24)])
+        # for idx in zone.settings.keys():
+        #     try:
+        #         zone.settings[idx] = float(zone.settings[idx])
+        #     except:
+        #         pass
+        # routine = ([0 for _ in range(int(zone.settings['zone_work_start']))] +
+        #            [1.0 for _ in range(int(zone.settings['zone_work_start']), int(zone.settings['zone_work_end']))] +
+        #            [0 for _ in range(int(zone.settings['zone_work_end']), 24)])
+        #
+        # heatingSchedule = dailySchedule({schDesignDay.AllDays: [zone.settings['zone_h_temp']] * 24},
+        #                                 _type=schType.Temperature)
+        # coolingSchedule = dailySchedule({schDesignDay.AllDays: [zone.settings['zone_c_temp']] * 24},
+        #                                 _type=schType.Temperature)
+        # pHeatSchedule = dailySchedule({schDesignDay.AllDays: [zone.settings['zone_popheat']] * 24},
+        #                               _type=schType.AnyNumber)
+        # ThermostatSchedule = dailySchedule({schDesignDay.AllDays: [4] * 24},
+        #                               _type=schType.AnyNumber)
+        # if re.search('Office',zone.settings['zone_template'],re.IGNORECASE) is not None:
+        #     OnSchedule = dailySchedule(
+        #         {schDesignDay.Weekends: [0] * 24, schDesignDay.Holidays: [0] * 24, schDesignDay.AllOtherDays: routine}
+        #     ,_name ='on_'+generate_code(4)
+        #     )
+        #     OccSchedule = dailySchedule(
+        #         {schDesignDay.Weekends: [0] * 24, schDesignDay.Holidays: [0] * 24, schDesignDay.AllOtherDays: routine}
+        #         , _type=schType.Fraction
+        #         , _name='Occ_' + generate_code(4)
+        #     )
+        # else:
+        #     OnSchedule = dailySchedule({schDesignDay.AllDays: routine})
+        #     OccSchedule = dailySchedule({schDesignDay.AllDays: routine}, _type=schType.Fraction)
+        # OnSchedule.applyToIDF(self.idf)
+        # OccSchedule.applyToIDF(self.idf)
+        # coolingSchedule.applyToIDF(self.idf)
+        # heatingSchedule.applyToIDF(self.idf)
+        # pHeatSchedule.applyToIDF(self.idf)
+        # ThermostatSchedule.applyToIDF(self.idf)
 
-        heatingSchedule = dailySchedule({schDesignDay.AllDays: [zone.settings['zone_h_temp']] * 24},
-                                        _type=schType.Temperature)
-        coolingSchedule = dailySchedule({schDesignDay.AllDays: [zone.settings['zone_c_temp']] * 24},
-                                        _type=schType.Temperature)
-        pHeatSchedule = dailySchedule({schDesignDay.AllDays: [zone.settings['zone_popheat']] * 24},
-                                      _type=schType.AnyNumber)
-        ThermostatSchedule = dailySchedule({schDesignDay.AllDays: [4] * 24},
-                                      _type=schType.AnyNumber)
-        if re.search('Office',zone.settings['zone_template'],re.IGNORECASE) is not None:
-            OnSchedule = dailySchedule(
-                {schDesignDay.Weekends: [0] * 24, schDesignDay.Holidays: [0] * 24, schDesignDay.AllOtherDays: routine}
-            ,_name ='on_'+generate_code(4)
-            )
-            OccSchedule = dailySchedule(
-                {schDesignDay.Weekends: [0] * 24, schDesignDay.Holidays: [0] * 24, schDesignDay.AllOtherDays: routine}
-                , _type=schType.Fraction
-                , _name='Occ_' + generate_code(4)
-            )
-        else:
-            OnSchedule = dailySchedule({schDesignDay.AllDays: routine})
-            OccSchedule = dailySchedule({schDesignDay.AllDays: routine}, _type=schType.Fraction)
-        OnSchedule.applyToIDF(self.idf)
-        OccSchedule.applyToIDF(self.idf)
-        coolingSchedule.applyToIDF(self.idf)
-        heatingSchedule.applyToIDF(self.idf)
-        pHeatSchedule.applyToIDF(self.idf)
-        ThermostatSchedule.applyToIDF(self.idf)
+        # create zone objects
         self.zoneObject.updateParams(
             **{'Name': zone.id, 'Floor_Area': zone.area, 'Volume': zone.area * zone.height}).applyToIDF(self.idf)
-        params = [
-            # 'ZoneInfiltration:DesignFlowRate',
-            {'Name': zone.id + '_Infiltration', 'Zone_or_ZoneList_Name': zone.id,'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
-             'Design_Flow_Rate': zone.settings['zone_infiltration'] / 3600 * zone.area * zone.height},
-            # 'ZoneVentilation:DesignFlowRate',
-            {'Name': zone.id + "_Ventilation",  # Block2:Zone5 Ventilation
-             'Zone_or_ZoneList_Name': zone.id,'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
-             "Schedule_Name": OnSchedule.params['Name'],
-             "Flow_Rate_per_Person": zone.settings['zone_pfav'] / 3600 },
-            # 'ZoneVentilation:WindandStackOpenArea',
-            {'Name': zone.id + '_Opening', 'Zone_or_Space_Name': zone.id,'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
-             'Opening_Area': (sum([gls.area for wall in zone.edge.wall if wall.isOuter for gls in wall.glazingElement]) + sum([gls.area for face in zone.ceiling.face if face.isOuter for gls in face.glazingElement]))*0.6,
-             },
-            # 'OtherEquipment',
-            {'Name': zone.id + '_Equipment', 'Zone_or_ZoneList_Name': zone.id,'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
-             'Power_per_Zone_Floor_Area': zone.settings['zone_equipment'],
-             'Schedule_Name': OccSchedule.params['Name']
-             },
-            # 'ElectricEquipment',
-            {'Name': zone.id + '_Equipment', 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
-             'Watts_per_Zone_Floor_Area': zone.settings['zone_equipment'],
-             'Schedule_Name': OccSchedule.params['Name']
-             },
-            # 'People',
-            {'Name': zone.id + '_People', 'Zone_or_ZoneList_Name': zone.id,'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
-             'People_per_Zone_Floor_Area': zone.settings['zone_ppsm'],
-             'Number_of_People_Schedule_Name': OccSchedule.params['Name'],
-             'Activity_level_schedule_Name': pHeatSchedule.params['Name']
-             },
-            # 'Lights',
-            {'Name': zone.id + '_Lights', 'Zone_or_ZoneList_Name': zone.id,'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
-             'Watts_per_Zone_Floor_Area': zone.settings['zone_lighting'],
-             'Schedule_Name': OnSchedule.params['Name']
-             },
-            # 'Sizing:Zone',
-            {'Zone_or_ZoneList_Name': zone.id,'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
-             'Design_Specification_Outdoor_Air_Object_Name':
-                 zone.id if self.objectList[self.objectHint.index('DesignSpecification:OutdoorAir')] else '',
-             'Design_Specification_Zone_Air_Distribution_Object_Name':
-                 zone.id if self.objectList[self.objectHint.index('DesignSpecification:ZoneAirDistribution')] else ''},
-            # 'DesignSpecification:OutdoorAir',
-            {'Name': zone.id,
-             'Outdoor_Air_Flow_per_Person': zone.settings['zone_pfav'] / 3600,
-             'Outdoor_Air_Schedule_Name': OnSchedule.params['Name']
-             },
-            # 'DesignSpecification:ZoneAirDistribution',
-            {'Name': zone.id},
-            # 'ZoneControl:Thermostat',
-            {'Name': zone.id + "_Thermostat",
-             'Zone_or_ZoneList_Name': zone.id,'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
-             'Control_1_Name': zone.id + "_SetPoint",
-             'Control_Type_Schedule_Name':ThermostatSchedule.params['Name']
-             },
-            # 'ThermostatSetpoint:DualSetpoint',
-            {'Name': zone.id + "_SetPoint",
-             'Heating_Setpoint_Temperature_Schedule_Name': heatingSchedule.params['Name'],
-             'Cooling_Setpoint_Temperature_Schedule_Name': coolingSchedule.params['Name']
-             },
-            # 'ZoneHVAC:EquipmentConnections',
-            {'Zone_Name': zone.id,
-             'Zone_Conditioning_Equipment_List_Name': zone.id + '_EquipmentList',
-             'Zone_Air_Inlet_Node_or_NodeList_Name': zone.id + ' Inlets',
-             'Zone_Air_Node_Name': 'Node ' + zone.id + ' Zone',
-             'Zone_Return_Air_Node_or_NodeList_Name': 'Node ' + zone.id + ' Out',
-             'Zone_Air_Exhaust_Node_or_NodeList_Name':''
-             },
-            # 'ZoneHVAC:EquipmentList',
-            {'Name': zone.id + '_EquipmentList',
-             'Zone_Equipment_1_Name': zone.id + '_Ideal Loads Air'
-             },
-            # 'ZoneHVAC:IdealLoadsAirSystem',
-            {'Name': zone.id + '_Ideal Loads Air',
-             'Availability_Schedule_Name': OnSchedule.params['Name'],
-             'Zone_Supply_Air_Node_Name': 'Node ' + zone.id + ' In',
-             'Zone_Exhaust_Air_Node_Name':'',
-             'Heating_Availability_Schedule_Name': OnSchedule.params['Name'],
-             'Cooling_Availability_Schedule_Name': OnSchedule.params['Name']
-             },
-            # 'NodeList'
-            {'Name': zone.id + " Inlets",
-             'Node_1_Name': "Node " + zone.id + " In"
-             }
-        ]
-        for i in range(len(self.objectList)):
-            if self.objectList[i]:
-                self.objectList[i].updateParams(**params[i])
-        if self.objectList[self.objectHint.index('DesignSpecification:OutdoorAir')]:
-            self.objectList[self.objectHint.index('ZoneHVAC:IdealLoadsAirSystem')].updateParams(
-                Design_Specification_Outdoor_Air_Object_Name=zone.id)
-        for i in range(len(self.objectList)):
-            if self.objectList[i]:
-                self.objectList[i].applyToIDF(self.idf)
+
+        # rename and update Schedule
+        for objHint in self.scheduleList:
+            for field in self.scheduleList[objHint]:
+                schName = zone.id + objHint + field
+                self.scheduleList[objHint][field].updateParams(**{"Name": schName})
+                self.objectList[objHint].updateParams(**{field: schName})
+        params = {
+            'ZoneInfiltration:DesignFlowRate':
+                {'Name': zone.id + '_Infiltration', 'Zone_or_ZoneList_Name': zone.id,
+                 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
+                 'Design_Flow_Rate': zone.settings['zone_infiltration'] / 3600 * zone.area * zone.height},
+            'ZoneVentilation:DesignFlowRate':
+                {'Name': zone.id + "_Ventilation",  # Block2:Zone5 Ventilation
+                 'Zone_or_ZoneList_Name': zone.id, 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
+                 "Flow_Rate_per_Person": zone.settings['zone_pfav'] / 3600},
+            'ZoneVentilation:WindandStackOpenArea':
+                {'Name': zone.id + '_Opening', 'Zone_or_Space_Name': zone.id,
+                 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
+                 'Opening_Area': (sum([gls.area for wall in zone.edge.wall if wall.isOuter for gls in
+                                       wall.glazingElement]) + sum(
+                     [gls.area for face in zone.ceiling.face if face.isOuter for gls in face.glazingElement])) * 0.6,
+                 },
+            'OtherEquipment':
+                {'Name': zone.id + '_Equipment', 'Zone_or_ZoneList_Name': zone.id,
+                 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
+                 'Power_per_Zone_Floor_Area': zone.settings['zone_equipment'],
+                 },
+            'ElectricEquipment':
+                {'Name': zone.id + '_Equipment', 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
+                 'Watts_per_Zone_Floor_Area': zone.settings['zone_equipment'],
+                 },
+            'People':
+                {'Name': zone.id + '_People', 'Zone_or_ZoneList_Name': zone.id,
+                 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
+                 'People_per_Zone_Floor_Area': zone.settings['zone_ppsm'],
+                 },
+            'Lights':
+                {'Name': zone.id + '_Lights', 'Zone_or_ZoneList_Name': zone.id,
+                 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
+                 'Watts_per_Zone_Floor_Area': zone.settings['zone_lighting'],
+                 },
+            'Sizing:Zone':
+                {'Zone_or_ZoneList_Name': zone.id, 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
+                 'Design_Specification_Outdoor_Air_Object_Name':
+                     zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
+                 'Design_Specification_Zone_Air_Distribution_Object_Name':
+                     zone.id if 'DesignSpecification:ZoneAirDistribution' in self.objectList else ''},
+            'DesignSpecification:OutdoorAir':
+                {'Name': zone.id,
+                 'Outdoor_Air_Flow_per_Person': zone.settings['zone_pfav'] / 3600,
+                 },
+            'DesignSpecification:ZoneAirDistribution':
+                {'Name': zone.id},
+            'ZoneControl:Thermostat':
+                {'Name': zone.id + "_Thermostat",
+                 'Zone_or_ZoneList_Name': zone.id, 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
+                 'Control_1_Name': zone.id + "_SetPoint",
+                 },
+            'ThermostatSetpoint:DualSetpoint':
+                {'Name': zone.id + "_SetPoint",
+                 },
+            'ZoneHVAC:EquipmentConnections':
+                {'Zone_Name': zone.id,
+                 'Zone_Conditioning_Equipment_List_Name': zone.id + '_EquipmentList',
+                 'Zone_Air_Inlet_Node_or_NodeList_Name': zone.id + ' Inlets',
+                 'Zone_Air_Node_Name': 'Node ' + zone.id + ' Zone',
+                 'Zone_Return_Air_Node_or_NodeList_Name': 'Node ' + zone.id + ' Out',
+                 'Zone_Air_Exhaust_Node_or_NodeList_Name': ''
+                 },
+            'ZoneHVAC:EquipmentList':
+                {'Name': zone.id + '_EquipmentList',
+                 'Zone_Equipment_1_Name': zone.id + '_Ideal Loads Air'
+                 },
+            'ZoneHVAC:IdealLoadsAirSystem':
+                {'Name': zone.id + '_Ideal Loads Air',
+                 'Zone_Supply_Air_Node_Name': 'Node ' + zone.id + ' In',
+                 'Zone_Exhaust_Air_Node_Name': '',
+                 "Design_Specification_Outdoor_Air_Object_Name":
+                     zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
+                 },
+            'NodeList':
+                {'Name': zone.id + " Inlets",
+                 'Node_1_Name': "Node " + zone.id + " In"
+                 }
+        }
+
+        for key in self.objectList:
+            self.objectList[key].updateParams(**params[key])
+
+        for key in self.objectList:
+            self.objectList[key].applyToIDF(self.idf)
 
 
 def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',

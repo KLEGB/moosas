@@ -3528,7 +3528,7 @@ class MoosasContainer(object):
             -  5: Glazing element (MoosasGlazing)
             -  6: Skylight element (MoosasSkylight)
         """
-
+        res =0
         if reset:
             for geo in self.getAllFaces():
                 geo.setCategory()
@@ -3542,3 +3542,6 @@ class MoosasContainer(object):
                 for item in almoface[key]:
                     if mixItemListToList(item.category)[0]!= 2:
                         item.setCategory(refs[key])
+                    elif key == 'MoosasWall':
+                        res+=1
+        print(res)
