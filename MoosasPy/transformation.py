@@ -16,7 +16,7 @@ from .geometry.geos import *
 from .models import MoosasModel
 from .geometry.cleanse import *
 from .utils.tools import searchBy
-from .IO import modelFromFile, modelToFile, loadRDF, writeRDF
+from .IO import modelFromFile, modelToFile, loadRDF, writeRDF, writeIDF
 from .utils.constant import geom
 from .geometry.contour import packing_edges, outerBoundary
 from .encoding.convexify import triangulate2dFace
@@ -49,9 +49,9 @@ def loadModel(filePath: str, fileFormat='turtle') -> MoosasModel:
     return model
 
 
-def saveModel(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseless=True):
+def saveModel(model: MoosasModel, out_path: str, save_type: str, dumpUseless=True):
     """
-        Save the model into any rdf format.
+        Save the model into any format.
 
         Parameters
         ----------
@@ -59,8 +59,9 @@ def saveModel(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseles
             the model includes space and face topology, and other weather or material issues.
         out_path : str
             output rdf file path
-        fileFormat : str, optional
-            rdf format, following the definition of rdflib module. Default : 'turtle'
+        save_type : str, optional
+            rdf format, following the definition of rdflib module.
+            idf format, following the definition of EnergyPlus input file.
         dumpUseless : bool, optional
             cut out the unuse nodes (elements and faces)
 
@@ -68,7 +69,10 @@ def saveModel(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseles
         -------
         None
     """
-    writeRDF(model, out_path, fileFormat=fileFormat, dumpUseless=dumpUseless)
+    if save_type.lower() == 'idf':
+        writeIDF(model, out_path)
+    elif save_type.lower() == 'rdf':
+        writeRDF(model, out_path, fileFormat="turtle", dumpUseless=dumpUseless)
 
 
 def transform(input_path: str, output_path: str = None, geo_path: str = None, input_type: str = None,
