@@ -5,9 +5,56 @@ from ..utils import np, pygeos, mixItemListToList, mixItemListToObject, searchBy
 from ..utils.constant import geom
 from rdflib.namespace import RDF, RDFS, GEO, BRICK, WGS
 
+specChar = {" ": "~0~",
+            ".": "~1~",
+            "/": "~2~",
+            "?": "~3~",
+            "&": "~4~",
+            "=": "~5~",
+            ":": "~6~",
+            "%": "~7~",
+            ">": "~8~",
+            "{":"~9~",
+            "}":"~10~",}
+
+
+def encodeURI(hint):
+    """
+    Encode a string into a URI by replacing spaces with underscores and converting to a URIRef object.
+
+    Parameters
+    ----------
+    hint : str
+        The input string to be encoded into a URI. It will be stripped of leading/trailing whitespace
+        and have spaces replaced with underscores.
+
+    Returns
+    -------
+    rdflib.term.URIRef
+        A URIRef object created from the processed hint string.
+
+    Raises
+    ------
+    Exception
+        If the input string contains an exclamation mark ('!').
+    """
+    for key, val in specChar.items():
+        escaped_key = re.escape(key)
+        hint = re.sub(escaped_key, val, str(hint).strip())
+    if "!" in hint:
+        raise Exception
+    return URIRef(hint)
+
+
+def decodeURI(hint):
+    hint = str(hint).strip()
+    for key, val in specChar.items():
+        hint = re.sub(val, key, hint)
+    return hint
+
 
 class MoosasGraph(Graph):
-    def __init__(self, model: MoosasModel = None, dumpUseless=True,ExportIFC=False):
+    def __init__(self, model: MoosasModel = None, dumpUseless=True, ExportIFC=False):
         """
         Initialize the MoosasGraph instance with optional model encoding and namespace bindings.
         
@@ -33,11 +80,15 @@ class MoosasGraph(Graph):
         self.moosas = Namespace("https://moosas#")
         self.pgd = Namespace("http://www.hkust.edu.hk/zhaojiwu/performance_based_generative_design#")
         self.ifc = Namespace("http://www.buildingsmart-tech.org/mvd/IFC4Add1/DTV/1.0/html/")
+        self.idfNameSpace = 'https://energyplus.net#'
+        self.idf = Namespace('https://energyplus.net#')
         self.rdf = RDF
         self.rdfs = RDFS
         self.geo = GEO
         self.brick = BRICK
         self.wgs = WGS
+
+        self.bind("idf", self.idf)
         self.bind("moosas", self.moosas)
         self.bind("bot", self.bot)
         self.bind("bes", self.pgd)
@@ -47,15 +98,15 @@ class MoosasGraph(Graph):
         self.bind("brick", BRICK)
         self.bind("wgs", WGS)
         self.bind("ifc", self.ifc)
-        bld = URIRef("Building" + generate_code(4))
-        self.add((URIRef("Site"), self.rdf.type, self.bot.Site))
-        self.add((URIRef("Site"), self.bot.hasBuilding, bld))
-        self.add((bld, self.rdf.type, self.bot.Building))
+        # bld = URIRef("Building" + generate_code(4))
+        # self.add((URIRef("Site"), self.rdf.type, self.bot.Site))
+        # self.add((URIRef("Site"), self.bot.hasBuilding, bld))
+        # self.add((bld, self.rdf.type, self.bot.Building))
         if model:
-            self.encodeModel(model, dumpUseless,ExportIFC)
+            self.encodeModel(model, dumpUseless, ExportIFC)
 
     @classmethod
-    def load(cls, filePath, fileFormat='turtle'):
+    def load(cls, filePath, fileFormat='turtle') -> MoosasGraph:
         """
         Load a graph from a file.
         
@@ -75,7 +126,7 @@ class MoosasGraph(Graph):
         g.parse(filePath, format=fileFormat)
         return g
 
-    def encodeModel(self, model: MoosasModel, dumpUseless=True,ExportIFC=False):
+    def encodeModel(self, model: MoosasModel, dumpUseless=True, ExportIFC=False):
         """
         Encode a MoosasModel into the ontology representation.
         
@@ -103,7 +154,7 @@ class MoosasGraph(Graph):
         for geo in model.geometryList:
             self.encodeGeo(geo)
         for space in model.spaceList + model.voidList:
-            self.encodeSpace(space,ExportIFC)
+            self.encodeSpace(space, ExportIFC)
         if dumpUseless:
             mElements = model.getAllFaces(True)
         else:
@@ -114,19 +165,19 @@ class MoosasGraph(Graph):
         uidSet = [ele.Uid for ele in uidSet]
 
         for face in mElements['MoosasFace']:
-            self.encodeElement(face, "Face", uidSet,ExportIFC)
+            self.encodeElement(face, "Face", uidSet, ExportIFC)
         for face in mElements['MoosasWall']:
-            self.encodeElement(face, "Wall", uidSet,ExportIFC)
+            self.encodeElement(face, "Wall", uidSet, ExportIFC)
         for face in mElements['MoosasGlazing']:
             if face.category == 2:
-                self.encodeElement(face, "AirWall", uidSet,ExportIFC)
+                self.encodeElement(face, "AirWall", uidSet, ExportIFC)
             else:
-                self.encodeElement(face, "Glazing", uidSet,ExportIFC)
+                self.encodeElement(face, "Glazing", uidSet, ExportIFC)
         for face in mElements['MoosasSkylight']:
             if face.category == 2:
-                self.encodeElement(face, "AirSkylight", uidSet,ExportIFC)
+                self.encodeElement(face, "AirSkylight", uidSet, ExportIFC)
             else:
-                self.encodeElement(face, "Skylight", uidSet,ExportIFC)
+                self.encodeElement(face, "Skylight", uidSet, ExportIFC)
 
     def buildOntology(self, model: MoosasModel):
         """
@@ -598,7 +649,7 @@ class MoosasGraph(Graph):
         if self.getObject(geoUri, self.moosas.hasHole) is not None:
             holes = []
             for hole in self.getObject(geoUri, self.moosas.hasHole):
-                hole=self.getObject(URIRef(str(hole)), self.geo.asWKT)
+                hole = self.getObject(URIRef(str(hole)), self.geo.asWKT)
                 if hole:
                     holes.append(pygeos.Geometry(str(hole)))
 
@@ -740,8 +791,59 @@ class MoosasGraph(Graph):
             related.add(s)
         return list(related)
 
+    def entities(self, check=False):
+        uriref_subjects = set()  # 存储所有URIRef类型的主语（去重）
+        uriref_objects = set()  # 存储所有URIRef类型的宾语（去重）
+        for s, p, o in self:
+            # 判断主语是否为 URIRef 类型
+            if isinstance(s, URIRef):
+                uriref_subjects.add(s)  # 去重存储
 
-def writeRDF(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseless=True,ExportIFC=False):
+            # 判断宾语是否为 URIRef 类型
+            if isinstance(o, URIRef):
+                uriref_objects.add(o)  # 去重存储
+        allEntities = {}
+        for entity in list(uriref_subjects) + list(uriref_objects):
+            entJson = self.get_entity(entity, check)
+            allEntities[decodeURI(entity)] = entJson
+        return list(allEntities.values())
+
+    def get_entity(self, entityURI, check=False):
+        if not isinstance(entityURI, URIRef):
+            entity = encodeURI(entityURI)
+        else:
+            entity = entityURI
+
+        entJson = {"uri": decodeURI(entity)}
+        label = self.getObject(entity, RDFS.label)
+        if len(label) > 0:
+            entJson['label'] = str(label[0])
+        elif check:
+            print("Skipping entity " + str(entity) + " empty label")
+
+        description = self.getObject(entity, RDFS.comment)
+        if len(description) > 0:
+            entJson['comment'] = str(description[0])
+        elif check:
+            print("Skipping entity " + str(entity) + " empty comment")
+
+        objType = self.getObject(entity, RDF.type)
+        if len(objType) > 0:
+            entJson['type'] = decodeURI(objType[0])[len(self.idfNameSpace):]
+        elif check:
+            print("Skipping entity " + str(entity) + " empty type")
+        return entJson
+
+    def encode_entity(self, name: str, entityType: URIRef, description: str,label:str=None):
+        if label is None:
+            label = name
+        self.add((encodeURI(name), RDFS.label, Literal(label)))
+        self.add((encodeURI(name), RDF.type, entityType))
+        self.add((encodeURI(name), RDFS.comment, Literal(description)))
+        return encodeURI(name)
+
+
+def writeRDF(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseless=True, ExportIFC=False):
     """
     Serialize a MoosasModel to an RDF file in the specified format.
     
@@ -763,7 +865,7 @@ def writeRDF(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseless
     MoosasGraph
         The generated MoosasGraph object that was serialized to the file.
     """
-    g = MoosasGraph(model, dumpUseless,ExportIFC)
+    g = MoosasGraph(model, dumpUseless, ExportIFC)
     g.serialize(out_path, format=fileFormat)
     return g
 
@@ -784,7 +886,7 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     MoosasModel
         A constructed MoosasModel instance populated with data from the RDF file.
     """
-    rdfGraph = MoosasGraph.load(input_path, fileFormat=fileFormat)
+    rdfGraph: MoosasGraph = MoosasGraph.load(input_path, fileFormat=fileFormat)
     model = MoosasModel()
 
     print(f'\rLOADING: searching Objects', end='')
@@ -807,7 +909,6 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     spList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.bot.Space)
     spList = mixItemListToList(spList)
     weather = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.pgd.Weather)
-
 
     if isinstance(weather, str):
         weatherPath = rdfGraph.getObject(URIRef(str(weather)), rdfGraph.pgd.fileStoreAt)
@@ -914,6 +1015,6 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
             model.voidList.append(spc)
         else:
             model.spaceList.append(spc)
-        print(f'\rLOADING: space {i + 1}/{len(spList)}',end='')
+        print(f'\rLOADING: space {i + 1}/{len(spList)}', end='')
     print()
     return model

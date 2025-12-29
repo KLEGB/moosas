@@ -3545,4 +3545,3 @@ class MoosasContainer(object):
                     elif key == 'MoosasWall':
                         res+=1
         print(res)
-        raise Exception
