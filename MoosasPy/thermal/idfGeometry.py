@@ -530,7 +530,7 @@ def createWindowSurface(idf: IDF, element: MoosasElement, parentElement: MoosasE
     """
     faceObjects = []
     for face in mixItemListToList(element.face):
-        for triFace in triangulate2dFace(face)[0]:
+        for triFace in triangulate2dFace(face):
             kwargs = {'Name': parentElement.space[0] + '-' + parentElement.Uid + '-' + element.Uid,
                       "Building_Surface_Name": parentElement.space[0] + '-' + parentElement.Uid,
                       "Construction_Name": Construction_Name}

@@ -89,7 +89,7 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None):
     # encoding geometries
     for wi, wall in enumerate(moElements['MoosasWall']):
         if len(wall.space) > 0:
-            print(f"\rIDF: encoding faces: {wi}/{len(moElements['MoosasFace'])}", end='')
+            print(f"\rIDF: encoding walls: {wi+1}/{len(moElements['MoosasWall'])}", end='')
             space = model.spaceIdDict[wall.space[0]]
             wallU, winU, SHGC = space.settings['zone_wallU'], space.settings['zone_winU'], space.settings[
                 'zone_win_SHGC']
@@ -104,7 +104,7 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None):
     print()
     for fi, face in enumerate(moElements['MoosasFace']):
         if len(face.space) > 0:
-            print(f"\rIDF: encoding faces: {fi}/{len(moElements['MoosasFace'])}", end='')
+            print(f"\rIDF: encoding faces: {fi+1}/{len(moElements['MoosasFace'])}", end='')
             faceType = 'Floor'
             space = model.spaceIdDict[face.space[0]]
             if len(face.space) == 1:
@@ -124,7 +124,7 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None):
 
     # writing zonal settings
     for si, space in enumerate(model.spaceList):
-        print(f"\rIDF: encoding zones: {si}/{len(model.spaceList)}", end='')
+        print(f"\rIDF: encoding zones: {si+1}/{len(model.spaceList)}", end='')
         space.settings['idf_template'].applyToIDF(idf)
         # if space.is_void():
         #     print('***Warring: EnergyPlus do not support void space')

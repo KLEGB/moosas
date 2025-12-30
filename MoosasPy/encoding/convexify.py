@@ -394,6 +394,47 @@ class Geometry_Option:
             return True
 
         return False
+    
+    def is_valid_face(vertices, area_eps=1e-8):
+        """
+        Check whether a 3D polygon face is geometrically valid.
+
+        Parameters
+        ----------
+        vertices : list or np.ndarray, shape (N, 3)
+            Vertices of the polygon.
+        area_eps : float
+            Area threshold below which the face is considered degenerate.
+
+        Returns
+        -------
+        bool
+            True if face is valid, False otherwise.
+        """
+
+        # 1. Vertex count
+        if vertices is None or len(vertices) < 3:
+            return False
+
+        v = np.asarray(vertices, dtype=float)
+
+        # 2. Finite check
+        if not np.isfinite(v).all():
+            return False
+
+        # 3. Area check (fan triangulation)
+        p0 = v[0]
+        area = 0.0
+
+        for i in range(1, len(v) - 1):
+            e1 = v[i]     - p0
+            e2 = v[i + 1] - p0
+            area += 0.5 * np.linalg.norm(np.cross(e1, e2))
+
+        if area <= area_eps:
+            return False
+
+        return True
 
 
     @staticmethod
@@ -775,52 +816,74 @@ class Geometry_Option:
 
 class MoosasConvexify:
     @staticmethod
-    def convexify_faces(idd, normal, faces, holes):
-        """
-        Convexify polygonal faces with holes by reordering vertices, merging holes, and applying a divide-and-conquer convex decomposition.
+    def convexify_faces(cat, idd, normal, faces, holes):
         
+        """
+        Convexify polygonal faces and generate quadrilateral air-wall patches.
+
+        This function processes a batch of polygonal faces (possibly with holes) 
+        and performs geometric normalization, hole integration, convex decomposition, 
+        and quadrilateral generation. The pipeline follows a divide-and-conquer method 
+        inspired by Arkin (1987), *"Path Planning for a Vision-Based Autonomous Robot"*.
+
         Parameters
         ----------
-        idd : list of str
-            List of identifiers for each face. These are preserved or modified when splitting faces.
-        normal : list of array-like of shape (3,)
-            List of normal vectors for each face, used to determine orientation (e.g., upward direction).
-        faces : list of list of array-like of shape (3,)
-            List of outer boundary vertices for each face, where each face is represented as a list of 3D points.
-        holes : list of list of list of array-like of shape (3,)
-            List containing hole definitions for each face; each element is a list of holes, and each hole is a list of 3D points.
-        
+        cat : list[str]
+            Category ID of each face.
+        idd : list[str]
+            Identifier of each face.
+        normal : list[array-like]
+            Normal vectors of faces.
+        faces : list[list[array-like]]
+            Vertex sequences of each face (outer boundary).
+        holes : list[list[list[array-like]]]
+            Hole vertex sequences for each face (may be empty).
+
+        Workflow
+        --------
+        1. **Vertex ordering**  
+        Vertices of the outer boundary and hole boundaries are reordered 
+        according to the face normal so that all polygons are in a consistent 
+        counter-clockwise orientation.
+
+        2. **Hole merging**  
+        Valid hole polygons are merged into the outer boundary.  
+        Any required merging lines are collected as divide-lines.
+
+        3. **Convex decomposition**  
+        Non-convex faces are split into convex sub-polygons using 
+        a divide-and-conquer algorithm.  
+        Each sub-face inherits its parent category and normal, 
+        with the ID extended as `idd_i` for multi-piece splits.
+
+        4. **Quadrilateral generation (air walls)**  
+        All diagonal split lines from decomposition are connected into 
+        quadrilateral patches. These are assigned:
+        - category `"2"` (air-wall)
+        - auto-generated IDs: `"a_i"`
+
         Returns
         -------
-        convex_idd : list of str
-            Updated identifiers for the resulting convex faces, with new labels assigned for split subfaces.
-        convex_normal : list of array-like of shape (3,)
-            Normal vectors corresponding to each output convex face, preserving input normals.
-        convex_faces : list of list of array-like of shape (3,)
-            List of convex polygons generated from the input faces, with holes merged and non-convex regions split.
-        divide_lines : list of numpy.ndarray of shape (2, 3)
-            List of line segments (pairs of 3D points) representing internal diagonals or merge lines introduced during convexification.
-        """
-        
-        """
-        MAIN FUNCTION FOR CONVEXIFY 非凸多边形优化主函数
-        1. 读取idd序号、normal 法线、faces面节点、holes洞节点
-        2. 按照面中节点x+y+z的最小值重排节点起始点，按照法线方向归并所有多边形点序列为逆时针方向
-        3. 针对带洞多边形进行重整
-        4. 多边形凸化，算法This divide-and-conquer methods base on Arkin, Ronald C.'s report (1987).
-            "Path planning for a vision-based autonomous robot"
-        5. 将凸化的分割线链接为四边形，并赋予新分类为空气墙
-        7. 生成新面与旧面的索引关系字典
-        6. 输出合并后的idd序号、normal 法线、faces面节点
-        """
-        """
-        还是有一些细节需要讨论：是否应该针对180°的角进行分割？
-        应该分割的情况：房间与房间相对，即最短连线尽可能垂直，且与上一个点的间距不能太小
-        不应该分割的情况：房间与大空间相对，或者最短的连线无法垂直或与前序线的夹角很小，或者与上一个点的间距很小
+        convex_cat : list[str]
+            Categories of all resulting faces (original + generated quads).
+        convex_idd : list[str]
+            IDs of resulting faces.
+        convex_normal : list[array-like]
+            Normals of resulting faces.
+        convex_faces : list[list[array-like]]
+            Vertex lists of resulting faces.
+        divide_lines : list[array-like]
+            All generated split/merge lines used in decomposition.
 
-        另外，确实需要明确分割后的面边数，在计算边数时，应该按照只有角度在179°以上的才能算作一个角点，否则不计入，这样可以避免绝大多数面都被分成了三角形
+        Notes
+        -----
+        - Walls (faces with near-zero Z-normal) are not convexified.
+        - The function guarantees consistent orientation and convexity of outputs.
+        - The quadrilateral air-wall layer can be used for visualization or 
+        topological reconstruction in graph-based pipelines.
         """
 
+        convex_cat = []
         convex_idd = []
         convex_normal = []
         convex_faces = []
@@ -832,11 +895,14 @@ class MoosasConvexify:
             
             is_upward = normal[idx][2] > 0
             faces[idx] = Geometry_Option.reorder_vertices(faces[idx], is_upward=is_upward)
+            
             if holes[idx]:
                 for i in range(len(holes[idx])):
                     holes[idx][i] = Geometry_Option.reorder_vertices(holes[idx][i], is_upward=is_upward)
+                    print (f"face[{idx}]:{faces[idx]}")
+                    print (f"hole[{idx}][{i}]:{holes[idx][i]}")
         
-        # print ("--Faces reodering done--")
+        print ("--Faces reodering done--")
 
         for idx, face in enumerate(faces):
             if np.abs(normal[idx][2]) > 1e-3:  # Not wall determination
@@ -849,7 +915,7 @@ class MoosasConvexify:
                         hole = holes[idx][i]
                         should_skip = Geometry_Option.process_hole(hole, faces, check_projection=True)
                         if should_skip:
-                            continue  # skip hole
+                            continue  # Skip the hole
                         poly_in[i] = hole
    
                     verts, mergelines = Geometry_Option.merge_holes(poly_ex, poly_in)
@@ -869,11 +935,13 @@ class MoosasConvexify:
                 
                 if len(subfaces) == 1:
                     for i, subface in enumerate(subfaces):
+                        convex_cat.append(cat[idx])
                         convex_idd.append(idd[idx])
                         convex_normal.append(normal[idx])
                         convex_faces.append(subface)
                 else:
                     for i, subface in enumerate(subfaces):
+                        convex_cat.append(cat[idx])
                         convex_idd.append(f"#{idd[idx]}_{i}")
                         convex_normal.append(normal[idx])
                         convex_faces.append(subface)
@@ -883,18 +951,85 @@ class MoosasConvexify:
                         divide_lines.extend(sublines)
 
             else:
+                convex_cat.append(cat[idx])
                 convex_idd.append(idd[idx])
                 convex_normal.append(normal[idx])
                 convex_faces.append(face)
         
-        # print ("--Faces splitting done--")
+        print ("--Faces splitting done--")
 
-        return convex_idd, convex_normal, convex_faces, divide_lines
+        quad_faces, quad_normals = MoosasConvexify.create_quadrilaterals(divide_lines)
+        
+        for i,face in enumerate(quad_faces):
+            convex_cat.append("2")   # new category for air wall 
+            convex_idd.append(f"a_{i}")
+            convex_normal.append(quad_normals[i])
+            convex_faces.append(face)
+
+        return convex_cat, convex_idd, convex_normal, convex_faces, divide_lines
 
 
 
-def triangulate2dFace(boundary: pygeos.Geometry, holes: np.ndarray[pygeos.Geometry] = None) -> (
-np.ndarray[pygeos.Geometry], np.ndarray[pygeos.Geometry]):
+    def convexify_faces_2d(faces, holes):
+        """
+        Simplified 2D convexification:
+        - reorder vertices
+        - merge holes
+        - split into convex polygons
+
+        Parameters
+        ----------
+        faces : list[list[array-like]]
+            Outer boundary vertices.
+        holes : list[list[list[array-like]]]
+            Hole vertices for each face.
+
+        Returns
+        -------
+        convex_faces : list[list[array-like]]
+            Convex sub-polygons.
+        """
+
+        convex_faces = []
+
+        for idx, face in enumerate(faces):
+
+            # 1. Vertex ordering (assume CCW in 2D)
+            face = Geometry_Option.reorder_vertices(face, is_upward=True)
+
+            hole_dict = {}
+
+            if holes[idx]:
+                for i, hole in enumerate(holes[idx]):
+                    hole = Geometry_Option.reorder_vertices(hole, is_upward=True)
+
+                    # Skip invalid holes
+                    should_skip = Geometry_Option.process_hole(
+                        hole, faces, check_projection=True
+                    )
+                    if should_skip:
+                        continue
+
+                    hole_dict[i] = hole
+
+            # 2. Hole merging
+            if hole_dict:
+                verts, _ = Geometry_Option.merge_holes(face, hole_dict)
+            else:
+                verts = face
+
+            # 3. Convex decomposition
+            indices = list(range(len(verts)))
+            polys, _ = Geometry_Option.split_poly(verts, indices)
+
+            for poly in polys:
+                subface = [verts[i] for i in poly]
+                if Geometry_Option.is_valid_face(subface):
+                    convex_faces.append(subface)
+
+        return convex_faces
+
+def triangulate2dFace(boundary: pygeos.Geometry, holes: np.ndarray[pygeos.Geometry] = None) -> np.ndarray[pygeos.Geometry]:
     """
     Triangulate a 2D face defined by a boundary and optional holes into convex faces and dividing lines.
     
@@ -925,8 +1060,6 @@ np.ndarray[pygeos.Geometry], np.ndarray[pygeos.Geometry]):
         holes = []
     else:
         holes = [pygeos.get_coordinates(pygeos.force_3d(hole, z=0))[:-1] for hole in holes]
-    _, _, convexFaces, dividedLines = MoosasConvexify.convexify_faces(['idd'], [np.array([0, 0, 1])], [boundary],
-                                                                      [holes])
+    convexFaces = MoosasConvexify.convexify_faces_2d([boundary],[holes])
     convexFaces = [pygeos.polygons(convexFace) for convexFace in convexFaces]
-    dividedLines = [pygeos.linestrings(dividedLine) for dividedLine in dividedLines]
-    return (convexFaces, dividedLines)
+    return convexFaces
