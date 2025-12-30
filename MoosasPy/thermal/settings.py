@@ -357,6 +357,17 @@ class MoosasSettings(object):
         """
         return self.params.__repr__()
 
+    def __getitem__(self, key):
+        if key in self.params.keys():
+            return self.params[key]
+        else:
+            raise KeyError(key)
+
+    def __setitem__(self, key, value):
+        self.params[key] = value
+
+    def __delitem__(self, key):
+        del self.params[key]
 
 class ThermalSettings(MoosasSettings):
     __slots__ = ['load']

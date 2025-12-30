@@ -3,7 +3,7 @@ import re
 from eppy.modeleditor import IDF
 
 from .construction import Construction
-from .schedule import typeLimitSettings
+
 from .settings import *
 from ..geometry.element import MoosasSpace, MoosasElement
 from ..geometry.geos import faceNormal, Vector
@@ -13,7 +13,15 @@ from ..utils import pygeos
 class ZoneTemplate():
     __slots__ = ("idf", "zoneObject", "objectList", "constructionList", "scheduleList")
 
-    def __init__(self, idf: IDF):
+    def __init__(self, idf, zoneObject, objectList, constructionList, scheduleList):
+        self.idf = idf
+        self.zoneObject = zoneObject
+        self.objectList = objectList
+        self.constructionList = constructionList
+        self.scheduleList = scheduleList
+
+    @classmethod
+    def fromIDF(cls, idf: IDF):
         """
         Initialize the object by extracting and processing construction and zone-related data from an IDF file.
         
@@ -25,16 +33,15 @@ class ZoneTemplate():
         
         Returns
         -------
-        None
-            This constructor does not return a value.
+        ZoneTemplate
+
         """
-        self.idf = idf
-        self.constructionList: list[Construction] = []
+        constructionList: list[Construction] = []
         for obj in idf.idfobjects['Construction']:
             con = Construction.fromIDFConstructionList(idf, obj)
             if con:
-                self.constructionList.append(con)
-        self.zoneObject = MoosasSettings.fromIdfObject(idf.idfobjects['Zone'][0])
+                constructionList.append(con)
+        zoneObject = MoosasSettings.fromIdfObject(idf.idfobjects['Zone'][0])
 
         # Extract zone objects
         objectHint = ['ZoneInfiltration:DesignFlowRate',
@@ -53,7 +60,7 @@ class ZoneTemplate():
                       'ZoneHVAC:EquipmentList',
                       'ZoneHVAC:IdealLoadsAirSystem',
                       'NodeList']
-        self.objectList = {}
+        objectList = {}
         found, unfound = [], []
         for objHint in objectHint:
             try:
@@ -62,7 +69,7 @@ class ZoneTemplate():
                 #     for spc in oriZoneList:
                 #         if re.search(spc,str(template.params[key]),re.IGNORECASE) is not None:
                 #             template.params[key] = ''
-                self.objectList[objHint] = template
+                objectList[objHint] = template
 
                 found.append(objHint)
             except IndexError:
@@ -70,22 +77,18 @@ class ZoneTemplate():
         print('foundObj:', found)
         print('unfoundObj:', unfound)
 
-        # get type limits
-        typeLimitsName = [idfobj['Name'] for idfobj in idf.idfobjects['ScheduleTypeLimits']]
-        for typeLimit in typeLimitSettings:
-            if typeLimit.params['Name'] not in typeLimitsName:
-                typeLimit.applyToIDF(idf)
-
         # get schedules
-        self.scheduleList = {}
+        scheduleList = {}
         # locate schedule
-        for objHint in self.objectList:
-            self.scheduleList[objHint] = {}
-            for field in self.objectList[objHint]:
+        for objHint in objectList:
+            scheduleList[objHint] = {}
+            for field in objectList[objHint].params.keys():
                 if re.search("Schedule_Name", field, re.IGNORECASE):
                     ref_obj = idf.idfobjects[objHint][0].get_referenced_object(field)
-                    self.scheduleList[objHint][field] = MoosasSettings.fromIdfObject(idf.idfobjects[objHint][0][field])
-                    self.scheduleList[objHint][field]["Name"] = ""
+                    scheduleList[objHint][field] = MoosasSettings.fromIdfObject(ref_obj)
+                    scheduleList[objHint][field].updateParams(**{"Name": ""})
+
+        return cls(idf, zoneObject, objectList, constructionList, scheduleList)
 
     def getConstruction(self, _type, UFactor, SHGC=None):
         """
@@ -133,52 +136,9 @@ class ZoneTemplate():
         
         Returns
         -------
-        None
-            This function does not return a value. It modifies the internal IDF model by applying
-            schedules, load definitions, HVAC configurations, and zone control settings based on
-            the provided zone data.
+        ZoneTemplate
+            This function return a new Zone object containing settings to the zone.
         """
-        # construct schedule
-        # for idx in zone.settings.keys():
-        #     try:
-        #         zone.settings[idx] = float(zone.settings[idx])
-        #     except:
-        #         pass
-        # routine = ([0 for _ in range(int(zone.settings['zone_work_start']))] +
-        #            [1.0 for _ in range(int(zone.settings['zone_work_start']), int(zone.settings['zone_work_end']))] +
-        #            [0 for _ in range(int(zone.settings['zone_work_end']), 24)])
-        #
-        # heatingSchedule = dailySchedule({schDesignDay.AllDays: [zone.settings['zone_h_temp']] * 24},
-        #                                 _type=schType.Temperature)
-        # coolingSchedule = dailySchedule({schDesignDay.AllDays: [zone.settings['zone_c_temp']] * 24},
-        #                                 _type=schType.Temperature)
-        # pHeatSchedule = dailySchedule({schDesignDay.AllDays: [zone.settings['zone_popheat']] * 24},
-        #                               _type=schType.AnyNumber)
-        # ThermostatSchedule = dailySchedule({schDesignDay.AllDays: [4] * 24},
-        #                               _type=schType.AnyNumber)
-        # if re.search('Office',zone.settings['zone_template'],re.IGNORECASE) is not None:
-        #     OnSchedule = dailySchedule(
-        #         {schDesignDay.Weekends: [0] * 24, schDesignDay.Holidays: [0] * 24, schDesignDay.AllOtherDays: routine}
-        #     ,_name ='on_'+generate_code(4)
-        #     )
-        #     OccSchedule = dailySchedule(
-        #         {schDesignDay.Weekends: [0] * 24, schDesignDay.Holidays: [0] * 24, schDesignDay.AllOtherDays: routine}
-        #         , _type=schType.Fraction
-        #         , _name='Occ_' + generate_code(4)
-        #     )
-        # else:
-        #     OnSchedule = dailySchedule({schDesignDay.AllDays: routine})
-        #     OccSchedule = dailySchedule({schDesignDay.AllDays: routine}, _type=schType.Fraction)
-        # OnSchedule.applyToIDF(self.idf)
-        # OccSchedule.applyToIDF(self.idf)
-        # coolingSchedule.applyToIDF(self.idf)
-        # heatingSchedule.applyToIDF(self.idf)
-        # pHeatSchedule.applyToIDF(self.idf)
-        # ThermostatSchedule.applyToIDF(self.idf)
-
-        # create zone objects
-        self.zoneObject.updateParams(
-            **{'Name': zone.id, 'Floor_Area': zone.area, 'Volume': zone.area * zone.height}).applyToIDF(self.idf)
 
         # rename and update Schedule
         for objHint in self.scheduleList:
@@ -186,10 +146,126 @@ class ZoneTemplate():
                 schName = zone.id + objHint + field
                 self.scheduleList[objHint][field].updateParams(**{"Name": schName})
                 self.objectList[objHint].updateParams(**{field: schName})
+
+        # get zone property
+        zoneTemplateArea, zoneTemplateVolume, zoneTemplateHeight = None, None, None
+        if "Floor_Area" in self.zoneObject.params:
+            zoneTemplateArea = self.zoneObject.params["Floor_Area"]
+        if "Volume" in self.zoneObject.params:
+            zoneTemplateVolume = self.zoneObject.params["Volume"]
+        if "Ceiling_Height" in self.zoneObject.params:
+            zoneTemplateHeight = self.zoneObject.params["Ceiling_Height"]
+        if zoneTemplateArea and zoneTemplateVolume:
+            zoneTemplateHeight = zoneTemplateVolume / zoneTemplateArea
+        elif zoneTemplateArea and zoneTemplateHeight:
+            zoneTemplateVolume = zoneTemplateArea * zoneTemplateHeight
+        elif zoneTemplateVolume and zoneTemplateHeight:
+            zoneTemplateArea = zoneTemplateVolume / zoneTemplateHeight
+        else:
+            raise ValueError("idf does not contain valid zone-specific settings: height/area/volume")
+
+        zoneOutGlazingArea = (sum([gls.area for wall in zone.edge.wall if wall.isOuter for gls in
+                                   wall.glazingElement]) + sum(
+            [gls.area for face in zone.ceiling.face if face.isOuter for gls in face.glazingElement]))
+        zoneOutWallArea = (sum([wall.area for wall in zone.edge.wall if wall.isOuter]) + sum(
+            [face.area for face in zone.ceiling.face if face.isOuter]))
+
+        # zone_infiltration
+        if "ZoneInfiltration:DesignFlowRate" in self.objectList:
+            if 'Design_Flow_Rate' in self.objectList["ZoneInfiltration:DesignFlowRate"].params:
+                inftM3s = self.objectList["ZoneInfiltration:DesignFlowRate"]['Design_Flow_Rate']  # {m3/s}
+                zone.settings['zone_infiltration'] = inftM3s / zoneTemplateVolume * 3600  # ac/h
+            if 'Flow_Rate_per_Floor_Area' in self.objectList["ZoneInfiltration:DesignFlowRate"].params:
+                inftM3sM2 = self.objectList["ZoneInfiltration:DesignFlowRate"]['Flow_Rate_per_Floor_Area']  # {m3/s-m2}
+                zone.settings['zone_infiltration'] = inftM3sM2 / zoneTemplateHeight * 3600  # ac/h
+            if 'Flow_Rate_per_Exterior_Surface_Area' in self.objectList["ZoneInfiltration:DesignFlowRate"].params:
+                inftM3sM2 = self.objectList["ZoneInfiltration:DesignFlowRate"][
+                    'Flow_Rate_per_Exterior_Surface_Area']  # {m3/s-m2}
+                zone.settings[
+                    'zone_infiltration'] = inftM3sM2 * zoneOutWallArea / zone.height / zone.area * 3600  # ac/h
+        zone.settings['zone_infiltration'] = float(zone.settings['zone_infiltration'])
+
+        # population
+        if 'People' in self.objectList:
+            if 'Number_of_People' in self.objectList["People"].params:
+                zone.settings['zone_ppsm'] = self.objectList["People"]["Number_of_People"] / zoneTemplateArea
+            if 'People_per_Floor_Area' in self.objectList["People"].params:
+                zone.settings['zone_ppsm'] = self.objectList["People"]["People_per_Floor_Area"]
+            if 'Floor_Area_per_Person' in self.objectList["People"].params:
+                zone.settings['zone_ppsm'] = 1 / self.objectList["People"]["Floor_Area_per_Person"]
+        zone.settings['zone_ppsm'] = float(zone.settings['zone_ppsm'])
+
+        # equipment (equip elec)
+        if 'ElectricEquipment' in self.objectList:
+            if 'Design_Level' in self.objectList["ElectricEquipment"].params:
+                zone.settings['zone_equipment'] = self.objectList["ElectricEquipment"][
+                                                      'Design_Level'] / zoneTemplateArea
+            if 'Watts_per_Floor_Area' in self.objectList["ElectricEquipment"].params:
+                zone.settings['zone_equipment'] = self.objectList["ElectricEquipment"]["Watts_per_Floor_Area"]
+            if 'Watts_per_Person' in self.objectList["ElectricEquipment"].params:
+                zone.settings['zone_equipment'] = self.objectList["ElectricEquipment"]["Watts_per_Person"] * \
+                                                  zone.settings['zone_ppsm']
+
+        # equipment (equip heat)
+        if 'OtherEquipment' in self.objectList:
+            if 'Design_Level' in self.objectList["OtherEquipment"].params:
+                zone.settings['zone_equipment'] = self.objectList["OtherEquipment"]['Design_Level'] / zoneTemplateArea
+            if 'Watts_per_Floor_Area' in self.objectList["OtherEquipment"].params:
+                zone.settings['zone_equipment'] = self.objectList["OtherEquipment"]["Watts_per_Floor_Area"]
+            if 'Watts_per_Person' in self.objectList["OtherEquipment"].params:
+                zone.settings['zone_equipment'] = self.objectList["OtherEquipment"]["Watts_per_Person"] * zone.settings[
+                    'zone_ppsm']
+        zone.settings['zone_equipment'] = float(zone.settings['zone_equipment'])
+
+        # light
+
+        if 'Lights' in self.objectList:
+            if 'Lighting_Level' in self.objectList["Lights"].params:
+                zone.settings['zone_lighting'] = self.objectList["Lights"]['Lighting_Level'] / zoneTemplateArea
+            if 'Watts_per_Floor_Area' in self.objectList["Lights"].params:
+                zone.settings['zone_lighting'] = self.objectList["Lights"]["Watts_per_Floor_Area"]
+            if 'Watts_per_Person' in self.objectList["Lights"].params:
+                zone.settings['zone_lighting'] = self.objectList["Lights"]["Watts_per_Person"] * zone.settings[
+                    'zone_ppsm']
+        zone.settings['zone_lighting'] = float(zone.settings['zone_lighting'])
+
+        # ventilation Flow_Rate_per_Person
+        if 'ZoneVentilation:DesignFlowRate' in self.objectList:
+            if 'Design_Flow_Rate' in self.objectList["ZoneVentilation:DesignFlowRate"].params:
+                inftM3s = self.objectList["ZoneVentilation:DesignFlowRate"]['Design_Flow_Rate']  # {m3/s}
+                zone.settings['zone_pfav'] = inftM3s * 3600 / zone.settings['zone_ppsm'] / zone.area  # m3/h-pp
+            if 'Flow_Rate_per_Floor_Area' in self.objectList["ZoneVentilation:DesignFlowRate"].params:
+                inftM3sM2 = self.objectList["ZoneVentilation:DesignFlowRate"]['Flow_Rate_per_Floor_Area']  # {m3/s-m2}
+                zone.settings['zone_pfav'] = inftM3sM2 * 3600 / zone.settings['zone_ppsm']  # m3/h-pp
+            if 'Flow_Rate_per_Person' in self.objectList["ZoneVentilation:DesignFlowRate"].params:
+                inftM3pp = self.objectList["ZoneVentilation:DesignFlowRate"]['Flow_Rate_per_Person']  # {m3/s-pp}
+                zone.settings['zone_pfav'] = inftM3pp * 3600  # m3/h-pp
+            if 'Air_Changes_per_Hour' in self.objectList["ZoneVentilation:DesignFlowRate"]:
+                ach = self.objectList["ZoneVentilation:DesignFlowRate"]['Air_Changes_per_Hour']  # {ac/h}
+                zone.settings['zone_pfav'] = ach * zoneTemplateVolume * 3600  # m3/h-pp
+
+        if 'DesignSpecification:OutdoorAir' in self.objectList:
+            if 'Outdoor_Air_Flow_per_Zone' in self.objectList['DesignSpecification:OutdoorAir'].params:
+                inftM3s = self.objectList['DesignSpecification:OutdoorAir']['Outdoor_Air_Flow_per_Zone']  # {m3/s}
+                zone.settings['zone_pfav'] = inftM3s * 3600 / zone.settings['zone_ppsm'] / zone.area  # m3/h-pp
+            if 'Outdoor_Air_Flow_per_Zone_Floor_Area' in self.objectList['DesignSpecification:OutdoorAir'].params:
+                inftM3sM2 = self.objectList['DesignSpecification:OutdoorAir'][
+                    'Outdoor_Air_Flow_per_Zone_Floor_Area']  # {m3/s-m2}
+                zone.settings['zone_pfav'] = inftM3sM2 * 3600 / zone.settings['zone_ppsm']  # m3/h-pp
+            if 'Outdoor_Air_Flow_per_Person' in self.objectList['DesignSpecification:OutdoorAir'].params:
+                inftM3pp = self.objectList['DesignSpecification:OutdoorAir']['Outdoor_Air_Flow_per_Person']  # {m3/s-pp}
+                zone.settings['zone_pfav'] = inftM3pp * 3600  # m3/h-pp
+            if 'Outdoor_Air_Flow_Air_Changes_per_Hour' in self.objectList['DesignSpecification:OutdoorAir'].params:
+                ach = self.objectList['DesignSpecification:OutdoorAir'][
+                    'Outdoor_Air_Flow_Air_Changes_per_Hour']  # {ac/h}
+                zone.settings['zone_pfav'] = ach * zoneTemplateVolume * 3600  # m3/h-pp
+        zone.settings['zone_pfav'] = float(zone.settings['zone_pfav'])
+
         params = {
             'ZoneInfiltration:DesignFlowRate':
                 {'Name': zone.id + '_Infiltration', 'Zone_or_ZoneList_Name': zone.id,
                  'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
+                 'Design_Flow_Rate_Calculation_Method': "Flow/Zone",
                  'Design_Flow_Rate': zone.settings['zone_infiltration'] / 3600 * zone.area * zone.height},
             'ZoneVentilation:DesignFlowRate':
                 {'Name': zone.id + "_Ventilation",  # Block2:Zone5 Ventilation
@@ -198,9 +274,7 @@ class ZoneTemplate():
             'ZoneVentilation:WindandStackOpenArea':
                 {'Name': zone.id + '_Opening', 'Zone_or_Space_Name': zone.id,
                  'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
-                 'Opening_Area': (sum([gls.area for wall in zone.edge.wall if wall.isOuter for gls in
-                                       wall.glazingElement]) + sum(
-                     [gls.area for face in zone.ceiling.face if face.isOuter for gls in face.glazingElement])) * 0.6,
+                 'Opening_Area': zoneOutGlazingArea * 0.6,
                  },
             'OtherEquipment':
                 {'Name': zone.id + '_Equipment', 'Zone_or_ZoneList_Name': zone.id,
@@ -257,8 +331,8 @@ class ZoneTemplate():
                 {'Name': zone.id + '_Ideal Loads Air',
                  'Zone_Supply_Air_Node_Name': 'Node ' + zone.id + ' In',
                  'Zone_Exhaust_Air_Node_Name': '',
-                 "Design_Specification_Outdoor_Air_Object_Name":
-                     zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
+                 "Design_Specification_Outdoor_Air_Object_Name": '',
+                 # zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
                  },
             'NodeList':
                 {'Name': zone.id + " Inlets",
@@ -269,14 +343,40 @@ class ZoneTemplate():
         for key in self.objectList:
             self.objectList[key].updateParams(**params[key])
 
+        # block items:
+        blockObjects = ['DesignSpecification:OutdoorAir', 'DesignSpecification:ZoneAirDistribution']
+        for item in blockObjects:
+            if item in self.objectList:
+                del self.objectList[item]
+                del self.scheduleList[item]
+
+        # create zone objects
+        self.zoneObject.updateParams(
+            **{'Name': zone.id, 'Floor_Area': zone.area, 'Volume': zone.area * zone.height})
+
+        return ZoneTemplate(self.idf, self.zoneObject, self.objectList, self.constructionList, self.scheduleList)
+
+    def applyToIDF(self,idf=None):
+        if idf == None:
+            idf = self.idf
+        self.zoneObject.applyToIDF(idf)
+        for objHint in self.scheduleList:
+            for field in self.scheduleList[objHint]:
+                self.scheduleList[objHint][field].applyToIDF(idf)
         for key in self.objectList:
-            self.objectList[key].applyToIDF(self.idf)
+            self.objectList[key].applyToIDF(idf)
+
+    def __repr__(self):
+        return str(self.idf)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
                          Construction_Name="Office_External_Wall",
                          Construction_Name_Window="Office_External_Window",
-                         normal=None):
+                         normal=None, encodeWindow=True):
     """
     Create a thermal surface in an EnergyPlus IDF file based on a MoosasElement.
     
@@ -366,8 +466,9 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
         ThermalSettings.params["Surface_Type"] = surfaceType
         surface2 = ThermalSettings.applyToIDF(idf)
         faceObject.append(surface2)
-    for gls in element.glazingElement:
-        faceObject += createWindowSurface(idf, gls, element, Construction_Name_Window, normal=normal)
+    if encodeWindow:
+        for gls in element.glazingElement:
+            faceObject += createWindowSurface(idf, gls, element, Construction_Name_Window, normal=normal)
     return faceObject
 
 

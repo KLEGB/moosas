@@ -542,7 +542,7 @@ class MoosasElement(object):
             if you want to get a list anyway,
             you can call mixItemListToList() func in utils.tools.
         """
-        return mixItemListToObject([geo.category for geo in self.__geometries])
+        return mixItemListToList([geo.category for geo in self.__geometries])[0]
 
     def setCategory(self, cat=None):
         for idx,geometry in enumerate(self.__geometries):
@@ -2633,7 +2633,8 @@ class MoosasSpace(object):
             "zone_summerrad": None,  # summer radiant heat units:kwh
             "zone_winterrad": None,  # winter radiant heat units:kwh
 
-            "zone_template": None
+            "zone_template": None,
+            "idf_template":None
         }
 
         self.applySettings('climatezone3_GB/T51350-2019_RESIDENTIAL')

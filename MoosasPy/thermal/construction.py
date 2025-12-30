@@ -156,3 +156,8 @@ class Construction(MoosasSettings):
         super().applyToIDF(idf, rename)
         for layer in self.layers:
             layer.applyToIDF(idf, rename)
+
+airBoundaryDefault ={
+    'key': "Construction:AirBoundary",
+    "Name": "Generic Air Boundary"
+}

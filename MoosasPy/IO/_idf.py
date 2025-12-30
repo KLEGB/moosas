@@ -1,6 +1,4 @@
-from ..models import *
 import os
-import re
 from difflib import SequenceMatcher
 
 from eppy.modeleditor import IDF
@@ -8,15 +6,50 @@ from rdflib import Literal, URIRef
 from rdflib.namespace import RDF
 
 from ._rdf import MoosasGraph, encodeURI, decodeURI
-from ..thermal import idfGeometry
+from ..models import *
+from ..thermal import *
 from ..utils import path, mixItemListToList
 
-
-def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath = None):
-
+def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None) -> idfGeometry.ZoneTemplate:
     """
     Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
-    
+
+    Parameters
+    ----------
+    model : MoosasModel
+        A model instance containing building geometry and settings to be converted into IDF format.
+        Must provide methods `getAllFaces`, `spaceIdDict`, and `spaceList`, and associated attributes
+        for space and surface properties.
+    idfTemplatePath : str
+        Path of the idf template file.
+
+    Returns
+    -------
+    model : MoosasModel
+
+    """
+    # Properly handle paths for cross-platform compatibility
+    if not idfTemplatePath:
+        idfTemplatePath = os.path.join(path.dataBaseDir, "in.idf")
+        idd = os.path.join(path.dataBaseDir, "Energy+.idd")
+        IDF.setiddname(idd)
+
+    idf = IDF(idfTemplatePath)
+    zTemplate: idfGeometry.ZoneTemplate = idfGeometry.ZoneTemplate.fromIDF(idf)
+    for si, space in enumerate(model.spaceList):
+        print(f"\rIDF: encoding zones: {si}/{len(model.spaceList)}", end='')
+        space.settings['idf_template'] = zTemplate.appliedToZone(space)
+        # if space.is_void():
+        #     print('***Warring: EnergyPlus do not support void space')
+        # else:
+        #     space.settings['idf_template'] = zTemplate.appliedToZone(space)
+    return zTemplate
+
+
+def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None):
+    """
+    Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
+
     Parameters
     ----------
     model : MoosasModel
@@ -25,63 +58,55 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath = None):
         for space and surface properties.
     outputPath : str
         Path to save the generated IDF file. The directory must be writable.
-    
+
     Returns
     -------
     None
         This function does not return any value. It writes the IDF file to the specified path and prints progress information.
     """
     print('IDF: initialization from IDF file...')
-
-    # Properly handle paths for cross-platform compatibility
-    if not idfTemplatePath:
-        idfTemplatePath = os.path.join(path.dataBaseDir, "in.idf")
-        idd = os.path.join(path.dataBaseDir, "Energy+.idd")
-        IDF.setiddname(idd)
-
-    idf = IDF(idfTemplatePath)
     moElements = model.getAllFaces(dumpUseless=True)
-    
-    zTemplate = idfGeometry.ZoneTemplate(idf)
-
-
+    zTemplate:idfGeometry.ZoneTemplate = loadIDFTemplate(model, idfTemplatePath)
     # remote existing zone-related objects
     remoteHint = []
-    # zName = [obj['Name'] for obj in idf.idfobjects['Zone']] + [obj['Name'] for obj in idf.idfobjects['Space']]
-    # for key in idf.idfobjects:
-    #     print(f"\rIDF: cleaning existing objects: {key}", end='')
-    #     if re.search("Schedule",key) is None:
-    #         if len(idf.idfobjects[key]) > 0:
-    #             for objName in idf.idfobjects[key][0].obj:
-    #                 if objName in zName:
-    #                     remoteHint.append(key)
-    #                     break
     remoteHint += list(zTemplate.objectList.keys()) + ['Zone', 'WaterUse:Equipment', 'BuildingSurface:Detailed',
-                                    'FenestrationSurface:Detailed', 'Space']
-    
+                                                       'FenestrationSurface:Detailed', 'Space']
+    idf = zTemplate.idf
     for h in remoteHint:
         idf.idfobjects[h] = []
         print(f"\rIDF: cleaning existing objects: {h}", end='')
     print()
 
+    # add moosas defines objects
+    # get type limits
+    typeLimitsName = [idfobj['Name'] for idfobj in idf.idfobjects['ScheduleTypeLimits']]
+    for typeLimit in schedule.typeLimitSettings:
+        if typeLimit.params['Name'] not in typeLimitsName:
+            typeLimit.applyToIDF(idf)
+    airboundary = settings.MoosasSettings(construction.airBoundaryDefault)
+    airboundary.applyToIDF(idf)
+
     # encoding geometries
     for wi, wall in enumerate(moElements['MoosasWall']):
-        print (wall)
-        print(f"\rIDF: encoding walls: {wi}/{len(moElements['MoosasWall'])}", end='')
-        space = model.spaceIdDict[wall.space[0]]
-        if not space.is_void():
+        if len(wall.space) > 0:
+            print(f"\rIDF: encoding faces: {wi}/{len(moElements['MoosasFace'])}", end='')
+            space = model.spaceIdDict[wall.space[0]]
             wallU, winU, SHGC = space.settings['zone_wallU'], space.settings['zone_winU'], space.settings[
                 'zone_win_SHGC']
             wallConstruction = zTemplate.getConstruction('opaque', wallU)
             windowConstruction = zTemplate.getConstruction('window', winU, SHGC)
-            idfGeometry.createThermalSurface(idf, wall, 'Wall', wallConstruction.params['Name'],
-                                             windowConstruction.params['Name'])
+            if wall.category == -2:
+                idfGeometry.createThermalSurface(idf, wall, 'Wall', "Generic Air Boundary",
+                                                 None,encodeWindow=False)
+            else:
+                idfGeometry.createThermalSurface(idf, wall, 'Wall', wallConstruction.params['Name'],
+                                                 windowConstruction.params['Name'])
     print()
     for fi, face in enumerate(moElements['MoosasFace']):
-        print(f"\rIDF: encoding faces: {fi}/{len(moElements['MoosasFace'])}", end='')
-        faceType = 'Floor'
-        space = model.spaceIdDict[face.space[0]]
-        if not space.is_void():
+        if len(face.space) > 0:
+            print(f"\rIDF: encoding faces: {fi}/{len(moElements['MoosasFace'])}", end='')
+            faceType = 'Floor'
+            space = model.spaceIdDict[face.space[0]]
             if len(face.space) == 1:
                 if face in model.spaceIdDict[face.space[0]].ceiling.face:
                     faceType = 'Roof'
@@ -89,17 +114,22 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath = None):
                 'zone_win_SHGC']
             wallConstruction = zTemplate.getConstruction('opaque', wallU)
             windowConstruction = zTemplate.getConstruction('window', winU, SHGC)
-            idfGeometry.createThermalSurface(idf, face, faceType, wallConstruction.params['Name'],
-                                             windowConstruction.params['Name'])
+            if face.category == -2:
+                idfGeometry.createThermalSurface(idf, face, faceType, "Generic Air Boundary",
+                                                 None,encodeWindow=False)
+            else:
+                idfGeometry.createThermalSurface(idf, face, faceType, wallConstruction.params['Name'],
+                                                 windowConstruction.params['Name'])
     print()
 
     # writing zonal settings
     for si, space in enumerate(model.spaceList):
         print(f"\rIDF: encoding zones: {si}/{len(model.spaceList)}", end='')
-        if space.is_void():
-            print('***Warring: EnergyPlus do not support void space')
-        else:
-            zTemplate.appliedToZone(space)
+        space.settings['idf_template'].applyToIDF(idf)
+        # if space.is_void():
+        #     print('***Warring: EnergyPlus do not support void space')
+        # else:
+        #     space.settings['idf_template'].applyToIDF(idf)
     idf.save(outputPath)
     print()
 
@@ -347,7 +377,7 @@ def extractZoneTemplate(graph: MoosasGraph):
 
     # find object's name contain the zone name
     for obj in graph.subjects(RDF.type, graph.idf.idfObject):
-        label = str(graph.getObject(obj,graph.rdfs.label))
+        label = str(graph.getObject(obj, graph.rdfs.label))
         if re.search(zoneName, label) is not None:
             _checkAddObj(obj)
 

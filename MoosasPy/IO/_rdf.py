@@ -1017,4 +1017,5 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
             model.spaceList.append(spc)
         print(f'\rLOADING: space {i + 1}/{len(spList)}', end='')
     print()
+
     return model

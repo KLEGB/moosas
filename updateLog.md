@@ -2,6 +2,8 @@
 # Transformation final update 12.04
 - 0.8.3.1 include the geo flags in the output geos.
 - 0.8.3.2 fix air wall issues.
+- 0.8.3.4 improve idf transformation module
+- 0.8.3.5 fix air wall issues in idf transformation.
 
 --0.8.2
 # AFN update 10.31
