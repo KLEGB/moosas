@@ -26,6 +26,10 @@ constructionDefault = {
     'Outside_Layer': ''
 }
 
+airBoundaryDefault ={
+    'key': "Construction:AirBoundary",
+    "Name": "Moosas Air Boundary"
+}
 
 class Construction(MoosasSettings):
     __slot__ = ['layers', 'UFactor', 'type']
@@ -157,7 +161,3 @@ class Construction(MoosasSettings):
         for layer in self.layers:
             layer.applyToIDF(idf, rename)
 
-airBoundaryDefault ={
-    'key': "Construction:AirBoundary",
-    "Name": "Generic Air Boundary"
-}
