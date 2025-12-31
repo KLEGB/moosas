@@ -815,6 +815,247 @@ class Geometry_Option:
         return polygons
 
 
+class FaceValidationUtils:
+    """Utility class for face validation and processing logic."""
+    
+    @staticmethod
+    def validate_face(face, is_valid_face=True, is_quad_clean=False, expected_quad_vertices=None):
+        """
+        Validate a single face based on validation flags.
+        
+        Parameters
+        ----------
+        face : list or numpy.ndarray
+            Face vertices to validate.
+        is_valid_face : bool, optional
+            If True, validate face using Geometry_Option.is_valid_face().
+            Default is True.
+        is_quad_clean : bool, optional
+            If True, apply additional quadrilateral validation.
+            Default is False.
+        expected_quad_vertices : int, optional
+            Expected number of vertices for quadrilateral validation.
+            Default is None (no check).
+        
+        Returns
+        -------
+        bool
+            True if face passes all validation checks, False otherwise.
+        """
+        # Basic validity check
+        if is_valid_face:
+            if not Geometry_Option.is_valid_face(face):
+                return False
+        
+        # Quadrilateral-specific validation
+        if is_quad_clean and expected_quad_vertices is not None:
+            if len(face) != expected_quad_vertices:
+                return False
+        
+        return True
+    
+    @staticmethod
+    def add_face_to_output(face, cat_value, idd_value, normal_value, 
+                          convex_cat, convex_idd, convex_normal, convex_faces):
+        """
+        Add a validated face to output lists.
+        
+        Parameters
+        ----------
+        face : list or numpy.ndarray
+            Face vertices.
+        cat_value : str
+            Category value.
+        idd_value : str
+            ID value.
+        normal_value : array-like
+            Normal vector.
+        convex_cat : list
+            Output category list.
+        convex_idd : list
+            Output ID list.
+        convex_normal : list
+            Output normal list.
+        convex_faces : list
+            Output face list.
+        """
+        convex_cat.append(cat_value)
+        convex_idd.append(idd_value)
+        convex_normal.append(normal_value)
+        convex_faces.append(face)
+    
+    @staticmethod
+    def process_filtered_faces(filtered_faces, cat_idx, idd_base, normal_idx,
+                              cat, idd, normal, convex_cat, convex_idd, 
+                              convex_normal, convex_faces, is_valid_face=True, 
+                              is_quad_clean=False, use_indexed_idd=False):
+        """
+        Process a list of filtered faces and add them to output.
+        
+        Parameters
+        ----------
+        filtered_faces : list
+            List of filtered face vertices.
+        cat_idx : int
+            Index in cat list.
+        idd_base : str
+            Base ID string.
+        normal_idx : int
+            Index in normal list.
+        cat : list
+            Input category list.
+        idd : list
+            Input ID list.
+        normal : list
+            Input normal list.
+        convex_cat : list
+            Output category list.
+        convex_idd : list
+            Output ID list.
+        convex_normal : list
+            Output normal list.
+        convex_faces : list
+            Output face list.
+        is_valid_face : bool, optional
+            Enable face validity validation. Default is True.
+        is_quad_clean : bool, optional
+            Enable quadrilateral validation. Default is False.
+        use_indexed_idd : bool, optional
+            If True, append index to ID (e.g., "id_0", "id_1").
+            Default is False.
+        
+        Returns
+        -------
+        int
+            Number of faces successfully added.
+        """
+        count = 0
+        for i, face in enumerate(filtered_faces):
+            # Validate face
+            if not FaceValidationUtils.validate_face(face, is_valid_face, is_quad_clean):
+                continue
+            
+            # Prepare ID
+            if use_indexed_idd:
+                face_idd = f"#{idd[idd_base]}_{i}"
+            else:
+                face_idd = idd[idd_base]
+            
+            # Add to output
+            FaceValidationUtils.add_face_to_output(
+                face, cat[cat_idx], face_idd, normal[normal_idx],
+                convex_cat, convex_idd, convex_normal, convex_faces
+            )
+            count += 1
+        
+        return count
+
+
+
+    @staticmethod
+    def process_convex_decomposition_faces(polys, verts, idx, cat, idd, normal,
+                                          convex_cat, convex_idd, convex_normal, 
+                                          convex_faces, is_valid_face=True, 
+                                          is_quad_clean=False):
+        """
+        Process faces resulting from convex decomposition.
+        
+        Parameters
+        ----------
+        polys : list
+            List of polygon indices from decomposition.
+        verts : numpy.ndarray
+            Vertex array.
+        idx : int
+            Current face index.
+        cat : list
+            Input category list.
+        idd : list
+            Input ID list.
+        normal : list
+            Input normal list.
+        convex_cat : list
+            Output category list.
+        convex_idd : list
+            Output ID list.
+        convex_normal : list
+            Output normal list.
+        convex_faces : list
+            Output face list.
+        is_valid_face : bool, optional
+            Enable face validity validation. Default is True.
+        is_quad_clean : bool, optional
+            Enable quadrilateral validation. Default is False.
+        
+        Returns
+        -------
+        int
+            Number of faces successfully added.
+        """
+        # Extract subfaces from polygon indices
+        subfaces = [verts[poly] for poly in polys]
+        
+        # Apply face node filtering
+        filtered_subfaces = FaceFilterAndQuadrilateral.filter_and_process_faces(subfaces)
+        
+        # Process filtered faces
+        use_indexed = len(filtered_subfaces) > 1
+        return FaceValidationUtils.process_filtered_faces(
+            filtered_subfaces, idx, idx, idx,
+            cat, idd, normal, convex_cat, convex_idd, convex_normal, convex_faces,
+            is_valid_face=is_valid_face, is_quad_clean=is_quad_clean,
+            use_indexed_idd=use_indexed
+        )
+    
+    @staticmethod
+    def process_quadrilateral_faces(quad_faces, quad_normals, convex_cat, convex_idd,
+                                   convex_normal, convex_faces, is_valid_face=True,
+                                   is_quad_clean=True):
+        """
+        Process quadrilateral air-wall faces with validation.
+        
+        Parameters
+        ----------
+        quad_faces : list
+            List of quadrilateral face vertices.
+        quad_normals : list
+            List of quadrilateral normals.
+        convex_cat : list
+            Output category list.
+        convex_idd : list
+            Output ID list.
+        convex_normal : list
+            Output normal list.
+        convex_faces : list
+            Output face list.
+        is_valid_face : bool, optional
+            Enable face validity validation. Default is True.
+        is_quad_clean : bool, optional
+            Enable quadrilateral validation. Default is True.
+        
+        Returns
+        -------
+        int
+            Number of quadrilateral faces successfully added.
+        """
+        count = 0
+        for i, face in enumerate(quad_faces):
+            # Apply quadrilateral-specific validation
+            if not FaceValidationUtils.validate_face(
+                face, is_valid_face=is_valid_face, 
+                is_quad_clean=is_quad_clean, expected_quad_vertices=4
+            ):
+                continue
+            
+            # Add to output
+            FaceValidationUtils.add_face_to_output(
+                face, "2", f"a_{i}", quad_normals[i],
+                convex_cat, convex_idd, convex_normal, convex_faces
+            )
+            count += 1
+        
+        return count
+
 class FaceFilterAndQuadrilateral:
     """Utility class for filtering faces by node count and computing maximum inscribed quadrilaterals."""
     
@@ -937,7 +1178,7 @@ class FaceFilterAndQuadrilateral:
 
 class MoosasConvexify:
     @staticmethod
-    def convexify_faces(cat, idd, normal, faces, holes):
+    def convexify_faces(cat, idd, normal, faces, holes, is_valid_face=True, is_quad_clean=True):
         
         """
         Convexify polygonal faces and generate quadrilateral air-wall patches.
@@ -959,6 +1200,12 @@ class MoosasConvexify:
             Vertex sequences of each face (outer boundary).
         holes : list[list[list[array-like]]]
             Hole vertex sequences for each face (may be empty).
+        is_valid_face : bool, optional
+            If True, validates each output face using Geometry_Option.is_valid_face().
+            Default is True.
+        is_quad_clean : bool, optional
+            If True, applies additional validation to quadrilateral faces (air walls).
+            Default is True.
 
         Workflow
         --------
@@ -1054,58 +1301,50 @@ class MoosasConvexify:
                 else:
                     verts = poly_ex
 
-                # Convexification
+                # Convex decomposition and face processing
                 indices = list(range(len(verts)))
-
                 polys, diags = Geometry_Option.split_poly(verts, indices)
                 
-                subfaces = [verts[poly] for poly in polys]
+                # Process decomposed faces using utility method
+                FaceValidationUtils.process_convex_decomposition_faces(
+                    polys, verts, idx, cat, idd, normal,
+                    convex_cat, convex_idd, convex_normal, convex_faces,
+                    is_valid_face=is_valid_face, is_quad_clean=is_quad_clean
+                )
                 
-                # Apply face node filtering before adding to output
-                filtered_subfaces = FaceFilterAndQuadrilateral.filter_and_process_faces(subfaces)
-                
-                if len(filtered_subfaces) == 1:
-                    for i, subface in enumerate(filtered_subfaces):
-                        convex_cat.append(cat[idx])
-                        convex_idd.append(idd[idx])
-                        convex_normal.append(normal[idx])
-                        convex_faces.append(subface)
-                else:
-                    for i, subface in enumerate(filtered_subfaces):
-                        convex_cat.append(cat[idx])
-                        convex_idd.append(f"#{idd[idx]}_{i}")
-                        convex_normal.append(normal[idx])
-                        convex_faces.append(subface)
-                    
-                    if diags:
-                        sublines = [np.array([verts[pair[0]], verts[pair[1]]]) for pair in diags]
-                        divide_lines.extend(sublines)
+                # Collect dividing lines
+                if diags:
+                    sublines = [np.array([verts[pair[0]], verts[pair[1]]]) for pair in diags]
+                    divide_lines.extend(sublines)
 
             else:
-                # For wall faces, also apply node filtering
+                # For wall faces, apply node filtering and validation
                 filtered_wall_faces = FaceFilterAndQuadrilateral.filter_and_process_faces([face])
                 
-                for filtered_face in filtered_wall_faces:
-                    convex_cat.append(cat[idx])
-                    convex_idd.append(idd[idx])
-                    convex_normal.append(normal[idx])
-                    convex_faces.append(filtered_face)
+                # Process wall faces using utility method
+                FaceValidationUtils.process_filtered_faces(
+                    filtered_wall_faces, idx, idx, idx,
+                    cat, idd, normal, convex_cat, convex_idd, convex_normal, convex_faces,
+                    is_valid_face=is_valid_face, is_quad_clean=is_quad_clean,
+                    use_indexed_idd=False
+                )
         
         print ("--Faces splitting done--")
 
         quad_faces, quad_normals = MoosasConvexify.create_quadrilaterals(divide_lines)
         
-        for i,face in enumerate(quad_faces):
-            convex_cat.append("2")   # new category for air wall 
-            convex_idd.append(f"a_{i}")
-            convex_normal.append(quad_normals[i])
-            convex_faces.append(face)
+        # Process quadrilateral air-wall faces using utility method
+        FaceValidationUtils.process_quadrilateral_faces(
+            quad_faces, quad_normals, convex_cat, convex_idd,
+            convex_normal, convex_faces, is_valid_face=is_valid_face,
+            is_quad_clean=is_quad_clean
+        )
 
         return convex_cat, convex_idd, convex_normal, convex_faces, divide_lines
 
 
 
-    def convexify_faces_2d(faces, holes):
+    def convexify_faces_2d(faces, holes, is_valid_face=True, is_quad_clean=True):
         """
         Simplified 2D convexification:
         - reorder vertices
@@ -1118,6 +1357,12 @@ class MoosasConvexify:
             Outer boundary vertices.
         holes : list[list[list[array-like]]]
             Hole vertices for each face.
+        is_valid_face : bool, optional
+            If True, validates each output face using Geometry_Option.is_valid_face().
+            Default is True.
+        is_quad_clean : bool, optional
+            If True, applies additional validation to faces.
+            Default is True.
 
         Returns
         -------
@@ -1153,18 +1398,24 @@ class MoosasConvexify:
             else:
                 verts = face
 
-            # 3. Convex decomposition
+            # 3. Convex decomposition and face processing
             indices = list(range(len(verts)))
             polys, _ = Geometry_Option.split_poly(verts, indices)
 
+            # Extract subfaces and apply node filtering
             subfaces = [verts[i] for i in polys]
-            
-            # Apply face node filtering
             filtered_subfaces = FaceFilterAndQuadrilateral.filter_and_process_faces(subfaces)
             
+            # Process filtered faces with validation
             for subface in filtered_subfaces:
-                if Geometry_Option.is_valid_face(subface):
-                    convex_faces.append(subface)
+                # Validate face
+                if not FaceValidationUtils.validate_face(
+                    subface, is_valid_face=is_valid_face, 
+                    is_quad_clean=is_quad_clean
+                ):
+                    continue
+                
+                convex_faces.append(subface)
 
         return convex_faces
 
