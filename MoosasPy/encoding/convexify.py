@@ -359,24 +359,24 @@ class Geometry_Option:
             True if the polygons are the same, considering point order and reverse order (with fixed first point), otherwise False.
         """
         """
-        判断两个多边形是否相同，可以处理2D投影或3D坐标。
-        允许多边形的点顺序不同，但第一个点固定，其他点可以逆序排列。
+        Determine if two polygons are the same, supporting 2D projection or 3D coordinates.
+        Allows different vertex orders, but the first point is fixed and other points can be in reverse order.
 
         Args:
-            polygon1: numpy array，形状为 (n, 2) 或 (n, 3)
-            polygon2: numpy array，形状需与 polygon1 一致
-            projection: bool，若为 True 则仅比较前两列（xoy投影）
+            polygon1: numpy array, shape (n, 2) or (n, 3)
+            polygon2: numpy array, shape must be consistent with polygon1
+            projection: bool, if True only compare the first two columns (xoy projection)
 
         Returns:
-            bool: 是否相同
+            bool: whether the polygons are the same
         """
-        # 确保多边形点数相同
+        # Ensure polygon vertex counts are the same
         if polygon1.shape != polygon2.shape:
             return False
 
-        # 提取需要比较的坐标
+        # Extract coordinates to compare
         if projection:
-            # 确保至少有两个坐标
+            # Ensure at least two coordinates
             if polygon1.shape[1] < 2 or polygon2.shape[1] < 2:
                 return False
             poly1 = polygon1[:, :2]
@@ -385,11 +385,11 @@ class Geometry_Option:
             poly1 = polygon1
             poly2 = polygon2
 
-        # 直接相同
+        # Directly identical
         if np.array_equal(poly1, poly2):
             return True
 
-        # 第一个点相同，其他点逆序
+        # First point is the same, other points in reverse order
         if np.array_equal(poly1[0], poly2[0]) and np.array_equal(poly1[1:], poly2[1:][::-1]):
             return True
 
@@ -436,7 +436,7 @@ class Geometry_Option:
 
         return True
 
-
+    
     @staticmethod
     def process_hole(hole, faces, check_projection=True):
         """
@@ -459,38 +459,38 @@ class Geometry_Option:
             False otherwise.
         """
         """
-        处理洞的逻辑，判断是否跳过当前 hole。
+        Logic to process a hole and determine if it should be skipped.
 
-        条件：
-        1. hole 与某个 face 三维完全重合
-        2. 若 check_projection 为 True，需额外检查投影是否与其他面不重叠
+        Conditions:
+        1. Hole completely coincides with a face in 3D
+        2. If check_projection is True, additionally check if projection does not overlap with other faces
 
         Args:
-            hole: numpy array，形状 (n, 3)
-            faces: list[numpy array]，所有面数据
-            check_projection: 是否检查投影重叠
+            hole: numpy array, shape (n, 3)
+            faces: list[numpy array], all face data
+            check_projection: whether to check projection overlap
 
         Returns:
-            bool: 是否跳过该洞
+            bool: whether to skip this hole
         """
         for other_face in faces:
-            # 1. 检查三维完全重合
+            # 1. Check for complete 3D coincidence
             if Geometry_Option.is_same_polygon(hole, other_face):
                 if not check_projection:
-                    return True  # 直接跳过
+                    return True  # Skip directly
                 
-                # 2. 检查投影是否与其他面重叠（排除自己）
+                # 2. Check if projection overlaps with other faces (excluding itself)
                 has_projection_overlap = False
                 for face in faces:
                     if Geometry_Option.is_same_polygon(hole, face):
-                        continue  # 跳过自身
+                        continue  # Skip itself
                     
-                    # 检查投影是否相同（允许逆序）
+                    # Check if projections are the same (allowing reverse order)
                     if Geometry_Option.is_same_polygon(hole, face, projection=True):
                         has_projection_overlap = True
                         break
                 
-                # 如果没有其他面投影重叠，则跳过该洞
+                # If no other face projection overlaps, skip this hole
                 if not has_projection_overlap:
                     return True
         
@@ -518,27 +518,27 @@ class Geometry_Option:
               each connecting a polygon vertex to a hole vertex.
         """
         """
-        为每个洞找到最短的有效连接线。
+        Find the shortest valid connection line for each hole.
         
         Args:
-            verts_poly: 外围多边形顶点坐标
-            verts_holes: 洞顶点坐标字典，key为洞序号
+            verts_poly: outer polygon vertex coordinates
+            verts_holes: dictionary of hole vertex coordinates, key is hole index
         
         Returns:
             tuple: (indices_all, diagonals)
-                - indices_all: 所有顶点的索引列表
-                - diagonals: 连接线列表，每个元素为(hole_vertex_idx, poly_vertex_idx)
+                - indices_all: list of all vertex indices
+                - diagonals: list of connection lines, each element is (hole_vertex_idx, poly_vertex_idx)
         """
         if verts_holes is None or len(verts_holes) == 0:
             return verts_poly, []
         
-        n_poly = len(verts_poly)  # 外围多边形顶点数
+        n_poly = len(verts_poly)  # Number of outer polygon vertices
         indices_poly = list(range(n_poly))
         indices_holes = {}
         verts_all = verts_poly.copy()
         indices_all = indices_poly.copy()
 
-        # 计算所有洞的顶点索引
+        # Calculate vertex indices for all holes
         offset = n_poly
         for hole_id, verts_hole in verts_holes.items():
             n_hole = len(verts_hole)
@@ -547,24 +547,24 @@ class Geometry_Option:
             indices_all.extend(range(offset, offset + n_hole))
             offset += n_hole
 
-        best_diagonals = {}  # 存储每个洞的最佳连接
+        best_diagonals = {}  # Store the best connection for each hole
 
-        # 遍历每个洞
+        # Iterate through each hole
         for hole_id, indices_hole in indices_holes.items():
             verts_hole = verts_holes[hole_id]
             n_hole = len(indices_hole)
             min_diagonal_length = float('inf')
             min_diagonal = None
 
-            # 遍历当前洞的所有顶点
+            # Iterate through all vertices of current hole
             for hole_idx, hole_vert_idx in enumerate(indices_hole):
-                hole_vertex = verts_hole[hole_idx]  # 使用hole_idx而不是hole_vert_idx
-                # 检查与外围多边形顶点的连接
+                hole_vertex = verts_hole[hole_idx]  # Use hole_idx instead of hole_vert_idx
+                # Check connection with outer polygon vertices
                 for poly_idx, poly_vertex_idx in enumerate(indices_poly):
                     poly_vertex = verts_poly[poly_idx]
                     okay = True
                     
-                    # 检查与外围多边形边的交线
+                    # Check intersection with outer polygon edges
                     for poly_edge in range(n_poly):
                         poly_a = verts_poly[poly_edge]
                         poly_b = verts_poly[(poly_edge + 1) % n_poly]
@@ -577,7 +577,7 @@ class Geometry_Option:
                     if not okay:
                         continue
                         
-                    # 检查与当前洞边的交线
+                    # Check intersection with current hole edges
                     for hole_edge in range(n_hole):
                         hole_a = verts_hole[hole_edge]
                         hole_b = verts_hole[(hole_edge + 1) % n_hole]
@@ -590,7 +590,7 @@ class Geometry_Option:
                     if not okay:
                         continue
                         
-                    # 检查与其他洞的交线
+                    # Check intersection with other holes
                     for other_id, other_indices in indices_holes.items():
                         if other_id == hole_id:
                             continue
@@ -605,7 +605,7 @@ class Geometry_Option:
                             break
                     
                     if okay:
-                        # 计算对角线长度
+                        # Calculate diagonal length
                         diagonal_length = np.linalg.norm(poly_vertex - hole_vertex)
                         if diagonal_length < min_diagonal_length:
                             min_diagonal_length = diagonal_length
@@ -614,23 +614,23 @@ class Geometry_Option:
             if min_diagonal is not None:
                 best_diagonals[hole_id] = min_diagonal
 
-        # 构建连接线列表
+        # Build connection line list
         diagonals = []
         
         for hole_id, (p_idx, h_idx) in best_diagonals.items():
             diagonals.append((p_idx, h_idx))
         diagonals = sorted(diagonals, key=lambda x: (x[0], -BasicOptions.get_angle_tan(x[0], x[1], verts_all)))
 
-        # 构建新的顶点列表
+        # Build new vertex list
         verts = []
         for idx in indices_poly:
             verts.append(verts_all[idx])
             
-            # 检查是否有从当前顶点出发的连线
+            # Check if there are connection lines starting from current vertex
             for diagonal in diagonals:
                 if diagonal[0] == idx:
                     hole_vertex = diagonal[1]
-                    # 找出这个洞顶点属于哪个洞
+                    # Find which hole this hole vertex belongs to
                     target_hole_id = None
                     target_hole_indices = None
                     for hole_id, hole_indices in indices_holes.items():
@@ -640,14 +640,14 @@ class Geometry_Option:
                             break
                     
                     if target_hole_indices:
-                        # 从连线端点开始遍历洞的顶点
+                        # Traverse hole vertices starting from connection endpoint
                         start_idx = target_hole_indices.index(hole_vertex)
                         n_hole = len(target_hole_indices)
-                        # 按顺序添加洞的顶点
-                        for i in range(n_hole + 1):  # +1 是为了回到起点
+                        # Add hole vertices in order
+                        for i in range(n_hole + 1):  # +1 is to return to the starting point
                             current_idx = target_hole_indices[(start_idx + i) % n_hole]
                             verts.append(verts_all[current_idx])
-                        # 再次添加当前外围顶点以闭合
+                        # Add current outer vertex again to close
                         verts.append(verts_all[idx])
         
         mergelines = [np.array([verts_all[pair[0]], verts_all[pair[1]]]) for pair in diagonals]
@@ -814,6 +814,127 @@ class Geometry_Option:
         
         return polygons
 
+
+class FaceFilterAndQuadrilateral:
+    """Utility class for filtering faces by node count and computing maximum inscribed quadrilaterals."""
+    
+    @staticmethod
+    def polygon_area_2d(vertices):
+        """
+        Calculate the area of a 2D polygon using the shoelace formula.
+        
+        Parameters
+        ----------
+        vertices : list or numpy.ndarray
+            List of 2D vertices (x, y) forming a polygon.
+        
+        Returns
+        -------
+        float
+            The area of the polygon.
+        """
+        if len(vertices) < 3:
+            return 0.0
+        
+        area = 0.0
+        n = len(vertices)
+        for i in range(n):
+            x1, y1 = vertices[i][:2]
+            x2, y2 = vertices[(i + 1) % n][:2]
+            area += x1 * y2 - x2 * y1
+        
+        return abs(area) / 2.0
+    
+    @staticmethod
+    def compute_max_inscribed_quadrilateral(vertices):
+        """
+        Compute the maximum area inscribed quadrilateral from a convex polygon.
+        
+        The inscribed quadrilateral has all four vertices selected from the polygon's vertices.
+        This function uses a brute-force approach to find the quadrilateral with maximum area.
+        
+        Parameters
+        ----------
+        vertices : list or numpy.ndarray
+            List of vertices of a convex polygon, ordered counter-clockwise.
+        
+        Returns
+        -------
+        list
+            List of four vertices forming the maximum area inscribed quadrilateral,
+            or the original vertices if fewer than 4 vertices exist.
+        """
+        n = len(vertices)
+        
+        # If polygon has 4 or fewer vertices, return as is
+        if n <= 4:
+            return vertices
+        
+        max_area = 0.0
+        best_quad_indices = None
+        
+        # Brute-force search through all combinations of 4 vertices
+        for i in range(n):
+            for j in range(i + 1, n):
+                for k in range(j + 1, n):
+                    for l in range(k + 1, n):
+                        # Create quadrilateral from selected vertex indices
+                        quad_vertices = [vertices[i], vertices[j], vertices[k], vertices[l]]
+                        
+                        # Calculate area of this quadrilateral
+                        area = FaceFilterAndQuadrilateral.polygon_area_2d(quad_vertices)
+                        
+                        # Update best quadrilateral if this one has larger area
+                        if area > max_area:
+                            max_area = area
+                            best_quad_indices = [i, j, k, l]
+        
+        # Return the best inscribed quadrilateral found
+        if best_quad_indices is not None:
+            return [vertices[idx] for idx in best_quad_indices]
+        else:
+            return vertices
+    
+    @staticmethod
+    def filter_and_process_faces(faces):
+        """
+        Filter faces by node count and process them according to the following rules:
+        - Discard faces with fewer than 3 vertices
+        - Keep faces with 3 or 4 vertices as-is
+        - For faces with more than 4 vertices, compute the maximum inscribed quadrilateral
+        
+        Parameters
+        ----------
+        faces : list[list[array-like]]
+            List of face vertex lists.
+        
+        Returns
+        -------
+        list[list[array-like]]
+            Processed faces meeting the filtering criteria.
+        """
+        processed_faces = []
+        
+        for face in faces:
+            num_vertices = len(face)
+            
+            # Discard faces with fewer than 3 vertices
+            if num_vertices < 3:
+                continue
+            
+            # Keep faces with 3 or 4 vertices as-is
+            elif num_vertices <= 4:
+                processed_faces.append(face)
+            
+            # For faces with more than 4 vertices, compute maximum inscribed quadrilateral
+            else:
+                max_quad = FaceFilterAndQuadrilateral.compute_max_inscribed_quadrilateral(face)
+                processed_faces.append(max_quad)
+        
+        return processed_faces
+
+
+
 class MoosasConvexify:
     @staticmethod
     def convexify_faces(cat, idd, normal, faces, holes):
@@ -856,7 +977,13 @@ class MoosasConvexify:
         Each sub-face inherits its parent category and normal, 
         with the ID extended as `idd_i` for multi-piece splits.
 
-        4. **Quadrilateral generation (air walls)**  
+        4. **Face node filtering**
+        Faces are filtered and processed based on node count:
+        - Faces with fewer than 3 nodes are discarded.
+        - Faces with 3 or 4 nodes are kept as-is.
+        - Faces with more than 4 nodes are replaced with the maximum inscribed quadrilateral.
+
+        5. **Quadrilateral generation (air walls)**  
         All diagonal split lines from decomposition are connected into 
         quadrilateral patches. These are assigned:
         - category `"2"` (air-wall)
@@ -881,6 +1008,7 @@ class MoosasConvexify:
         - The function guarantees consistent orientation and convexity of outputs.
         - The quadrilateral air-wall layer can be used for visualization or 
         topological reconstruction in graph-based pipelines.
+        - Face node filtering ensures output faces have at most 4 vertices.
         """
 
         convex_cat = []
@@ -933,14 +1061,17 @@ class MoosasConvexify:
                 
                 subfaces = [verts[poly] for poly in polys]
                 
-                if len(subfaces) == 1:
-                    for i, subface in enumerate(subfaces):
+                # Apply face node filtering before adding to output
+                filtered_subfaces = FaceFilterAndQuadrilateral.filter_and_process_faces(subfaces)
+                
+                if len(filtered_subfaces) == 1:
+                    for i, subface in enumerate(filtered_subfaces):
                         convex_cat.append(cat[idx])
                         convex_idd.append(idd[idx])
                         convex_normal.append(normal[idx])
                         convex_faces.append(subface)
                 else:
-                    for i, subface in enumerate(subfaces):
+                    for i, subface in enumerate(filtered_subfaces):
                         convex_cat.append(cat[idx])
                         convex_idd.append(f"#{idd[idx]}_{i}")
                         convex_normal.append(normal[idx])
@@ -951,10 +1082,14 @@ class MoosasConvexify:
                         divide_lines.extend(sublines)
 
             else:
-                convex_cat.append(cat[idx])
-                convex_idd.append(idd[idx])
-                convex_normal.append(normal[idx])
-                convex_faces.append(face)
+                # For wall faces, also apply node filtering
+                filtered_wall_faces = FaceFilterAndQuadrilateral.filter_and_process_faces([face])
+                
+                for filtered_face in filtered_wall_faces:
+                    convex_cat.append(cat[idx])
+                    convex_idd.append(idd[idx])
+                    convex_normal.append(normal[idx])
+                    convex_faces.append(filtered_face)
         
         print ("--Faces splitting done--")
 
@@ -1022,8 +1157,12 @@ class MoosasConvexify:
             indices = list(range(len(verts)))
             polys, _ = Geometry_Option.split_poly(verts, indices)
 
-            for poly in polys:
-                subface = [verts[i] for i in poly]
+            subfaces = [verts[i] for i in polys]
+            
+            # Apply face node filtering
+            filtered_subfaces = FaceFilterAndQuadrilateral.filter_and_process_faces(subfaces)
+            
+            for subface in filtered_subfaces:
                 if Geometry_Option.is_valid_face(subface):
                     convex_faces.append(subface)
 
