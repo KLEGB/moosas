@@ -529,28 +529,28 @@ def createWindowSurface(idf: IDF, element: MoosasElement, parentElement: MoosasE
         - Two surfaces (with opposite orientations and linked boundary conditions) for inner (interior) parent elements.
     """
     faceObjects = []
-    for face in mixItemListToList(element.face):
-        for triFace in triangulate2dFace(face):
-            kwargs = {'Name': parentElement.space[0] + '-' + parentElement.Uid + '-' + element.Uid,
-                      "Building_Surface_Name": parentElement.space[0] + '-' + parentElement.Uid,
-                      "Construction_Name": Construction_Name}
-            ThermalSettings = MoosasSettings(default=WindowDefault, **kwargs)
-            encodeFace(ThermalSettings, triFace, normal)
+    face = element.representation()
+    for triFace in triangulate2dFace(face):
+        kwargs = {'Name': parentElement.space[0] + '-' + parentElement.Uid + '-' + element.Uid,
+                  "Building_Surface_Name": parentElement.space[0] + '-' + parentElement.Uid,
+                  "Construction_Name": Construction_Name}
+        ThermalSettings = MoosasSettings(default=WindowDefault, **kwargs)
+        encodeFace(ThermalSettings, triFace, normal)
 
-            if not parentElement.isOuter:
-                ThermalSettings.params["Outside_Boundary_Condition_Object"] = parentElement.space[
-                                                                                  1] + '-' + parentElement.Uid + '-' + element.Uid
-                surface1 = ThermalSettings.applyToIDF(idf)
-                kwargs = {'Name': parentElement.space[1] + '-' + parentElement.Uid + '-' + element.Uid,
-                          "Building_Surface_Name": parentElement.space[1] + '-' + parentElement.Uid,
-                          "Outside_Boundary_Condition_Object": parentElement.space[
-                                                                   0] + '-' + parentElement.Uid + '-' + element.Uid,
-                          "View_Factor_to_Ground": 0}
-                ThermalSettings.updateParams(**kwargs)
-                encodeFace(ThermalSettings, element.representation(), -normal)
-                surface2 = ThermalSettings.applyToIDF(idf)
-                faceObjects+= [surface1, surface2]
-            else:
-                surface1 = ThermalSettings.applyToIDF(idf)
-                faceObjects+= [surface1]
+        if not parentElement.isOuter:
+            ThermalSettings.params["Outside_Boundary_Condition_Object"] = parentElement.space[
+                                                                              1] + '-' + parentElement.Uid + '-' + element.Uid
+            surface1 = ThermalSettings.applyToIDF(idf)
+            kwargs = {'Name': parentElement.space[1] + '-' + parentElement.Uid + '-' + element.Uid,
+                      "Building_Surface_Name": parentElement.space[1] + '-' + parentElement.Uid,
+                      "Outside_Boundary_Condition_Object": parentElement.space[
+                                                               0] + '-' + parentElement.Uid + '-' + element.Uid,
+                      "View_Factor_to_Ground": 0}
+            ThermalSettings.updateParams(**kwargs)
+            encodeFace(ThermalSettings, element.representation(), -normal)
+            surface2 = ThermalSettings.applyToIDF(idf)
+            faceObjects+= [surface1, surface2]
+        else:
+            surface1 = ThermalSettings.applyToIDF(idf)
+            faceObjects+= [surface1]
     return faceObjects

@@ -1,6 +1,6 @@
 from typing import Union, List, Tuple
 from ..utils import pygeos,np
-
+from ..geometry.geos import Projection
 class BasicOptions:
     @staticmethod
     def left_on(p1, p2, p3):
@@ -1055,11 +1055,16 @@ def triangulate2dFace(boundary: pygeos.Geometry, holes: np.ndarray[pygeos.Geomet
     """
     give a boundary and return split boundaries and the divided lines.
     """
+    boundary = pygeos.polygons(pygeos.get_coordinates(pygeos.force_3d(boundary, z=0)))
+    proj = Projection.fromPolygon(boundary)
+    boundary = proj.toUV(boundary)
     boundary = pygeos.get_coordinates(pygeos.force_3d(boundary, z=0))[:-1]
     if holes is None:
         holes = []
     else:
+        holes = [proj.toUV(hole) for hole in holes]
         holes = [pygeos.get_coordinates(pygeos.force_3d(hole, z=0))[:-1] for hole in holes]
     convexFaces = MoosasConvexify.convexify_faces_2d([boundary],[holes])
     convexFaces = [pygeos.polygons(convexFace) for convexFace in convexFaces]
+    convexFaces = [proj.toWorld(convexFace) for convexFace in convexFaces]
     return convexFaces
