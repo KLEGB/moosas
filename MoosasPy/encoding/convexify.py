@@ -1,6 +1,6 @@
 from typing import Union, List, Tuple
 from ..utils import pygeos,np
-from ..geometry.geos import Projection
+from ..geometry.geos import Projection,simplify
 class BasicOptions:
     @staticmethod
     def left_on(p1, p2, p3):
@@ -1058,7 +1058,9 @@ def triangulate2dFace(boundary: pygeos.Geometry, holes: np.ndarray[pygeos.Geomet
     boundary = pygeos.polygons(pygeos.get_coordinates(pygeos.force_3d(boundary, z=0)))
     proj = Projection.fromPolygon(boundary)
     boundary = proj.toUV(boundary)
+    boundary = simplify(boundary,include_z=True)
     boundary = pygeos.get_coordinates(pygeos.force_3d(boundary, z=0))[:-1]
+
     if holes is None:
         holes = []
     else:
