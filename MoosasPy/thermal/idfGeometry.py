@@ -299,8 +299,8 @@ class ZoneTemplate():
                 {'Zone_or_ZoneList_Name': zone.id, 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
                  'Design_Specification_Outdoor_Air_Object_Name':
                      zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
-                 'Design_Specification_Zone_Air_Distribution_Object_Name':
-                     zone.id if 'DesignSpecification:ZoneAirDistribution' in self.objectList else ''},
+                 'Design_Specification_Zone_Air_Distribution_Object_Name':'',
+                     # zone.id if 'DesignSpecification:ZoneAirDistribution' in self.objectList else ''},
             'DesignSpecification:OutdoorAir':
                 {'Name': zone.id,
                  'Outdoor_Air_Flow_per_Person': zone.settings['zone_pfav'] / 3600,
