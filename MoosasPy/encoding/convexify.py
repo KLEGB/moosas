@@ -1052,15 +1052,11 @@ def triangulate2dFace(boundary: pygeos.Geometry, holes: np.ndarray[pygeos.Geomet
         - dividedLines: numpy.ndarray of pygeos.Geometry
           Linestrings representing the internal edges introduced during decomposition.
     """
-    """
-    give a boundary and return split boundaries and the divided lines.
-    """
-    boundary = pygeos.polygons(pygeos.get_coordinates(pygeos.force_3d(boundary, z=0)))
+    boundary = pygeos.polygons(pygeos.get_coordinates(pygeos.force_3d(boundary, z=0),include_z=True))
     proj = Projection.fromPolygon(boundary)
     boundary = proj.toUV(boundary)
     boundary = simplify(boundary,include_z=True)
-    boundary = pygeos.get_coordinates(pygeos.force_3d(boundary, z=0))[:-1]
-
+    boundary = pygeos.get_coordinates(pygeos.force_3d(boundary, z=0),include_z=True)[:-1]
     if holes is None:
         holes = []
     else:

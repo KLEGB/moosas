@@ -1352,7 +1352,12 @@ def faceNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vect
 
     # ------------------- Step 5: Normalize and return unit vector -------------------
     norm = np.linalg.norm(normal)
-    return normal / norm if norm > EPS else None
+    if norm > EPS:
+        norm = normal / norm
+        return Vector(norm)
+    else:
+        raise GeometryError(poly,"******GeometryError: invalid face results in zero normal")
+
 # def faceNormalLegacy(face: pygeos.Geometry) -> Vector:
 # #     """Calculate the normal vector of a face using cross product of non-parallel edges.
 # #
