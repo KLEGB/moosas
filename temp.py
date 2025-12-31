@@ -4,4 +4,4 @@ import os
 
 IDF.setiddname(r'MoosasPy/db/Energy+.idd')
 idf = IDF(r'MoosasPy/db/in.idf')
-inft = idf.idfobjects['ZoneInfiltration:DesignFlowRate'][0]
+inft = idf.idfobjects['ZoneMixing'][0]

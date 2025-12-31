@@ -6,8 +6,8 @@
 """
 from __future__ import annotations
 
-from ..utils.constant import geom
 from ..utils import pygeos, np, GeometryError, Iterable
+from ..utils.constant import geom
 
 
 class Vector(object):
@@ -49,7 +49,7 @@ class Vector(object):
             self.style = np.ndarray
         if isinstance(vec, pygeos.Geometry):
             if pygeos.is_empty(vec):
-                vec = np.array([0,0,0])
+                vec = np.array([0, 0, 0])
                 self.style = np.ndarray
             else:
                 vec = pygeos.force_3d(vec, z=0)
@@ -130,7 +130,7 @@ class Vector(object):
         vec = Vector(self).uniform.array
 
         for i in range(3):
-            if abs(vec[i]) <geom.POINT_PRECISION:
+            if abs(vec[i]) < geom.POINT_PRECISION:
                 vec[i] = '0.00'
             else:
                 vec[i] = round(vec[i], 2)
@@ -300,7 +300,7 @@ class Vector(object):
             return Vector(np.cross(vec1, vec2))
 
     @staticmethod
-    def parallel(vec1, vec2,tolerance = None):
+    def parallel(vec1, vec2, tolerance=None):
         """test if two vector is parallel, based on their dot value"""
         if not tolerance:
             tolerance = Vector.ANGLE_TOLERANCE
@@ -694,7 +694,7 @@ class Projection(Ray):
         
         Returns
         -------
-        cls
+        Projection
             A new instance of the class initialized with the origin and direction from the Ray.
         """
         return cls(plane.origin, plane.direction)
@@ -711,7 +711,7 @@ class Projection(Ray):
         
         Returns
         -------
-        cls
+        Projection
             An instance of the class representing the coordinate system defined by the polygon's 
             normal vector, center point, and an orthogonal basis vector derived from a cross-section.
         """
@@ -1073,10 +1073,7 @@ def is_ccw(geo: pygeos.Geometry) -> bool:
     bool
         True if the ring is oriented counter-clockwise, False otherwise.
     """
-    """
-    Improved method for pygeos.is_ccw()
-    accept both convex & non-convex but have lower efficiency
-    """
+
     poilist = pygeos.get_coordinates(geo)
     veclist = [poilist[i] - poilist[i - 1] for i in range(1, len(poilist))]
     crosslist = [np.cross(veclist[i], veclist[i - 1]) for i in range(len(veclist))]
@@ -1275,6 +1272,94 @@ def equals(geo1: pygeos.Geometry, geo2: pygeos.Geometry):
         return False
 
 
+def projectTo(child: pygeos.Geometry, parent: pygeos.Geometry) -> pygeos.Geometry:
+    """
+        project a child surface to the parent surface.
+
+        Parameters
+        ----------
+        child : pygeos.Geometry
+            3D polygon geometry with z-coordinates (pygeos.Polygon type) to be projected.
+        parent : pygeos.Geometry
+            3D polygon geometry with z-coordinates (pygeos.Polygon type) as the Projection aixs system.
+
+        Returns
+        -------
+        pygeos.Geometry
+
+        Notes
+        -----
+        - Projection.toUV method
+    """
+    proj = Projection.fromPolygon(parent)
+    childProj = proj.toUV(child)
+    childProj = pygeos.force_3d(pygeos.force_2d(childProj), z=0)
+    child = proj.toWorld(childProj)
+    if Vector.dot(faceNormal(child), faceNormal(parent)) < 0:
+        coordinates = pygeos.get_coordinates(child,include_z=True)[::-1]
+        child = pygeos.polygons(coordinates)
+    return child
+
+
+def trim(child: pygeos.Geometry, parent: pygeos.Geometry) -> pygeos.Geometry | None:
+    """
+    Trim a child surface with the parent surface.
+
+    Parameters
+    ----------
+    child : pygeos.Geometry
+        3D polygon geometry with z-coordinates (pygeos.Polygon type) to be trimmed.
+    parent : pygeos.Geometry
+        3D polygon geometry with z-coordinates (pygeos.Polygon type) as the splitter.
+
+    Returns
+    -------
+    pygeos.Geometry
+
+    Notes
+    -----
+    - pygeos.intersection method
+    """
+    proj = Projection.fromPolygon(parent)
+    childProj = proj.toUV(child)
+    parentProj = proj.toUV(parent)
+    if overlapArea(childProj, parentProj) < pygeos.area(childProj):
+        childProjIntersection = pygeos.intersection(childProj, parentProj)
+        if pygeos.get_dimensions(childProjIntersection) == 2:
+            childProjIntersection = pygeos.get_parts(childProjIntersection)[0]
+            return proj.toWorld(childProjIntersection)
+        else:
+            return None
+    return child
+
+
+def offset(polygon: pygeos.Geometry, offset: float) -> pygeos.Geometry:
+    """
+    Offset a geometry by a specified offset. Positive for outer offset and negative for inner offset.
+
+    Parameters
+    ----------
+    polygon : pygeos.Geometry
+        3D polygon geometry with z-coordinates (pygeos.Polygon type) to be offset.
+    offset : float
+        offset distance
+
+    Returns
+    -------
+    pygeos.Geometry
+
+    Notes
+    -----
+    - pygeos.buffer method
+
+
+    """
+    proj = Projection.fromPolygon(polygon)
+    polygonProj = proj.toUV(polygon)
+    polygonProjOffset = pygeos.buffer(polygonProj, offset)
+    return proj.toWorld(polygonProjOffset)
+
+
 def faceNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vector:
     """
     Compute stable normal vector for 3D polygon (handles non-convex/non-coplanar vertices)
@@ -1288,7 +1373,7 @@ def faceNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vect
 
     Returns
     -------
-    np.ndarray
+    Vector
         Unit normal vector (x, y, z) of shape (3,)
         Returns None if computation fails (invalid input/insufficient vertices)
 
@@ -1303,7 +1388,7 @@ def faceNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vect
     # Extract 3D coordinates (remove closing duplicate point)
     coords = pygeos.get_coordinates(poly, include_z=True)
     if coords.shape[1] != 3:
-        return Vector(0,0,1)
+        return Vector(0, 0, 1)
 
     # Remove duplicate closing point and filter valid vertices
     vertices = coords[:-1] if np.allclose(coords[0], coords[-1], atol=EPS) else coords
@@ -1311,7 +1396,7 @@ def faceNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vect
     n_vertices = len(vertices)
 
     if n_vertices < 3:
-        return Vector(0,0,1)  # Need at least 3 unique vertices
+        return Vector(0, 0, 1)  # Need at least 3 unique vertices
 
     # ------------------- Step 2: Fast path for triangular faces (3 vertices) -------------------
     if n_vertices == 3:
@@ -1325,7 +1410,7 @@ def faceNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vect
 
         if norm < EPS:
             print("******GeometryError: invalid face results in zero normal")
-            return Vector(0,0,1)  # Collinear vertices
+            return Vector(0, 0, 1)  # Collinear vertices
         return Vector(normal / norm)
 
     # ------------------- Step 3: PCA + SVD for non-coplanar polygons (stable method) -------------------
@@ -1356,8 +1441,40 @@ def faceNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vect
         norm = normal / norm
         return Vector(norm)
     else:
-        raise GeometryError(poly,"******GeometryError: invalid face results in zero normal")
+        raise GeometryError(poly, "******GeometryError: invalid face results in zero normal")
 
+def ccwNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vector:
+    """
+    enhance Normal method for 3D polygon to ensure the normal pass the ccw test.
+    using the faceNormal method.
+
+    Parameters
+    ----------
+    poly : pygeos.Geometry
+        3D polygon geometry with z-coordinates (pygeos.Polygon type)
+    EPS : float, optional
+        Floating point precision threshold (default: 1e-9)
+
+    Returns
+    -------
+    Vector
+        Unit normal vector (x, y, z) of shape (3,)
+        Returns None if computation fails (invalid input/insufficient vertices)
+
+    Notes
+    -----
+    - Uses PCA + SVD for non-coplanar vertices (most stable method)
+    - Falls back to edge cross product for triangular faces (faster)
+    - Ensures consistent orientation via right-hand rule
+    """
+    norm = faceNormal(poly, EPS)
+    proj = Projection(origin=pygeos.get_coordinates(poly)[0],unitZ=norm)
+    polyProj = proj.toUV(poly)
+    polyProj = pygeos.force_2d(polyProj)
+    if is_ccw(polyProj):
+        return norm
+    else:
+        return -norm
 # def faceNormalLegacy(face: pygeos.Geometry) -> Vector:
 # #     """Calculate the normal vector of a face using cross product of non-parallel edges.
 # #
@@ -1486,10 +1603,10 @@ def rayFaceIntersect(ray: Ray, face: pygeos.Geometry,
     if infinity_face:
         return pygeos.points(pt)
     else:
-        coordinates = pygeos.get_coordinates(face,include_z=True)
-        if np.min(coordinates[:,0])<=pt[0]<=np.max(coordinates[:,0]):
-            if np.min(coordinates[:,1])<=pt[1]<=np.max(coordinates[:,1]):
-                if np.min(coordinates[:,2])<=pt[2]<=np.max(coordinates[:,2]):
+        coordinates = pygeos.get_coordinates(face, include_z=True)
+        if np.min(coordinates[:, 0]) <= pt[0] <= np.max(coordinates[:, 0]):
+            if np.min(coordinates[:, 1]) <= pt[1] <= np.max(coordinates[:, 1]):
+                if np.min(coordinates[:, 2]) <= pt[2] <= np.max(coordinates[:, 2]):
                     return pygeos.points(pt)
         # proj = Projection(origin=p0, unitZ=normal)
         # face = proj.toUV(face)
@@ -1508,8 +1625,8 @@ def simplify(geo: pygeos.Geometry, include_z=False) -> pygeos.Geometry:
     points = pygeos.points(coordinates)
     delPoints = []
     # remove overlap points
-    for i in range(1,len(points)):
-        if Vector(coordinates[i] - coordinates[i - 1]).length(power=True)==0:
+    for i in range(1, len(points)):
+        if Vector(coordinates[i] - coordinates[i - 1]).length(power=True) == 0:
             delPoints.append(i)
     points = np.delete(points, delPoints)
     coordinates = pygeos.get_coordinates(points, include_z=include_z)
@@ -1772,6 +1889,8 @@ def splitByCurveLagacy(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list
             geoCollection[group][i] = faceWorld
 
     return geoCollection
+
+
 def splitOnZ(geoBase: pygeos.Geometry, level: float, EPS: float = 1e-9) -> list[list[pygeos.Geometry]]:
     """
     Simple logic for 3D polygon cutting: insert intersection points → reorder path → split segments → close to rings → classify output
@@ -1816,10 +1935,10 @@ def splitOnZ(geoBase: pygeos.Geometry, level: float, EPS: float = 1e-9) -> list[
 
         # Add current vertex to new coordinate list
         new_coords.append(p1)
-        if np.abs(z1 - level)<EPS:
+        if np.abs(z1 - level) < EPS:
             intersections.append(p1)
             continue
-        if np.abs(z2 - level)<EPS:
+        if np.abs(z2 - level) < EPS:
             continue
         # Check if edge intersects z=level plane (exclude endpoints on plane)
         if (z1 - level) * (z2 - level) < -EPS and abs(z1 - z2) > EPS:
@@ -1945,7 +2064,8 @@ def splitOnZ(geoBase: pygeos.Geometry, level: float, EPS: float = 1e-9) -> list[
 
     return [final_polygons_upper, final_polygons_lower]
 
-def splitFace2d(geoBaseProj:pygeos.Geometry,curveProj:pygeos.Geometry)-> list[list[pygeos.Geometry]]:
+
+def splitFace2d(geoBaseProj: pygeos.Geometry, curveProj: pygeos.Geometry) -> list[list[pygeos.Geometry]]:
     points = pygeos.points(pygeos.get_coordinates(geoBaseProj, include_z=True))
     geoCollection = [[], []]
     pointOnCurve = []
@@ -2034,6 +2154,7 @@ def splitFace2d(geoBaseProj:pygeos.Geometry,curveProj:pygeos.Geometry)-> list[li
             collection.append(thisGeo)
         geoCollection[group] = collection
     return geoCollection
+
 
 def splitByCurve(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list[list[pygeos.Geometry]]:
     """
@@ -2140,6 +2261,7 @@ def closeTheCurve(geo: pygeos.Geometry):
     coordinates = pygeos.get_coordinates(geo, include_z=True).tolist()
     coordinates.append(coordinates[0])
     return pygeos.polygons(coordinates)
+
 
 # 旧版本的vector计算
 # 向量计算 / 整合了pygeos.Geometry类型，比np的泛用性广

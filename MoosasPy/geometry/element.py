@@ -6,12 +6,14 @@ so actually all objects named model or attributes named parent are MoosasModel o
 """
 from __future__ import annotations
 
-from .geos import Projection, Vector, faceNormal, simplify, overlapArea, equals, selfIntersect, makeValid, bBox
-from ..utils import generate_code, searchBy, mixItemListToObject, mixItemListToList, encodeParams, GeometryError
-from ..utils import pygeos, np, ET, Iterable
-from ..utils.constant import geom
-from ..encoding.convexify import triangulate2dFace
 import re
+
+from .geos import Projection, Vector, faceNormal, simplify, overlapArea, equals, selfIntersect, makeValid, bBox
+from ..encoding.convexify import triangulate2dFace
+from ..utils import generate_code, searchBy, mixItemListToObject, mixItemListToList, encodeParams, GeometryError
+from ..utils import pygeos, np, ET
+from ..utils.constant import geom
+
 # 不做inch meter转换
 INCH_METER_MULTIPLIER = 1
 INCH_METER_MULTIPLIER_SQR = 1
@@ -125,9 +127,9 @@ class MoosasGeometry(object):
 
         # force planner by project and reproject
         face = pygeos.polygons(face) if not isinstance(face, pygeos.Geometry) else face
-        proj = Projection(origin=pygeos.get_coordinates(face,include_z=True)[0],unitZ=faceNormal(face))
+        proj = Projection(origin=pygeos.get_coordinates(face, include_z=True)[0], unitZ=faceNormal(face))
         face = proj.toUV(face)
-        face = pygeos.force_3d(pygeos.force_2d(face),z=0)
+        face = pygeos.force_3d(pygeos.force_2d(face), z=0)
         face = proj.toWorld(face)
 
         face = pygeos.get_coordinates(face, include_z=True)
@@ -144,7 +146,6 @@ class MoosasGeometry(object):
                 raise GeometryError(face, "too few points")
         if len(_coordinates) < 3:
             raise GeometryError(face, "too few points")
-
 
         return np.array(_coordinates)
 
@@ -272,7 +273,7 @@ class MoosasGeometry(object):
         """
         return self.__category
 
-    def setCategory(self,cat=None) -> None:
+    def setCategory(self, cat=None) -> None:
         """
         Set the category attribute based on input or predefined conditions.
         
@@ -292,10 +293,10 @@ class MoosasGeometry(object):
         if cat:
             self.__category = cat
         else:
-            if self.category==3 or self.category==4 or self.category==-1:
-                self.__category=0
-            if self.category>=5:
-                self.__category=1
+            if self.category == 3 or self.category == 4 or self.category == -1:
+                self.__category = 0
+            if self.category >= 5:
+                self.__category = 1
 
     @property
     def holes(self) -> list[pygeos.Geometry]:
@@ -400,7 +401,8 @@ class MoosasElement(object):
     fromDict: construct an element from a dictionary which may be given by toDictionary method from a xmlTree
 
     """
-    __slots__ = ['__geometries', 'level', 'offset', 'Uid', '__glazingElement', 'parent', 'neighbor', 'isOuter', 'space','shading']
+    __slots__ = ['__geometries', 'level', 'offset', 'Uid', '__glazingElement', 'parent', 'neighbor', 'isOuter', 'space',
+                 'shading']
 
     def __init__(self, model: MoosasContainer,
                  faceId: str | list[str] | np.ndarray[str] | MoosasGeometry | list[MoosasGeometry] | np.ndarray[
@@ -439,7 +441,7 @@ class MoosasElement(object):
         self.Uid: str = generate_code(6) if uid is None else uid
         self.level: float = level
         self.offset: float = offset
-        self.shading=[]
+        self.shading = []
         self.__glazingElement: list[MoosasElement] = mixItemListToList(
             glazingElement) if glazingElement is not None else []
         if glazingId is not None:
@@ -466,6 +468,7 @@ class MoosasElement(object):
     @property
     def geometry(self):
         return self.__geometries
+
     @property
     def glazingElement(self) -> list[MoosasGlazing | MoosasSkylight]:
         """protect the __glazingElement attribute"""
@@ -490,10 +493,11 @@ class MoosasElement(object):
         """return a single face merging all faces contained in this element"""
         if len(self.__geometries) == 1:
             return self.__geometries[0].face
-        proj = Projection(origin=np.mean(pygeos.get_coordinates(self.face,include_z=True),axis=0),unitZ=self.normal)
+        proj = Projection(origin=np.mean(pygeos.get_coordinates(self.face, include_z=True), axis=0), unitZ=self.normal)
         UVFaces = [proj.toUV(g) for g in self.face]
-        mergedUVFace = pygeos.force_3d(pygeos.union_all(pygeos.force_2d(UVFaces)),z=0)
+        mergedUVFace = pygeos.force_3d(pygeos.union_all(pygeos.force_2d(UVFaces)), z=0)
         return proj.toWorld(mergedUVFace)
+
     @property
     def holes(self) -> pygeos.Geometry | np.ndarray[pygeos.Geometry]:
         """
@@ -545,8 +549,9 @@ class MoosasElement(object):
         return mixItemListToList([geo.category for geo in self.__geometries])[0]
 
     def setCategory(self, cat=None):
-        for idx,geometry in enumerate(self.__geometries):
+        for idx, geometry in enumerate(self.__geometries):
             self.__geometries[idx].setCategory(cat)
+
     @property
     def area(self) -> float:
         """quick link to self.area3d"""
@@ -1039,9 +1044,9 @@ class MoosasFace(MoosasElement):
         None
             This constructor does not return a value.
         """
-        if isinstance(faceId, list) or isinstance(faceId,np.ndarray):
+        if isinstance(faceId, list) or isinstance(faceId, np.ndarray):
             raise ValueError("MoosasFace should only contain one geometry")
-        if isinstance(faceId,MoosasGeometry):
+        if isinstance(faceId, MoosasGeometry):
             uid = f"face_{faceId.faceId}" if uid is None else uid
         else:
             uid = f"face_{mixItemListToList(faceId)[0]}" if uid is None else uid
@@ -1454,11 +1459,11 @@ class MoosasWall(MoosasElement):
             return [wall]
         bottom = wall.level + wall.offset
         top = wall.toplevel + wall.topoffset
-        unit = Vector(twins[1]-twins[0]).unit()
+        unit = Vector(twins[1] - twins[0]).unit()
         breakPoints = np.array([breakPoints]).flatten()
         breakPoints = np.append(pygeos.points(twins), breakPoints)
-        for i,bp in enumerate(breakPoints):
-            vecBp = Vector(pygeos.get_coordinates(bp)[0]-twins[0])
+        for i, bp in enumerate(breakPoints):
+            vecBp = Vector(pygeos.get_coordinates(bp)[0] - twins[0])
             breakPoints[i] = Vector(unit * Vector.dot(vecBp, unit) + Vector(twins[0])).geometry
         # breakPoints = [breakP for breakP in breakPoints if pygeos.contains(wall.force_2d(), breakP)]
         breakPoints = pygeos.force_2d(breakPoints)
@@ -1717,11 +1722,13 @@ class MoosasWall(MoosasElement):
             constructed from bottom and top boundary coordinates.
         """
         lBot = pygeos.force_3d(self.force_2d(False, False), z=self.level + self.offset)
-        lTop = pygeos.force_3d(self.force_2d(True, False), z=self.toplevel + self.topoffset)
+        lTop = pygeos.force_3d(self.force_2d(False, False), z=self.toplevel + self.topoffset)
+        # lTop = pygeos.force_3d(self.force_2d(True, False), z=self.toplevel + self.topoffset)
 
         lBot = pygeos.get_coordinates(lBot, include_z=True).tolist()
         lTop = pygeos.get_coordinates(lTop, include_z=True).tolist()
         lTop.reverse()
+
         return pygeos.polygons(list(lBot) + list(lTop) + [lBot[0]])
 
 
@@ -2110,7 +2117,7 @@ class MoosasEdge:
     'level': The lower elevation of the envelope, which is used to reduce the scope of floor identification
     'toplevel': The upper elevation of the envelope, which is used to reduce the ceiling identification area
     """
-    __slots__ = ('wall', 'Uid', '__botBound', '__topBound','internalMass')
+    __slots__ = ('wall', 'Uid', '__botBound', '__topBound', 'internalMass')
 
     def __init__(self, walls: list[MoosasWall]):
         """
@@ -2135,7 +2142,7 @@ class MoosasEdge:
         self.prepareBoundary()
         self.internalMass: list[MoosasElement] = []
         for w in walls:
-            self.internalMass+=w.shading
+            self.internalMass += w.shading
 
     def prepareBoundary(self):
         """
@@ -2256,10 +2263,9 @@ class MoosasEdge:
                     matched = True
                     break
             if not matched:
-                newWall = MoosasWall.fromProjection(edg,walls[0].level,walls[0].toplevel,walls[0].parent,True)
+                newWall = MoosasWall.fromProjection(edg, walls[0].level, walls[0].toplevel, walls[0].parent, True)
                 walls[0].parent.wallList = list(np.append(walls[0].parent.wallList, newWall))
                 validWalls.append(newWall)
-
 
         # print(edges,validWalls)
         # edge = cls(validWalls)
@@ -2450,6 +2456,7 @@ class MoosasEdge:
         pygeos.Geometry
             A PyGEOS geometry object representing the requested polygon.
         """
+
         def reverseTwin(point_twin):
             """
             Reverse the elements of a two-element list in place.
@@ -2634,7 +2641,7 @@ class MoosasSpace(object):
             "zone_winterrad": None,  # winter radiant heat units:kwh
 
             "zone_template": None,
-            "idf_template":None
+            "idf_template": None
         }
 
         self.applySettings('climatezone3_GB/T51350-2019_RESIDENTIAL')
@@ -2970,6 +2977,31 @@ class MoosasSpace(object):
             return True
         return False
 
+    def is_open(self):
+        """
+            Check if the space is considered exposed to the outdoor air based on floor and ceiling area conditions.
+
+            Parameters
+            ----------
+            self : object
+                The instance of the class containing the attributes `floor`, `ceiling`, `area`,
+                where `floor` and `ceiling` are objects with an `area` attribute, and `area`
+                represents the reference area of the space.
+
+            Returns
+            -------
+            bool
+                True if the space is considered open (i.e., either floor or ceiling is missing,
+                or their area is less than the space's area within the given precision),
+                False otherwise.
+        """
+        for moElement in self.getAllFaces(to_dict=False):
+            # moElement:MoosasElement = moElement
+            for glazing in moElement.glazingElement:
+                if glazing.category == 2 and moElement.isOuter:
+                        return True
+        return False
+
     def boundBox(self) -> np.ndarray:
         """
         Compute the axis-aligned bounding box of all faces in the object.
@@ -3016,7 +3048,7 @@ class MoosasSpace(object):
                 template = self.parent.buildingTemplate[buildingTemplateHint]
             else:
                 for hint in self.parent.buildingTemplate:
-                    if re.search(buildingTemplateHint,hint) is not None:
+                    if re.search(buildingTemplateHint, hint) is not None:
                         template = self.parent.buildingTemplate[hint]
                         buildingTemplateHint = hint
         else:
@@ -3026,6 +3058,7 @@ class MoosasSpace(object):
         self.settings['zone_template'] = buildingTemplateHint
         for key in template.keys():
             self.settings[key] = template[key]
+
     def add_neighbor(self, neighbor_id, element: MoosasElement):
         """
         Add a neighbor element to the specified neighbor ID.
@@ -3354,7 +3387,7 @@ class MoosasContainer(object):
         Returns:
             dict: {spaceId:MoosasSpace}
         """
-        return {space.id: space for space in self.spaceList+self.voidList}
+        return {space.id: space for space in self.spaceList + self.voidList}
 
     def fromDict(self, spaceDict: dict) -> MoosasSpace:
         """construct a space from a dictionary
@@ -3425,7 +3458,7 @@ class MoosasContainer(object):
         """
         if not dumpUseless:
             faces = []
-            for elementList in [self.wallList, self.faceList, self.glazingList, self.skylightList,self.shadingList]:
+            for elementList in [self.wallList, self.faceList, self.glazingList, self.skylightList, self.shadingList]:
                 faces = np.append(faces, elementList)
             return list(faces)
         else:
@@ -3513,9 +3546,9 @@ class MoosasContainer(object):
                 print(f"the geo: {idd} not in the geometry library.")
         return [self.geometryList[idd] for idd in _faceId]
 
-    def setCategory(self,reset=False):
+    def setCategory(self, reset=False):
         """
-                Returns
+        Returns
         -------
         int
             The category code:
@@ -3529,7 +3562,7 @@ class MoosasContainer(object):
             -  5: Glazing element (MoosasGlazing)
             -  6: Skylight element (MoosasSkylight)
         """
-        res =0
+        res = 0
         if reset:
             for geo in self.getAllFaces():
                 geo.setCategory()
@@ -3538,11 +3571,39 @@ class MoosasContainer(object):
                 if self.geometryList[i].category != 2:
                     self.geometryList[i].setCategory(-1)
             almoface = self.getAllFaces(dumpUseless=True)
-            refs= {'MoosasFace': 4, 'MoosasSkylight': 6, 'MoosasWall': 3, 'MoosasGlazing': 5}
+            refs = {'MoosasFace': 4, 'MoosasSkylight': 6, 'MoosasWall': 3, 'MoosasGlazing': 5}
             for key in almoface.keys():
                 for item in almoface[key]:
-                    if mixItemListToList(item.category)[0]!= 2:
+                    if mixItemListToList(item.category)[0] != 2:
                         item.setCategory(refs[key])
                     elif key == 'MoosasWall':
-                        res+=1
+                        res += 1
         print(res)
+
+    def removeSpace(self, space: str | MoosasSpace):
+        """
+        safely delete a space and change all the boundary conditions of reset of the faces.
+
+        Parameters
+        -------
+        spaceId : str
+        space id or space object to remove
+        """
+        if isinstance(space, str):
+            space = self.spaceIdDict[space]
+        for moElement in space.getAllFaces(False):
+            try:
+                moElement.isOuter = True
+                moElement.space.remove(space.id)
+            except:
+                pass
+        try:
+            self.spaceList = list(self.spaceList)
+            self.spaceList.remove(space)
+        except:
+            pass
+        try:
+            self.voidList = list(self.voidList)
+            self.voidList.remove(space)
+        except:
+            pass

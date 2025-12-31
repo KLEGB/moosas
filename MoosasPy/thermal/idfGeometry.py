@@ -3,12 +3,12 @@ import re
 from eppy.modeleditor import IDF
 
 from .construction import Construction
-from ..encoding.convexify import triangulate2dFace
 from .settings import *
+from ..encoding.convexify import triangulate2dFace
 from ..geometry.element import MoosasSpace, MoosasElement
-from ..geometry.geos import faceNormal, Vector
-from ..utils import pygeos,mixItemListToList
-import copy
+from ..geometry.geos import ccwNormal, Vector, offset, trim, projectTo
+from ..utils import pygeos
+
 
 class ZoneTemplate():
     __slots__ = ("idf", "zoneObject", "objectList", "constructionList", "scheduleList")
@@ -297,9 +297,9 @@ class ZoneTemplate():
                  },
             'Sizing:Zone':
                 {'Zone_or_ZoneList_Name': zone.id, 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
-                 'Design_Specification_Outdoor_Air_Object_Name':
-                     zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
-                 'Design_Specification_Zone_Air_Distribution_Object_Name':''
+                 'Design_Specification_Outdoor_Air_Object_Name': '',
+                 # zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
+                 'Design_Specification_Zone_Air_Distribution_Object_Name': ''
                  },
             'DesignSpecification:OutdoorAir':
                 {'Name': zone.id,
@@ -356,7 +356,7 @@ class ZoneTemplate():
 
         return ZoneTemplate(self.idf, self.zoneObject, self.objectList, self.constructionList, self.scheduleList)
 
-    def applyToIDF(self,idf=None):
+    def applyToIDF(self, idf=None):
         if idf == None:
             idf = self.idf
         # print(self.zoneObject)
@@ -429,6 +429,7 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
             kwargs["Sun_Exposure"] = 'NoSun'
             kwargs["Wind_Exposure"] = 'NoWind'
             kwargs["View_Factor_to_Ground"] = '0'
+            encodeWindow = False
         else:
             kwargs["Outside_Boundary_Condition"] = 'Outdoors'
             kwargs["Sun_Exposure"] = 'SunExposed'
@@ -467,6 +468,7 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
         ThermalSettings.params["Surface_Type"] = surfaceType
         surface2 = ThermalSettings.applyToIDF(idf)
         faceObject.append(surface2)
+
     if encodeWindow:
         for gls in element.glazingElement:
             faceObject += createWindowSurface(idf, gls, element, Construction_Name_Window, normal=normal)
@@ -493,9 +495,9 @@ def encodeFace(obj: MoosasSettings, polygon: pygeos.Geometry, normal: Vector):
         This function modifies the `obj` in place and does not return a value.
     """
     coordinates = pygeos.get_coordinates(polygon, include_z=True)
-    if Vector.dot(faceNormal(polygon), normal) < 0:
-        coordinates = coordinates[::-1]
     obj.params['Number_of_Vertices'] = len(coordinates) - 1
+    if Vector.dot(ccwNormal(polygon), normal) < 0:
+        coordinates = coordinates[::-1]
     for i, point in enumerate(coordinates[:-1]):
         obj.params[f'Vertex_{i + 1}_Xcoordinate'] = np.round(point[0], 2)
         obj.params[f'Vertex_{i + 1}_Ycoordinate'] = np.round(point[1], 2)
@@ -530,8 +532,26 @@ def createWindowSurface(idf: IDF, element: MoosasElement, parentElement: MoosasE
     """
     faceObjects = []
     face = element.representation()
-    for triFace in triangulate2dFace(face):
-        kwargs = {'Name': parentElement.space[0] + '-' + parentElement.Uid + '-' + element.Uid,
+
+    # project the face to its parent
+    face = projectTo(face,parentElement.representation())
+
+    # clip by the parent surface
+    face = trim(face, parentElement.representation())
+
+    if face is None:
+        return
+
+    # split the face into 4 coordinates
+    for idx, triFace in enumerate(triangulate2dFace(face)):
+
+        # offset the window considering the splitter
+        triFace = offset(triFace, -0.1)
+
+        # project the face to its parent
+        triFace = projectTo(triFace, parentElement.representation())
+
+        kwargs = {'Name': parentElement.space[0] + '-' + parentElement.Uid + '-' + element.Uid + '-' + str(idx),
                   "Building_Surface_Name": parentElement.space[0] + '-' + parentElement.Uid,
                   "Construction_Name": Construction_Name}
         ThermalSettings = MoosasSettings(default=WindowDefault, **kwargs)
@@ -539,18 +559,21 @@ def createWindowSurface(idf: IDF, element: MoosasElement, parentElement: MoosasE
 
         if not parentElement.isOuter:
             ThermalSettings.params["Outside_Boundary_Condition_Object"] = parentElement.space[
-                                                                              1] + '-' + parentElement.Uid + '-' + element.Uid
+                                                                              1] + '-' + parentElement.Uid + '-' + element.Uid + '-' + str(
+                idx)
             surface1 = ThermalSettings.applyToIDF(idf)
-            kwargs = {'Name': parentElement.space[1] + '-' + parentElement.Uid + '-' + element.Uid,
+            kwargs = {'Name': parentElement.space[1] + '-' + parentElement.Uid + '-' + element.Uid + '-' + str(idx),
                       "Building_Surface_Name": parentElement.space[1] + '-' + parentElement.Uid,
                       "Outside_Boundary_Condition_Object": parentElement.space[
-                                                               0] + '-' + parentElement.Uid + '-' + element.Uid,
+                                                               0] + '-' + parentElement.Uid + '-' + element.Uid + '-' + str(
+                          idx),
                       "View_Factor_to_Ground": 0}
             ThermalSettings.updateParams(**kwargs)
-            encodeFace(ThermalSettings, element.representation(), -normal)
+            encodeFace(ThermalSettings, triFace, -normal)
             surface2 = ThermalSettings.applyToIDF(idf)
-            faceObjects+= [surface1, surface2]
+            faceObjects += [surface1, surface2]
         else:
             surface1 = ThermalSettings.applyToIDF(idf)
-            faceObjects+= [surface1]
+            faceObjects += [surface1]
+
     return faceObjects

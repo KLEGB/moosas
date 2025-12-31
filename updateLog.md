@@ -5,6 +5,7 @@
 - 0.8.3.4 improve idf transformation module
 - 0.8.3.5 fix air wall issues in idf transformation.
 - 0.8.3.6 fix window face encoding
+- 0.8.3.7 all green in idf transformation, on test\example0_c.RDF
 
 --0.8.2
 # AFN update 10.31

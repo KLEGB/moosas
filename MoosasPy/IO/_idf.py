@@ -37,12 +37,10 @@ def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None) -> idfGeometry.Zon
     idf = IDF(idfTemplatePath)
     zTemplate: idfGeometry.ZoneTemplate = idfGeometry.ZoneTemplate.fromIDF(idf)
     for si, space in enumerate(model.spaceList):
-        print(f"\rIDF: encoding zones: {si}/{len(model.spaceList)}", end='')
+        print(f"\rIDF: overwriting zonal settings: {si}/{len(model.spaceList  + model.voidList)}", end='')
         space.settings['idf_template'] = zTemplate.appliedToZone(space)
-        # if space.is_void():
-        #     print('***Warring: EnergyPlus do not support void space')
-        # else:
-        #     space.settings['idf_template'] = zTemplate.appliedToZone(space)
+        if space.is_open():
+            print(f'\n******Warring: EnergyPlus do not support void space: {space.id}')
     return zTemplate
 
 
@@ -68,15 +66,15 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None):
     moElements = model.getAllFaces(dumpUseless=True)
     zTemplate:idfGeometry.ZoneTemplate = loadIDFTemplate(model, idfTemplatePath)
     # remote existing zone-related objects
-    remoteHint = []
-    remoteHint += list(zTemplate.objectList.keys()) + ['Zone', 'WaterUse:Equipment', 'BuildingSurface:Detailed',
-                                                       'FenestrationSurface:Detailed', 'Space']
+    removeHint = []
+    removeHint += list(zTemplate.objectList.keys()) + ['Zone', 'WaterUse:Equipment', 'BuildingSurface:Detailed',
+                                                       'FenestrationSurface:Detailed', 'Space','SpaceList','ZoneMixing','DesignSpecification:OutdoorAir:SpaceList']
     idf = zTemplate.idf
-    for h in remoteHint:
+    for h in removeHint:
         idf.idfobjects[h] = []
         print(f"\rIDF: cleaning existing objects: {h}", end='')
     print()
-
+    
     # add moosas defines objects
     # get type limits
     typeLimitsName = [idfobj['Name'] for idfobj in idf.idfobjects['ScheduleTypeLimits']]
@@ -85,6 +83,15 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None):
             typeLimit.applyToIDF(idf)
     airboundary = settings.MoosasSettings(construction.airBoundaryDefault)
     airboundary.applyToIDF(idf)
+
+    # check space boundary condition
+    removeSpace = [space.id for space in model.spaceList if space.is_open()]
+    while len(removeSpace)>0:
+        for inValidSpaceId in removeSpace:
+            print(f"\rIDF: removing invalid space: {inValidSpaceId}", end='')
+            model.removeSpace(inValidSpaceId)
+        removeSpace = [space.id for space in model.spaceList if space.is_open()]
+    print()
 
     # encoding geometries
     for wi, wall in enumerate(moElements['MoosasWall']):
@@ -95,7 +102,7 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None):
                 'zone_win_SHGC']
             wallConstruction = zTemplate.getConstruction('opaque', wallU)
             windowConstruction = zTemplate.getConstruction('window', winU, SHGC)
-            if wall.category == -2:
+            if wall.category == 2:
                 idfGeometry.createThermalSurface(idf, wall, 'Wall', "Generic Air Boundary",
                                                  None,encodeWindow=False)
             else:
@@ -114,8 +121,8 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None):
                 'zone_win_SHGC']
             wallConstruction = zTemplate.getConstruction('opaque', wallU)
             windowConstruction = zTemplate.getConstruction('window', winU, SHGC)
-            if face.category == -2:
-                idfGeometry.createThermalSurface(idf, face, faceType, "Generic Air Boundary",
+            if face.category == 2:
+                idfGeometry.createThermalSurface(idf, face, faceType, "Moosas Air Boundary",
                                                  None,encodeWindow=False)
             else:
                 idfGeometry.createThermalSurface(idf, face, faceType, wallConstruction.params['Name'],
@@ -130,6 +137,30 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None):
         #     print('***Warring: EnergyPlus do not support void space')
         # else:
         #     space.settings['idf_template'].applyToIDF(idf)
+
+    # writing zone mixing
+    mixing = set()
+    for space in model.spaceList:
+        for moElement in space.getAllFaces(False):
+            if moElement.category == 2:
+                mixing.add('~~'.join(moElement.space))
+
+    for zoneTwins in mixing:
+        zoneTwins = zoneTwins.split("~~")
+        zoneMixing = settings.MoosasSettings(settings.ZoneMixingDefault)
+        zoneMixing.updateParams(**{
+            'Name':zoneTwins[0]+"_"+zoneTwins[1],
+            'Zone_or_Space_Name': zoneTwins[0],
+            'Source_Zone_or_Space_Name': zoneTwins[1],
+        })
+        zoneMixing.applyToIDF(idf)
+        zoneMixing.updateParams(**{
+            'Name':zoneTwins[1]+"_"+zoneTwins[0],
+            'Zone or Space Name': zoneTwins[1],
+            'Source Zone or Space Name': zoneTwins[0],
+        })
+        zoneMixing.applyToIDF(idf)
+
     idf.save(outputPath)
     print()
 
