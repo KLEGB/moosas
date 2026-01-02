@@ -170,6 +170,12 @@ def loadXml(filePath, geoPath):
             topology["Edge"] = MoosasEdge(walls)
         if topology["Edge"] is not None:
             spc = MoosasSpace(_floor=topology["Floor"], _ceiling=topology["ceiling"], _edge=topology["Edge"])
+
+            for key in element['setting']:
+                try:
+                    spc.settings[key] = float(element['setting'][key])
+                except ValueError:
+                    spc.settings[key] = element['setting'][key]
             if spc.is_void():
                 model.voidList.append(spc)
             else:
