@@ -1,3 +1,7 @@
+--0.8.4
+# IO update 01.02
+- 0.8.4.1 I/O method has been changed. XML loading is valid.
+
 --0.8.3
 # Transformation final update 12.04
 - 0.8.3.1 include the geo flags in the output geos.

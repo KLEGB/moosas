@@ -6,6 +6,26 @@ from ..geometry.geos import simplify,Vector
 from ._obj import _readObj
 
 
+def preClassified(model):
+    """
+    Preprocesses a model by assigning face IDs to geoId and setting a new index based on geometry list length.
+
+    Parameters
+    ----------
+    model : object
+        The model object containing a `geometryList` attribute, where each element has a `faceId` attribute.
+        This object is modified in place by adding `geoId` and `newIndex` attributes.
+
+    Returns
+    -------
+    object
+        The modified model object with added `geoId` (list of face IDs) and `newIndex` (integer representing
+        the length of the geometry list).
+    """
+    model.geoId = [geo.faceId for geo in model.geometryList]
+    model.newIndex = len(model.geometryList)
+    return model
+
 def writeGeo(file_path, model=None, geoList=None, mask=None) -> str:
     """Get a *.geo file for the geometry library in the model
 

@@ -11,8 +11,7 @@ import time
 
 import pygeos
 
-from .IO import modelFromFile, modelToFile, loadRDF, writeRDF, writeIDF
-from .encoding.convexify import triangulate2dFace
+from .IO import modelFromFile, loadRDF, saveModel, loadXml
 from .geometry.cleanse import *
 from .geometry.contour import packing_edges, outerBoundary
 from .geometry.geos import *
@@ -22,7 +21,7 @@ from .utils.constant import geom
 from .utils.tools import searchBy
 
 
-def loadModel(filePath: str, fileFormat='turtle') -> MoosasModel:
+def loadModel(filePath: str, geoPath: str = None, fileFormat='turtle') -> MoosasModel:
     """
     Loading MoosasModel from rdf format file. See doc/MoosasRDF for file namespace and description.
 
@@ -30,6 +29,8 @@ def loadModel(filePath: str, fileFormat='turtle') -> MoosasModel:
     ----------
     filePath : str
         any input rdf file
+    geoPath : str, optional
+        any input *.geo file
     fileFormat : str, optional
         rdf format, following the definition of rdflib module. Default : 'turtle'
 
@@ -38,7 +39,12 @@ def loadModel(filePath: str, fileFormat='turtle') -> MoosasModel:
     MoosasModel
         The model for further transformation or analysis.
     """
-    model = loadRDF(filePath, fileFormat=fileFormat)
+    if fileFormat == 'xml':
+        if geoPath is None:
+            raise FileNotFoundError('No *.geo file provided.')
+        model = loadXml(filePath, geoPath)
+    else:
+        model = loadRDF(filePath, fileFormat=fileFormat)
     """2nd level space boundaries topology"""
     model = spaceTopology(model, True)
     model = faceTopology(model)
@@ -48,34 +54,9 @@ def loadModel(filePath: str, fileFormat='turtle') -> MoosasModel:
     return model
 
 
-def saveModel(model: MoosasModel, out_path: str, save_type: str, dumpUseless=True):
-    """
-        Save the model into any format.
-
-        Parameters
-        ----------
-        model : MoosasModel
-            the model includes space and face topology, and other weather or material issues.
-        out_path : str
-            output rdf file path
-        save_type : str, optional
-            rdf format, following the definition of rdflib module.
-            idf format, following the definition of EnergyPlus input file.
-        dumpUseless : bool, optional
-            cut out the unuse nodes (elements and faces)
-
-        Returns
-        -------
-        None
-    """
-    if save_type.lower() == 'idf':
-        writeIDF(model, out_path)
-    elif save_type.lower() == 'rdf':
-        writeRDF(model, out_path, fileFormat="turtle", dumpUseless=dumpUseless)
-
-
-def transform(input_path: str, output_path: str = None, geo_path: str = None, input_type: str = None,
-              output_type: str = None, method=CCRSpaceGeneration,
+def transform(input_path: str, input_type: str = None,
+              output_path: str = None, output_type: str = None,
+              method=CCRSpaceGeneration,
               solve_duplicated=True, solve_redundant=True, solve_overlap=True, triangulate_faces=True,
               break_wall_vertical=True, break_wall_horizontal=True,
               attach_shading=False,
@@ -100,9 +81,6 @@ def transform(input_path: str, output_path: str = None, geo_path: str = None, in
         - *.json : JSON equivalent of XML structure
         - *.idf : EnergyPlus input with default thermal settings
         - *.rdf : RDF knowledge graph (Turtle format)
-
-    geo_path : str, optional
-        Export path for modified geometry (*.geo format).
 
     input_type : str, optional
         Explicit input format specification (e.g., 'obj', 'xml').
@@ -196,8 +174,12 @@ def transform(input_path: str, output_path: str = None, geo_path: str = None, in
                        t0=t0)
 
     # export the model
-    if output_path:
-        modelToFile(model, output_path, output_type, geo_path)
+    if output_path is not None:
+        if isinstance(output_path, str):
+            saveModel(model, output_path, output_type)
+        else:
+            for oP, oS in zip(output_path, output_type):
+                saveModel(model, oP, oS)
 
     sys.stdout = sysout
     # print(len(model.spaceList))

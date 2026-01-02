@@ -44,7 +44,7 @@ def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None) -> idfGeometry.Zon
     return zTemplate
 
 
-def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None):
+def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None,iddFile=None):
     """
     Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
 
@@ -63,6 +63,8 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None):
         This function does not return any value. It writes the IDF file to the specified path and prints progress information.
     """
     print('IDF: initialization from IDF file...')
+    if iddFile:
+        IDF.setiddname(iddFile)
     moElements = model.getAllFaces(dumpUseless=True)
     zTemplate:idfGeometry.ZoneTemplate = loadIDFTemplate(model, idfTemplatePath)
     # remote existing zone-related objects
@@ -74,7 +76,7 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None):
         idf.idfobjects[h] = []
         print(f"\rIDF: cleaning existing objects: {h}", end='')
     print()
-    
+
     # add moosas defines objects
     # get type limits
     typeLimitsName = [idfobj['Name'] for idfobj in idf.idfobjects['ScheduleTypeLimits']]

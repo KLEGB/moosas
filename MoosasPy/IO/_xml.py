@@ -1,7 +1,13 @@
+from __future__ import annotations
 
+from collections import defaultdict
+
+from ._geo import _readGeo, preClassified
+from ..models import *
 from ..utils import ET
-from ..utils import path
-def writeXml(file_path, model, writeGeometry=False) -> ET.ElementTree:
+
+
+def writeXml(file_path, model: MoosasModel, writeGeometry=False) -> ET.ElementTree:
     """Get a xml file describe the space topology.
         we have 3 different level of data:
 
@@ -76,3 +82,232 @@ def writeXml(file_path, model, writeGeometry=False) -> ET.ElementTree:
     tree.write(file_path)
 
     return tree
+
+
+def loadXml(filePath, geoPath):
+    # initialize model
+    model: MoosasModel = MoosasModel()
+    model.geometryList = _readGeo(geoPath)
+    model = preClassified(model)
+    # read the tree to dict
+    root = praseXml(filePath)['model']
+
+    # construct LevelList
+    level = set()
+    for i, element in enumerate(root['face']):
+        print(f'\rLOADING: find level {i + 1}/{len(root["face"])}', end='')
+        level.add(float(element['level']))
+    model.levelList = list(level)
+    model.levelList.sort()
+    print()
+
+    # construct MoosasFaceList
+    for i, element in enumerate(root['face']):
+        Uid = str(element['Uid'])
+        if searchBy('Uid', Uid, model.faceList, earlyEnd=True, asObject=True):
+            continue
+        offset = float(element['offset'])
+        level = float(element['level'])
+        geoId = mixItemListToObject(element['faceId'].split(' '))
+        element = MoosasFace(model, geoId, level=level, uid=Uid, offset=offset)
+        model.faceList.append(element)
+        print(f'\rLOADING: Faces {i + 1}/{len(root["face"])}', end='')
+    print()
+    # construct MoosasWallList
+    for i, element in enumerate(root['wall']):
+        Uid = str(element['Uid'])
+        if searchBy('Uid', Uid, model.wallList, earlyEnd=True, asObject=True):
+            continue
+        offset = float(element['offset'])
+        level = float(element['level'])
+        geoId = mixItemListToObject(element['faceId'].split(' '))
+        element = MoosasWall(model, geoId, level=level, uid=Uid, offset=offset)
+        model.wallList.append(element)
+        print(f'\rLOADING: Faces {i + 1}/{len(root["wall"])}', end='')
+    print()
+    # construct MoosasGlazingList
+    if "glazing" in root:
+        for i, element in enumerate(root['glazing']):
+            Uid = str(element['Uid'])
+            if searchBy('Uid', Uid, model.glazingList, earlyEnd=True, asObject=True):
+                continue
+            offset = float(element['offset'])
+            level = float(element['level'])
+            geoId = mixItemListToObject(element['faceId'].split(' '))
+            element = MoosasGlazing(model, geoId, level=level, uid=Uid, offset=offset)
+            model.glazingList.append(element)
+            print(f'\rLOADING: Faces {i + 1}/{len(root["glazing"])}', end='')
+        print()
+    # construct MoosasSkylightList
+    if "skylight" in root:
+        for i, element in enumerate(root['skylight']):
+            Uid = str(element['Uid'])
+            if searchBy('Uid', Uid, model.skylightList, earlyEnd=True, asObject=True):
+                continue
+            offset = float(element['offset'])
+            level = float(element['level'])
+            geoId = mixItemListToObject(element['faceId'].split(' '))
+            element = MoosasSkylight(model, geoId, level=level, uid=Uid, offset=offset)
+            model.skylightList.append(element)
+            print(f'\rLOADING: Faces {i + 1}/{len(root["skylight"])}', end='')
+        print()
+    # load space
+    for i, element in enumerate(root['space']):
+        topology = {"Floor": None, "ceiling": None, "Edge": None}
+        if "floor" in element['topology']:
+            element['topology']['floor']['face'] = mixItemListToList(element['topology']['floor']['face'])
+            floors = [searchBy('Uid', face, model.faceList, earlyEnd=True, asObject=True)[0] for face in
+                      element['topology']['floor']['face']]
+            topology["Floor"] = MoosasFloor(floors)
+        if "ceiling" in element['topology']:
+            element['topology']['ceiling']['face'] = mixItemListToList(element['topology']['ceiling']['face'])
+            ceilings = [searchBy('Uid', face, model.faceList, earlyEnd=True, asObject=True)[0] for face in
+                        element['topology']['ceiling']['face']]
+            topology["ceiling"] = MoosasFloor(ceilings)
+        if "edge" in element['topology']:
+            walls = [searchBy('Uid', face['Uid'], model.wallList, earlyEnd=True, asObject=True)[0] for face
+                     in element['topology']['edge']['wall']]
+            topology["Edge"] = MoosasEdge(walls)
+        if topology["Edge"] is not None:
+            spc = MoosasSpace(_floor=topology["Floor"], _ceiling=topology["ceiling"], _edge=topology["Edge"])
+            if spc.is_void():
+                model.voidList.append(spc)
+            else:
+                model.spaceList.append(spc)
+        print(f'\rLOADING: space {i + 1}/{len(root["space"])}', end='')
+    print()
+    return model
+
+
+def praseXml(xml_path: str) -> dict:
+    """
+    Convert an XML file (with text-only nodes, no attributes, nested/repeated tags) to a simplified dictionary.
+
+    Key features:
+    - Nested nodes → nested dictionaries
+    - Repeated nodes with the same tag → lists
+    - Node text content → direct values (no special keys like #text/@attributes)
+    - No attribute handling (optimized for attribute-free XML)
+
+    Parameters
+    ----------
+    xml_path : str
+        File path to the target XML file (absolute/relative path)
+
+    Returns
+    -------
+    dict
+        Simplified nested dictionary with:
+        - Root tag as the top-level key
+        - Repeated child nodes stored as lists
+        - Nested child nodes stored as sub-dictionaries
+        - Text content as direct values of corresponding keys
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified XML file does not exist at the given path
+    ET.ParseError
+        If the XML file has invalid syntax or cannot be parsed
+    ValueError
+        Wrapper for XML parsing errors with human-readable messages
+
+    Examples
+    --------
+    Sample XML content (test_simple.xml):
+    <?xml version="1.0" encoding="UTF-8"?>
+    <root>
+        <person>
+            <name>Zhang San</name>
+            <age>25</age>
+            <address>
+                <city>Beijing</city>
+                <district>Haidian</district>
+            </address>
+            <hobby>Coding</hobby>
+            <hobby>Reading</hobby>
+        </person>
+        <person>
+            <name>Li Si</name>
+            <age>30</age>
+        </person>
+        <remark>Test data for XML conversion</remark>
+    </root>
+
+    Usage:
+    {
+      "root": {
+        "person": [
+          {
+            "name": "Zhang San",
+            "age": "25",
+            "address": {"city": "Beijing", "district": "Haidian"},
+            "hobby": ["Coding", "Reading"]
+          },
+          {
+            "name": "Li Si",
+            "age": "30"
+          }
+        ],
+        "remark": "Test data for XML conversion"
+      }
+    }
+    """
+
+    # Internal recursive function to process XML elements
+    def _element_to_dict(element: ET.Element) -> dict | list | str:
+        """
+        Recursively convert an ElementTree Element to a dictionary/list/text value.
+
+        Parameters
+        ----------
+        element : ET.Element
+            Single XML element node to process
+
+        Returns
+        -------
+        dict | list | str
+            Converted value (dict for nested nodes, list for repeated nodes, str for text)
+        """
+        # Clean up text content (remove leading/trailing whitespace)
+        text = element.text.strip() if element.text else None
+
+        # Get child nodes list
+        children = list(element)
+
+        # Case 1: No child nodes → return text directly (empty string for blank text)
+        if not children:
+            return text if text is not None else ""
+
+        # Case 2: Has child nodes → process recursively
+        child_groups = defaultdict(list)
+        for child in children:
+            child_groups[child.tag].append(_element_to_dict(child))
+
+        # Build result dict (single child → value, multiple children → list)
+        result = {}
+        for tag, child_values in child_groups.items():
+            if len(child_values) == 1:
+                result[tag] = child_values[0]
+            else:
+                result[tag] = child_values
+
+        # Rare case: Element has both children and text content
+        if text:
+            result["_text"] = text
+
+        return result
+
+    # Main logic: Parse XML file and convert to dict
+    try:
+        # Parse XML file and get root element
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+
+        # Convert root element to dict and return
+        return {root.tag: _element_to_dict(root)}
+
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"XML file not found at path: {xml_path}") from e
+    except ET.ParseError as e:
+        raise ValueError(f"Failed to parse XML file (invalid syntax): {str(e)}") from e

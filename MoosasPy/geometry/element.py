@@ -991,7 +991,7 @@ class MoosasElement(object):
         ET.SubElement(geometry, "height").text = str((self.level + self.offset) / INCH_METER_MULTIPLIER)
         ET.SubElement(geometry, "normal").text = ' '.join(Vector(self.normal).array.astype(str))
         ET.SubElement(geometry, "external").text = str(self.isOuter)
-        ET.SubElement(geometry, "s").text = str(spcList.astype(str))
+        ET.SubElement(geometry, "parentSpace").text = str(spcList.astype(str))
         neighbor = ET.SubElement(geometry, "neighbor")
         for key in self.neighbor:
             obj = ET.SubElement(neighbor, "edge")

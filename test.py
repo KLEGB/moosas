@@ -23,5 +23,7 @@ f = rf'test\example0_c.geo'
 #                   solve_duplicated=True,solve_overlap=True, divided_zones=False,break_wall_vertical=True, break_wall_horizontal=True, solve_redundant=True,
 #                   attach_shading=False, standardize=False)
 # IO.writeRDF(model,r"test\example0_c.RDF")
-model = loadModel("test\example0_c.RDF")
-IO.writeIDF(model,'test/test.idf')
+geoFile = r'\\166.111.40.8\protect\moosasTestModelDataset\SRT_DATA\new_geo\cyh_25_01101_01101-01.geo'
+xmlFile = r'\\166.111.40.8\protect\moosasTestModelDataset\SRT_DATA\new_xml\cyh_25_01101_01101-01.xml'
+model = loadModel(xmlFile,geoFile,fileFormat='xml')
+# IO.writeIDF(model,'test/test.idf')

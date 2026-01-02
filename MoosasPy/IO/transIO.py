@@ -2,12 +2,14 @@
 MoosasModel should be imported inside the function to avoid circular import.
 please use the general import func modelFromFile() instead of any private funcs.
 """
-from ._geo import _readGeo,writeGeo
-from ._obj import _readObj
-from ._xml import writeXml
-from ._json import _readGeojson,writeJson,writeGeojson
+from ._geo import _readGeo, writeGeo , preClassified
 from ._idf import writeIDF
+from ._json import _readGeojson, writeJson, writeGeojson
+from ._obj import _readObj
+from ._rdf import writeRDF
+from ._xml import writeXml
 from ..utils import path
+
 
 def modelFromFile(inputPath: str, inputType=None):
     """Get a MoosasModel from geometry file *.geo,*.xml,*.obj,*.json(geoJson)
@@ -44,62 +46,56 @@ def modelFromFile(inputPath: str, inputType=None):
 
     return preClassified(model)
 
-def preClassified(model):
+
+
+
+
+def saveModel(model, out_path: str, save_type: str = None, idfTemplate=None, iddFile=None, dumpUseless=True):
     """
-    Preprocesses a model by assigning face IDs to geoId and setting a new index based on geometry list length.
-    
-    Parameters
-    ----------
-    model : object
-        The model object containing a `geometryList` attribute, where each element has a `faceId` attribute.
-        This object is modified in place by adding `geoId` and `newIndex` attributes.
-    
-    Returns
-    -------
-    object
-        The modified model object with added `geoId` (list of face IDs) and `newIndex` (integer representing 
-        the length of the geometry list).
-    """
-    model.geoId = [geo.faceId for geo in model.geometryList]
-    model.newIndex = len(model.geometryList)
-    return model
-def modelToFile(model, outputPath, outputType=None, geoPath=None, geoType=None):
-    """write the space topology data or geometry data to the file
+        Save the model into any format.
 
-    please check the file description in each function:
-    _readGeo,_readXml,_readObj,readGeoJson
+        Parameters
+        ----------
+        model : MoosasModel
+            the model includes space and face topology, and other weather or material issues.
+        out_path : str
+            output rdf file path
+        save_type : str, optional
+            rdf format, following the definition of rdf module, I/O possible file.
+            xml format, following the definition of xml module, I/O possible file.
+            geo format, following the definition of geo specific for Moosas, I/O possible file.
+            idf format, following the definition of EnergyPlus input file, I/O possible file.
 
-    Args:
-        model(MoosasModel): model to write the space data and geometries data
-        outputPath(str): input geometry file.
-        geoPath(str): output geometry file.
-        outputType(str): input file type. If None the type will be interpreted from the file directly (default: None)
-        geoType(str): output geometry file.
+            spc format, following the definition of legacy spc module.
+            geojson format, following the definition of geojson.
+        idfTemplate: str, optional
+            optional idf template for writing idf file
+        iddFile: str, optional
+            optional idd file path for writing idd file
+        dumpUseless : bool, optional
+            cut out the unuse nodes (elements and faces)
 
-
-    Returns:
+        Returns
+        -------
         None
-
-    Examples:
-        >>> modelToFile(model,r'test.json')
     """
-    if outputPath[-4:len(outputPath)] == '.spc' or outputType == 'spc':
-        writeSpc(outputPath, model)
-    elif outputPath[-4:len(outputPath)] == '.xml' or outputType == 'xml':
-        writeXml(outputPath, model)
-    elif outputPath[-4:len(outputPath)] == 'json' or outputType == 'json':
-        writeJson(outputPath, model)
-    elif outputPath[-4:len(outputPath)] == '.idf' or outputType == 'idf':
-        writeIDF(outputPath, model)
-    else:
-        print('***Error: Wrong file type(.spc,.xml,.json) Please check:', outputPath)
-
-    if geoPath is not None:
-        if geoPath[-4:len(geoPath)] == '.geo' or geoType == '.geo':
-            writeGeo(geoPath, model)
-        if geoPath[-4:len(geoPath)] == 'json' or geoType == 'json':
-            writeGeojson(geoPath, model)
-
+    path.checkBuildDir(out_path)
+    if save_type is None:
+        save_type = out_path.lower().split('.')[-1]
+    if save_type.lower() == 'idf':
+        writeIDF(model, out_path, idfTemplate, iddFile)
+    elif save_type.lower() == 'rdf':
+        writeRDF(model, out_path, fileFormat="turtle", dumpUseless=dumpUseless)
+    elif save_type.lower() == 'geo':
+        writeGeo(out_path, model)
+    elif save_type.lower() == 'geojson':
+        writeGeojson(out_path, model)
+    elif save_type.lower() == 'spc':
+        writeSpc(out_path, model)
+    elif save_type.lower() == 'xml':
+        writeXml(out_path, model)
+    elif save_type.lower() == 'json':
+        writeJson(out_path, model)
 
 
 def writeSpc(file_path, model) -> str:
