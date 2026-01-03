@@ -1,6 +1,7 @@
 --0.8.4
 # IO update 01.02
 - 0.8.4.1 I/O method has been changed. XML loading is valid.
+- 0.8.4.2 Bug in idf transformation.
 
 --0.8.3
 # Transformation final update 12.04

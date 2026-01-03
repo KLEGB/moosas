@@ -450,7 +450,7 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
         else:
             try:
                 normal = space0.edge.FactorOfWall[space0.edge.wall.index(element)]
-            except IndexError:
+            except ValueError:
                 normal = element.normal
     encodeFace(ThermalSettings, element.representation(), normal)
     # create objects
@@ -540,7 +540,7 @@ def createWindowSurface(idf: IDF, element: MoosasElement, parentElement: MoosasE
     face = trim(face, parentElement.representation())
 
     if face is None:
-        return
+        return []
 
     # split the face into 4 coordinates
     for idx, triFace in enumerate(triangulate2dFace(face)):
