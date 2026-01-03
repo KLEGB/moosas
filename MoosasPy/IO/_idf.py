@@ -117,8 +117,9 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None,iddFile=N
             faceType = 'Floor'
             space = model.spaceIdDict[face.space[0]]
             if len(face.space) == 1:
-                if face in model.spaceIdDict[face.space[0]].ceiling.face:
-                    faceType = 'Roof'
+                if model.spaceIdDict[face.space[0]].ceiling:
+                    if face in model.spaceIdDict[face.space[0]].ceiling.face:
+                        faceType = 'Roof'
             wallU, winU, SHGC = space.settings['zone_wallU'], space.settings['zone_winU'], space.settings[
                 'zone_win_SHGC']
             wallConstruction = zTemplate.getConstruction('opaque', wallU)

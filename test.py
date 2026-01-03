@@ -14,7 +14,7 @@ from MoosasPy import IO,geometry,preprocess,vent
 f = r'C:\Users\Lenovo\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins\pkpm-moosas\data\geometry\selection0.geo'
 f = r'\\166.111.40.8\home\2025_MoosasEnergy\zhonghairuzhen.geo'
 f = rf'\\166.111.40.8\home\2024_MOOSASIDF_BS2025\test\dataset3\_7_in.geo'
-f = rf'test\20250416_144635_c.geo'
+f = rf'test\20251205_000848_c.geo'
 # stdout = sys.stdout
 model = transform(f,
                   triangulate_faces=False,
