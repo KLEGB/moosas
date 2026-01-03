@@ -297,8 +297,8 @@ class ZoneTemplate():
                  },
             'Sizing:Zone':
                 {'Zone_or_ZoneList_Name': zone.id, 'Zone_or_ZoneList_or_Space_or_SpaceList_Name': zone.id,
-                 'Design_Specification_Outdoor_Air_Object_Name': '',
-                 # zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
+                 'Design_Specification_Outdoor_Air_Object_Name':
+                 zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
                  'Design_Specification_Zone_Air_Distribution_Object_Name': ''
                  },
             'DesignSpecification:OutdoorAir':
@@ -331,8 +331,8 @@ class ZoneTemplate():
                 {'Name': zone.id + '_Ideal Loads Air',
                  'Zone_Supply_Air_Node_Name': 'Node ' + zone.id + ' In',
                  'Zone_Exhaust_Air_Node_Name': '',
-                 "Design_Specification_Outdoor_Air_Object_Name": '',
-                 # zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
+                 "Design_Specification_Outdoor_Air_Object_Name":
+                 zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
                  },
             'NodeList':
                 {'Name': zone.id + " Inlets",
@@ -344,11 +344,11 @@ class ZoneTemplate():
             self.objectList[key].updateParams(**params[key])
 
         # block items:
-        blockObjects = ['DesignSpecification:OutdoorAir', 'DesignSpecification:ZoneAirDistribution']
-        for item in blockObjects:
-            if item in self.objectList:
-                del self.objectList[item]
-                del self.scheduleList[item]
+        # blockObjects = ['DesignSpecification:OutdoorAir', 'DesignSpecification:ZoneAirDistribution']
+        # for item in blockObjects:
+        #     if item in self.objectList:
+        #         del self.objectList[item]
+        #         del self.scheduleList[item]
 
         # create zone objects
         self.zoneObject.updateParams(
