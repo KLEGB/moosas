@@ -430,7 +430,7 @@ Schedule:Day:Interval,
 ZoneInfiltration:DesignFlowRate,
   Generic Office Infiltration,            !- Name
   Generic Office Program,                 !- Zone or ZoneList or Space or SpaceList Name
-  Generic Office Infiltration,            !- Schedule Name
+  ,                                       !- Schedule Name
   Flow/ExteriorArea,                      !- Design Flow Rate Calculation Method
   ,                                       !- Design Flow Rate {m3/s}
   ,                                       !- Flow Rate per Floor Area {m3/s-m2}
@@ -3279,131 +3279,6 @@ Schedule:Day:Interval,
   24:00,                                  !- Time 5 {hh:mm}
   15.6;                                   !- Value Until Time 5
 
-Schedule:Day:Interval,
-  OfficeMedium INFIL_SCH_PNNL_Default,    !- Name
-  Fractional,                             !- Schedule Type Limits Name
-  No,                                     !- Interpolate to Timestep
-  24:00,                                  !- Time 1 {hh:mm}
-  1;                                      !- Value Until Time 1
-
-Schedule:Day:Interval,
-  OfficeMedium INFIL_SCH_PNNL_Sat,        !- Name
-  Fractional,                             !- Schedule Type Limits Name
-  No,                                     !- Interpolate to Timestep
-  06:00,                                  !- Time 1 {hh:mm}
-  1,                                      !- Value Until Time 1
-  18:00,                                  !- Time 2 {hh:mm}
-  0.25,                                   !- Value Until Time 2
-  24:00,                                  !- Time 3 {hh:mm}
-  1;                                      !- Value Until Time 3
-
-Schedule:Day:Interval,
-  OfficeMedium INFIL_SCH_PNNL_Sat_WntrDsn, !- Name
-  Fractional,                             !- Schedule Type Limits Name
-  No,                                     !- Interpolate to Timestep
-  06:00,                                  !- Time 1 {hh:mm}
-  1,                                      !- Value Until Time 1
-  18:00,                                  !- Time 2 {hh:mm}
-  0.25,                                   !- Value Until Time 2
-  24:00,                                  !- Time 3 {hh:mm}
-  1;                                      !- Value Until Time 3
-
-Schedule:Day:Interval,
-  OfficeMedium INFIL_SCH_PNNL_Wkdy,       !- Name
-  Fractional,                             !- Schedule Type Limits Name
-  No,                                     !- Interpolate to Timestep
-  06:00,                                  !- Time 1 {hh:mm}
-  1,                                      !- Value Until Time 1
-  22:00,                                  !- Time 2 {hh:mm}
-  0.25,                                   !- Value Until Time 2
-  24:00,                                  !- Time 3 {hh:mm}
-  1;                                      !- Value Until Time 3
-
-Schedule:Day:Interval,
-  OfficeMedium INFIL_SCH_PNNL_Wkdy_SmrDsn, !- Name
-  Fractional,                             !- Schedule Type Limits Name
-  No,                                     !- Interpolate to Timestep
-  06:00,                                  !- Time 1 {hh:mm}
-  1,                                      !- Value Until Time 1
-  22:00,                                  !- Time 2 {hh:mm}
-  0.25,                                   !- Value Until Time 2
-  24:00,                                  !- Time 3 {hh:mm}
-  1;                                      !- Value Until Time 3
-
-Schedule:Day:Interval,
-  {21984ae9-163f-43ef-b42f-0c0535ccb509}, !- Name
-  Fractional,                             !- Schedule Type Limits Name
-  No,                                     !- Interpolate to Timestep
-  24:00,                                  !- Time 1 {hh:mm}
-  1;                                      !- Value Until Time 1
-
-Schedule:Day:Interval,
-  {4bb0a6e6-845c-4452-8b17-239c9d2a3eee}, !- Name
-  Fractional,                             !- Schedule Type Limits Name
-  No,                                     !- Interpolate to Timestep
-  06:00,                                  !- Time 1 {hh:mm}
-  1,                                      !- Value Until Time 1
-  22:00,                                  !- Time 2 {hh:mm}
-  0.25,                                   !- Value Until Time 2
-  24:00,                                  !- Time 3 {hh:mm}
-  1;                                      !- Value Until Time 3
-
-Schedule:Day:Interval,
-  {4f2e1dd8-5cbc-42c3-84c5-56e81f37cbcc}, !- Name
-  Fractional,                             !- Schedule Type Limits Name
-  No,                                     !- Interpolate to Timestep
-  06:00,                                  !- Time 1 {hh:mm}
-  1,                                      !- Value Until Time 1
-  22:00,                                  !- Time 2 {hh:mm}
-  0.25,                                   !- Value Until Time 2
-  24:00,                                  !- Time 3 {hh:mm}
-  1;                                      !- Value Until Time 3
-
-Schedule:Day:Interval,
-  {c8a82c93-ed9f-47d3-8441-f59a4b3ced5c}, !- Name
-  Fractional,                             !- Schedule Type Limits Name
-  No,                                     !- Interpolate to Timestep
-  06:00,                                  !- Time 1 {hh:mm}
-  1,                                      !- Value Until Time 1
-  18:00,                                  !- Time 2 {hh:mm}
-  0.25,                                   !- Value Until Time 2
-  24:00,                                  !- Time 3 {hh:mm}
-  1;                                      !- Value Until Time 3
-
-Schedule:Day:Interval,
-  {d4a63a7b-162c-45b9-8b21-c223612dc233}, !- Name
-  Fractional,                             !- Schedule Type Limits Name
-  No,                                     !- Interpolate to Timestep
-  06:00,                                  !- Time 1 {hh:mm}
-  1,                                      !- Value Until Time 1
-  18:00,                                  !- Time 2 {hh:mm}
-  0.25,                                   !- Value Until Time 2
-  24:00,                                  !- Time 3 {hh:mm}
-  1;                                      !- Value Until Time 3
-
-Schedule:Week:Daily,
-  Generic Office Infiltration Week Rule - Jan1-Dec31, !- Name
-  OfficeMedium INFIL_SCH_PNNL_Default,    !- Sunday Schedule:Day Name
-  {4bb0a6e6-845c-4452-8b17-239c9d2a3eee}, !- Monday Schedule:Day Name
-  {4bb0a6e6-845c-4452-8b17-239c9d2a3eee}, !- Tuesday Schedule:Day Name
-  {4bb0a6e6-845c-4452-8b17-239c9d2a3eee}, !- Wednesday Schedule:Day Name
-  {4bb0a6e6-845c-4452-8b17-239c9d2a3eee}, !- Thursday Schedule:Day Name
-  {4bb0a6e6-845c-4452-8b17-239c9d2a3eee}, !- Friday Schedule:Day Name
-  {c8a82c93-ed9f-47d3-8441-f59a4b3ced5c}, !- Saturday Schedule:Day Name
-  {21984ae9-163f-43ef-b42f-0c0535ccb509}, !- Holiday Schedule:Day Name
-  {4f2e1dd8-5cbc-42c3-84c5-56e81f37cbcc}, !- SummerDesignDay Schedule:Day Name
-  {d4a63a7b-162c-45b9-8b21-c223612dc233}, !- WinterDesignDay Schedule:Day Name
-  OfficeMedium INFIL_SCH_PNNL_Default,    !- CustomDay1 Schedule:Day Name
-  OfficeMedium INFIL_SCH_PNNL_Default;    !- CustomDay2 Schedule:Day Name
-
-Schedule:Year,
-  Generic Office Infiltration,            !- Name
-  Fractional,                             !- Schedule Type Limits Name
-  Generic Office Infiltration Week Rule - Jan1-Dec31, !- Schedule:Week Name 1
-  1,                                      !- Start Month 1
-  1,                                      !- Start Day 1
-  12,                                     !- End Month 1
-  31;                                     !- End Day 1
 
 OutdoorAir:Node,
   Model Outdoor Air Node;                 !- Name
@@ -3690,9 +3565,5 @@ Output:VariableDictionary,
 Output:SQLite,
   SimpleAndTabular;                       !- Option Type
 
-LifeCycleCost:NonrecurringCost,
-  Default Cost,                           !- Name
-  Construction,                           !- Category
-  0,                                      !- Cost
-  ServicePeriod;                          !- Start of Costs
+
 
