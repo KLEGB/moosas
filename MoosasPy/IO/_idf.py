@@ -97,39 +97,54 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None,iddFile=N
 
     # encoding geometries
     for wi, wall in enumerate(moElements['MoosasWall']):
-        if len(wall.space) > 0:
-            print(f"\rIDF: encoding walls: {wi+1}/{len(moElements['MoosasWall'])}", end='')
-            space = model.spaceIdDict[wall.space[0]]
-            wallU, winU, SHGC = space.settings['zone_wallU'], space.settings['zone_winU'], space.settings[
-                'zone_win_SHGC']
-            wallConstruction = zTemplate.getConstruction('opaque', wallU)
-            windowConstruction = zTemplate.getConstruction('window', winU, SHGC)
-            if wall.category == 2:
-                idfGeometry.createThermalSurface(idf, wall, 'Wall', "Generic Air Boundary",
-                                                 None,encodeWindow=False)
-            else:
-                idfGeometry.createThermalSurface(idf, wall, 'Wall', wallConstruction.params['Name'],
-                                                 windowConstruction.params['Name'])
+        try:
+            if len(wall.space) > 0:
+                print(f"\rIDF: encoding walls: {wi+1}/{len(moElements['MoosasWall'])}", end='')
+                space = model.spaceIdDict[wall.space[0]]
+                wallU, winU, SHGC = space.settings['zone_wallU'], space.settings['zone_winU'], space.settings[
+                    'zone_win_SHGC']
+                wallConstruction = zTemplate.getConstruction('opaque', wallU)
+                windowConstruction = zTemplate.getConstruction('window', winU, SHGC)
+                if wall.category == 2:
+                    idfGeometry.createThermalSurface(idf, wall, 'Wall', "Generic Air Boundary",
+                                                     None,encodeWindow=False)
+                else:
+                    idfGeometry.createThermalSurface(idf, wall, 'Wall', wallConstruction.params['Name'],
+                                                     windowConstruction.params['Name'])
+        except IndexError as e:
+            print(f"\n  Warning: Wall {wi} (UID: {wall.Uid}) encoding failed - list index error with spaces: {wall.space} - {str(e)}")
+        except KeyError as e:
+            missing_id = str(e).strip("'")
+            print(f"\n  Warning: Wall {wi} (UID: {wall.Uid}) encoding failed - space ID not found: {missing_id} (available: {wall.space})")
+        except Exception as e:
+            print(f"\n  Warning: Wall {wi} (UID: {wall.Uid}) encoding failed - {type(e).__name__}: {str(e)}")
     print()
     for fi, face in enumerate(moElements['MoosasFace']):
-        if len(face.space) > 0:
-            print(f"\rIDF: encoding faces: {fi+1}/{len(moElements['MoosasFace'])}", end='')
-            faceType = 'Floor'
-            space = model.spaceIdDict[face.space[0]]
-            if len(face.space) == 1:
-                if model.spaceIdDict[face.space[0]].ceiling:
-                    if face in model.spaceIdDict[face.space[0]].ceiling.face:
-                        faceType = 'Roof'
-            wallU, winU, SHGC = space.settings['zone_wallU'], space.settings['zone_winU'], space.settings[
-                'zone_win_SHGC']
-            wallConstruction = zTemplate.getConstruction('opaque', wallU)
-            windowConstruction = zTemplate.getConstruction('window', winU, SHGC)
-            if face.category == 2:
-                idfGeometry.createThermalSurface(idf, face, faceType, "Moosas Air Boundary",
-                                                 None,encodeWindow=False)
-            else:
-                idfGeometry.createThermalSurface(idf, face, faceType, wallConstruction.params['Name'],
-                                                 windowConstruction.params['Name'])
+        try:
+            if len(face.space) > 0:
+                print(f"\rIDF: encoding faces: {fi+1}/{len(moElements['MoosasFace'])}", end='')
+                faceType = 'Floor'
+                space = model.spaceIdDict[face.space[0]]
+                if len(face.space) == 1:
+                    if model.spaceIdDict[face.space[0]].ceiling:
+                        if face in model.spaceIdDict[face.space[0]].ceiling.face:
+                            faceType = 'Roof'
+                wallU, winU, SHGC = space.settings['zone_wallU'], space.settings['zone_winU'], space.settings[
+                    'zone_win_SHGC']
+                wallConstruction = zTemplate.getConstruction('opaque', wallU)
+                windowConstruction = zTemplate.getConstruction('window', winU, SHGC)
+                if face.category == 2:
+                    idfGeometry.createThermalSurface(idf, face, faceType, "Moosas Air Boundary",
+                                                     None,encodeWindow=False)
+                else:
+                    idfGeometry.createThermalSurface(idf, face, faceType, wallConstruction.params['Name'],
+                                                     windowConstruction.params['Name'])
+        except IndexError as e:
+            print(f"\n  Warning: Face {fi} encoding failed - invalid space list: {face.space} - {e}")
+        except KeyError as e:
+            print(f"\n  Warning: Face {fi} encoding failed - space not found: {face.space[0] if len(face.space) > 0 else 'empty'} - {e}")
+        except Exception as e:
+            print(f"\n  Warning: Face {fi} encoding failed - {e}")
     print()
 
     # writing zonal settings

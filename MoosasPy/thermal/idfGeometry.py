@@ -401,22 +401,39 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
     list
         A list of IDF objects (surfaces) created, including the main thermal surface and any associated window surfaces. Returns None if the element is invalid or belongs to a void space.
     """
+    # Validate element has valid space information
+    if not element.space or len(element.space) == 0:
+        return None
+    
     model = element.parent
-    space0 = model.spaceIdDict[element.space[0]]
+    try:
+        space0 = model.spaceIdDict[element.space[0]]
+    except (KeyError, IndexError):
+        return None
+    
     if len(element.space) == 2:
         if space0.is_void():
             element.isOuter = True
-            space0 = model.spaceIdDict[element.space[1]]
-        if model.spaceIdDict[element.space[1]].is_void():
-            element.isOuter = True
+            try:
+                space0 = model.spaceIdDict[element.space[1]]
+            except (KeyError, IndexError):
+                return None
+        try:
+            if model.spaceIdDict[element.space[1]].is_void():
+                element.isOuter = True
+        except (KeyError, IndexError):
+            pass
     elif len(element.space) == 1:
         if space0.is_void():
             return None
     else:
         return None
     if surfaceType == 'Floor':
-        if element in space0.ceiling.face:
-            surfaceType = 'Ceiling'
+        try:
+            if space0.ceiling and element in space0.ceiling.face:
+                surfaceType = 'Ceiling'
+        except (AttributeError, TypeError):
+            pass
 
     ThermalSettings = MoosasSettings(default=FaceDefault)
     kwargs = {'Name': element.space[0] + '-' + element.Uid,
@@ -436,11 +453,17 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
             kwargs["Wind_Exposure"] = 'WindExposed'
             kwargs["View_Factor_to_Ground"] = 'AutoCalculate'
     else:
-        kwargs["Outside_Boundary_Condition"] = 'Surface'
-        kwargs["Outside_Boundary_Condition_Object"] = element.space[1] + '-' + element.Uid
-        kwargs["Sun_Exposure"] = 'NoSun'
-        kwargs["Wind_Exposure"] = 'NoWind'
-        kwargs["View_Factor_to_Ground"] = '0'
+        # For interior walls with 2 spaces
+        if len(element.space) < 2:
+            return None  # Invalid: expects 2 spaces
+        try:
+            kwargs["Outside_Boundary_Condition"] = 'Surface'
+            kwargs["Outside_Boundary_Condition_Object"] = element.space[1] + '-' + element.Uid
+            kwargs["Sun_Exposure"] = 'NoSun'
+            kwargs["Wind_Exposure"] = 'NoWind'
+            kwargs["View_Factor_to_Ground"] = '0'
+        except (KeyError, IndexError) as e:
+            return None
     ThermalSettings.updateParams(**kwargs)
     if normal is None:
         if surfaceType == 'Floor':
@@ -450,24 +473,35 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
         else:
             try:
                 normal = space0.edge.FactorOfWall[space0.edge.wall.index(element)]
-            except ValueError:
+            except (ValueError, AttributeError, TypeError, IndexError):
                 normal = element.normal
-    encodeFace(ThermalSettings, element.representation(), normal)
+    
+    try:
+        encodeFace(ThermalSettings, element.representation(), normal)
+    except Exception as e:
+        return None
     # create objects
     surface1 = ThermalSettings.applyToIDF(idf)
     faceObject = [surface1]
     if not element.isOuter:
-        ThermalSettings.params["Name"] = element.space[1] + '-' + element.Uid
-        ThermalSettings.params["Zone_Name"] = element.space[1]
-        ThermalSettings.params["Outside_Boundary_Condition_Object"] = element.space[0] + '-' + element.Uid
-        encodeFace(ThermalSettings, element.representation(), -normal)
-        if surfaceType == 'Floor':
-            surfaceType = 'Ceiling'
-        elif surfaceType == 'Ceiling':
-            surfaceType = 'Floor'
-        ThermalSettings.params["Surface_Type"] = surfaceType
-        surface2 = ThermalSettings.applyToIDF(idf)
-        faceObject.append(surface2)
+        # For interior walls: create second surface for the adjacent space
+        if len(element.space) < 2:
+            return faceObject  # Can't create second surface without second space
+        try:
+            ThermalSettings.params["Name"] = element.space[1] + '-' + element.Uid
+            ThermalSettings.params["Zone_Name"] = element.space[1]
+            ThermalSettings.params["Outside_Boundary_Condition_Object"] = element.space[0] + '-' + element.Uid
+            encodeFace(ThermalSettings, element.representation(), -normal)
+            if surfaceType == 'Floor':
+                surfaceType = 'Ceiling'
+            elif surfaceType == 'Ceiling':
+                surfaceType = 'Floor'
+            ThermalSettings.params["Surface_Type"] = surfaceType
+            surface2 = ThermalSettings.applyToIDF(idf)
+            faceObject.append(surface2)
+        except (KeyError, IndexError) as e:
+            # If second surface creation fails, return just the first one
+            pass
 
     if encodeWindow:
         for gls in element.glazingElement:
