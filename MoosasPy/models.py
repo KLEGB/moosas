@@ -64,7 +64,7 @@ class MoosasModel(MoosasContainer):
         super(MoosasModel, self).__init__()
 
         self.weather: MoosasWeather | None = None
-        self.__template = loadBuildingTemplate(path.dataBaseDir+r'\building_template.csv')
+        self.__template = loadBuildingTemplate(os.path.join(path.dataBaseDir, 'building_template.csv'))
     @property
     def buildingTemplate(self) -> dict:
         """
