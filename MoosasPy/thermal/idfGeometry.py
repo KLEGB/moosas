@@ -576,8 +576,9 @@ def createWindowSurface(idf: IDF, element: MoosasElement, parentElement: MoosasE
     if face is None:
         return []
 
-    # split the face into 4 coordinates
-    for idx, triFace in enumerate(triangulate2dFace(face)):
+    # split the face into convex pieces
+    tri_faces, _ = triangulate2dFace(face)
+    for idx, triFace in enumerate(tri_faces):
 
         # offset the window considering the splitter
         triFace = offset(triFace, -0.1)

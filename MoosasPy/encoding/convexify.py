@@ -1,6 +1,7 @@
 from typing import Union, List, Tuple
 from ..utils import pygeos,np
 from ..geometry.geos import Projection,simplify
+from .quad import create_quadrilaterals
 class BasicOptions:
     @staticmethod
     def left_on(p1, p2, p3):
@@ -60,8 +61,12 @@ class BasicOptions:
         
         if np.linalg.norm(cross) < 1e-3 * np.linalg.norm(v1) * np.linalg.norm(v2):
             return 0  
-        
-        angle_rad = np.arccos(np.clip(dot/(np.linalg.norm(v1) * np.linalg.norm(v2)), -1.0, 1.0))
+
+        denom = np.linalg.norm(v1) * np.linalg.norm(v2)
+        if denom <= 1e-12:
+            return 0
+
+        angle_rad = np.arccos(np.clip(dot / denom, -1.0, 1.0))
         angle_deg = np.degrees(angle_rad)
         
         if np.isscalar(cross):
@@ -327,16 +332,28 @@ class Geometry_Option:
         Returns:
             reordered_face: numpy array, shape=(n, 3)
         """
-        # calculate the sum of x, y, z of each vertex
-        sum_xyz = np.sum(face, axis=1)
-        min_index = np.argmin(sum_xyz)
-        
-        # reorder the vertices based on the minimum index
-        if is_upward:
-            face = np.roll(face, -min_index, axis=0)
-        else:
-            face = np.roll(face, -min_index + face.shape[0] - 1, axis=0)[::-1]
-            
+        face = np.asarray(face, dtype=float)
+        if len(face) <= 1:
+            return face
+
+        # Rotate to a stable start vertex first (minimum x+y+z)
+        min_index = np.argmin(np.sum(face, axis=1))
+        face = np.roll(face, -min_index, axis=0)
+
+        # Signed area in XY by shoelace: >0 => CCW, <0 => CW
+        x = face[:, 0]
+        y = face[:, 1]
+        signed_area = 0.5 * np.sum(x * np.roll(y, -1) - np.roll(x, -1) * y)
+        is_ccw = signed_area > 0
+
+        # is_upward=True => enforce CCW; is_upward=False => enforce CW
+        if (is_upward and not is_ccw) or ((not is_upward) and is_ccw):
+            face = face[::-1]
+
+        # Re-align start vertex after potential reversal
+        min_index = np.argmin(np.sum(face, axis=1))
+        face = np.roll(face, -min_index, axis=0)
+
         return face
 
     @staticmethod
@@ -1177,6 +1194,8 @@ class FaceFilterAndQuadrilateral:
 
 
 class MoosasConvexify:
+    create_quadrilaterals = staticmethod(create_quadrilaterals)
+
     @staticmethod
     def convexify_faces(cat, idd, normal, faces, holes, is_valid_face=True, is_quad_clean=True):
         
@@ -1263,81 +1282,97 @@ class MoosasConvexify:
         convex_normal = []
         convex_faces = []
         divide_lines = []
-        
-        
-        # Face reordering by normal direction
+
+        # Reorder non-wall faces in top view:
+        # - outer face: counter-clockwise
+        # - holes: clockwise
         for idx in range(len(faces)):
-            
-            is_upward = normal[idx][2] > 0
-            faces[idx] = Geometry_Option.reorder_vertices(faces[idx], is_upward=is_upward)
-            
-            if holes[idx]:
-                for i in range(len(holes[idx])):
-                    holes[idx][i] = Geometry_Option.reorder_vertices(holes[idx][i], is_upward=is_upward)
-                    print (f"face[{idx}]:{faces[idx]}")
-                    print (f"hole[{idx}][{i}]:{holes[idx][i]}")
-        
-        print ("--Faces reodering done--")
+            if np.abs(normal[idx][2]) > 1e-3:
+                faces[idx] = Geometry_Option.reorder_vertices(faces[idx], is_upward=True)
+                if holes[idx]:
+                    for i in range(len(holes[idx])):
+                        holes[idx][i] = Geometry_Option.reorder_vertices(holes[idx][i], is_upward=False)
+
+        print("--Faces reordering done--")
 
         for idx, face in enumerate(faces):
-            if np.abs(normal[idx][2]) > 1e-3:  # Not wall determination
+            if is_valid_face and not Geometry_Option.is_valid_face(face):
+                print(f"    Skipping invalid face {idd[idx]}")
+                continue
+
+            if np.abs(normal[idx][2]) > 1e-3:
                 poly_ex = face
-                
-                # Hole Merging
+
                 poly_in = {}
                 if holes[idx]:
                     for i in range(len(holes[idx])):
                         hole = holes[idx][i]
                         should_skip = Geometry_Option.process_hole(hole, faces, check_projection=True)
                         if should_skip:
-                            continue  # Skip the hole
+                            continue
                         poly_in[i] = hole
-   
+
                     verts, mergelines = Geometry_Option.merge_holes(poly_ex, poly_in)
-                    
                     if mergelines:
                         divide_lines.extend(mergelines)
-                        
                 else:
                     verts = poly_ex
 
-                # Convex decomposition and face processing
                 indices = list(range(len(verts)))
                 polys, diags = Geometry_Option.split_poly(verts, indices)
-                
-                # Process decomposed faces using utility method
-                FaceValidationUtils.process_convex_decomposition_faces(
-                    polys, verts, idx, cat, idd, normal,
-                    convex_cat, convex_idd, convex_normal, convex_faces,
-                    is_valid_face=is_valid_face, is_quad_clean=is_quad_clean
-                )
-                
-                # Collect dividing lines
-                if diags:
-                    sublines = [np.array([verts[pair[0]], verts[pair[1]]]) for pair in diags]
-                    divide_lines.extend(sublines)
+
+                subfaces = []
+                for poly in polys:
+                    candidate_face = verts[poly]
+
+                    if is_valid_face and not Geometry_Option.is_valid_face(candidate_face):
+                        print(f"    Skipping invalid sub-face in face {idd[idx]}")
+                        continue
+
+                    if is_quad_clean and len(poly) > 4:
+                        quad_poly = FaceFilterAndQuadrilateral.compute_max_inscribed_quadrilateral(candidate_face)
+                        if is_valid_face and not Geometry_Option.is_valid_face(quad_poly):
+                            print(f"    Skipping invalid quadrilateral sub-face in face {idd[idx]}")
+                            continue
+                        candidate_face = np.array(quad_poly)
+
+                    subfaces.append(candidate_face)
+
+                if len(subfaces) == 1:
+                    for subface in subfaces:
+                        convex_cat.append(cat[idx])
+                        convex_idd.append(idd[idx])
+                        convex_normal.append(normal[idx])
+                        convex_faces.append(subface)
+                else:
+                    for i, subface in enumerate(subfaces):
+                        convex_cat.append(cat[idx])
+                        convex_idd.append(f"#{idd[idx]}_{i}")
+                        convex_normal.append(normal[idx])
+                        convex_faces.append(subface)
+
+                    if diags:
+                        sublines = [np.array([verts[pair[0]], verts[pair[1]]]) for pair in diags]
+                        divide_lines.extend(sublines)
 
             else:
-                # For wall faces, apply node filtering and validation
-                filtered_wall_faces = FaceFilterAndQuadrilateral.filter_and_process_faces([face])
-                
-                # Process wall faces using utility method
-                FaceValidationUtils.process_filtered_faces(
-                    filtered_wall_faces, idx, idx, idx,
-                    cat, idd, normal, convex_cat, convex_idd, convex_normal, convex_faces,
-                    is_valid_face=is_valid_face, is_quad_clean=is_quad_clean,
-                    use_indexed_idd=False
-                )
-        
-        print ("--Faces splitting done--")
+                convex_cat.append(cat[idx])
+                convex_idd.append(idd[idx])
+                convex_normal.append(normal[idx])
+                convex_faces.append(face)
+
+        print("--Faces splitting done--")
 
         quad_faces, quad_normals = MoosasConvexify.create_quadrilaterals(divide_lines)
-        
-        # Process quadrilateral air-wall faces using utility method
         FaceValidationUtils.process_quadrilateral_faces(
-            quad_faces, quad_normals, convex_cat, convex_idd,
-            convex_normal, convex_faces, is_valid_face=is_valid_face,
-            is_quad_clean=is_quad_clean
+            quad_faces,
+            quad_normals,
+            convex_cat,
+            convex_idd,
+            convex_normal,
+            convex_faces,
+            is_valid_face=is_valid_face,
+            is_quad_clean=is_quad_clean,
         )
 
         return convex_cat, convex_idd, convex_normal, convex_faces, divide_lines
@@ -1371,19 +1406,17 @@ class MoosasConvexify:
         """
 
         convex_faces = []
+        divide_lines = []
 
         for idx, face in enumerate(faces):
-
-            # 1. Vertex ordering (assume CCW in 2D)
             face = Geometry_Option.reorder_vertices(face, is_upward=True)
 
             hole_dict = {}
 
             if holes[idx]:
                 for i, hole in enumerate(holes[idx]):
-                    hole = Geometry_Option.reorder_vertices(hole, is_upward=True)
+                    hole = Geometry_Option.reorder_vertices(hole, is_upward=False)
 
-                    # Skip invalid holes
                     should_skip = Geometry_Option.process_hole(
                         hole, faces, check_projection=True
                     )
@@ -1392,34 +1425,35 @@ class MoosasConvexify:
 
                     hole_dict[i] = hole
 
-            # 2. Hole merging
             if hole_dict:
-                verts, _ = Geometry_Option.merge_holes(face, hole_dict)
+                verts, mergelines = Geometry_Option.merge_holes(face, hole_dict)
+                if mergelines:
+                    divide_lines.extend(mergelines)
             else:
                 verts = face
 
-            # 3. Convex decomposition and face processing
             indices = list(range(len(verts)))
-            polys, _ = Geometry_Option.split_poly(verts, indices)
+            polys, diags = Geometry_Option.split_poly(verts, indices)
 
-            # Extract subfaces and apply node filtering
-            subfaces = [verts[i] for i in polys]
-            filtered_subfaces = FaceFilterAndQuadrilateral.filter_and_process_faces(subfaces)
-            
-            # Process filtered faces with validation
-            for subface in filtered_subfaces:
-                # Validate face
-                if not FaceValidationUtils.validate_face(
-                    subface, is_valid_face=is_valid_face, 
-                    is_quad_clean=is_quad_clean
-                ):
+            for poly in polys:
+                candidate_face = verts[poly]
+                if is_valid_face and not Geometry_Option.is_valid_face(candidate_face):
                     continue
-                
-                convex_faces.append(subface)
 
-        return convex_faces
+                if is_quad_clean and len(poly) > 4:
+                    quad_poly = FaceFilterAndQuadrilateral.compute_max_inscribed_quadrilateral(candidate_face)
+                    if is_valid_face and not Geometry_Option.is_valid_face(quad_poly):
+                        continue
+                    candidate_face = np.array(quad_poly)
 
-def triangulate2dFace(boundary: pygeos.Geometry, holes: np.ndarray[pygeos.Geometry] = None) -> np.ndarray[pygeos.Geometry]:
+                convex_faces.append(candidate_face)
+
+            if diags:
+                divide_lines.extend([np.array([verts[pair[0]], verts[pair[1]]]) for pair in diags])
+
+        return convex_faces, divide_lines
+
+def triangulate2dFace(boundary: pygeos.Geometry, holes: np.ndarray[pygeos.Geometry] = None) -> tuple[list[pygeos.Geometry], list[pygeos.Geometry]]:
     """
     Triangulate a 2D face defined by a boundary and optional holes into convex faces and dividing lines.
     
@@ -1451,8 +1485,13 @@ def triangulate2dFace(boundary: pygeos.Geometry, holes: np.ndarray[pygeos.Geomet
         holes = []
     else:
         holes = [proj.toUV(hole) for hole in holes]
-        holes = [pygeos.get_coordinates(pygeos.force_3d(hole, z=0))[:-1] for hole in holes]
-    convexFaces = MoosasConvexify.convexify_faces_2d([boundary],[holes])
+        holes = [pygeos.get_coordinates(pygeos.force_3d(hole, z=0), include_z=True)[:-1] for hole in holes]
+    convexFaces, dividedLines = MoosasConvexify.convexify_faces_2d(
+        [boundary],
+        [holes],
+        is_quad_clean=False,
+    )
     convexFaces = [pygeos.polygons(convexFace) for convexFace in convexFaces]
     convexFaces = [proj.toWorld(convexFace) for convexFace in convexFaces]
-    return convexFaces
+    dividedLines = [proj.toWorld(pygeos.linestrings(line)) for line in dividedLines]
+    return convexFaces, dividedLines
