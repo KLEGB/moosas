@@ -323,15 +323,19 @@ class MoosasGeometry(object):
         edge_str_s = {}
         for face in faces:
             coors = pygeos.get_coordinates(face, include_z=True)
+            # Snap coordinates onto the shared precision grid before encoding edges.
+            # Using floor() here can split the same physical edge into adjacent bins
+            # when paired faces differ by tiny floating-point noise.
+            quantized = np.rint(np.asarray(coors, dtype=float) / geom.POINT_PRECISION).astype(int)
 
-            for i in range(1, len(coors)):
+            for i in range(1, len(quantized)):
                 str1, str2 = '', ''
-                for corDim in coors[i]:
-                    str1 += f'{int(corDim * 100)}_'
-                for corDim in coors[i - 1]:
-                    str2 += f'{int(corDim * 100)}_'
+                for corDim in quantized[i]:
+                    str1 += f'{int(corDim)}_'
+                for corDim in quantized[i - 1]:
+                    str2 += f'{int(corDim)}_'
                 if str1 != str2:
-                    if coors[i - 1][0] + coors[i - 1][1] + coors[i - 1][2] > coors[i][0] + coors[i][1] + coors[i][2]:
+                    if tuple(quantized[i - 1]) > tuple(quantized[i]):
                         edge_str = f'{str1}{str2}'
                     else:
                         edge_str = f'{str2}{str1}'
