@@ -22,9 +22,14 @@ def convex_temp():
         This function does not return any value. It performs file reading, convexification of faces, and file writing as side effects.
     """
     cat, idd, normal, faces, holes = read_geo(input_geo_path)
-    convex_idd, convex_normal, convex_faces = MoosasConvexify.convexify_faces(idd, normal, faces,
-                                                                                          holes)
-    write_geo(output_geo_path, convex_idd, convex_normal, convex_faces)
+    convex_cat, convex_idd, convex_normal, convex_faces, _ = MoosasConvexify.convexify_faces(
+        cat,
+        idd,
+        normal,
+        faces,
+        holes,
+    )
+    write_geo(output_geo_path, convex_cat, convex_idd, convex_normal, convex_faces)
 
 
 def graph_temp():

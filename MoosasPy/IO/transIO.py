@@ -3,6 +3,7 @@ MoosasModel should be imported inside the function to avoid circular import.
 please use the general import func modelFromFile() instead of any private funcs.
 """
 from ._geo import _readGeo, writeGeo , preClassified
+from ._graph import writeGraph
 from ._idf import writeIDF
 from ._json import _readGeojson, writeJson, writeGeojson
 from ._obj import _readObj
@@ -65,6 +66,7 @@ def saveModel(model, out_path: str, save_type: str = None, idfTemplate=None, idd
             xml format, following the definition of xml module, I/O possible file.
             geo format, following the definition of geo specific for Moosas, I/O possible file.
             idf format, following the definition of EnergyPlus input file, I/O possible file.
+            graph format, following the graph json definition used by the direct graph exporter.
 
             spc format, following the definition of legacy spc module.
             geojson format, following the definition of geojson.
@@ -94,6 +96,8 @@ def saveModel(model, out_path: str, save_type: str = None, idfTemplate=None, idd
         writeSpc(out_path, model)
     elif save_type.lower() == 'xml':
         writeXml(out_path, model)
+    elif save_type.lower() == 'graph':
+        writeGraph(out_path, model)
     elif save_type.lower() == 'json':
         writeJson(out_path, model)
 

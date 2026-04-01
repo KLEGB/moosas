@@ -1,5 +1,6 @@
 from .transIO import modelFromFile, saveModel
 from ._geo import writeGeo, geoLegacyToGeo, objToGeo
+from ._graph import buildGraph, writeGraph
 from ._xml import writeXml,loadXml
 from ._json import writeJson, writeGeojson
 from ._rdf import writeRDF, loadRDF
