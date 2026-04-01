@@ -50,7 +50,7 @@ def read_temp(file_path):
     with open(file_path, 'r') as f:
         node = f.readlines()
         node = [re.split('\t[ ]*', li.strip('\n'))[0:6] for li in node]
-        print(node)
+        # print(node)
 
     return np.array(node)[1:, 3].T.astype(float) + 273.15
 

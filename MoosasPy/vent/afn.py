@@ -4,17 +4,17 @@
 """
 from __future__ import annotations
 
-from ..geometry.element import *
-from ..geometry.geos import Vector
-from ..utils.constant import geom
-from ..utils.tools import path, generate_code, callCmd, parseFile
-from ..rad import modelRadiation
-from ..weather.cumsky import MoosasCumSky
-import numpy as np
 import os
 
+from ..geometry.element import *
+from ..geometry.geos import Vector
+from ..rad import modelRadiation
+from ..utils.constant import geom
+from ..utils.tools import path, generate_code, callCmd, parseFile
+from ..weather.cumsky import MoosasCumSky
 
-class AfnZone(MoosasSpace):
+
+class AfnZone(object):
     """
         input for networkFile(zones):
         zoneName: user define zoneName
@@ -24,9 +24,16 @@ class AfnZone(MoosasSpace):
         positionX,positionY,positionZ: a position to match the zone in meter (m)
         boundaryPolygon: define the zone boundary in meter (m) with ' ' as sep
     """
-    __slots__ = ['username', 'temperature', 'prjIndex', 'heatLoad']
+    __slots__ = ['userName', 'temperature', 'prjIndex', 'heatLoad', 'volume', 'position_x', 'position_y', 'position_z',
+                 'boundary', 'element']
 
-    def __init__(self, space: MoosasSpace, name=None, temperature=27):
+    def __init__(self, **kwargs):
+        for key in self.__slots__:
+            if key in kwargs.keys():
+                setattr(self, key, kwargs[key])
+
+    @classmethod
+    def fromElement(cls, space: MoosasSpace, temperature=27) -> AfnZone:
         """
         Initialize an AfnZone instance with space data and settings.
         
@@ -49,49 +56,25 @@ class AfnZone(MoosasSpace):
             try:
                 modelRadiation(space.parent, reflection=0)
             except:
-                space.settings['zone_summerrad']=0
-                space.settings['zone_winterrad']=0
+                space.settings['zone_summerrad'] = 0
+                space.settings['zone_winterrad'] = 0
             space = space.parent.spaceList[spaceId]
-        super(AfnZone, self).__init__(space.floor, space.edge, space.ceiling)
-
-        if name is not None:
-            self.username = name
-        else:
-            self.username = space.id
-        self.temperature = temperature
-        self.prjIndex = 0
-        self.settings = space.settings
-        self.heatLoad = self.calculateHeatLoad()
-
-    @property
-    def volume(self):
-        """
-        Volume of the object calculated as the product of area and height.
-        
-        Returns
-        -------
-        float or int
-            The volume, computed as area multiplied by height.
-        """
-        return self.area * self.height
-
-    @property
-    def position(self) -> Vector:
-        """
-        Return the position of the floor's weight center as a Vector.
-        
-        Parameters
-        ----------
-        self : object
-            The instance of the class containing the `position` property.
-            It is expected to have a `floor` attribute with a `getWeightCenter` method.
-        
-        Returns
-        -------
-        Vector
-            A Vector object representing the weight center of the floor.
-        """
-        return Vector(self.floor.getWeightCenter())
+        theZone = {}
+        theZone["userName"] = space.id
+        theZone["temperature"] = temperature
+        theZone["prjIndex"] = 0
+        theZone["heatLoad"] = 0
+        theZone["volume"] = space.area * space.height
+        pos = space.floor.getWeightCenter()
+        theZone["position_x"] = pos[0]
+        theZone["position_y"] = pos[1]
+        theZone["position_z"] = pos[2]
+        theZone["boundary"] = ' '.join(
+            [' '.join(coor) for coor in pygeos.get_coordinates(space.edge.force_2d()).astype(str)])
+        theZone['element'] = space
+        z = cls(**theZone)
+        z.heatLoad = z.calculateHeatLoad()
+        return z
 
     def calculateHeatLoad(self):
         """
@@ -116,10 +99,11 @@ class AfnZone(MoosasSpace):
             equipment, and lighting heat gains.
         """
         heat = 0
-        heat += self.settings['zone_summerrad'] / (MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY) * 1000
-        heat += float(self.settings['zone_ppsm']) * float(self.settings['zone_popheat']) * self.area
-        heat += float(self.settings['zone_equipment']) * self.area
-        heat += float(self.settings['zone_lighting']) * self.area
+        heat += self.element.settings['zone_summerrad'] / (MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY) * 1000 * float(self.element.settings['zone_win_SHGC'])
+        heat += float(self.element.settings['zone_ppsm']) * float(
+            self.element.settings['zone_popheat']) * self.element.area
+        heat += float(self.element.settings['zone_equipment']) * self.element.area
+        heat += float(self.element.settings['zone_lighting']) * self.element.area
         return heat
 
     def printHeatLoad(self):
@@ -141,11 +125,13 @@ class AfnZone(MoosasSpace):
         """
         print('\nzone total', self.calculateHeatLoad())
         print('solar heat',
-              self.settings['zone_summerrad'] / (MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY) * 1000)
-        print('people', float(self.settings['zone_ppsm']) * float(self.settings['zone_popheat']) * self.area)
-        print('equipment', float(self.settings['zone_equipment']) * self.area)
-        print('lighting', float(self.settings['zone_lighting']) * self.area)
-        print('area', self.area)
+              self.element.settings['zone_summerrad'] / (
+                          MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY) * 1000)
+        print('people', float(self.element.settings['zone_ppsm']) * float(
+            self.element.settings['zone_popheat']) * self.element.area)
+        print('equipment', float(self.element.settings['zone_equipment']) * self.element.area)
+        print('lighting', float(self.element.settings['zone_lighting']) * self.element.area)
+        print('area', self.element.area)
 
     def dump(self):
         """
@@ -155,7 +141,7 @@ class AfnZone(MoosasSpace):
         ----------
         self : object
             The instance of the class containing the zone data. Expected attributes include:
-            - username (str): User-defined zone name.
+            - userName (str): User-defined zone name.
             - prjIndex (int): Project index used to generate zone ID.
             - heatLoad (float): Total heat load in Watts (W).
             - temperature (float): Initial zone temperature in Celsius (C).
@@ -170,28 +156,26 @@ class AfnZone(MoosasSpace):
             volume, position coordinates (x, y, z), and flattened boundary polygon coordinates in meters (m),
             with space-separated coordinate pairs.
         """
-        """
-            input for networkFile(zones):
-            zoneName: user define zoneName
-            heatLoad: total heat load in Watt (W)
-            temperature: zone initial temperature (C)
-            volume: zone volume (m3)
-            positionX,positionY,positionZ: a position to match the zone in meter (m)
-            boundaryPolygon: define the zone boundary in meter (m) with ' ' as sep
-        """
-        zoneStr = [self.username]
-        zoneStr += ['z' + '%03d' % self.prjIndex]
-        zoneStr += ['%.2f' % self.heatLoad]
-        zoneStr += ['%.2f' % self.temperature]
-        zoneStr += ['%.2f' % self.volume]
-        zoneStr += ['%.2f' % self.position.x]
-        zoneStr += ['%.2f' % self.position.y]
-        zoneStr += ['%.2f' % self.position.z]
-        zoneStr += [' '.join([' '.join(coor) for coor in pygeos.get_coordinates(self.edge.force_2d()).astype(str)])]
+
+        zoneStr = [self.userName]
+        zoneStr += ['z' + '%03d' % int(self.prjIndex)]
+        zoneStr += [str(self.heatLoad)]
+        zoneStr += [str(self.temperature)]
+        zoneStr += [str(self.volume)]
+        zoneStr += [str(self.position_x)]
+        zoneStr += [str(self.position_y)]
+        zoneStr += [str(self.position_z)]
+        zoneStr += [self.boundary]
         return ','.join(zoneStr)
 
+    def toDict(self) -> dict:
+        pathDict = {}
+        for key in self.__slots__:
+            pathDict[key] = str(getattr(self, key))
+        return pathDict
 
-class AfnPath(MoosasGlazing):
+
+class AfnPath(object):
     """
         input for networkFile(paths):
         pathName: user define pathName
@@ -201,11 +185,21 @@ class AfnPath(MoosasGlazing):
         fromZone: the zone index that the path from
         toZone: the zone index that the path to
         pressure: wind pressure of the path if it is connected to outdoor
+        orientation: orientation of the aperture if it is connected to outdoor
+        element: reference MoosasElement (optional)
     """
-    __slots__ = ['pathName', 'fromZone', 'toZone', 'pressure', 'prjIndex','winType']
+    __slots__ = ['userName', 'prjIndex', 'pathHeight', 'pathWidth', 'position_x', 'position_y', 'position_z',
+                 'fromZone', 'toZone', 'pressure',
+                 'winType', 'orientation', 'operable','element']
 
-    def __init__(self, moGeometry: MoosasGlazing | MoosasSkylight, model, pathName=None, fromZone=None, toZone=None,
-                 pressure=0.0):
+    def __init__(self, **kwargs):
+        for key in self.__slots__:
+            if key in kwargs.keys():
+                setattr(self, key, kwargs[key])
+
+    @classmethod
+    def fromElement(cls, moGeometry: MoosasGlazing | MoosasSkylight, pathName=None, fromZone=None, toZone=None,
+                    pressure=0.0) -> AfnPath:
         """
         Initialize an AfnPath object for airflow network modeling.
         
@@ -229,34 +223,38 @@ class AfnPath(MoosasGlazing):
         None
             This method initializes the object and does not return a value.
         """
-        super(AfnPath, self).__init__(model, moGeometry.faceId)
-        self.winType = 1 if isinstance(moGeometry, MoosasGlazing) else 0
-        self.Uid = moGeometry.Uid
+        thePath = {}
+        thePath["winType"] = 1 if isinstance(moGeometry, MoosasGlazing) else 0
+        thePath["Uid"] = moGeometry.Uid
         if pathName is None:
             pathName = moGeometry.Uid
-        self.pathName = pathName
-        self.prjIndex = 0
-        self.fromZone = fromZone
-        self.toZone = toZone
-        self.pressure = pressure
-        self.space = moGeometry.space
-        self.parentFace = moGeometry.parentFace
-        self.shading = moGeometry.shading
-        self.orientation = moGeometry.orientation if not Vector.parallel(moGeometry.orientation, [0, 0, 1]) else Vector(
+        thePath["userName"] = pathName
+        thePath["prjIndex"] = 0
+        thePath["fromZone"] = fromZone
+        thePath["toZone"] = toZone
+        thePath["pressure"] = pressure
+        thePath["orientation"] = moGeometry.orientation if not Vector.parallel(moGeometry.orientation,
+                                                                               [0, 0, 1]) else Vector(
             [0, 0,
              1])
+        pos = list(moGeometry.getWeightCenter())
+        thePath['position_x'] = pos[0]
+        thePath['position_y'] = pos[1]
+        thePath['position_z'] = pos[2]
+        thePath["pathHeight"] = None
+        thePath["pathWidth"] = None
+        thePath["operable"]=1.0
+        thePath["element"] = moGeometry
+        thePath = cls(**thePath)
+        thePath._width
+        thePath._height
+        return thePath
 
     @property
-    def width(self):
+    def _width(self):
         """
         Calculate the width of the face along the minimum Z-plane.
-        
-        Parameters
-        ----------
-        self : object
-            The instance of the class containing the `face` attribute. The `face` is a geometry object 
-            compatible with pygeos, representing a 3D planar face.
-        
+
         Returns
         -------
         float
@@ -264,47 +262,35 @@ class AfnPath(MoosasGlazing):
             distance between the first and last points in the sorted 2D projection of the face's 
             boundary points lying on the minimum Z-plane.
         """
-        coordinates = pygeos.get_coordinates(self.face, include_z=True)
-        minZ = np.min(coordinates[:, 2])
-        sortlist = [[coor[0], coor[1]] for coor in coordinates if
-                    minZ - geom.POINT_PRECISION < coor[2] < minZ + geom.POINT_PRECISION]
-        sortlist.sort(key=lambda x: (x[0], x[1]))
-        return Vector(np.array(sortlist[-1]) - np.array(sortlist[0])).length()
+        if self.pathWidth is None:
+            coordinates = pygeos.get_coordinates(self.element.face, include_z=True)
+            minZ = np.min(coordinates[:, 2])
+            sortlist = [[coor[0], coor[1]] for coor in coordinates if
+                        minZ - geom.POINT_PRECISION < coor[2] < minZ + geom.POINT_PRECISION]
+            sortlist.sort(key=lambda x: (x[0], x[1]))
+            self.pathWidth = Vector(np.array(sortlist[-1]) - np.array(sortlist[0])).length()
+        return self.pathWidth
 
     @property
-    def pathHeight(self):
+    def _height(self):
         """
         Height of the path calculated as the ratio of 3D area to width.
-        
-        Parameters
-        ----------
-        self : object
-            The instance of the class containing this property. It is expected to have
-            `area3d` and `width` attributes used in the computation.
+
         
         Returns
         -------
         float
             The height of the path, computed as the 3D area divided by the width.
         """
-        return self.area3d() / self.width
+        if self.pathHeight is None:
+            self.pathHeight = self.element.area3d() / self._width
+        return self.pathHeight
 
-    @property
-    def position(self) -> Vector:
-        """
-            Get the position of the weight center as a Vector object.
-        
-            Parameters
-            ----------
-            self : object
-                The instance of the class containing this property. Assumes the instance has a method `getWeightCenter`.
-        
-            Returns
-            -------
-            Vector
-                A Vector object representing the weight center position.
-        """
-        return Vector(self.getWeightCenter())
+    def toDict(self) -> dict:
+        pathDict = {}
+        for key in self.__slots__:
+            pathDict[key] = str(getattr(self, key))
+        return pathDict
 
     def dump(self):
         """
@@ -312,7 +298,7 @@ class AfnPath(MoosasGlazing):
         
         Parameters
         ----------
-        self : object
+        self
             The instance of the class containing the path data. Expected attributes include:
             - pathName (str): User-defined name for the path.
             - prjIndex (int): Project index used to generate a formatted identifier.
@@ -342,13 +328,13 @@ class AfnPath(MoosasGlazing):
         """
         if self.fromZone is None or self.toZone is None:
             raise Exception('path topology have not been calculated')
-        pathStr = [self.pathName]
-        pathStr += ['p' + '%03d' % self.prjIndex]
-        pathStr += [str(self.pathHeight)]
-        pathStr += [str(self.width)]
-        pathStr += [str(self.position.x)]
-        pathStr += [str(self.position.y)]
-        pathStr += [str(self.position.z)]
+        pathStr = [self.userName]
+        pathStr += ['p' + '%03d' % int(self.prjIndex)]
+        pathStr += [str(float(self.pathHeight)*float(self.operable))]
+        pathStr += [str(float(self.pathWidth)*float(self.operable))]
+        pathStr += [str(self.position_x)]
+        pathStr += [str(self.position_y)]
+        pathStr += [str(self.position_z)]
         pathStr += [str(self.fromZone)]
         pathStr += [str(self.toZone)]
         pathStr += [str(self.pressure)]
@@ -359,7 +345,7 @@ class AfnPath(MoosasGlazing):
 class AfnNetwork:
     __slots__ = ('zones', 'paths', 'model')
 
-    def __init__(self, model):
+    def __init__(self, model=None, paths=None, zones=None):
         """
         Initialize the object with a model and construct airflow network paths and zones.
         
@@ -375,18 +361,31 @@ class AfnNetwork:
         None
             This method does not return a value.
         """
-        self.model = model
-        self.paths: list[AfnPath] = []
-        self.zones: list[AfnZone] = []
-        for s in model.spaceList:
-            self.zones.append(AfnZone(s, s.id))
-            self.zones[-1].prjIndex = len(self.zones)
-            for gls in s.getAllFaces(to_dict=False):
-                if isinstance(gls, MoosasGlazing) or isinstance(gls, MoosasSkylight):
-                    self.paths.append(AfnPath(gls, model))
-                    self.paths[-1].prjIndex = len(self.paths)
+        if model:
+            self.model = model
+            self.paths: list[AfnPath] = []
+            self.zones: list[AfnZone] = []
+            for s in model.spaceList:
+                self.zones.append(AfnZone.fromElement(s))
+                self.zones[-1].prjIndex = len(self.zones)
+                for gls in s.getAllFaces(to_dict=False):
+                    if isinstance(gls, MoosasGlazing) or isinstance(gls, MoosasSkylight):
+                        self.paths.append(AfnPath.fromElement(gls))
+                        self.paths[-1].prjIndex = len(self.paths)
+        elif (paths and zones):
+            self.paths = paths
+            self.zones = zones
         self.paths = pathTopology(self.paths, self.zones)
         self.paths, self.zones = cleanseNetwork(self.paths, self.zones)
+
+    def checkTopology(self):
+        topology = {z.prjIndex:[] for z in self.zones}
+        topology[-1]=[]
+        for p in self.paths:
+            topology[p.fromZone].append(p.prjIndex)
+            topology[p.toZone].append(p.prjIndex)
+        print(topology)
+        print({k: len(i) for k, i in topology.items()})
 
     def applyWindPressure(self, windVector: Vector, speed=None, airDensity=1.205, alpha=0.22):
         """
@@ -411,7 +410,8 @@ class AfnNetwork:
         """connect to applyWindPressure()"""
         self.paths = applyWindPressure(self.paths, windVector=windVector, speed=speed, airDensity=airDensity,
                                        alpha=alpha)
-    def applyZoneHeat(self,zoneInfoFile):
+
+    def applyZoneHeat(self, zoneInfoFile):
         """
         Copy heat information from a zone info file to corresponding zones.
         
@@ -425,17 +425,18 @@ class AfnNetwork:
         -------
         None
             This function does not return any value. It modifies the `heatLoad` attribute of 
-            each zone in `self.zones` if the zone's username matches an entry in the heat info.
+            each zone in `self.zones` if the zone's userName matches an entry in the heat info.
         """
         """copy the heat information in zoneInfoFile"""
         zoneInfo = parseFile(zoneInfoFile)[0]
-        heatIdx,nameIdx = 2,3
+        heatIdx, nameIdx = 2, 3
         if len(zoneInfo[0]) == 2:
             heatIdx, nameIdx = 1, 2
-        heatInfo = {line[nameIdx]:float(line[heatIdx]) for line in zoneInfo}
+        heatInfo = {line[nameIdx]: float(line[heatIdx]) for line in zoneInfo}
         for zone in self.zones:
-            if zone.username in heatInfo.keys():
-                zone.heatLoad = heatInfo[zone.username]
+            if zone.userName in heatInfo.keys():
+                zone.heatLoad = heatInfo[zone.userName]
+
     def toFile(self, networkFilePath=None):
         """connect to buildNetworkFile()"""
         return buildNetworkFile(pathList=self.paths, zoneList=self.zones, networkFilePath=networkFilePath)
@@ -501,7 +502,7 @@ def applyWindPressure(pathList: list[AfnPath], windVector: Vector, speed: float 
     pressure = Wp * airDensity * windVector.length(power=True) * np.power(([p.elevation for p in pathList]),
                                                                           (alpha * 2)) / 2
     for _path, _pressure in zip(pathList, pressure):
-        if Vector.parallel(_path.normal,[0,0,1]):
+        if Vector.parallel(_path.normal, [0, 0, 1]):
             _pressure = 0
         _path.pressure = _pressure
 
@@ -527,11 +528,11 @@ def getZoneAndPath(model):
     pathList: list[AfnPath] = []
     zoneList: list[AfnZone] = []
     for s in model.spaceList:
-        zoneList.append(AfnZone(s))
+        zoneList.append(AfnZone.fromElement(s))
         zoneList[-1].prjIndex = len(zoneList)
         for gls in s.getAllFaces(to_dict=False):
             if isinstance(gls, MoosasGlazing) or isinstance(gls, MoosasSkylight):
-                pathList.append(AfnPath(gls, model))
+                pathList.append(AfnPath.fromElement(gls))
                 pathList[-1].prjIndex = len(pathList)
     pathList = pathTopology(pathList, zoneList)
     return zoneList, pathList
@@ -556,26 +557,26 @@ def pathTopology(pathList: list[AfnPath], zoneList: list[AfnZone]) -> list[AfnPa
         and `toZone` are set to the corresponding zone indices from `zoneList`. Paths 
         with no connected spaces are excluded.
     """
-    zoneUid = [zone.id for zone in zoneList]
+    zoneUid = [zone.element.id for zone in zoneList]
     invalidPath = []
 
     for i, p in enumerate(pathList):
-        if len(p.space) == 0:
+        if len(p.element.space) == 0:
             invalidPath.append(i)
-        elif len(p.space) == 1:
+        elif len(p.element.space) == 1:
             p.fromZone = -1
-            p.toZone = zoneUid.index(p.space[0])
+            p.toZone = zoneUid.index(p.element.space[0])
 
-        elif len(p.space) == 2:
-            p.fromZone = zoneUid.index(p.space[0])
-            p.toZone = zoneUid.index(p.space[1])
+        elif len(p.element.space) == 2:
+            p.fromZone = zoneUid.index(p.element.space[0])
+            p.toZone = zoneUid.index(p.element.space[1])
 
     return list(np.delete(pathList, invalidPath))
 
 
 def buildNetworkFile(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone] = None,
                      networkFilePath=None, windVector: Vector = None,
-                      airDensity=1.205, alpha=0.22) -> str:
+                     airDensity=1.205, alpha=0.22) -> str:
     """
         Build *.net file from model or pathList/zoneList.
         It is the input for MoosasAFN.exe and record zone and path data.
@@ -604,11 +605,11 @@ def buildNetworkFile(model=None, pathList: list[AfnPath] = None, zoneList: list[
         if model is None:
             raise Exception("model, pathList and zoneList cannot be all None")
         zoneList, pathList = getZoneAndPath(model)
+        pathList, zoneList = cleanseNetwork(pathList, zoneList)
 
-    pathList, zoneList = cleanseNetwork(pathList, zoneList)
     if windVector:
         pathList = applyWindPressure(pathList, windVector=windVector, speed=windVector.length(), airDensity=airDensity,
-                          alpha=alpha)
+                                     alpha=alpha)
     networkStr = "! All annotations has prefix as !\n"
     networkStr += "! ZONE DATA\n"
     networkStr += "! zoneName,zonePrjName,heatLoad,temperature,volume,positionX,positionY,positionZ,boundaryPolygon\n"
@@ -646,48 +647,70 @@ def cleanseNetwork(pathList: list[AfnPath], zoneList: list[AfnZone]) -> (list[Af
     """clean the zones that are not linked to the ambient.
     those zones will cause error in ContamX and their air change is 0.
     """
-    invalidZone = np.arange(len(zoneList))
-    topology = {i: set() for i in invalidZone}
-    topology[-1] = set()
-    validZone = {-1}
-    invalidZone = set(invalidZone)
 
-    for p in pathList:
-        topology[p.fromZone].add(p.toZone)
-        topology[p.toZone].add(p.fromZone)
+    cleansed = True
+    while cleansed:
+        cleansed = False
+        invalidZone = np.arange(len(zoneList))
+        topology = {i: set() for i in invalidZone}
+        topology[-1] = set()
+        validZone = {-1}
+        invalidZone = set(invalidZone)
 
-    invalid = 0
-    while invalid != len(invalidZone):
-        invalid = len(invalidZone)
-        _oriValid = list(validZone)
-        for zIdx in _oriValid:
-            validZone = validZone | topology[zIdx] # add the connected zones to valid group
-        invalidZone = invalidZone.difference(validZone) # find invalid zones
-
-    if len(invalidZone) > 0:
-        print(f'******Warning: some zones do not linked to ambient.')
-        invalidPath = [i for i, p in enumerate(pathList) if p.fromZone in invalidZone or p.toZone in invalidZone]
-        print(f'******Warning: those zone will be removed:{list(invalidZone)}')
-        print(f'******Warning: those path will be removed:{list(invalidPath)}')
-        ZoneIdOri = [z.id for z in zoneList]
         for p in pathList:
-            p.fromZone = ZoneIdOri[p.fromZone] if p.fromZone >= 0 else -1
-            p.toZone = ZoneIdOri[p.toZone] if p.toZone >= 0 else -1
+            topology[p.fromZone].add(p.toZone)
+            topology[p.toZone].add(p.fromZone)
 
-        zoneList = np.delete(zoneList, list(invalidZone))
-        pathList = np.delete(pathList, list(invalidPath))
-        ZoneIdOri = [z.id for z in zoneList]
-        for i, p in enumerate(pathList):
-            p.fromZone = ZoneIdOri.index(p.fromZone) if p.fromZone != -1 else -1
-            p.toZone = ZoneIdOri.index(p.toZone) if p.toZone != -1 else -1
+        valid=0
+        for zone in topology[-1]:
+            validZone.add(zone)  # branch first search all connected zones
+        while valid != len(validZone):
+            valid = len(validZone)
+            validZoneCopy = validZone.copy()
+            for item in validZoneCopy:
+                for zone in topology[item]:
+                    validZone.add(zone) # branch first search all connected zones
+
+        invalidZone = invalidZone.difference(validZone)  # find invalid zones
+
+        # invalid = 0
+        # while invalid != len(invalidZone):
+        #     invalid = len(invalidZone)
+        #     _oriValid = list(validZone)
+        #     for zIdx in _oriValid:
+        #         validZone = validZone | topology[zIdx]  # add the connected zones to valid group
+        #     invalidZone = invalidZone.difference(validZone)  # find invalid zones
+        # print("QQQQQQQQQQQQQQQQQQQQQQQQQQQ",invalidZone)
+        if len(invalidZone) > 0:
+            print(f'******Warning: some zones do not linked to ambient.')
+            invalidPath = [i for i, p in enumerate(pathList) if p.fromZone in invalidZone or p.toZone in invalidZone]
+            print(f'******Warning: those zone will be removed:{list(invalidZone)}')
+            print(f'******Warning: those path will be removed:{list(invalidPath)}')
+            ZoneIdOri = [z.element.id for z in zoneList]
+            for p in pathList:
+                p.fromZone = ZoneIdOri[p.fromZone] if p.fromZone >= 0 else -1
+                p.toZone = ZoneIdOri[p.toZone] if p.toZone >= 0 else -1
+
+            zoneList = np.delete(zoneList, list(invalidZone))
+            pathList = np.delete(pathList, list(invalidPath))
+            ZoneIdOri = [z.element.id for z in zoneList]
+            for i, p in enumerate(pathList):
+                p.fromZone = ZoneIdOri.index(p.fromZone) if p.fromZone != -1 else -1
+                p.toZone = ZoneIdOri.index(p.toZone) if p.toZone != -1 else -1
+                p.prjIndex = i
+
+            for i, z in enumerate(zoneList):
+                z.prjIndex = i
+
+            cleansed = True
 
     return pathList, zoneList
 
 
 def buildPrj(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone] = None,
              prjFilePath=None, networkFilePath=None, split=False,
-             t0=25, windVector: Vector = None,airDensity=1.205, alpha=0.22,
-             simulate=False, resultFile=None) -> list[str]:
+             t0=25, windVector: Vector = None, airDensity=1.205, alpha=0.22,
+             simulate=False, resultFile=None) -> str:
     """
     Build one or more CONTAM *.prj file(s) from a model or provided path and zone lists.
     
@@ -759,7 +782,7 @@ def buildPrj(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone]
                 raise Exception("model, pathList and zoneList cannot be all None")
             zoneList, pathList = getZoneAndPath(model)
         networkFilePath = buildNetworkFile(pathList=pathList, zoneList=zoneList, networkFilePath=networkFilePath,
-                                           windVector = windVector,airDensity=airDensity, alpha=alpha)
+                                           windVector=windVector, airDensity=airDensity, alpha=alpha)
 
     if prjFilePath is None:
         prjName = prjTempName
@@ -790,7 +813,7 @@ def buildZoneInfoFile(model=None, zoneList: list[AfnZone] = None, networkFilePat
                       zoneInfoFilePath=None) -> str:
     """
     Builds a zone information file (.info) for thermal zone data based on model, zone list, and network file inputs.
-    
+
     Parameters
     ----------
     model : MoosasModel, optional
@@ -803,7 +826,7 @@ def buildZoneInfoFile(model=None, zoneList: list[AfnZone] = None, networkFilePat
         List of AfnPath objects representing airflow paths. Required if generating a network file.
     zoneInfoFilePath : str, optional
         Output file path for the generated zone info file. If not specified, a temporary file path is created.
-    
+
     Returns
     -------
     str

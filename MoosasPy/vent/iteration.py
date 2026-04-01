@@ -308,6 +308,7 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
             """calculating the room indoor temperature"""
             temperature = change_temperature(AFN=AFN, roomInfo=np.array([z.heat for z in zones]), t0=outdoorTemperature)
             tempIteration = (np.array(temperature) - 273.15).flatten().tolist() + [outdoorTemperature]
+            print(np.array(temperature) - 273.15)
             for i in range(temperature.shape[1]):
                 if temperature[0, i] < 200 or temperature[0, i] > 375:
                     invalidRoom[i] = True
@@ -362,7 +363,7 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
                 writeZone(resultFile, zones)
 
     if resultFile is None:
-        return writeZone(resultFile, zones)
+        return zones
     print('simulation finished :', resultFile)
     callCmd(['copy',
              "\"" + FilePath['current_file'] + "\"",
