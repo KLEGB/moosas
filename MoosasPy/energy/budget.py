@@ -405,15 +405,15 @@ if __name__ == "__main__":
     }
     waste_demo = {"profile": 0.06, "glass": 0.02, "window": 0.03}
 
-    cases = [estimate_curtainwall_cost(15, 10, p/100.0, prices=prices_demo, waste=waste_demo) for p in range(1,100)]
+    cases = [estimate_curtainwall_cost(4.5, 10, p/100.0, prices=prices_demo, waste=waste_demo) for p in range(10,60)]
     import matplotlib.pyplot as plt
 
-    profile,glass,window,install = ([cases[i]['profile'] for i in range(99)],
-                                    [cases[i]['glass_fixed'] for i in range(99)],
-                                    [cases[i]['window'] for i in range(99)],
-                                    [cases[i]['install'] for i in range(99)])
+    profile,glass,window,install = ([cases[i]['profile'] for i in range(len(cases))],
+                                    [cases[i]['glass_fixed'] for i in range(len(cases))],
+                                    [cases[i]['window'] for i in range(len(cases))],
+                                    [cases[i]['install'] for i in range(len(cases))])
 
-    x = [p/100.0 for p in range(1,100)]
+    x = [p/100.0 for p in range(10,60)]
     plt.stackplot(x,profile,glass,window,install,labels=["profile","glass_fixed","window","install"],alpha=0.5)
     plt.legend(loc="best")
     plt.show()

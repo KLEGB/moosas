@@ -1,14 +1,19 @@
 """
-quick energy analysis module.
-this energy analysis based on simplified physical model,
+Quick energy analysis module.
+
+This energy analysis is based on a simplified physical model,
 which only takes 0.01s for a space and gets acceptable accuracy.
-the analysis result has been validated by ASHRAE 140.
-more information can be found in this article:
+The analysis result has been validated by ASHRAE 140.
+More information can be found in this article:
 https://doi.org/10.1016/j.buildenv.2021.107929.
+
+This module serves as the Python-side interface for the unified
+MoosasEnergy Go executable, which supports both residential and
+public building types via the -t parameter.
 """
 from ..utils.support import os
 from datetime import datetime
-from ..utils import path, callCmd, parseFile,FileError
+from ..utils import path, callCmd, parseFile, FileError
 from ..utils.constant import buildingType, dateSetting
 from ..rad import modelRadiation
 
@@ -16,143 +21,189 @@ from ..thermal.settings import ThermalSettings
 
 from ..models import *
 
-# a quick radiation estimation based on measured data
+# A quick radiation estimation based on measured data (Beijing cumSky)
 SUMMER_RADIATION = [280100, 175200, 213200, 116300, 280100]
 WINTER_RADIATION = [150800, 355200, 123600, 51500, 150800]
+
+# Directory paths for the energy module
 energyScriptDir = os.path.join(path.libDir, "energy")
 energyDataDir = os.path.join(path.dataDir, "energy")
-energyIndex = ["space_height","zone_area","outside_area","facade_area","window_area","roof_area","skylight_area","floor_area",
- "summer_solar","winter_solar","zone_wallU","zone_winU","zone_win_SHGC","zone_c_temp","zone_c_hum","zone_h_temp",
- "zone_collingEER","zone_HeatingEER","zone_work_start","zone_work_end","zone_ppsm","zone_pfav","zone_popheat",
- "zone_equipment","zone_lighting","zone_infiltration","zone_nightACH","zone_name","zone_summerrad","zone_winterrad","zone_template"
+
+# Month names for output parsing (12 months)
+MONTH_NAMES = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ]
 
-def energyAnalysis(model: MoosasModel=None, core=buildingType.RESIDENTIAL,
+
+def energyAnalysis(model: MoosasModel = None,
+                   core=buildingType.RESIDENTIAL,
                    requireRadiation=False,
-                    energyInput=None,
+                   exportDaily=False,
+                   exportHourly=False,
+                   exportByZone=False,
+                   schedulePath=None,
+                   energyInput=None,
                    inputPath=os.path.join(energyDataDir, "Energy.i"),
                    resultPath=os.path.join(energyDataDir, "Energy.o")) -> dict:
-
     """Quick energy analysis function.
 
-    It takes two different cores for residential buildings and others.
-    if you don't require a radiation calculation,
-    you must change the SUMMER_RADIATION and WINTER_RADIATION before you use this function.
-    Otherwise, the solar heat will be estimated based on Beijing's cumSky.
+    This function prepares the input file, invokes the unified MoosasEnergy
+    executable, and parses the output. It supports both residential and public
+    building types, and can export results at multiple granularities.
 
     Args:
-        model(MoosasModel): the model you want to analysis
-        core: which core you want to use, please take buildingType.RESIDENTIAL or others (default: buildingType.RESIDENTIAL)
-        requireRadiation(bool): True if you want to take an accurate radiation calculation by MoosasRad. (default: False)
-        inputPath(str): save the input file to this path. (default: data\energy\Energy.i)
-        inputPath(str): save the output file to this path. (default: data\energy\Energy.o)
+        model (MoosasModel): The model to analyze.
+        core: Building type selector. Use buildingType.RESIDENTIAL for
+            residential buildings (type=0), or any other buildingType value
+            for public buildings (type=1~6). (default: buildingType.RESIDENTIAL)
+        requireRadiation (bool): True to perform accurate radiation calculation
+            using MoosasRad. If False, solar heat is estimated based on
+            Beijing's cumSky. (default: False)
+        exportDaily (bool): If True, include daily (365-row) results in output.
+            (default: False)
+        exportHourly (bool): If True, include hourly (8760-row) results in
+            output. (default: False)
+        exportByZone (bool): If True, include per-zone results in output.
+            (default: False)
+        schedulePath (str or None): Path to the schedule CSV file. If None,
+            schedule functionality is disabled. (default: None)
+        energyInput (dict or None): Pre-built energy input dict. If provided,
+            skips getEnergyInput(). Must contain 'zones' and 'args' keys.
+            (default: None)
+        inputPath (str): Path to save the input .i file.
+            (default: data/energy/Energy.i)
+        resultPath (str): Path to save the output .o file.
+            (default: data/energy/Energy.o)
 
     Returns:
-        e_data(dict):
-        a dictionary to show the result in:
-        total:{ cooling: total cooling energy demand,
-                heating: total heating energy demand,
-                lighting: total lighting energy demand,
-                total: total energy demand }
-        spaces: list[ThermalSettings] (the result are recorded in ThermalSettings.load)
-        months: {Jan : {cooling: total cooling energy demand,
-                        heating: total heating energy demand,
-                        lighting: total lighting energy demand,
-                        total: total energy demand }
-                Feb : {...}
-                ...}
+        dict: A dictionary containing the parsed energy results:
+            - 'total': dict with 'cooling', 'heating', 'lighting', 'total'
+            - 'spaces': list of ThermalSettings with load attributes set
+            - 'months': dict mapping month names to energy demand dicts
+            - 'days': list of dicts (365 items), only if exportDaily=True
+            - 'hours': list of dicts (8760 items), only if exportHourly=True
+            - 'zone_months': list of list of dicts, only if exportByZone=True
+            - 'zone_days': list of list of dicts, only if exportByZone=True
+                and exportDaily=True
+            - 'zone_hours': list of list of dicts, only if exportByZone=True
+                and exportHourly=True
 
     Raises:
-        ShellError: error occured in MoosasResidential.exe or MoosasPublic.exe
+        ShellError: Error occurred in MoosasEnergy executable.
 
     Examples:
-        >>> e_data = energyAnalysis(model,requireRadiation=True)
+        >>> e_data = energyAnalysis(model, requireRadiation=True)
         >>> print(e_data['total'])
+
+        >>> # With daily and hourly output
+        >>> e_data = energyAnalysis(model, exportDaily=True, exportHourly=True)
+        >>> print(len(e_data['days']))   # 365
+        >>> print(len(e_data['hours']))  # 8760
+
+        >>> # With schedule file
+        >>> e_data = energyAnalysis(model, schedulePath='office_schedule.csv')
 
     References:
         https://doi.org/10.1016/j.buildenv.2021.107929.
-
     """
     if not energyInput:
-        energyInput = getEnergyInput(model, requireRadiation)
+        energyInput = getEnergyInput(
+            model,
+            core=core,
+            requireRadiation=requireRadiation,
+            exportDaily=exportDaily,
+            exportHourly=exportHourly,
+            exportByZone=exportByZone,
+            schedulePath=schedulePath,
+        )
 
     inputPath = os.path.abspath(inputPath)
     resultPath = os.path.abspath(resultPath)
+
+    # Write the input .i file
     with open(inputPath, "w") as file:
         lines = [zone.paramToString() for zone in energyInput['zones']]
         file.write('!' + energyInput['zones'][0].paramTags() + '\n')
         file.write('\n'.join(lines))
 
-    energyInput['args'] += ['-o', f"\"{resultPath}\""] + [f"\"{inputPath}\""]
-    exe_command = os.path.abspath(os.path.join(energyScriptDir,
-                                               "MoosasEnergyResidential.exe")) if core == buildingType.RESIDENTIAL else os.path.join(
-        energyScriptDir, "MoosasEnergyPublic.exe")
-    exe_command=f"\"{exe_command}\""
+    # Append output path and input path to the command-line arguments
+    energyInput['args'] += ['-o', f'"{resultPath}"'] + [f'"{inputPath}"']
+
+    # Use the unified MoosasEnergy executable
+    exe_command = os.path.abspath(
+        os.path.join(energyScriptDir, "MoosasEnergy.exe")
+    )
+    exe_command = f'"{exe_command}"'
     exe_command = [exe_command] + energyInput['args']
     callCmd(exe_command, cwd=os.path.abspath(energyScriptDir))
 
-    return parseEnergyOutput(resultPath, energyInput['zones'])
+    return parseEnergyOutput(
+        resultPath,
+        energyInput['zones'],
+        exportDaily=exportDaily,
+        exportHourly=exportHourly,
+        exportByZone=exportByZone,
+    )
 
 
-def parseEnergyOutput(resultPath, zoneList: list[ThermalSettings] = None):
-    """
-    Parse the output file from MoosasResidential.exe or MoosasPublic.exe.
-    
-    Parameters
-    ----------
-    resultPath : str
-        Path to the result file to parse.
-    zoneList : list of ThermalSettings, optional
-        List of ThermalSettings objects to record the results. If None, results are returned as dictionaries.
-        Default is None.
-    
-    Returns
-    -------
-    e_data : dict
-        A dictionary containing the parsed energy results with the following keys:
-        - 'total': dict with keys 'cooling', 'heating', 'lighting', and 'total' representing total energy demands.
-        - 'spaces': list of ThermalSettings (if zoneList provided) with load attributes set, or list of dicts with energy demands per space.
-        - 'months': dict mapping month names to their respective energy demand dictionaries (cooling, heating, lighting, total).
-    """
-    """Parse the output file from MoosasResidential.exe or MoosasPublic.exe
+def parseEnergyOutput(resultPath,
+                      zoneList: list[ThermalSettings] = None,
+                      exportDaily=False,
+                      exportHourly=False,
+                      exportByZone=False):
+    """Parse the output file from MoosasEnergy executable.
+
+    The output file contains multiple sections separated by ';', each
+    starting with a '!' header line. This function parses all sections
+    and returns a structured dictionary.
 
     Args:
-        resultPath(str): the result file to parse.
-        zoneList(list[ThermalSettings]) ThermalSettings list to record the result.
-        if None, the result will be given directly. (default: None)
+        resultPath (str): Path to the result .o file to parse.
+        zoneList (list[ThermalSettings], optional): List of ThermalSettings
+            objects to record per-space results. If None, results are returned
+            as plain dictionaries. (default: None)
+        exportDaily (bool): Whether daily results are expected in the output.
+            (default: False)
+        exportHourly (bool): Whether hourly results are expected in the output.
+            (default: False)
+        exportByZone (bool): Whether per-zone results are expected in the
+            output. (default: False)
 
     Returns:
-        e_data(dict):
-        a dictionary to show the result in:
-        total:{ cooling: total cooling energy demand,
-                heating: total heating energy demand,
-                lighting: total lighting energy demand,
-                total: total energy demand }
-        spaces: list[ThermalSettings] (the result are recorded in ThermalSettings.load)
-        or spaces: [{   cooling: total cooling energy demand,
-                        heating: total heating energy demand,
-                        lighting: total lighting energy demand,
-                        total: total energy demand }...]
-        months: {Jan : {cooling: total cooling energy demand,
-                        heating: total heating energy demand,
-                        lighting: total lighting energy demand,
-                        total: total energy demand }
-                Feb : {...}
-                ...}
+        dict: A dictionary containing the parsed energy results with keys:
+            - 'total': dict with 'cooling', 'heating', 'lighting', 'total'
+            - 'spaces': list of ThermalSettings or list of dicts
+            - 'months': dict mapping month names to energy demand dicts
+            - 'days': list of 365 dicts (only if exportDaily=True)
+            - 'hours': list of 8760 dicts (only if exportHourly=True)
+            - 'zone_months': list[list[dict]], per-zone monthly
+                (only if exportByZone=True)
+            - 'zone_days': list[list[dict]], per-zone daily
+                (only if exportByZone=True and exportDaily=True)
+            - 'zone_hours': list[list[dict]], per-zone hourly
+                (only if exportByZone=True and exportHourly=True)
 
     Raises:
-        FileError: get an invalid file which cannot be parsed.
+        FileError: The output file cannot be parsed.
 
     Examples:
-        >>> e_data = parseEnergyOutput(r'data\energy\Energy.o')
+        >>> e_data = parseEnergyOutput('Energy.o', exportDaily=True)
+        >>> print(len(e_data['days']))  # 365
     """
-
     try:
         output = parseFile(resultPath)
-        total = output[0][0]
-        total = {"cooling": total[0], "heating": total[1], "lighting": total[2],
-                 "total": np.array(total).astype(float).sum()}
-        monthsResult = {}
+
+        # ── Section 0: TOTAL (1 row) ──────────────────────
+        total_row = output[0][0]
+        total = {
+            "cooling": total_row[0],
+            "heating": total_row[1],
+            "lighting": total_row[2],
+            "total": np.array(total_row).astype(float).sum(),
+        }
+
+        # ── Section 1: SPACE RESULT (N rows) ─────────────
         if zoneList:
             for i in range(len(zoneList)):
                 zoneList[i].load = {
@@ -169,71 +220,173 @@ def parseEnergyOutput(resultPath, zoneList: list[ThermalSettings] = None):
                 'total': np.array(res).astype(float).sum(),
             } for res in output[1]]
 
+        # ── Section 2: MONTH RESULT (12 rows) ────────────
+        months_result = {}
         for mon, result in zip(dateSetting.MONTH_NAME, output[2]):
-            monthsResult[mon] = {"cooling": result[0], "heating": result[1], "lighting": result[2],
-                                 "total": np.array(result).astype(float).sum()}
+            months_result[mon] = {
+                "cooling": result[0],
+                "heating": result[1],
+                "lighting": result[2],
+                "total": np.array(result).astype(float).sum(),
+            }
 
-        e_data = {"total": total, "spaces": zoneList, "months": monthsResult}
+        e_data = {
+            "total": total,
+            "spaces": zoneList,
+            "months": months_result,
+        }
+
+        # ── Track the next section index ─────────────────
+        # Sections 0, 1, 2 are always present (TOTAL, SPACE, MONTH).
+        # Additional sections are appended in the order defined by the
+        # Go executable: DAY, HOUR, ZONE MONTH, ZONE DAY, ZONE HOUR.
+        section_idx = 3
+
+        # ── Section 3 (optional): DAY RESULT (365 rows) ──
+        if exportDaily:
+            e_data["days"] = _parse_energy_rows(output[section_idx])
+            section_idx += 1
+
+        # ── Section 4 (optional): HOUR RESULT (8760 rows) ─
+        if exportHourly:
+            e_data["hours"] = _parse_energy_rows(output[section_idx])
+            section_idx += 1
+
+        # ── Section 5 (optional): ZONE MONTH RESULT ──────
+        if exportByZone:
+            num_zones = len(output[1])  # number of spaces
+            e_data["zone_months"] = _parse_zone_energy_rows(
+                output[section_idx], num_zones, 12
+            )
+            section_idx += 1
+
+            # ── Section 6 (optional): ZONE DAY RESULT ────
+            if exportDaily:
+                e_data["zone_days"] = _parse_zone_energy_rows(
+                    output[section_idx], num_zones, 365
+                )
+                section_idx += 1
+
+            # ── Section 7 (optional): ZONE HOUR RESULT ───
+            if exportHourly:
+                e_data["zone_hours"] = _parse_zone_energy_rows(
+                    output[section_idx], num_zones, 8760
+                )
+                section_idx += 1
+
         return e_data
 
-    except:
+    except Exception:
         raise FileError(resultPath)
 
 
-def getEnergyInput(model: MoosasModel, require_radiation=False):
+def _parse_energy_rows(section_data):
+    """Parse a list of [cooling, heating, lighting] rows into dicts.
+
+    Args:
+        section_data: List of rows, each row is a list of 3 string values.
+
+    Returns:
+        list[dict]: Each dict has 'cooling', 'heating', 'lighting', 'total'.
     """
-    Get the energy input configuration for a given MoosasModel.
-    
-    Parameters
-    ----------
-    model : MoosasModel
-        The model for which to generate the energy input file.
-    require_radiation : bool, optional
-        If True, enables accurate radiation calculation using MoosasRad. Default is False.
-    
-    Returns
-    -------
-    dict
-        A dictionary containing the energy input configuration with the following keys:
-        - 'zones': list of ThermalSettings objects representing thermal settings for each zone.
-        - 'args': list of command-line arguments including weather file, latitude, altitude, and shape factor.
+    return [{
+        "cooling": row[0],
+        "heating": row[1],
+        "lighting": row[2],
+        "total": np.array(row).astype(float).sum(),
+    } for row in section_data]
+
+
+def _parse_zone_energy_rows(section_data, num_zones, items_per_zone):
+    """Parse zone-level output rows into a nested list structure.
+
+    The Go executable outputs zone results as flat rows in the format:
+    SpaceIndex,Cooling,Heating,Lighting
+    This function groups them by zone index.
+
+    Args:
+        section_data: List of rows, each row is [spaceIdx, cooling, heating,
+            lighting].
+        num_zones (int): Number of zones/spaces.
+        items_per_zone (int): Number of items per zone (12 for months,
+            365 for days, 8760 for hours).
+
+    Returns:
+        list[list[dict]]: Outer list indexed by zone, inner list contains
+            dicts with 'cooling', 'heating', 'lighting', 'total'.
     """
-    """Parse the output file from MoosasResidential.exe or MoosasPublic.exe
+    zone_results = [[] for _ in range(num_zones)]
+    for row in section_data:
+        zone_idx = int(float(row[0]))
+        zone_results[zone_idx].append({
+            "cooling": row[1],
+            "heating": row[2],
+            "lighting": row[3],
+            "total": np.array(row[1:4]).astype(float).sum(),
+        })
+    return zone_results
 
-        Args:
-            model(MoosasModel): the model to get the energy input file
-            requireRadiation(bool): True if you want to take an accurate radiation calculation by MoosasRad. (default: False)
 
-        Returns:
-            energyInput(dict):
-            a dictionary to show the energy input:
-            zones: list[ThermalSettings]
-            args: list[ '-w', weatherFile,
-                        '-l', lantitute,
-                        '-a', altitude,
-                        '-s', shapeFactor ]
+def getEnergyInput(model: MoosasModel,
+                   core=buildingType.RESIDENTIAL,
+                   requireRadiation=False,
+                   exportDaily=False,
+                   exportHourly=False,
+                   exportByZone=False,
+                   schedulePath=None):
+    """Get the energy input configuration for a given MoosasModel.
 
-        Examples:
-            >>> energyInput = getEnergyInput(model, True)
-            >>> for z in energyInput['zones']:
-            >>>     print(z)
+    This function computes geometry-derived parameters for each space,
+    populates ThermalSettings objects, and builds the command-line argument
+    list for the unified MoosasEnergy executable.
+
+    Args:
+        model (MoosasModel): The model for which to generate the energy input.
+        core: Building type selector. Use buildingType.RESIDENTIAL for
+            residential buildings, or any other buildingType value for public
+            buildings. (default: buildingType.RESIDENTIAL)
+        requireRadiation (bool): If True, enables accurate radiation
+            calculation using MoosasRad. (default: False)
+        exportDaily (bool): If True, adds '-d 1' to command-line args.
+            (default: False)
+        exportHourly (bool): If True, adds '-r 1' to command-line args.
+            (default: False)
+        exportByZone (bool): If True, adds '-z 1' to command-line args.
+            (default: False)
+        schedulePath (str or None): Path to the schedule CSV file. If
+            provided, adds '-sch <path>' to command-line args. (default: None)
+
+    Returns:
+        dict: A dictionary containing the energy input configuration:
+            - 'zones': list of ThermalSettings objects
+            - 'args': list of command-line argument strings
+
+    Examples:
+        >>> energyInput = getEnergyInput(model, core=buildingType.OFFICE)
+        >>> for z in energyInput['zones']:
+        ...     print(z)
+
+        >>> # With all export options
+        >>> energyInput = getEnergyInput(
+        ...     model,
+        ...     exportDaily=True,
+        ...     exportHourly=True,
+        ...     exportByZone=True,
+        ...     schedulePath='office_schedule.csv',
+        ... )
     """
     def calculate_orientation(n):
+        """Calculate the orientation angle in degrees from a 2D normal vector.
+
+        Args:
+            n: A 2-element array representing a 2D vector [n[0], n[1]].
+
+        Returns:
+            int: Orientation angle in degrees (0~360), measured clockwise
+                from the positive y-axis. W:0, S:90, E:180, N:270.
         """
-        Calculate the orientation angle in degrees from a 2D vector.
-        
-        Parameters
-        ----------
-        n : array_like
-            A 2-element array or list representing a 2D vector [n[0], n[1]].
-        
-        Returns
-        -------
-        int
-            The orientation angle in degrees, measured clockwise from the positive y-axis, 
-            ranging from 0 to 360 degrees.
-        """
-        o = int((np.arccos((-1) * n[0] / np.sqrt(n[0] ** 2 + n[1] ** 2)) * 180 / np.pi).round())
+        o = int((np.arccos((-1) * n[0] / np.sqrt(n[0] ** 2 + n[1] ** 2))
+                 * 180 / np.pi).round())
         if n[1] > 0:
             o = 360 - o
         if o == 360:
@@ -241,22 +394,11 @@ def getEnergyInput(model: MoosasModel, require_radiation=False):
         return o
 
     def non(x):
-        """
-        Return the input value if it is positive, otherwise return 0.
-        
-        Parameters
-        ----------
-        x : float or int
-            The input number to be evaluated.
-        
-        Returns
-        -------
-        int or float
-            The input value `x` if it is greater than 0, otherwise 0.
-        """
+        """Return x if positive, otherwise 0."""
         return x if x > 0 else 0
 
-    if require_radiation:
+    # Perform radiation calculation if requested
+    if requireRadiation:
         t2 = datetime.now()
         if model.spaceList[0].settings['zone_summerrad'] is None:
             modelRadiation(model, reflection=0)
@@ -281,14 +423,23 @@ def getEnergyInput(model: MoosasModel, require_radiation=False):
                 outside_area += non(pygeos.length(b.force_2d()) - 5.0) * 5.0
                 facade_area += b.area * (1 - b.wwr)
                 window_area += b.area * b.wwr
-                o = calculate_orientation(b.normal)  # W:0 S:90 E:180 N:270
-                summer_solar += (SUMMER_RADIATION[o // 90] + ((o % 90) / 90.0) * (
-                        SUMMER_RADIATION[o // 90 + 1] - SUMMER_RADIATION[o // 90])) * b.area * b.wwr
-                winter_solar += (WINTER_RADIATION[o // 90] + ((o % 90) / 90.0) * (
-                        WINTER_RADIATION[o // 90 + 1] - WINTER_RADIATION[o // 90])) * b.area * b.wwr
+                o = calculate_orientation(b.normal)
+                summer_solar += (
+                    SUMMER_RADIATION[o // 90]
+                    + ((o % 90) / 90.0)
+                    * (SUMMER_RADIATION[o // 90 + 1]
+                       - SUMMER_RADIATION[o // 90])
+                ) * b.area * b.wwr
+                winter_solar += (
+                    WINTER_RADIATION[o // 90]
+                    + ((o % 90) / 90.0)
+                    * (WINTER_RADIATION[o // 90 + 1]
+                       - WINTER_RADIATION[o // 90])
+                ) * b.area * b.wwr
 
-        if require_radiation:
-            summer_solar, winter_solar = s.settings['zone_summerrad'] * 60, s.settings['zone_winterrad'] * 60
+        if requireRadiation:
+            summer_solar = s.settings['zone_summerrad'] * 60
+            winter_solar = s.settings['zone_winterrad'] * 60
 
         for c in s.ceiling.face:
             if c.isOuter:
@@ -317,14 +468,36 @@ def getEnergyInput(model: MoosasModel, require_radiation=False):
         theZone.updateParams(**addSettings)
         zones.append(theZone)
 
+    # Load weather data if not already loaded
     if model.weather is None:
         model.loadWeatherData()
     weather = model.weather
+
+    # ── Build command-line arguments ──────────────────────
+    # Determine the building type integer for the -t parameter.
+    # buildingType.RESIDENTIAL maps to 0; all others map to their
+    # integer value (1=OFFICE, 2=HOTEL, 3=SCHOOL, etc.)
+    building_type_int = 0 if core == buildingType.RESIDENTIAL else int(core)
+
     args = [
-        '-w', f"\"{weather.weatherFile}\"",
+        '-w', f'"{weather.weatherFile}"',
+        '-t', str(building_type_int),
         '-l', str(round(float(weather.location.latitude), 2)),
         '-a', str(round(float(weather.location.altitude), 2)),
-        '-s', str(round(total_outside_area / total_volume, 2))
+        '-s', str(round(total_outside_area / total_volume, 2)),
     ]
+
+    # Append optional export flags
+    if exportDaily:
+        args += ['-d', '1']
+    if exportHourly:
+        args += ['-r', '1']
+    if exportByZone:
+        args += ['-z', '1']
+
+    # Append schedule file path if provided
+    if schedulePath is not None:
+        abs_schedule_path = os.path.abspath(schedulePath)
+        args += ['-sch', f'"{abs_schedule_path}"']
 
     return {'zones': zones, 'args': args}

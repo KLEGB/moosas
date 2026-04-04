@@ -34,7 +34,7 @@ def modelRadiation(model, reflection=1):
     """
     """construct rays"""
     rays, windowArea, spaceIdx = [], [], []
-    geo_path = WriteRadGeo(model)
+    geo_path = writeRadGeo(model)
     for i, space in enumerate(model.spaceList):
         moFaces = space.getAllFaces(to_dict=False)
         for moGeometry in moFaces:
@@ -98,7 +98,7 @@ def spaceRadiation(space: MoosasSpace, reflection=1) -> dict:
     """
     settings = space.settings
     model = space.parent
-    geo_path = WriteRadGeo(model)
+    geo_path = writeRadGeo(model)
     if 'cumSky' not in model.__dir__():
         model.loadCumSky()
     moFaces = space.getAllFaces(to_dict=False)
@@ -161,7 +161,7 @@ def positionRadiation(positionRay: Ray | Iterable[Ray], sky: MoosasCumSky,
     if geo_path is None:
         if model is None:
             raise Exception('Geo export error: empty model.')
-        geo_path = WriteRadGeo(model)
+        geo_path = writeRadGeo(model)
 
     rays = []
     for pointRay in positionRay:
@@ -223,7 +223,7 @@ def rayTest(rays: Iterable[Ray], model = None, geo_path: str = None, ray_path: s
     if geo_path is None:
         if model is None:
             raise Exception('empty model')
-        geo_path = WriteRadGeo(model)
+        geo_path = writeRadGeo(model)
     if ray_path is None:
         ray_path = os.path.abspath(os.path.join(path.tempDir, prj + '.i'))
     result_path = os.path.abspath(os.path.join(path.tempDir, prj + '.o'))
@@ -263,7 +263,7 @@ def rayTest(rays: Iterable[Ray], model = None, geo_path: str = None, ray_path: s
     return reflectionRay
 
 
-def WriteRadGeo(model):
+def writeRadGeo(model):
     """
     Write a geometry file for the given model in Radiance format.
     

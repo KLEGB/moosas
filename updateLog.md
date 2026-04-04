@@ -1,3 +1,7 @@
+--0.8.5
+# energy module update 04.04
+- 0.8.5.2 energy plus ventilation simulation. allow the analysis on energy saving by natural ventilation.
+
 --0.8.4
 # IO update 01.02
 - 0.8.4.1 I/O method has been changed. XML loading is valid.

@@ -1,7 +1,7 @@
 from .analysis import getEnergyInput, ThermalSettings, energyAnalysis
 from ..geometry.geos import Vector, Ray
 from ..models import MoosasModel, MoosasCumSky
-from ..rad import modelRadiation, WriteRadGeo, rayTest
+from ..rad import modelRadiation, writeRadGeo, rayTest
 from ..utils import np, path, os
 from ..vent.afn import AfnNetwork, buildPrj, buildZoneInfoFile, AfnPath, AfnZone
 from ..vent.iteration import iterateFile
@@ -53,7 +53,7 @@ class heatLoadModel(object):
             rays += thisRays
             fixMatrix.append(np.array([abs(Vector.dot(ps.element.normal, r.direction)) for r in thisRays]))
         rays = np.array(rays)
-        geo_path = WriteRadGeo(model)
+        geo_path = writeRadGeo(model)
         resRay = rayTest(rays, geo_path=geo_path)
         resRay = np.array([1.0 if r is not None else 0 for r in resRay])
         resRay = resRay.reshape(len(self.paths), int(len(resRay) / len(self.paths)))

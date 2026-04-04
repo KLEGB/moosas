@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
 
-from .rad import rayTest, WriteRadGeo
+from .rad import rayTest, writeRadGeo
 from .weather.directsky import MoosasDirectSky
 from .geometry.geos import Vector, Ray
 from .utils.date import DateTime
@@ -73,7 +73,7 @@ def positionSunHour(positionRay: Ray | Iterable[Ray], location: Location = None,
     if geo_path is None:
         if model is None:
             raise Exception('Geo export error: empty model.')
-        geo_path = WriteRadGeo(model)
+        geo_path = writeRadGeo(model)
 
     if isinstance(positionRay, Ray):
         positionRay = [positionRay]
