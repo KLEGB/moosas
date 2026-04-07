@@ -1,9 +1,11 @@
 from __future__ import annotations
+
 from rdflib import Graph, Namespace, Literal, URIRef
+from rdflib.namespace import RDF, RDFS, GEO, BRICK, WGS
+
 from ..models import *
 from ..utils import np, pygeos, mixItemListToList, mixItemListToObject, searchBy, generate_code, path
 from ..utils.constant import geom
-from rdflib.namespace import RDF, RDFS, GEO, BRICK, WGS
 
 specChar = {" ": "~0~",
             ".": "~1~",
@@ -14,8 +16,8 @@ specChar = {" ": "~0~",
             ":": "~6~",
             "%": "~7~",
             ">": "~8~",
-            "{":"~9~",
-            "}":"~10~",}
+            "{": "~9~",
+            "}": "~10~", }
 
 
 def encodeURI(hint):
@@ -579,7 +581,12 @@ class MoosasGraph(Graph):
         """
         self.add((URIRef(f"Space_{space.id}"), self.rdf.type, self.bot.Space))
         self.add((URIRef(f"Space_{space.id}"), self.moosas.Uid, Literal(space.id)))
-        self.add((URIRef(f"Space_{space.id}"), self.moosas.Program, self.moosas.term(space.settings["zone_template"])))
+
+        # storage space settings
+        for key in space.settings:
+            self.add((URIRef(f"Space_{space.id}"), self.moosas.hasSetting, Literal(key)))
+            self.add((URIRef(f"Space_{space.id}"), Literal(key), Literal(space.settings[key])))
+
         self.add((URIRef(f"Space_{space.id}"), self.pgd.hasFloorArea_m2, Literal(space.area)))
         self.add((URIRef(f"Space_{space.id}"), self.pgd.hasVolume_m3, Literal(space.area * space.height)))
         self.add((URIRef(f"Space_{space.id}"), self.pgd.hasNorthDirection_deg, Literal(0e+00)))
@@ -834,7 +841,7 @@ class MoosasGraph(Graph):
             print("Skipping entity " + str(entity) + " empty type")
         return entJson
 
-    def encode_entity(self, name: str, entityType: URIRef, description: str,label:str=None):
+    def encode_entity(self, name: str, entityType: URIRef, description: str, label: str = None):
         if label is None:
             label = name
         self.add((encodeURI(name), RDFS.label, Literal(label)))
@@ -1011,6 +1018,13 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
                 topology["Ceiling"] = MoosasFloor(list(subElement.values()))
 
         spc = MoosasSpace(_floor=topology["Floor"], _ceiling=topology["Ceiling"], _edge=topology["Edge"])
+
+        # restore space settings
+        spcSettings = mixItemListToList(rdfGraph.getObject(spaceUri, rdfGraph.moosas.hasSetting))
+        for key in spcSettings:
+            setting = rdfGraph.getObject(spaceUri, key)
+            spc.settings[str(key)] = str(setting)
+
         if spc.is_void():
             model.voidList.append(spc)
         else:

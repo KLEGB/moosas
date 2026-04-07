@@ -40,7 +40,7 @@ class heatLoadModel(object):
         with open(os.path.join(path.dataBaseDir, 'cum_sky', f'cumsky_{stationid}.csv')) as f:
             cumValue = np.array([line.split(',') for line in f.read().split('\n') if len(line) > 1]).astype(float)
             for i in range(8760):
-                self.skySeries.append(MoosasCumSky.fromPeriod(cumValue, i, i + 1))
+                self.skySeries.append(MoosasCumSky(cumValue[:, i] / MoosasCumSky.FIX_RADIATION))
 
         print("-----------------------\nCalculating path radiation intensity...\n-----------------------")
         print(time.time() - t0)
@@ -64,6 +64,7 @@ class heatLoadModel(object):
         print("-----------------------\nNetwork Ready...\n-----------------------")
         print(time.time() - t0)
         t0 = time.time()
+
     def updateHeatLoad(self, hoy, energyDict: dict = None):
 
         if energyDict:
@@ -129,7 +130,7 @@ class heatLoadModel(object):
         energyInput = self.reconstructEnergyInputs(energyDict)
         return energyAnalysis(energyInput=energyInput)
 
-    def ventilationTask(self,hoy, energyDict: dict = None, iteration=1):
+    def ventilationTask(self, hoy, energyDict: dict = None, iteration=1):
         if energyDict:
             self.networkDict = energyDict
         self.updateHeatLoad(hoy)
@@ -140,15 +141,15 @@ class heatLoadModel(object):
         zones = iterateFile(prjFile, zFile, maxIteration=iteration)
         return zones
 
-    def annualComfort(self,energyDict: dict = None, iteration=1):
+    def annualComfort(self, energyDict: dict = None, iteration=1):
         zResult = self.ventilationTask(hoy=0, energyDict=energyDict, iteration=iteration)
-        for i,zR in enumerate(zResult):
+        for i, zR in enumerate(zResult):
             zResult[i].temperature = [zResult[i].temperature[-1]]
             zResult[i].ACH = [zResult[i].ACH[-1]]
-        for hoy in range(1,8760):
+        for hoy in range(1, 8760):
             print("--------------------Hoy:", hoy)
             zResultHoy = self.ventilationTask(hoy=hoy, energyDict=energyDict, iteration=iteration)
             for i, zR in enumerate(zResultHoy):
                 zResult[i].temperature += [zResultHoy[i].temperature[-1]]
-                zResult[i].ACH +=  [zResultHoy[i].ACH[-1]]
+                zResult[i].ACH += [zResultHoy[i].ACH[-1]]
         return zResult

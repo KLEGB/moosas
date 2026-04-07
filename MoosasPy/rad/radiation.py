@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from ..utils import path, callCmd,generate_code
-from ..utils import np,os,Iterable
 from ..IO import writeGeo
-from ..geometry.geos import Ray,Vector
-from ..geometry.element import MoosasSpace,MoosasSkylight,MoosasGlazing
+from ..geometry import MoosasGrid
+from ..geometry.element import MoosasSpace, MoosasSkylight, MoosasGlazing, MoosasElement
+from ..geometry.geos import Ray, Vector
+from ..utils import np, os, Iterable
+from ..utils import path, callCmd, generate_code
 from ..utils.constant import rad
 from ..weather import MoosasCumSky
 
@@ -129,8 +130,77 @@ def spaceRadiation(space: MoosasSpace, reflection=1) -> dict:
     return settings
 
 
+def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky: MoosasCumSky = None, reflection=1,
+                  geo_path=None) -> np.ndarray:
+    """
+    Calculate the sky visibility for each patch in the sky model, for a gridded face.
+    the return result would be the average sky visibility, not for a position but the whole grid.
+
+    Parameters
+    ----------
+    face : object
+        The face to be calculated.
+    sky : MoosasCumSky
+        The position will be replaced if a sky is given,
+        and the radiation value will be multiplied by the visibility.
+    gridSize : float
+        The calculation grid size in meters. (default 1.0)
+    gridOffset : float
+        The grid offset in meters. (default 0.2)
+    reflection : float
+        How many reflection in the ray test calculation. (default 0)
+    geo_path : str
+        The path of the geometric model.
+    Returns
+    -------
+    np.ndarry
+        A numpy array containing average sky patches visibility (len=145).
+    """
+    grid: MoosasGrid = MoosasGrid(face, gridSize, gridOffset)
+    model = face.parent
+    if sky is None:
+        position = MoosasCumSky.defaultPosition()
+    else:
+        position = sky.position
+    rays = []
+    fixMatrix = []
+    allCells = [c for row in grid.gridCell for c in row]
+    for c in allCells:
+        thisRays = [Ray(c.origin, pos,value=1.0) for pos in position]
+        rays += thisRays
+        fixMatrix.append(np.array([abs(Vector.dot(c.direction, r.direction)) for r in thisRays]))
+
+    unHit = np.arange(len(rays))
+    rays = np.array(rays)
+    if geo_path is None:
+        geo_path = writeRadGeo(model)
+
+    while reflection >= 0 and len(rays[unHit]) > 0:
+        newRays = rayTest(rays[unHit], geo_path=geo_path)
+        if len(newRays) != len(unHit):
+            raise Exception('Ray test error: input and output dont have the same len')
+        unHitNext = []
+        for i, thisRay in enumerate(newRays):
+            if thisRay is not None:
+                rays[unHit[i]] = thisRay
+                rays[unHit[i]].value *= rad.CONTENT_REFLECTION
+                unHitNext.append(unHit[i])
+        unHit = unHitNext
+        if len(rays[unHit]) == 0:
+            break
+        reflection -= 1
+
+    rays = np.array([ra.value for ra in rays])
+    rays = rays.reshape(len(allCells), int(len(rays) / len(allCells)))
+    if sky is None:
+        rays = [cell * fixMatrix[i] for i, cell in enumerate(rays)]
+    else:
+        rays = [cell * sky.value * fixMatrix[i] for i, cell in enumerate(rays)]
+    return np.mean(rays, axis=0)
+
+
 def positionRadiation(positionRay: Ray | Iterable[Ray], sky: MoosasCumSky,
-                      model = None, reflection=1, geo_path=None) -> Iterable[float]:
+                      model=None, reflection=1, geo_path=None) -> Iterable[float]:
     """
         Cumulative radiation for positions with factors.
         The position are defined as Ray class with origins and directions.
@@ -138,6 +208,7 @@ def positionRadiation(positionRay: Ray | Iterable[Ray], sky: MoosasCumSky,
         The return value is unit in kWh/m2
         Model or geoPath should be provided.
 
+        Parameters
         -------------------------------------
 
         positionRay: Iterable[Ray] position(origin, factor) to test. Put as much as possible in one coll on this func.
@@ -146,9 +217,10 @@ def positionRadiation(positionRay: Ray | Iterable[Ray], sky: MoosasCumSky,
         reflection: how many reflection will be calculated. default 1
         geoPath: optional *.geo file input for the test content.
 
-
-        returns: Iterable[float]
-        The return value is unit in kWh/m2
+        Returns
+        -------
+        Iterable[float]
+            The return value is unit in kWh/m2
     """
     if isinstance(positionRay, Ray):
         positionRay = np.array([positionRay])
@@ -199,8 +271,8 @@ def positionRadiation(positionRay: Ray | Iterable[Ray], sky: MoosasCumSky,
     return np.sum(rays, axis=1)
 
 
-def rayTest(rays: Iterable[Ray], model = None, geo_path: str = None, ray_path: str = None) -> list[
-    Ray | None]:
+def rayTest(rays: Iterable[Ray], model=None, geo_path: str = None,
+            ray_path: str = None) -> list[Ray | None]:
     """
         call MoosasRad.exe to test the ray face intersection and reflection.
         if the ray hit a face: result ray will be the reflection ray of the input ray.
@@ -265,12 +337,12 @@ def rayTest(rays: Iterable[Ray], model = None, geo_path: str = None, ray_path: s
 
 def writeRadGeo(model):
     """
-    Write a geometry file for the given model in Radiance format.
+    Write a geometry file for the given model towards MoosasRayTest.exe.
     
     Parameters
     ----------
     model : object
-        The geometric model to be written to the Radiance .geo file. The exact type depends on the expected input of `writeGeo`, typically representing a 3D scene or geometry structure.
+        The geometric model to be written to the .geo file. The exact type depends on the expected input of `writeGeo`, typically representing a 3D scene or geometry structure.
     
     Returns
     -------

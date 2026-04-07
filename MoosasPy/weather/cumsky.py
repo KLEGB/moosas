@@ -9,7 +9,7 @@ from ..utils import Iterable
 
 
 class MoosasCumSky(object):
-    __slots__ = ['position', 'value']
+    __slots__ = ['_position', 'value']
     ANNUAL_HOY = 8760
     FIX_RADIATION = 1000
     SUMMER_START_HOY = 3624
@@ -17,7 +17,7 @@ class MoosasCumSky(object):
     WINTER_START_HOY = 8016
     WINTER_END_HOY = 1416
 
-    def __init__(self, cumValue=None):
+    def __init__(self, cumValue=None,position=None):
         """
         Initialize the object with cumulative value and load sun position data.
         
@@ -31,9 +31,20 @@ class MoosasCumSky(object):
         None
         """
         self.value = cumValue
-        self.position = []
-        with open(os.path.join(path.libDir, r'weather\sun_position.csv')) as f:
-            self.position = [Vector(np.array(line.split(',')).astype(float)) for line in f.read().split('\n')]
+        self._position = position
+
+    @property
+    def position(self):
+        if self._position is None:
+            with open(os.path.join(path.libDir, r'weather','sun_position.csv')) as f:
+                self._position = [Vector(np.array(line.split(',')).astype(float)) for line in f.read().split('\n')]
+        return self._position
+
+    @staticmethod
+    def defaultPosition():
+        with open(os.path.join(path.libDir, r'weather', 'sun_position.csv')) as f:
+            position = [Vector(np.array(line.split(',')).astype(float)) for line in f.read().split('\n')]
+            return position
 
     @classmethod
     def fromPeriod(cls, cumValue, stDateTime: DateTime | int, edDateTime: DateTime | int):

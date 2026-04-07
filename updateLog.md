@@ -1,6 +1,7 @@
 --0.8.5
 # energy module update 04.04
-- 0.8.5.2 energy plus ventilation simulation. allow the analysis on energy saving by natural ventilation.
+- 0.8.5.2 energy plus ventilation simulation. allow the analysis on energy saving by natural ventilation via energy.ventilation module.
+- 0.8.5.3 annual PV generation now available via energy.PV module.
 
 --0.8.4
 # IO update 01.02

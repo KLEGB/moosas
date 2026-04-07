@@ -477,7 +477,7 @@ def getEnergyInput(model: MoosasModel,
     # Determine the building type integer for the -t parameter.
     # buildingType.RESIDENTIAL maps to 0; all others map to their
     # integer value (1=OFFICE, 2=HOTEL, 3=SCHOOL, etc.)
-    building_type_int = 0 if core == buildingType.RESIDENTIAL else int(core)
+    building_type_int = 0 if core == buildingType.RESIDENTIAL else 1
 
     args = [
         '-w', f'"{weather.weatherFile}"',
