@@ -213,7 +213,7 @@ def cum_sky(location, weatherFile):
     return mtx
 
 
-def includeEpw(epw_file, city=None):
+def includeEpw(epw_file, city=None)->str:
     """
     Process an EPW file and generate associated weather data files.
     
