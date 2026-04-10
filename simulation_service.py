@@ -36,6 +36,7 @@ from rdflib import Graph, Literal, URIRef
 from app.core.config import settings
 from app.core.process_pool import run_in_process
 from app.core.storage import save_output_file
+from app.core.logger import log_custom
 from .MoosasPy.utils import generate_code
 from .MoosasPy import loadModel, saveModel, transform
 from .MoosasPy import energyAnalysis
@@ -58,7 +59,7 @@ def resolve_weather(station_id: str) -> str:
                         return os.path.join(root, file)
 
         return None
-
+    station_id = str(station_id)
     if station_id in MoosasWeather.loadStation():
         return station_id
 
@@ -353,7 +354,7 @@ def _worker_energy_analysis(
     start_time = time.perf_counter()
 
     model = loadModel(str(model_path.resolve()))
-    station_id = resolve_weather(task_params.get("station_id", "545110"))
+    station_id = task_params.get("station_id", "545110")
     model.loadWeatherData(station_id)
 
     accepted_param_names = energyAnalysis.__code__.co_varnames
@@ -393,6 +394,8 @@ async def run_energy_analysis(
         Sanitized result dict from the worker.
     """
     params = task_params or {}
+    station_id = resolve_weather(task_params.get("station_id", "545110"))
+    params["station_id"] = station_id  # Ensure the resolved station ID is used in the worker
     if "schedulePath" in params:
         params["schedulePath"] = str(_resolve_storage_path(input_filename=params["schedulePath"]))
     effective_path = _resolve_storage_path(input_file_path, input_filename)
@@ -522,7 +525,7 @@ def _worker_update_space_settings(
         value_to_update = space_settings.get("value", {})
 
         if not space_id:
-            print("WARNING: Missing 'space_id' in space_settings entry — skipping.")
+            log_custom("WARNING: Missing 'space_id' in space_settings entry — skipping.", "warning")
             continue
 
         # Locate the space subject by matching its ID as a literal value.
@@ -532,7 +535,7 @@ def _worker_update_space_settings(
             break
 
         if not space_subject:
-            print(f"WARNING: Space '{space_id}' not found in RDF model — skipping.")
+            log_custom(f"WARNING: Space '{space_id}' not found in RDF model — skipping.", "warning")
             continue
 
         predicate = Literal(settings_to_update)
