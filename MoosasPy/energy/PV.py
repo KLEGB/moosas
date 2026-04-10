@@ -12,6 +12,10 @@ def roofAnnualGeneration(model: MoosasModel,usefulArea=0.7,efficiency=0.17, stat
     ----------
     model : object
         The geometric model to be written to the .geo file. The exact type depends on the expected input of `writeGeo`, typically representing a 3D scene or geometry structure.
+    usefulArea: float
+        Valid area for the BAPV installation. (default 0.7)
+    efficiency: float
+        Efficiency for the PV panel. (default 0.17)
     stationid : string
         The station ID. Should be appeared in the /db/cumsky folder.
     gridSize : float
@@ -22,8 +26,7 @@ def roofAnnualGeneration(model: MoosasModel,usefulArea=0.7,efficiency=0.17, stat
         How many reflection in the ray test calculation. (default 0)
     Returns
     -------
-    np.ndarry
-        A numpy array containing the hourly result (len=8760).
+        analysis_results with an array containing the hourly result (len=8760).
     """
     mElements = model.getAllFaces(True)
     roofFaces = []
@@ -43,6 +46,10 @@ def facadeAnnualGeneration(model: MoosasModel, usefulArea=0.4,efficiency=0.17,st
     ----------
     model : object
         The geometric model to be written to the .geo file. The exact type depends on the expected input of `writeGeo`, typically representing a 3D scene or geometry structure.
+    usefulArea: float
+        Valid area for the BAPV installation. (default 0.4)
+    efficiency: float
+        Efficiency for the PV panel. (default 0.17)
     stationid : string
         The station ID. Should be appeared in the /db/cumsky folder.
     gridSize : float

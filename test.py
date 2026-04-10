@@ -18,11 +18,15 @@ from MoosasPy import transform,saveModel,loadModel
 #                   attach_shading=False, standardize=True)
 # saveModel(model,r'.\temp.rdf')
 model=loadModel('temp.rdf')
-
-from MoosasPy.energy import roofAnnualGeneration,facadeAnnualGeneration
-res = roofAnnualGeneration(model)
-res2 = facadeAnnualGeneration(model)
-print(res2)
+# for spc in model.spaceList:
+#     print(spc.settings)
+from MoosasPy.energy import energyAnalysis
+res = energyAnalysis(model)
+print(res)
+# from MoosasPy.energy import roofAnnualGeneration,facadeAnnualGeneration
+# res = roofAnnualGeneration(model)
+# res2 = facadeAnnualGeneration(model)
+# print(res2)
 # IO.writeRDF(model,r"test\example0_c.RDF")
 # geoFile = r'\\166.111.40.8\protect\moosasTestModelDataset\SRT_DATA\new_geo\cyh_25_01101_01101-01.geo'
 # xmlFile = r'\\166.111.40.8\protect\moosasTestModelDataset\SRT_DATA\new_xml\cyh_25_01101_01101-01.xml'

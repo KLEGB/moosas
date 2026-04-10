@@ -1021,8 +1021,9 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
 
         # restore space settings
         spcSettings = mixItemListToList(rdfGraph.getObject(spaceUri, rdfGraph.moosas.hasSetting))
+
         for key in spcSettings:
-            setting = rdfGraph.getObject(spaceUri, key)
+            setting = rdfGraph.getObject(spaceUri, Literal(key))
             spc.settings[str(key)] = str(setting)
 
         if spc.is_void():
