@@ -28,6 +28,7 @@ WINTER_RADIATION = [150800, 355200, 123600, 51500, 150800]
 # Directory paths for the energy module
 energyScriptDir = os.path.join(path.libDir, "energy")
 energyDataDir = os.path.join(path.dataDir, "energy")
+energyExeSuffix = ".exe" if os.name == "nt" else ""
 
 # Month names for output parsing (12 months)
 MONTH_NAMES = [
@@ -132,7 +133,7 @@ def energyAnalysis(model: MoosasModel = None,
 
     # Use the unified MoosasEnergy executable
     exe_command = os.path.abspath(
-        os.path.join(energyScriptDir, "MoosasEnergy.exe")
+        os.path.join(energyScriptDir, f"MoosasEnergy{energyExeSuffix}")
     )
     exe_command = f'"{exe_command}"'
     exe_command = [exe_command] + energyInput['args']

@@ -10,6 +10,9 @@ from ..utils.constant import rad
 from ..weather import MoosasCumSky
 
 
+RAD_EXE_SUFFIX = ".exe" if os.name == "nt" else ""
+
+
 def modelRadiation(model, reflection=1):
     """
     Calculate radiation for each space in the model using a fast single-call method via MoosasRad.exe.
@@ -313,7 +316,7 @@ def rayTest(rays: Iterable[Ray], model=None, geo_path: str = None,
 
     # call MoosasRad.exe
     command = [
-        os.path.join(path.libDir, r'rad\MoosasRad.exe'),
+        os.path.join(path.libDir, 'rad', f'MoosasRad{RAD_EXE_SUFFIX}'),
         '-g', geo_path,
         '-o', result_path,
         ray_path

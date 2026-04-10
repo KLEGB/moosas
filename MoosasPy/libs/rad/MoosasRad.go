@@ -225,7 +225,7 @@ type simulationInfo struct {
 
 func help() {
 	fmt.Println("Moosas rayTest.")
-	fmt.Println("Command line should be: MoosasRad.exe [-h,-g...] inputFile.i")
+	fmt.Println("Command line should be: MoosasRad [-h,-g...] inputFile.i")
 	fmt.Println("Optional command:")
 	fmt.Println("-h / -help : reprint the help information")
 	fmt.Println("-g / -geo : geometrical input for ray test contents")

@@ -21,6 +21,7 @@ SUMMER_RADIATION = [280100, 175200, 213200, 116300, 280100]
 WINTER_RADIATION = [150800, 355200, 123600, 51500, 150800]
 energyScriptDir = os.path.join(path.libDir, "energy")
 energyDataDir = os.path.join(path.dataDir, "energy")
+energyExeSuffix = ".exe" if os.name == "nt" else ""
 
 
 def energyAnalysis(model: MoosasModel, core=buildingType.RESIDENTIAL,
@@ -107,9 +108,8 @@ def energyAnalysis(model: MoosasModel, core=buildingType.RESIDENTIAL,
         file.write('\n'.join(lines))
 
     energyInput['args'] += ['-o', f"\"{resultPath}\""] + [f"\"{inputPath}\""]
-    exe_command = os.path.abspath(os.path.join(energyScriptDir,
-                                               "MoosasEnergyResidential.exe")) if core == buildingType.RESIDENTIAL else os.path.join(
-        energyScriptDir, "MoosasEnergyPublic.exe")
+    exe_name = f"MoosasEnergyResidential{energyExeSuffix}" if core == buildingType.RESIDENTIAL else f"MoosasEnergyPublic{energyExeSuffix}"
+    exe_command = os.path.abspath(os.path.join(energyScriptDir, exe_name))
     exe_command=f"\"{exe_command}\""
     exe_command = [exe_command] + energyInput['args']
     callCmd(exe_command, cwd=os.path.abspath(energyScriptDir))

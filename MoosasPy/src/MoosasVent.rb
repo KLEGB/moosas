@@ -307,7 +307,7 @@ class MoosasVent
         thermal_param.push(['Outdoor',out_temp,-1].join(","))
         File.write("roomheat", thermal_param.join("\n"))
         p 'executing afn.exe...'
-        system("afn.exe")
+        system("./afn/afn" + MPath::EXE_SUFFIX)
         if thermal 
             prjdict = MPath::VENT+"thermal"
             p 'executing Thermal Iteration...'
