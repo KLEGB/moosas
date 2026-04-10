@@ -14,15 +14,16 @@ from ..utils.tools import path, callCmd,parseFile
 import os
 
 working_dir = os.path.join(path.libDir, r'vent')
+EXE_SUFFIX = '.exe' if os.name == 'nt' else ''
 FilePath = {
-    'contamx': working_dir + r'\contam\contamx3.exe',
-    'contamw': working_dir + r'\contam\contamw3.exe',
-    'simread': working_dir + r'\contam\simread.exe',
-    'response': working_dir + r'\contam\response.txt',
-    'roomInfo': path.dataDir + r'\vent\roomInfo.txt',
-    'project_dir': path.dataDir + r'\vent\project',
-    'contam_dir': working_dir + r'\contam',
-    'result_dir': path.dataDir + r'\vent\result',
+    'contamx': os.path.join(working_dir, 'contam', f'contamx3{EXE_SUFFIX}'),
+    'contamw': os.path.join(working_dir, 'contam', f'contamw3{EXE_SUFFIX}'),
+    'simread': os.path.join(working_dir, 'contam', f'simread{EXE_SUFFIX}'),
+    'response': os.path.join(working_dir, 'contam', 'response.txt'),
+    'roomInfo': os.path.join(path.dataDir, 'vent', 'roomInfo.txt'),
+    'project_dir': os.path.join(path.dataDir, 'vent', 'project'),
+    'contam_dir': os.path.join(working_dir, 'contam'),
+    'result_dir': os.path.join(path.dataDir, 'vent', 'result'),
 }
 DEFAULT_INDOOR_TEMPERATURE = 298.15
 

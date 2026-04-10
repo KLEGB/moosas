@@ -7,8 +7,9 @@ module MPath
     DB = BASE+"db/"
     TEMP = BASE+"__temp__/"
     PYTHON = BASE+"python/"
-    ENERGY_PUBLIC = LIB+"energy/MoosasEnergyPublic.exe"
-    ENERGY_RES = LIB+"energy/MoosasEnergyResidential.exe"
+    EXE_SUFFIX = Gem.win_platform? ? ".exe" : ""
+    ENERGY_PUBLIC = LIB+"energy/MoosasEnergyPublic"+EXE_SUFFIX
+    ENERGY_RES = LIB+"energy/MoosasEnergyResidential"+EXE_SUFFIX
     UI = LIB + "ui/"
     RAD = LIB + "rad/"
     VENT = LIB + "vent/"

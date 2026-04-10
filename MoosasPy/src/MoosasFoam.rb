@@ -398,7 +398,7 @@ class MoosasFoam
     pwd = MPath::VENT + "mkdir/"
     Dir.chdir pwd
     File.write("mkdir.input", MPath::DATA + "vent/foam/")
-    system("mkdir.exe")
+    system("./mkdir" + MPath::EXE_SUFFIX)
   end
 
   def self.generate_0()
@@ -1566,7 +1566,7 @@ class FoamUtil
     pwd = MPath::VENT + "triangulate"
     Dir.chdir pwd
     File.write("triangulate.input", input)
-    system("triangulate.exe")
+    system("./triangulate" + MPath::EXE_SUFFIX)
     output = []
     File.open("triangulate.output", "r") do |file|
       output = file.gets.split(",")

@@ -56,12 +56,12 @@ type globalInfo struct {
 
 func help() {
 	fmt.Println("Moosas ContamX Builder and reader.")
-	fmt.Println("Command line should be: MoosasAFN.exe [-h,-p...] inputNetworkFile.net")
+	fmt.Println("Command line should be: MoosasAFN [-h,-p...] inputNetworkFile.net")
 	fmt.Println("Optional command:")
 	fmt.Println("-h / -help : reprint the help information")
 	fmt.Println("-p / -project : base name of the prj file  (default: network)")
 	fmt.Println("-d / -directory : directory where the project file and result to put  (default: execution directory)")
-	fmt.Println("-o / -output : result output file path (default: execution directory\\airVel.o)")
+	fmt.Println("-o / -output : result output file path (default: execution directory/airVel.o)")
 	fmt.Println("-r / -run : 1 if run contamX for all built *.prj files and gather the results (default: 0)")
 	fmt.Println("-s / -split : 1 if split the input network into several networks (default: 1)")
 	fmt.Println("-t / -t0 : OutdoorTemperature (default: 25)")
@@ -78,7 +78,7 @@ func main() {
 		networkFile: "",
 		directory:   res,
 		prjName:     "network_",
-		resultFile:  res + "\\airVel.o",
+		resultFile:  filepath.Join(res, "airVel.o"),
 		simulation:  false,
 		split:       true,
 		t0:          "298.15",

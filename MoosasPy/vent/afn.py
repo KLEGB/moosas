@@ -14,6 +14,9 @@ from ..utils.tools import path, generate_code, callCmd, parseFile
 from ..weather.cumsky import MoosasCumSky
 
 
+VENT_EXE_SUFFIX = ".exe" if os.name == "nt" else ""
+
+
 class AfnZone(object):
     """
         input for networkFile(zones):
@@ -792,7 +795,7 @@ def buildPrj(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone]
         prjName = os.path.basename(prjFilePath)[:-4]
         prjDirectory = os.path.dirname(prjFilePath)
 
-    command = [path.libDir + r'\vent\MoosasAFN.exe']
+    command = [os.path.join(path.libDir, 'vent', f'MoosasAFN{VENT_EXE_SUFFIX}')]
     command += ['-p', prjName]
     command += ['-d', prjDirectory]
     command += ['-t', str(t0)]

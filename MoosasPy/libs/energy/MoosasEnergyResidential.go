@@ -46,7 +46,7 @@ type simulationInfo struct {
 
 func help() {
 	fmt.Println("Moosas Energy Analysis for Residential Buildings.")
-	fmt.Println("Command line should be: MoosasEnergyResidential.exe [-h,-w...] inputFile.i")
+	fmt.Println("Command line should be: MoosasEnergyResidential [-h,-w...] inputFile.i")
 	fmt.Println("Optional command:")
 	fmt.Println("-h / -help : reprint the help information")
 	fmt.Println("-w / -weather [weather file path.csv]: weather file formatted in DeST. for file formatted in EPW, please use the script in MoosasPy/weather.py")
