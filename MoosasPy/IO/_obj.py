@@ -1,3 +1,4 @@
+import os
 from ..utils import np, pygeos, ET, json,GeometryError
 from ..utils import to_dictionary, path, parseFile, mixItemListToList
 from ..utils.constant import geom
@@ -54,8 +55,8 @@ def _readObj(file_path) -> list[MoosasGeometry]:
                 block = []
             line = f.readline()
 
-    mtl_path = file_path.split('\\')[0:-1] + [obj_file[1][0].strip('\n').split(' ')[1]]
-    mtl_path = ('\\').join(mtl_path)
+    mtl_filename = obj_file[1][0].strip('\n').split(' ')[1]
+    mtl_path = os.path.join(os.path.dirname(file_path), mtl_filename)
 
     with open(mtl_path) as f:
         line = f.readline()

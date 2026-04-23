@@ -1,13 +1,18 @@
 import os
-
+import time
 import numpy as np
 import re
 from ..utils.tools import path, callCmd
 from .dest import Location, temp_dic, weather_dic, stationInfo
 
-epw2wea_exe = os.path.join(path.libDir, r'weather\epw2wea.exe')
-gendaymtx_exe = os.path.join(path.libDir, r'weather\gendaymtx.exe')
-sun_position = os.path.join(path.libDir, r'weather\sun_position.csv')
+import platform
+if platform.system().lower() == 'linux':
+    epw2wea_exe = os.path.join(path.libDir, 'weather', 'epw2wea')
+    gendaymtx_exe = os.path.join(path.libDir, 'weather', 'gendaymtx')
+else:
+    epw2wea_exe = os.path.join(path.libDir, 'weather', 'epw2wea.exe')
+    gendaymtx_exe = os.path.join(path.libDir, 'weather', 'gendaymtx.exe')
+sun_position = os.path.join(path.libDir, 'weather', 'sun_position.csv')
 
 TREGENZA_COEFFICIENTS = \
     [0.0435449227, 0.0416418006, 0.0473984151, 0.0406730411, 0.0428934136,
@@ -155,6 +160,7 @@ def epw2wea(location, epw_file):
     # command = ' '.join([epw2wea_exe, epw_file, wea_file])
     # os.popen(command)
     callCmd([epw2wea_exe, epw_file, wea_file])
+    wait(wea_file)
     return wea_file
 
 
@@ -249,11 +255,11 @@ def includeEpw(epw_file, city=None)->str:
     if not exist:
         with open(stationInfo, 'a') as wea:
             wea.write(location.__str__() + '\n')
-    with open(weather_dic + '\\' + str(location.stationId) + '.csv', 'w+') as wea:
+    with open(os.path.join(weather_dic, str(location.stationId) + '.csv'), 'w+') as wea:
         epw_csv = np.array(epw_csv).T
         epw_csv = [','.join(line) + '\n' for line in epw_csv]
         wea.writelines(epw_csv)
-    with open(weather_dic + r'\..\cum_sky\cumsky_' + str(location.stationId) + '.csv', 'w+') as wea:
+    with open(os.path.join(weather_dic, '..', 'cum_sky', 'cumsky_' + str(location.stationId) + '.csv'), 'w+') as wea:
         mtx = [','.join(line.astype(str)) + '\n' for line in mtx]
         wea.writelines(mtx)
     print(location.__str__())

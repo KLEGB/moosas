@@ -102,7 +102,7 @@ def loadCumSky(stationid: str,
         each representing cumulative sky data for the corresponding time period.
     """
     m_cumSky = []
-    with open(os.path.join(path.dataBaseDir, f'cum_sky\\cumsky_{stationid}.csv')) as f:
+    with open(os.path.join(path.dataBaseDir, 'cum_sky', f'cumsky_{stationid}.csv')) as f:
         cumValue = np.array([line.split(',') for line in f.read().split('\n') if len(line) > 1]).astype(float)
         if stDateTime is not None and edDateTime is not None:
             if not isinstance(stDateTime, Iterable):

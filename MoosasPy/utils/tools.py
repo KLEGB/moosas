@@ -135,6 +135,8 @@ def callCmd(args, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, block=T
     if cwd is not None:
         os.chdir(cwd)
     result = None
+    # from app.core.logger import log_custom
+    # log_custom(f'Call cmd: {command}', level='info')
     try:
         print(f'Call:{command}')
         result = os.popen(command, **kwargs)

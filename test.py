@@ -17,12 +17,16 @@ from MoosasPy import transform,saveModel,loadModel
 #                   solve_duplicated=True,solve_overlap=True, divided_zones=False,break_wall_vertical=True, break_wall_horizontal=True, solve_redundant=True,
 #                   attach_shading=False, standardize=True)
 # saveModel(model,r'.\temp.rdf')
-model=loadModel('temp.rdf')
-# for spc in model.spaceList:
-#     print(spc.settings)
-from MoosasPy.energy import energyAnalysis
-res = energyAnalysis(model)
-print(res)
+from MoosasPy.weather import includeEpw
+print(11111111111111111111)
+sid = includeEpw(r'C:\Users\Lenovo\Downloads\CHN_AH_Hefei.583210_TMYx.epw')
+print(sid)
+# model=loadModel('temp.rdf')
+# # for spc in model.spaceList:
+# #     print(spc.settings)
+# from MoosasPy.energy import energyAnalysis
+# res = energyAnalysis(model)
+# print(res)
 # from MoosasPy.energy import roofAnnualGeneration,facadeAnnualGeneration
 # res = roofAnnualGeneration(model)
 # res2 = facadeAnnualGeneration(model)

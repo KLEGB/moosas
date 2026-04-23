@@ -667,8 +667,9 @@ def writeZone(resultFile, zones):
 
 
 if __name__ == '__main__':
-    prjfile = '.\data\\' + [file for file in os.listdir('../data') if file[-3:] == 'prj'][0]
-    roomInfo_file = r'../data/roomInfo.txt'
+    prj_name = [file for file in os.listdir(os.path.join('..', 'data')) if file[-3:] == 'prj'][0]
+    prjfile = os.path.join('.', 'data', prj_name)
+    roomInfo_file = os.path.join('..', 'data', 'roomInfo.txt')
     # iterateFile(r'C:\Users\Lenovo\PycharmProjects\ComtamW\data\kunming_old.prj',r'C:\Users\Lenovo\PycharmProjects\ComtamW\data\roomInfo_old.txt')
     # iterateFile(r'.\data\ttt.prj', r'.\data\roomInfottt.txt')
     iterateFile(prjfile,

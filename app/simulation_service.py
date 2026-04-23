@@ -31,12 +31,14 @@ import zipfile
 import asyncio
 import re
 import requests 
+import shutil
 import glob
+import json
+
 from pathlib import Path
 from typing import Any, Dict, List, AsyncIterator, Awaitable, Callable
 import pymysql
 from rdflib import Graph, Literal, URIRef, BNode
-from openai import AsyncOpenAI
 import traceback
 from app.core.logger import log_error
 from app.core.config import settings
@@ -47,9 +49,9 @@ from ..MoosasPy import utils
 from ..MoosasPy import loadModel, saveModel, transform
 from ..MoosasPy import energyAnalysis
 from ..MoosasPy.energy import facadeAnnualGeneration, roofAnnualGeneration
-
 from ..MoosasPy.weather import includeEpw,MoosasWeather
-from .haversine import calculate_haversine_distance
+from .scripts.haversine import calculate_haversine_distance
+from .agent import run_green_building_agent
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -77,7 +79,7 @@ def resolve_weather(station_id: str = None, station_lat: float = None, station_l
         charset="utf8mb4"
     )
     
-    def _query_station_by_id(station_id: str, prefer_source: str = "onebuilding", prefer_file_type: str = "TMYx"):
+    def _query_station_by_id(station_id: str):
         try:
             conn = pymysql.connect(**MYSQL_CONFIG, cursorclass=pymysql.cursors.DictCursor)
             with conn.cursor() as cur:
@@ -86,13 +88,12 @@ def resolve_weather(station_id: str = None, station_lat: float = None, station_l
             conn.close()
             if not rows:
                 return None
-            filtered = [r for r in rows if r["sources"].lower() == prefer_source.lower()]
-            if filtered:
-                rows = filtered
-            filtered = [r for r in rows if prefer_file_type.lower() in (r["fileType"] or "").lower()]
+            # 强制筛选 fileType=TMYx
+            filtered = [r for r in rows if (r.get("fileType") or "").lower() == "tmyx"]
             if filtered:
                 rows = filtered
             rows = sorted(rows, key=lambda x: x["site"], reverse=True)
+            # log_custom(f"_query_station_by_id result: {rows[0]}")
             return rows[0]
         except Exception as exc:
             tb_str = traceback.format_exc()
@@ -133,24 +134,60 @@ def resolve_weather(station_id: str = None, station_lat: float = None, station_l
             raise ValueError(f"No station found near lat={station_lat}, lon={station_lon}")
     else:
         raise ValueError("Must provide station_id or both station_lat and station_lon.")
-    # 自动下载、解压epw并include
-    
-    # 直接从数据库epw_files表获取epw内容（MySQL）
-    try:
-        conn = pymysql.connect(**MYSQL_CONFIG)
-        with conn.cursor() as cur:
-            cur.execute("SELECT epwFile FROM epw_files WHERE stationId = %s", (station["stationId"],))
-            row = cur.fetchone()
-        conn.close()
-        if not row or not row[0]:
-            raise RuntimeError(f"No epw file found in database for stationId={station['stationId']}")
-        epw_bytes = row[0]
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.epw') as tmp_epw:
-            tmp_epw.write(epw_bytes)
-            epw_path = tmp_epw.name
+
+    if station["stationId"] not in station_dict:
+        # Auto-download, unzip, and include EPW
+        download_url = station.get('download_url')
+        if not download_url:
+            raise RuntimeError(f'No download_url for stationId={station["stationId"]}')
+        # 下载zip文件
+        # 支持代理下载
+        proxy = os.environ.get('EPW_HTTP_PROXY') or os.environ.get('HTTP_PROXY')
+        proxies = None
+        if proxy:
+            proxies = {"http": proxy, "https": proxy}
+        temp_dir = "/app/__temp/"
+        os.makedirs(temp_dir, exist_ok=True)
+        zip_path = os.path.join(temp_dir, f"{station['stationId']}.zip")
+        epw_path = os.path.join(temp_dir, f"{station['stationId']}.epw")
+        # 下载zip文件
+        with requests.get(download_url, stream=True, proxies=proxies) as r:
+            r.raise_for_status()
+            with open(zip_path, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+        # 解压epw
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            epw_candidates = [f for f in zip_ref.namelist() if f.lower().endswith('.epw')]
+            if not epw_candidates:
+                raise RuntimeError('No .epw file found in downloaded zip')
+            epw_file = epw_candidates[0]
+            with open(epw_path, 'wb') as f:
+                f.write(zip_ref.read(epw_file))
         includeEpw(epw_path)
-    except Exception as e:
-        raise RuntimeError(f"Failed to load/include epw from database: {e}")
+        # 清理临时文件
+        try:
+            os.remove(zip_path)
+            os.remove(epw_path)
+        except Exception:
+            pass
+        # ---原有数据库epw获取逻辑保留注释---
+        # try:
+        #     conn = pymysql.connect(**MYSQL_CONFIG)
+        #     with conn.cursor() as cur:
+        #         cur.execute("SELECT epwFile FROM epw_files WHERE stationId = %s", (station["stationId"],))
+        #         row = cur.fetchone()
+        #     conn.close()
+        #     if not row or not row[0]:
+        #         raise RuntimeError(f"No epw file found in database for stationId={station['stationId']}")
+        #     epw_bytes = row[0]
+        #     with tempfile.NamedTemporaryFile(delete=False, suffix='.epw') as tmp_epw:
+        #         tmp_epw.write(epw_bytes)
+        #         epw_path = tmp_epw.name
+        #     includeEpw(epw_path)
+        # except Exception as e:
+        #     raise RuntimeError(f"Failed to load/include epw from database: {e}")
+
     return station["stationId"]
 
 
@@ -227,17 +264,25 @@ def _sanitize_for_json(obj: Any) -> Any:
         return obj
     if isinstance(obj, Path):
         return str(obj)
+    if hasattr(obj, "tolist"):
+        return _sanitize_for_json(obj.tolist())
+    if hasattr(obj, "item"):
+        try:
+            return _sanitize_for_json(obj.item())
+        except Exception:
+            pass
     if hasattr(obj, "__dict__"):
         # Custom objects (e.g. ThermalSettings): expose their instance attributes.
         return _sanitize_for_json(vars(obj))
     # Final fallback — use repr() to avoid silent data loss.
     return repr(obj)
 
-
 async def _worker_GBAssistant(
-        rdf_path: Path,
-        weather_path: Path,
-        energy_path: Path,
+    rdf_path: Path,
+    weather_path: Path,
+    energy_path: Path,
+    *,
+    to_xml: bool = False,
     progress_callback: Callable[[Dict[str, Any]], Awaitable[None]] | None = None,
 ) -> Dict[str, Any]:
     """
@@ -266,25 +311,23 @@ async def _worker_GBAssistant(
             return value
         raise RuntimeError(f"Environment variable '{name}' is required for this endpoint.")
 
-    async def with_retry(label: str, factory, attempts: int = 3, delay_seconds: float = 2.0):
-        last_error = None
-        for attempt in range(1, attempts + 1):
-            try:
-                return await factory()
-            except Exception as exc:
-                last_error = exc
-                if attempt == attempts:
-                    break
-                await asyncio.sleep(delay_seconds)
-        raise RuntimeError(f"{label} failed after {attempts} attempts: {last_error}")
+    def prepare_upload_source(file_path: Path, *, to_xml: bool = False) -> tuple[Path, Path | None]:
+        """
+        Prepare RDF for agent upload.
 
-    def prepare_upload_source(file_path: Path) -> tuple[Path, Path | None]:
-        if file_path.suffix.lower() != ".rdf":
+        - Default (to_xml=False): return the original RDF path without conversion.
+        - to_xml=True: parse and sanitise RDF, then serialise to a temporary
+          RDF/XML file to maximise compatibility with legacy agents.
+
+        Returns a tuple of (path_to_use, temp_xml_path_or_None).
+        """
+        # If not converting to XML or the file isn't an .rdf, just return it as-is.
+        if (not to_xml) or (file_path.suffix.lower() != ".rdf"):
             return file_path, None
 
+        # Legacy behaviour: parse and write a sanitised RDF/XML temp file.
         graph = Graph()
         parsed = False
-        # Try common RDF serializations, then export to canonical RDF/XML.
         for rdf_format in ("xml", "turtle", "n3", "nt", "json-ld"):
             try:
                 graph.parse(str(file_path), format=rdf_format)
@@ -303,13 +346,10 @@ async def _worker_GBAssistant(
 
         def sanitize_uri(uri_text: str) -> str:
             raw = uri_text.strip().strip("<>")
-            # Keep URL-safe punctuation, replace all other characters with '-'.
             cleaned = re.sub(r"[^A-Za-z0-9._~:/#?\[\]@!$&'()*+,;=%-]+", "-", raw)
             cleaned = re.sub(r"-+", "-", cleaned).strip("-")
             if not cleaned:
                 cleaned = "term"
-
-            # If URI has no scheme, force it into a stable absolute namespace.
             if not re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", cleaned):
                 cleaned = uri_sanitize_ns + cleaned.lstrip("/#")
             return cleaned
@@ -324,8 +364,6 @@ async def _worker_GBAssistant(
         def sanitize_predicate(term):
             if isinstance(term, URIRef):
                 return URIRef(sanitize_uri(str(term)))
-            # Some source RDF contains malformed predicates (e.g. plain tokens);
-            # force them into a normalized absolute URI.
             return URIRef(sanitize_uri(str(term)))
 
         def sanitize_object(term):
@@ -344,8 +382,10 @@ async def _worker_GBAssistant(
             return Literal(str(term))
 
         sanitized_graph = Graph()
-        for s, p, o in graph:
-            sanitized_graph.add((sanitize_subject(s), sanitize_predicate(p), sanitize_object(o)))
+        for subj, pred, obj in graph:
+            sanitized_graph.add(
+                (sanitize_subject(subj), sanitize_predicate(pred), sanitize_object(obj))
+            )
 
         temp_file = tempfile.NamedTemporaryFile(
             prefix=f"{file_path.stem}_",
@@ -357,185 +397,95 @@ async def _worker_GBAssistant(
         sanitized_graph.serialize(destination=str(temp_path), format="xml")
         return temp_path, temp_path
 
-    def extract_assistant_text(message: Any) -> str:
-        chunks: list[str] = []
-        for block in message.content:
-            if getattr(block, "type", None) == "text":
-                chunks.append(block.text.value)
-        if not chunks:
-            raise RuntimeError("Assistant response did not contain any text content.")
-        return "\n".join(chunks)
-
-    client = AsyncOpenAI(
-        api_key=require_setting(settings.OPENAI_API_KEY, "OPENAI_API_KEY"),
-        timeout=settings.OPENAI_TIMEOUT_SECONDS,
-        max_retries=2,
-    )
-
-    async def retrieve_assistant():
-        assistant_id = require_setting(
-            settings.GREEN_BUILDING_ASSISTANT_ID,
-            "GREEN_BUILDING_ASSISTANT_ID",
-        )
-        assistant = await client.beta.assistants.retrieve(assistant_id)
-
-        tool_types = {tool.type for tool in assistant.tools}
-        if "code_interpreter" not in tool_types:
-            raise RuntimeError(
-                "The configured assistant does not have the code_interpreter tool enabled."
-            )
-
-        return assistant
-
-    async def upload_file_for_assistant(file_path: Path) -> str:
-        upload_path, temp_path = prepare_upload_source(file_path)
-
-        try:
-            with open(upload_path, "rb") as file_handle:
-                async def upload_once():
-                    file_handle.seek(0)
-                    return await client.files.create(file=file_handle, purpose="assistants")
-
-                file_obj = await with_retry(f"Uploading {file_path.name}", upload_once)
-            return file_obj.id
-        finally:
-            if temp_path and temp_path.exists():
-                temp_path.unlink()
-
-    await emit_status("retrieving_assistant", "Retrieving assistant configuration.")
-    assistant = await with_retry("Retrieving assistant", retrieve_assistant)
-    await emit_status("assistant_ready", "Assistant configuration loaded.", assistant_id=assistant.id)
-
-    helper_script_path = Path(__file__).with_name("app/rdf_keyword_search_helper.py")
+    helper_script_path = Path(__file__).parent / "scripts" / "rdf_keyword_search_helper.py"
     if not helper_script_path.exists():
         raise FileNotFoundError(f"Required helper script not found: {helper_script_path}")
 
-    file_ids: list[str] = []
+    require_setting(settings.OPENAI_API_KEY, "OPENAI_API_KEY")
+
+    await emit_status("preparing_inputs", "Preparing agent input files.")
+
+    agent_temp_dir = Path(tempfile.mkdtemp(prefix="gb_agent_"))
+    normalized_rdf_path: Path | None = None
+    weather_json_path = agent_temp_dir / f"{weather_path.stem}.json"
+
     try:
-        for file_role, file_path in (
-            ("rdf", rdf_path),
-            ("weather_csv", weather_path),
-            ("energy_json", energy_path),
-            ("rdf_helper_script", helper_script_path),
-        ):
-            await emit_status(
-                "uploading_file",
-                f"Uploading {file_path.name}.",
-                file_role=file_role,
-                filename=file_path.name,
-            )
-            uploaded_file_id = await upload_file_for_assistant(file_path)
-            file_ids.append(uploaded_file_id)
-            await emit_status(
-                "file_uploaded",
-                f"Uploaded {file_path.name}.",
-                file_role=file_role,
-                filename=file_path.name,
-                uploaded_file_id=uploaded_file_id,
-            )
+        normalized_rdf_path, _ = prepare_upload_source(rdf_path, to_xml=to_xml)
 
-        await emit_status("creating_thread", "Creating assistant thread.")
-        thread = await with_retry(
-            "Creating thread",
-            lambda: client.beta.threads.create(),
+        weather_data = MoosasWeather.loadWeatherData(weather_path)
+        weather_json_path.write_text(
+            json.dumps(_sanitize_for_json(weather_data), ensure_ascii=False),
+            encoding="utf-8",
         )
-        await emit_status("thread_created", "Assistant thread created.", thread_id=thread.id)
-        attachments = [{"file_id": file_id, "tools": [{"type": "code_interpreter"}]} for file_id in file_ids]
 
-        await emit_status("creating_message", "Attaching files and creating user message.")
-        await with_retry(
-            "Creating thread message",
-            lambda: client.beta.threads.messages.create(
-                thread_id=thread.id,
-                role="user",
-                content=(
-                    "请严格按照 assistant 的分析要求，对附件中的 RDF、CSV 和 JSON 文件进行真实计算，"
-                    "输出建筑能耗表现总结、体形系数与窗墙比及合规性评价、围护结构建议和进一步节能设计建议。"
-                    "如需在 RDF 中做关键词查询或兜底检索，请优先使用附件脚本 rdf_keyword_search_helper.py，"
-                    "通过 keyword_query(file_path, query, top_k) 获取结果，不要自行假设 RDF 谓词一定可按命名空间分割。"
-                ),
-                attachments=attachments,
-            ),
-        )
-        await emit_status("message_created", "Assistant input message created.")
-
-        await emit_status("creating_run", "Creating assistant run.")
-        run = await client.beta.threads.runs.create(
-            thread_id=thread.id,
-            assistant_id=assistant.id,
-        )
         await emit_status(
-            "run_created",
-            f"Assistant run created with status '{run.status}'.",
-            run_id=run.id,
-            run_status=run.status,
+            "inputs_ready",
+            "Agent input files prepared.",
+            rdf_filename=normalized_rdf_path.name,
+            weather_json_filename=weather_json_path.name,
+            energy_filename=energy_path.name,
+            helper_filename=helper_script_path.name,
         )
 
-        terminal_statuses = {
-            "completed",
-            "failed",
-            "cancelled",
-            "expired",
-            "incomplete",
-            "requires_action",
-        }
-        last_status = run.status
-        last_emit_at = time.monotonic()
-
-        while run.status not in terminal_statuses:
-            await asyncio.sleep(2.0)
-            run = await with_retry(
-                "Polling run status",
-                lambda: client.beta.threads.runs.retrieve(
-                    thread_id=thread.id,
-                    run_id=run.id,
-                ),
-            )
-
-            now = time.monotonic()
-            if run.status != last_status or (now - last_emit_at) >= 10.0:
-                await emit_status(
-                    "run_status",
-                    f"Assistant run status: {run.status}.",
-                    run_id=run.id,
-                    run_status=run.status,
-                )
-                last_status = run.status
-                last_emit_at = now
-
-        if run.status != "completed":
-            raise RuntimeError(
-                f"Run failed with status: {run.status}. Last error: {run.last_error}"
-            )
-
-        await emit_status("fetching_response", "Fetching assistant response.")
-        messages = await with_retry(
-            "Fetching assistant response",
-            lambda: client.beta.threads.messages.list(
-                thread_id=thread.id,
-                order="desc",
-                limit=1,
-            ),
+        query = (
+            "请基于输入文件生成完整的绿色建筑性能分析 Markdown 报告。"
+            "重点包括建筑能耗表现总结、体形系数与窗墙比及合规性评价、"
+            "围护结构建议和进一步节能设计建议。"
         )
-        report_markdown = extract_assistant_text(messages.data[0])
-        await emit_status("response_ready", "Assistant response retrieved.")
+
+        await emit_status("running_agent", "Running green building agent.")
+        os.environ["OPENAI_API_KEY"] = settings.OPENAI_API_KEY
+        agent_result = await asyncio.to_thread(
+            run_green_building_agent,
+            query,
+            {
+                "weather": str(weather_json_path),
+                "energy": str(energy_path),
+                "rdf": str(normalized_rdf_path),
+                "helper": str(helper_script_path),
+            },
+            output_dir=str(agent_temp_dir),
+            timeout_seconds=int(settings.OPENAI_TIMEOUT_SECONDS),
+        )
+
+        if not agent_result.success:
+            raise RuntimeError(agent_result.error or "Green building agent failed without details.")
+
+        report_path = Path(agent_result.report_path) if agent_result.report_path else None
+
+        await emit_status("reading_report", "Reading generated Markdown report.")
+        if report_path and report_path.exists():
+            report_markdown = report_path.read_text(encoding="utf-8")
+        elif agent_result.report_md:
+            report_markdown = agent_result.report_md
+        else:
+            raise RuntimeError("Green building agent did not return a report file or markdown content.")
+
+        await emit_status(
+            "response_ready",
+            "Markdown report generated successfully.",
+            report_filename=report_path.name if report_path else None,
+            iterations=agent_result.iterations,
+        )
 
         return {
             "report_markdown": report_markdown,
-            "assistant_id": assistant.id,
+            "assistant_id": "green_building_agent",
             "input_files": {
                 "rdf": rdf_path.name,
                 "weather_csv": weather_path.name,
+                "weather_json": weather_json_path.name,
                 "energy_json": energy_path.name,
                 "rdf_helper_script": helper_script_path.name,
+                "report_md": report_path.name if report_path else None,
             },
+            "agent_iterations": agent_result.iterations,
+            "tool_log": agent_result.tool_log,
         }
     finally:
-        for file_id in file_ids:
-            try:
-                await client.files.delete(file_id)
-            except Exception:
-                pass
+        if normalized_rdf_path and normalized_rdf_path != rdf_path and normalized_rdf_path.exists():
+            normalized_rdf_path.unlink(missing_ok=True)
+        shutil.rmtree(agent_temp_dir, ignore_errors=True)
 
 
 async def run_GBAssistant(
@@ -543,7 +493,11 @@ async def run_GBAssistant(
         energy_json_filename: str | None = None,
         rdf_path: Path | None = None,
         rdf_file_name: str | None = None,
-        station_id: str = "545110",
+        station_id: str  = None,
+        station_lat: float | None = None,
+        station_lon: float | None = None,
+    *,
+    to_xml: bool = False,
 ) -> Dict[str, Any]:
     """
     Public service entry for Green Building Assistant analysis.
@@ -570,14 +524,13 @@ async def run_GBAssistant(
 
     resolved_station_id = resolve_weather(
         station_id,
-        None,
-        None
+        station_lat,
+        station_lon
     )
     weather_path = Path(
         os.path.join(utils.path.dataBaseDir, "weather", f"{resolved_station_id}.csv")
     )
-
-    return await _worker_GBAssistant(rdf_path, weather_path, energy_json_path)
+    return await _worker_GBAssistant(rdf_path, weather_path, energy_json_path, to_xml=to_xml)
 
 
 async def stream_GBAssistant(
@@ -585,7 +538,11 @@ async def stream_GBAssistant(
         energy_json_filename: str | None = None,
         rdf_path: Path | None = None,
         rdf_file_name: str | None = None,
-        station_id: str = "545110",
+        station_id: str = None,
+        station_lat: float | None = None,
+        station_lon: float | None = None,
+    *,
+    to_xml: bool = False,
 ) -> AsyncIterator[Dict[str, Any]]:
     """
     Stream-friendly wrapper for Green Building Assistant.
@@ -596,11 +553,10 @@ async def stream_GBAssistant(
     """
     rdf_path = _resolve_storage_path(rdf_path, rdf_file_name)
     energy_json_path = _resolve_storage_path(energy_json_path, energy_json_filename)
-
     resolved_station_id = resolve_weather(
         station_id,
-        None,
-        None
+        station_lat,
+        station_lon
     )
     weather_path = Path(
         os.path.join(utils.path.dataBaseDir, "weather", f"{resolved_station_id}.csv")
@@ -618,6 +574,7 @@ async def stream_GBAssistant(
                 rdf_path,
                 weather_path,
                 energy_json_path,
+                to_xml=to_xml,
                 progress_callback=publish,
             )
             result_holder.update(result)
@@ -654,12 +611,48 @@ async def stream_GBAssistant(
     }
 
     report_text = result.get("report_markdown", "")
-    chunk_size = 1200
-    for start in range(0, len(report_text), chunk_size):
-        yield {
-            "type": "chunk",
-            "delta": report_text[start:start + chunk_size],
-        }
+    # Try to split by explicit section markers if present; otherwise fall back to fixed-size chunks.
+    sections: list[tuple[int, str]] = []
+    try:
+        import re as _re
+        pattern = _re.compile(r"<!-- SECTION:(\d) START -->(.*?)<!-- SECTION:\\1 END -->", _re.DOTALL)
+        matches = list(pattern.finditer(report_text))
+        for m in matches:
+            idx = int(m.group(1))
+            content = m.group(2).strip()
+            if content:
+                sections.append((idx, content))
+    except Exception:
+        sections = []
+
+    if sections:
+        # Stream each section sequentially (1..3), chunked for stability.
+        for idx, content in sorted(sections, key=lambda x: x[0]):
+            yield {
+                "type": "status",
+                "stage": f"section_{idx}_start",
+                "message": f"Streaming section {idx}.",
+            }
+            chunk_size = 1200
+            for start in range(0, len(content), chunk_size):
+                yield {
+                    "type": "chunk",
+                    "section": idx,
+                    "delta": content[start:start + chunk_size],
+                }
+            yield {
+                "type": "status",
+                "stage": f"section_{idx}_end",
+                "message": f"Section {idx} completed.",
+            }
+    else:
+        # Fallback: plain chunking
+        chunk_size = 1200
+        for start in range(0, len(report_text), chunk_size):
+            yield {
+                "type": "chunk",
+                "delta": report_text[start:start + chunk_size],
+            }
 
     yield {
         "type": "result",
@@ -906,10 +899,11 @@ async def run_energy_analysis(
         Sanitized result dict from the worker.
     """
     params = task_params or {}
-    station_id = task_params.get("station_id", "545110")
+    station_id = task_params.get("station_id")
     station_lat = task_params.get("station_lat")
     station_lon = task_params.get("station_lon")
     resolved_station_id = resolve_weather(station_id, station_lat, station_lon)
+    log_custom(f"Resolved station ID for energy analysis: {resolved_station_id}")
     params["station_id"] = resolved_station_id  # Ensure the resolved station ID is used in the worker
     if "schedulePath" in params:
         params["schedulePath"] = str(_resolve_storage_path(input_filename=params["schedulePath"]))
@@ -988,7 +982,7 @@ async def run_PV_analysis(
     """
     effective_path = _resolve_storage_path(input_file_path, input_filename)
     params = task_params or {}
-    station_id = params.get("station_id", "545110")
+    station_id = params.get("station_id")
     station_lat = params.get("station_lat")
     station_lon = params.get("station_lon")
     resolved_station_id = resolve_weather(station_id, station_lat, station_lon)
@@ -1100,7 +1094,7 @@ async def update_space_settings(
 # Operation 6 — Download Weather Data  (Pattern C: Params → Dict)
 # ═════════════════════════════════════════════════════════════════════════════
 
-def _worker_download_weather_data(station_id: str = "545110", station_lat: float = None, station_lon: float = None) -> Dict[str, Any]:
+def _worker_download_weather_data(station_id: str = None, station_lat: float = None, station_lon: float = None) -> Dict[str, Any]:
     """
     Worker: resolve a weather station by id or coordinates and return weather data as a dict.
 
@@ -1115,6 +1109,7 @@ def _worker_download_weather_data(station_id: str = "545110", station_lat: float
 
     try:
         resolved_station_id = resolve_weather(station_id, station_lat, station_lon)
+        log_custom(f"Resolved station ID for weather data download: {resolved_station_id}")
         weather = MoosasWeather(resolved_station_id)
         location = weather.location
 
@@ -1144,7 +1139,7 @@ def _worker_download_weather_data(station_id: str = "545110", station_lat: float
 
 
 async def download_weather_data(
-    station_id: str = "545110",
+    station_id: str = None,
     station_lat: float = None,
     station_lon: float = None
 ) -> Dict[str, Any]:
@@ -1185,7 +1180,7 @@ async def run_green_building_analysis(
     but delegates execution to ``run_GBAssistant``. If weather file/path is
     provided, station id is inferred from the weather filename stem.
     """
-    station_id = "545110"
+    station_id = None
     if weather_file_path is not None or weather_filename is not None:
         weather_path = _resolve_storage_path(weather_file_path, weather_filename)
         station_id = weather_path.stem

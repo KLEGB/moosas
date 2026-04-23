@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from rdflib import Graph, Namespace, Literal, URIRef
 from rdflib.namespace import RDF, RDFS, GEO, BRICK, WGS
 
@@ -358,7 +359,7 @@ class MoosasGraph(Graph):
         self.add((wea, self.pgd.fileStoreAt, Literal(model.weather.weatherFile)))
         self.add((wea, self.pgd.stationId, Literal(model.weather.location.stationId)))
         self.add((wea, self.pgd.hasCumSky,
-                  Literal(os.path.join(path.dataBaseDir, f'cum_sky\\cumsky_{model.weather.location.stationId}.csv'))))
+              Literal(os.path.join(path.dataBaseDir, 'cum_sky', f"cumsky_{model.weather.location.stationId}.csv"))))
         self.add((wea, self.pgd.hasLocation, URIRef(str(site))))
         self.add((wea, self.pgd.pressure, Literal(model.weather.location.pressure)))
         self.add((URIRef(str(site)), self.wgs.lat, Literal(model.weather.location.latitude)))
