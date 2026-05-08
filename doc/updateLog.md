@@ -1,3 +1,7 @@
+--0.8.6
+# transformation update 05.08
+- 0.8.6.1 include idf as valid input for transformation.
+
 --0.8.5
 # energy module update 04.04
 - 0.8.5.2 energy plus ventilation simulation. allow the analysis on energy saving by natural ventilation via energy.ventilation module.
@@ -5,7 +9,6 @@
 - 0.8.5.4 add endpoints for moosas backend
 - 0.8.5.5 fix bug in loadModel for energyAnalysis
 - 0.8.5.6 energy services for frontend in ./app
-- 0.8.5.7 enable Linux Environment, fix the belonging *.exe for external module of Moosas.
 
 --0.8.4
 # IO update 01.02

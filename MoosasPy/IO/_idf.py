@@ -1,50 +1,163 @@
 import os
+import math
+import re
+import tempfile
+from collections import Counter, defaultdict
+from dataclasses import dataclass
 from difflib import SequenceMatcher
+from pathlib import Path
 
 from eppy.modeleditor import IDF
 from rdflib import Literal, URIRef
 from rdflib.namespace import RDF
 
 from ._rdf import MoosasGraph, encodeURI, decodeURI
+from ._xml import loadXml
 from ..models import *
 from ..thermal import *
 from ..utils import path, mixItemListToList
 
-def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None) -> idfGeometry.ZoneTemplate:
+
+def _normalize_zone_name_to_space_dict(zoneNameToSpaceDict):
     """
-    Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
+    Normalize zoneNameToSpaceDict to {zoneName: [spaceId, ...]} and validate duplicates.
+
+    Parameters
+    ----------
+    zoneNameToSpaceDict : dict or None
+        Mapping where key is zone name in template IDF and value is a space id string
+        or an iterable of space id strings.
+
+    Returns
+    -------
+    dict
+        Normalized mapping where each value is a list of unique space ids.
+    """
+    if zoneNameToSpaceDict is None:
+        return {"": []}
+
+    if not isinstance(zoneNameToSpaceDict, dict):
+        raise TypeError("zoneNameToSpaceDict must be a dict like {'Zone_Name': 'SpaceId'}")
+
+    normalized = {}
+    usedSpaceIds = set()
+    for zoneName, spaceIds in zoneNameToSpaceDict.items():
+        zoneKey = str(zoneName)
+
+        if isinstance(spaceIds, str):
+            targetIds = [spaceIds]
+        elif spaceIds is None:
+            targetIds = []
+        else:
+            try:
+                targetIds = list(spaceIds)
+            except TypeError:
+                raise TypeError(f"spaceIds for zone '{zoneKey}' must be str/list/tuple/set or None")
+
+        # Keep stable order while removing duplicates.
+        dedupedIds = []
+        seen = set()
+        for spId in targetIds:
+            spId = str(spId)
+            if spId not in seen:
+                dedupedIds.append(spId)
+                seen.add(spId)
+
+        overlap = [spId for spId in dedupedIds if spId in usedSpaceIds]
+        if len(overlap) > 0:
+            raise ValueError(f"Duplicate spaceIds across zone mappings are not allowed: {overlap}")
+
+        usedSpaceIds.update(dedupedIds)
+        normalized[zoneKey] = dedupedIds
+
+    if len(normalized) == 0:
+        return {"": []}
+    return normalized
+
+
+def _idf_get_first_zone_name(idfTemplatePath=None) -> str:
+    """Return the first valid Zone name in template IDF, or empty string when unavailable."""
+    idd = os.path.join(path.dataBaseDir, "Energy+.idd")
+    if os.path.isfile(idd):
+        try:
+            IDF.setiddname(idd)
+        except Exception:
+            pass
+
+    if not idfTemplatePath:
+        idfTemplatePath = os.path.join(path.dataBaseDir, "in.idf")
+
+    try:
+        idf = IDF(idfTemplatePath)
+    except Exception:
+        return ""
+
+    for zoneObj in idf.idfobjects['Zone']:
+        zoneName = str(zoneObj['Name']).strip()
+        if zoneName:
+            return zoneName
+    return ""
+
+
+def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zoneName: str = "") -> idfGeometry.ZoneTemplate:
+    """
+    Load one zone template from an IDF template file and inject it into target spaces.
 
     Parameters
     ----------
     model : MoosasModel
-        A model instance containing building geometry and settings to be converted into IDF format.
-        Must provide methods `getAllFaces`, `spaceIdDict`, and `spaceList`, and associated attributes
-        for space and surface properties.
-    idfTemplatePath : str
-        Path of the idf template file.
+        Model containing target spaces and spaceIdDict.
+    idfTemplatePath : str, optional
+        Path to template IDF file. Defaults to dataBaseDir/in.idf.
+    spaceIds : str or list[str], optional
+        Target space ids to receive this template. If None or empty, apply to all spaces.
+    zoneName : str, optional
+        Zone name to select from template IDF.
 
     Returns
     -------
-    model : MoosasModel
+    idfGeometry.ZoneTemplate
+        Loaded template for the requested zoneName.
 
     """
     # Properly handle paths for cross-platform compatibility
+    idd = os.path.join(path.dataBaseDir, "Energy+.idd")
+    if os.path.isfile(idd):
+        try:
+            IDF.setiddname(idd)
+        except Exception:
+            # Eppy may reject resetting IDD after first use in the same process.
+            pass
+
     if not idfTemplatePath:
         idfTemplatePath = os.path.join(path.dataBaseDir, "in.idf")
-        idd = os.path.join(path.dataBaseDir, "Energy+.idd")
-        IDF.setiddname(idd)
 
     idf = IDF(idfTemplatePath)
-    zTemplate: idfGeometry.ZoneTemplate = idfGeometry.ZoneTemplate.fromIDF(idf)
-    for si, space in enumerate(model.spaceList):
-        print(f"\rIDF: overwriting zonal settings: {si}/{len(model.spaceList  + model.voidList)}", end='')
+    zTemplate: idfGeometry.ZoneTemplate = idfGeometry.ZoneTemplate.fromIDF(idf, zoneName=zoneName)
+    if zTemplate.isEmpty():
+        print(f"\n******Warning: no valid zone template was found for Name='{zoneName}'")
+        return zTemplate
+
+    if isinstance(spaceIds, str):
+        spaceIds = [spaceIds]
+
+    if spaceIds:
+        missingSpaceIds = [spId for spId in spaceIds if spId not in model.spaceIdDict]
+        if len(missingSpaceIds) > 0:
+            raise ValueError(f"Invalid spaceIds: {missingSpaceIds}")
+        targetSpaces = [model.spaceIdDict[spId] for spId in spaceIds]
+    else:
+        targetSpaces = list(model.spaceList)
+
+    for si, space in enumerate(targetSpaces):
+        print(f"\rIDF: overwriting zonal settings: {si + 1}/{len(targetSpaces)}", end='')
         space.settings['idf_template'] = zTemplate.appliedToZone(space)
         if space.is_open():
             print(f'\n******Warring: EnergyPlus do not support void space: {space.id}')
     return zTemplate
 
 
-def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None,iddFile=None):
+def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, iddFile=None, zoneNameToSpaceDict=None):
     """
     Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
 
@@ -56,6 +169,14 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None,iddFile=N
         for space and surface properties.
     outputPath : str
         Path to save the generated IDF file. The directory must be writable.
+    idfTemplatePath : str, optional
+        Path to template IDF file. Defaults to dataBaseDir/in.idf.
+    iddFile : str, optional
+        Path to Energy+.idd file. If provided, used as IDD before writing.
+    zoneNameToSpaceDict : dict, optional
+        Mapping from template zone name to target space ids.
+        Example: {"Zone_A": "Space-1", "Zone_B": ["Space-2", "Space-3"]}
+        If None, equivalent to {"": all spaces}.
 
     Returns
     -------
@@ -66,11 +187,70 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None,iddFile=N
     if iddFile:
         IDF.setiddname(iddFile)
     moElements = model.getAllFaces(dumpUseless=True)
-    zTemplate:idfGeometry.ZoneTemplate = loadIDFTemplate(model, idfTemplatePath)
+
+    if zoneNameToSpaceDict is None and hasattr(model, 'idfZoneSettings'):
+        modelZoneMap = getattr(model, 'idfZoneSettings')
+        if isinstance(modelZoneMap, dict):
+            zoneNameToSpaceDict = modelZoneMap
+
+    zoneMap = _normalize_zone_name_to_space_dict(zoneNameToSpaceDict)
+    zTemplate: idfGeometry.ZoneTemplate = None
+    objectHints = set()
+    assignedSpaceIds = set()
+    allSpaceIds = [str(space.id) for space in model.spaceList]
+
+    # Apply templates by zone->space mapping. When space list is empty, it means all spaces.
+    for zoneName, targetSpaceIds in zoneMap.items():
+        mappedSpaceIds = list(targetSpaceIds) if len(targetSpaceIds) > 0 else list(allSpaceIds)
+        thisTemplate: idfGeometry.ZoneTemplate = loadIDFTemplate(
+            model,
+            idfTemplatePath=idfTemplatePath,
+            spaceIds=targetSpaceIds,
+            zoneName=zoneName,
+        )
+        if thisTemplate.isEmpty():
+            print(f"\n******Warning: skip empty template for zone '{zoneName}'")
+            continue
+
+        if zTemplate is None:
+            zTemplate = thisTemplate
+        objectHints.update(list(thisTemplate.objectList.keys()))
+        assignedSpaceIds.update(mappedSpaceIds)
+
+    unassignedSpaceIds = [spId for spId in allSpaceIds if spId not in assignedSpaceIds]
+
+    # Robust fallback: when zoneName is empty/invalid or mapping fails,
+    # apply the first available template zone to all unassigned spaces.
+    if zTemplate is None or len(unassignedSpaceIds) > 0:
+        fallbackZoneName = _idf_get_first_zone_name(idfTemplatePath)
+        fallbackTargets = list(allSpaceIds) if zTemplate is None else unassignedSpaceIds
+        if len(fallbackTargets) > 0:
+            print(
+                f"\n******Warning: fallback IDF template mapping activated. "
+                f"zone='{fallbackZoneName}', targets={len(fallbackTargets)}"
+            )
+            fallbackTemplate: idfGeometry.ZoneTemplate = loadIDFTemplate(
+                model,
+                idfTemplatePath=idfTemplatePath,
+                spaceIds=fallbackTargets,
+                zoneName=fallbackZoneName,
+            )
+            if not fallbackTemplate.isEmpty():
+                if zTemplate is None:
+                    zTemplate = fallbackTemplate
+                objectHints.update(list(fallbackTemplate.objectList.keys()))
+
+    if zTemplate is None:
+        raise ValueError(
+            "No valid ZoneTemplate was loaded. Check zoneNameToSpaceDict and template IDF Zone names. "
+            "Fallback to first zone also failed."
+        )
+
     # remote existing zone-related objects
     removeHint = []
-    removeHint += list(zTemplate.objectList.keys()) + ['Zone', 'WaterUse:Equipment', 'BuildingSurface:Detailed',
-                                                       'FenestrationSurface:Detailed', 'Space','SpaceList','ZoneMixing','DesignSpecification:OutdoorAir:SpaceList']
+    removeHint += list(objectHints) + ['Zone', 'WaterUse:Equipment', 'BuildingSurface:Detailed',
+                                       'FenestrationSurface:Detailed', 'Space', 'SpaceList', 'ZoneMixing',
+                                       'DesignSpecification:OutdoorAir:SpaceList']
     idf = zTemplate.idf
     for h in removeHint:
         idf.idfobjects[h] = []
@@ -150,7 +330,10 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None,iddFile=N
     # writing zonal settings
     for si, space in enumerate(model.spaceList):
         print(f"\rIDF: encoding zones: {si+1}/{len(model.spaceList)}", end='')
-        space.settings['idf_template'].applyToIDF(idf)
+        if 'idf_template' in space.settings:
+            space.settings['idf_template'].applyToIDF(idf)
+        else:
+            print(f"\n******Warning: no idf_template mapped for space '{space.id}', skipped")
         # if space.is_void():
         #     print('***Warring: EnergyPlus do not support void space')
         # else:
@@ -446,3 +629,627 @@ def extractZoneTemplate(graph: MoosasGraph):
         subGraph += objGraph
 
     return subGraph
+
+
+IDF_TO_GEO_PRECISION = 6
+
+
+@dataclass
+class _IDFSurfaceRecord:
+    name: str
+    family: str
+    surface_type: str
+    zone_name: str
+    boundary_condition: str
+    boundary_object: str
+    parent_surface: str
+    construction_name: str
+    vertices: list[tuple[float, float, float]]
+
+
+@dataclass
+class _IDFUnifiedFace:
+    key: str
+    geo_id: str
+    uid: str
+    cat: int
+    vertices: list[tuple[float, float, float]]
+    normal: tuple[float, float, float]
+    records: list[_IDFSurfaceRecord]
+
+    @property
+    def level(self) -> float:
+        return min(v[2] for v in self.vertices)
+
+    @property
+    def offset(self) -> float:
+        return 0.0
+
+    @property
+    def is_horizontal(self) -> bool:
+        return abs(self.normal[2]) >= 0.9
+
+
+def _idf_safe_set_idd(idd_path: str) -> None:
+    try:
+        IDF.setiddname(idd_path)
+    except Exception:
+        pass
+
+
+def _idf_default_idd_path(iddPath: str = None) -> str:
+    if iddPath:
+        return iddPath
+    return os.path.join(path.dataBaseDir, "Energy+.idd")
+
+
+def _idf_default_output_path(idfPath: str, extension: str) -> str:
+    base, _ = os.path.splitext(idfPath)
+    return base + extension
+
+
+def _idf_as_float(value) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return 0.0
+
+
+def _idf_round_xyz(point: tuple[float, float, float], precision: int = IDF_TO_GEO_PRECISION) -> tuple[float, float, float]:
+    return (
+        round(float(point[0]), precision),
+        round(float(point[1]), precision),
+        round(float(point[2]), precision),
+    )
+
+
+def _idf_poly_normal(vertices: list[tuple[float, float, float]]) -> tuple[float, float, float]:
+    if len(vertices) < 3:
+        return 0.0, 0.0, 1.0
+    p1, p2, p3 = vertices[0], vertices[1], vertices[2]
+    ux, uy, uz = p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]
+    vx, vy, vz = p3[0] - p1[0], p3[1] - p1[1], p3[2] - p1[2]
+    nx = uy * vz - uz * vy
+    ny = uz * vx - ux * vz
+    nz = ux * vy - uy * vx
+    norm = math.sqrt(nx * nx + ny * ny + nz * nz)
+    if norm == 0:
+        return 0.0, 0.0, 1.0
+    return nx / norm, ny / norm, nz / norm
+
+
+def _idf_canonical_signature(vertices: list[tuple[float, float, float]], precision: int = IDF_TO_GEO_PRECISION) -> str:
+    rounded = [_idf_round_xyz(v, precision) for v in vertices]
+    seq = sorted(rounded)
+    return "|".join(f"{x:.{precision}f},{y:.{precision}f},{z:.{precision}f}" for x, y, z in seq)
+
+
+def _idf_get_vertex_triplets(idf_obj, vertex_count: int) -> list[tuple[float, float, float]]:
+    points = []
+    for i in range(1, vertex_count + 1):
+        x = _idf_as_float(idf_obj[f"Vertex_{i}_Xcoordinate"])
+        y = _idf_as_float(idf_obj[f"Vertex_{i}_Ycoordinate"])
+        z = _idf_as_float(idf_obj[f"Vertex_{i}_Zcoordinate"])
+        points.append(_idf_round_xyz((x, y, z)))
+    return points
+
+
+def _idf_safe_obj_value(idf_obj, field: str, default: str = "") -> str:
+    try:
+        value = idf_obj[field]
+    except Exception:
+        return default
+    if value is None:
+        return default
+    return str(value)
+
+
+def _idf_map_cat(rec: _IDFSurfaceRecord, is_horizontal: bool) -> int:
+    st = (rec.surface_type or "").upper()
+    bc = (rec.boundary_condition or "").upper()
+    cn = (rec.construction_name or "").upper()
+
+    if rec.family == "shading":
+        return -1
+
+    if rec.family == "fenestration":
+        if st in {"SKYLIGHT", "TUBULARDAYLIGHTDOME", "TUBULARDAYLIGHTDIFFUSER"} or is_horizontal:
+            return 6
+        # Interior windows are represented by paired fenestration objects linked by
+        # Outside_Boundary_Condition_Object in EnergyPlus.
+        if str(rec.boundary_object).strip() != "":
+            return 1
+        if "TRANSLUC" in cn:
+            return 1
+        return 5
+
+    if rec.family == "building":
+        if st in {"FLOOR", "ROOF", "CEILING"} or is_horizontal:
+            return 4
+        if "AIR" in cn and "BOUNDARY" in cn:
+            return 2
+        if st == "WALL":
+            return 3
+        if bc in {"ADIABATIC", "GROUND", "OUTDOORS", "SURFACE", "ZONE"}:
+            return 0
+        return 0
+
+    return -2
+
+
+def _idf_read_surfaces(idfPath: str, iddPath: str = None) -> list[_IDFSurfaceRecord]:
+    idd = _idf_default_idd_path(iddPath)
+    _idf_safe_set_idd(idd)
+    idf = IDF(idfPath)
+    records: list[_IDFSurfaceRecord] = []
+    building_zone_by_name: dict[str, str] = {}
+
+    for obj in idf.idfobjects["BUILDINGSURFACE:DETAILED"]:
+        n = int(_idf_as_float(obj.Number_of_Vertices))
+        if n < 3:
+            continue
+        obj_name = _idf_safe_obj_value(obj, "Name")
+        obj_zone = _idf_safe_obj_value(obj, "Zone_Name")
+        if obj_name:
+            building_zone_by_name[obj_name] = obj_zone
+        records.append(
+            _IDFSurfaceRecord(
+                name=obj_name,
+                family="building",
+                surface_type=_idf_safe_obj_value(obj, "Surface_Type"),
+                zone_name=obj_zone,
+                boundary_condition=_idf_safe_obj_value(obj, "Outside_Boundary_Condition"),
+                boundary_object=_idf_safe_obj_value(obj, "Outside_Boundary_Condition_Object"),
+                parent_surface="",
+                construction_name=_idf_safe_obj_value(obj, "Construction_Name"),
+                vertices=_idf_get_vertex_triplets(obj, n),
+            )
+        )
+
+    for obj in idf.idfobjects["FENESTRATIONSURFACE:DETAILED"]:
+        n = int(_idf_as_float(obj.Number_of_Vertices))
+        if n < 3:
+            continue
+        parent_surface_name = _idf_safe_obj_value(obj, "Building_Surface_Name")
+        zone_name = _idf_safe_obj_value(obj, "Zone_Name", default="")
+        if not zone_name and parent_surface_name:
+            zone_name = building_zone_by_name.get(parent_surface_name, "")
+        records.append(
+            _IDFSurfaceRecord(
+                name=_idf_safe_obj_value(obj, "Name"),
+                family="fenestration",
+                surface_type=_idf_safe_obj_value(obj, "Surface_Type"),
+                zone_name=zone_name,
+                boundary_condition=_idf_safe_obj_value(obj, "Outside_Boundary_Condition"),
+                boundary_object=_idf_safe_obj_value(obj, "Outside_Boundary_Condition_Object"),
+                parent_surface=parent_surface_name,
+                construction_name=_idf_safe_obj_value(obj, "Construction_Name"),
+                vertices=_idf_get_vertex_triplets(obj, n),
+            )
+        )
+
+    shading_classes = [
+        "SHADING:BUILDING:DETAILED",
+        "SHADING:ZONE:DETAILED",
+        "SHADING:SITE:DETAILED",
+    ]
+    for cls in shading_classes:
+        for obj in idf.idfobjects.get(cls, []):
+            n = int(_idf_as_float(getattr(obj, "Number_of_Vertices", 0)))
+            if n < 3:
+                continue
+            records.append(
+                _IDFSurfaceRecord(
+                    name=str(getattr(obj, "Name", f"{cls}_unnamed")),
+                    family="shading",
+                    surface_type=cls,
+                    zone_name=str(getattr(obj, "Zone_Name", "")),
+                    boundary_condition="",
+                    boundary_object="",
+                    parent_surface="",
+                    construction_name="",
+                    vertices=_idf_get_vertex_triplets(obj, n),
+                )
+            )
+
+    return records
+
+
+def _idf_unify_faces(records: list[_IDFSurfaceRecord]) -> tuple[list[_IDFUnifiedFace], dict[str, _IDFUnifiedFace], dict[str, int]]:
+    rec_by_name = {r.name: r for r in records}
+    assigned: dict[str, str] = {}
+    pairs: list[tuple[str, str]] = []
+    stats = {"paired": 0, "fallback": 0}
+
+    for rec in records:
+        if rec.name in assigned:
+            continue
+        if rec.boundary_condition.upper() != "SURFACE" or not rec.boundary_object:
+            continue
+        other = rec_by_name.get(rec.boundary_object)
+        if other is None:
+            continue
+        if other.boundary_condition.upper() != "SURFACE" or other.boundary_object != rec.name:
+            continue
+        if other.family != rec.family:
+            continue
+        a, b = sorted((rec.name, other.name))
+        key = f"pair::{a}::{b}"
+        if a in assigned or b in assigned:
+            continue
+        assigned[a] = key
+        assigned[b] = key
+        pairs.append((a, b))
+        stats["paired"] += 1
+
+    grouped: dict[str, list[_IDFSurfaceRecord]] = defaultdict(list)
+    for rec in records:
+        if rec.name in assigned:
+            continue
+        sig = _idf_canonical_signature(rec.vertices)
+        gkey = f"geom::{rec.family}::{sig}"
+        grouped[gkey].append(rec)
+
+    unified: list[_IDFUnifiedFace] = []
+    rec_to_face: dict[str, _IDFUnifiedFace] = {}
+    next_id = 1
+
+    def add_unified(key: str, rec_list: list[_IDFSurfaceRecord]) -> None:
+        nonlocal next_id
+        vertices = rec_list[0].vertices
+        normal = _idf_poly_normal(vertices)
+        cat = _idf_map_cat(rec_list[0], abs(normal[2]) >= 0.9)
+        geo_id = f"n{next_id}"
+        if cat == 3:
+            uid = f"wall_{next_id}"
+        elif cat == 4:
+            uid = f"face_{next_id}"
+        elif cat == 5:
+            uid = f"gls_{next_id}"
+        elif cat == 6:
+            uid = f"sky_{next_id}"
+        elif cat == -1:
+            uid = f"shd_{next_id}"
+        else:
+            uid = f"surf_{next_id}"
+        face = _IDFUnifiedFace(key=key, geo_id=geo_id, uid=uid, cat=cat, vertices=vertices, normal=normal, records=rec_list)
+        unified.append(face)
+        for r in rec_list:
+            rec_to_face[r.name] = face
+        next_id += 1
+
+    for a, b in pairs:
+        add_unified(assigned[a], [rec_by_name[a], rec_by_name[b]])
+
+    for gkey, rec_list in grouped.items():
+        for rec in rec_list:
+            assigned[rec.name] = gkey
+        add_unified(gkey, rec_list)
+        stats["fallback"] += 1
+
+    return unified, rec_to_face, stats
+
+
+def _idf_point2d(p: tuple[float, float, float], precision: int = 3) -> tuple[float, float]:
+    return round(float(p[0]), precision), round(float(p[1]), precision)
+
+
+def _idf_segment_key(a: tuple[float, float], b: tuple[float, float]) -> tuple[tuple[float, float], tuple[float, float]]:
+    return (a, b) if a <= b else (b, a)
+
+
+def _idf_face_bottom_segment(face: _IDFUnifiedFace, precision: int = 3) -> tuple[tuple[float, float], tuple[float, float]] | None:
+    min_z = min(v[2] for v in face.vertices)
+    bot_pts = [_idf_point2d(v, precision) for v in face.vertices if abs(v[2] - min_z) <= 1e-6]
+    ordered = []
+    for p in bot_pts:
+        if not ordered or ordered[-1] != p:
+            ordered.append(p)
+    unique = []
+    for p in ordered:
+        if p not in unique:
+            unique.append(p)
+    if len(unique) < 2:
+        return None
+    return _idf_segment_key(unique[0], unique[1])
+
+
+def _idf_order_walls_by_connectivity(wall_uids, face_by_uid: dict[str, _IDFUnifiedFace]) -> list[str]:
+    wall_uids = list(wall_uids)
+    if len(wall_uids) <= 2:
+        return wall_uids
+
+    segments: dict[str, tuple[tuple[float, float], tuple[float, float]]] = {}
+    for uid in wall_uids:
+        face = face_by_uid.get(uid)
+        if face is None:
+            continue
+        seg = _idf_face_bottom_segment(face)
+        if seg is not None:
+            segments[uid] = seg
+
+    if len(segments) < 2:
+        return wall_uids
+
+    unvisited = [uid for uid in wall_uids if uid in segments]
+    ordered = []
+    first = unvisited.pop(0)
+    ordered.append(first)
+    a, b = segments[first]
+    prev_point, current_point = a, b
+
+    while unvisited:
+        idx = None
+        chosen_uid = None
+        next_point = None
+
+        for i, uid in enumerate(unvisited):
+            s1, s2 = segments[uid]
+            if s1 == current_point or s2 == current_point:
+                candidate_next = s2 if s1 == current_point else s1
+                if candidate_next != prev_point:
+                    idx = i
+                    chosen_uid = uid
+                    next_point = candidate_next
+                    break
+
+        if chosen_uid is None:
+            for i, uid in enumerate(unvisited):
+                s1, s2 = segments[uid]
+                if s1 == current_point or s2 == current_point:
+                    idx = i
+                    chosen_uid = uid
+                    next_point = s2 if s1 == current_point else s1
+                    break
+
+        if chosen_uid is None:
+            break
+
+        ordered.append(chosen_uid)
+        unvisited.pop(idx)
+        prev_point, current_point = current_point, next_point
+
+    tail = [uid for uid in wall_uids if uid not in ordered]
+    return ordered + tail
+
+
+def _idf_floor_boundary_segments(face: _IDFUnifiedFace, precision: int = 3) -> set[tuple[tuple[float, float], tuple[float, float]]]:
+    pts = [_idf_point2d(v, precision) for v in face.vertices]
+    if len(pts) > 1 and pts[0] == pts[-1]:
+        pts = pts[:-1]
+    out: set[tuple[tuple[float, float], tuple[float, float]]] = set()
+    if len(pts) < 3:
+        return out
+    for i in range(len(pts)):
+        a = pts[i]
+        b = pts[(i + 1) % len(pts)]
+        if a != b:
+            out.add(_idf_segment_key(a, b))
+    return out
+
+
+def _idf_write_geo(outputPath: str, faces: list[_IDFUnifiedFace]) -> None:
+    path.checkBuildDir(outputPath)
+    lines = []
+    for face in faces:
+        lines.append(f"f,{face.cat},{face.geo_id}")
+        nx, ny, nz = face.normal
+        lines.append(f"fn,{nx},{ny},{nz}")
+        for x, y, z in face.vertices:
+            lines.append(f"fv,{x},{y},{z}")
+        lines.append(";")
+    with open(outputPath, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+
+
+def _idf_write_xml(outputPath: str, faces: list[_IDFUnifiedFace], rec_to_face: dict[str, _IDFUnifiedFace], records: list[_IDFSurfaceRecord]) -> None:
+    from ..utils import ET
+
+    path.checkBuildDir(outputPath)
+    root = ET.Element("model")
+    face_by_uid = {f.uid: f for f in faces}
+    zone_topology = defaultdict(lambda: {"floor": set(), "ceiling": set(), "wall": set(), "setting": {}})
+
+    def _resolve_face_level(face: _IDFUnifiedFace) -> float:
+        # Keep glazing/skylight level aligned with parent surface level so the
+        # downstream glazing-to-wall matching by level can find candidates.
+        if face.cat in {1, 5, 6}:
+            for rec in face.records:
+                parent_name = str(rec.parent_surface).strip()
+                if parent_name and parent_name in rec_to_face:
+                    return rec_to_face[parent_name].level
+        return face.level
+
+    for face in faces:
+        level = str(_resolve_face_level(face))
+        offset = str(face.offset)
+        if face.cat in {4}:
+            node = ET.SubElement(root, "face")
+        elif face.cat in {2, 3, 0}:
+            node = ET.SubElement(root, "wall")
+        elif face.cat in {5, 1}:
+            node = ET.SubElement(root, "glazing")
+        elif face.cat == 6:
+            node = ET.SubElement(root, "skylight")
+        elif face.cat == -1:
+            continue
+        else:
+            node = ET.SubElement(root, "wall")
+
+        ET.SubElement(node, "Uid").text = face.uid
+        ET.SubElement(node, "faceId").text = face.geo_id
+        ET.SubElement(node, "level").text = level
+        ET.SubElement(node, "offset").text = offset
+
+    for rec in records:
+        if rec.family != "building":
+            continue
+        if rec.zone_name == "" or rec.name not in rec_to_face:
+            continue
+        uf = rec_to_face[rec.name]
+        ztp = zone_topology[rec.zone_name]
+        st = rec.surface_type.upper()
+        bc = rec.boundary_condition.upper()
+
+        if st == "FLOOR":
+            ztp["floor"].add(uf.uid)
+        elif st in {"CEILING", "ROOF"}:
+            ztp["ceiling"].add(uf.uid)
+        elif uf.cat in {2, 3, 0}:
+            if bc != "SURFACE":
+                ztp["wall"].add(uf.uid)
+        else:
+            if (not uf.is_horizontal) and (bc != "SURFACE"):
+                ztp["wall"].add(uf.uid)
+
+        ztp["setting"]["zone_name"] = rec.zone_name
+
+    for zone_name, topology in zone_topology.items():
+        floor_boundary = set()
+        for f_uid in topology["floor"]:
+            floor_face = face_by_uid.get(f_uid)
+            if floor_face is None:
+                continue
+            floor_boundary |= _idf_floor_boundary_segments(floor_face)
+
+        if floor_boundary:
+            filtered_walls = set()
+            for w_uid in topology["wall"]:
+                w_face = face_by_uid.get(w_uid)
+                if w_face is None:
+                    continue
+                seg = _idf_face_bottom_segment(w_face)
+                if seg and seg in floor_boundary:
+                    filtered_walls.add(w_uid)
+            if filtered_walls:
+                topology["wall"] = filtered_walls
+
+        topology["wall"] = _idf_order_walls_by_connectivity(topology["wall"], face_by_uid)
+
+    for zone_name, topology in zone_topology.items():
+        sp = ET.SubElement(root, "space")
+        ET.SubElement(sp, "id").text = zone_name
+        ET.SubElement(sp, "area").text = "0"
+        ET.SubElement(sp, "height").text = "0"
+        ET.SubElement(sp, "is_void").text = "False"
+        ET.SubElement(sp, "void").text = ""
+
+        setting = ET.SubElement(sp, "setting")
+        if topology["setting"]:
+            for k, v in sorted(topology["setting"].items()):
+                ET.SubElement(setting, k).text = str(v)
+        else:
+            ET.SubElement(setting, "zone_name").text = zone_name
+
+        topo = ET.SubElement(sp, "topology")
+        if topology["floor"]:
+            floor = ET.SubElement(topo, "floor")
+            ET.SubElement(floor, "face").text = " ".join(sorted(topology["floor"]))
+        if topology["ceiling"]:
+            ceiling = ET.SubElement(topo, "ceiling")
+            ET.SubElement(ceiling, "face").text = " ".join(sorted(topology["ceiling"]))
+        edge = ET.SubElement(topo, "edge")
+        for uid in topology["wall"]:
+            w = ET.SubElement(edge, "wall")
+            ET.SubElement(w, "Uid").text = uid
+
+    levels = sorted({f.level for f in faces if f.cat == 4})
+    ET.SubElement(root, "level").text = " ".join(str(v) for v in levels)
+    tree = ET.ElementTree(root)
+    tree.write(outputPath)
+
+
+def _idf_build_artifacts(idfPath: str, iddPath: str = None) -> tuple[list[_IDFSurfaceRecord], list[_IDFUnifiedFace], dict[str, _IDFUnifiedFace], dict[str, int]]:
+    records = _idf_read_surfaces(idfPath, iddPath)
+    faces, rec_to_face, stats = _idf_unify_faces(records)
+    return records, faces, rec_to_face, stats
+
+
+def IDFtoGeo(idfPath: str, outputPath: str = None, iddPath: str = None) -> None:
+    """Export Moosas GEO from an IDF file."""
+    if outputPath is None:
+        outputPath = _idf_default_output_path(idfPath, ".geo")
+    _, faces, _, _ = _idf_build_artifacts(idfPath, iddPath)
+    _idf_write_geo(outputPath, faces)
+
+
+def IDFtoXml(idfPath: str, outputPath: str = None, iddPath: str = None) -> None:
+    """Export Moosas XML topology from an IDF file."""
+    if outputPath is None:
+        outputPath = _idf_default_output_path(idfPath, ".xml")
+    records, faces, rec_to_face, _ = _idf_build_artifacts(idfPath, iddPath)
+    _idf_write_xml(outputPath, faces, rec_to_face, records)
+
+
+def _idf_collect_zone_to_space_mapping(model: MoosasModel) -> dict[str, list[str]]:
+    """Build zoneName->spaceIds mapping from loaded spaces.
+
+    Priority:
+    1) space.settings['zone_name'] generated during IDF->XML conversion
+    2) fallback to current space.id when zone_name is unavailable
+    """
+    zoneMap = defaultdict(list)
+    for space in model.spaceList:
+        zoneName = ""
+        if hasattr(space, "settings") and isinstance(space.settings, dict):
+            zoneName = str(space.settings.get("zone_name", "")).strip()
+        if zoneName == "":
+            zoneName = str(space.id)
+        zoneMap[zoneName].append(str(space.id))
+    return _normalize_zone_name_to_space_dict(dict(zoneMap))
+
+
+def _idf_apply_zone_templates(model: MoosasModel, idfPath: str) -> None:
+    """Apply IDF zone templates to spaces and persist SpaceId->ZoneTemplate mapping."""
+    zoneMap = _idf_collect_zone_to_space_mapping(model)
+    zoneIDFSettings = {}
+
+    for zoneName, spaceIds in zoneMap.items():
+        if len(spaceIds) == 0:
+            continue
+        try:
+            zTemplate = loadIDFTemplate(
+                model,
+                idfTemplatePath=idfPath,
+                spaceIds=spaceIds,
+                zoneName=zoneName,
+            )
+        except Exception as exc:
+            print(f"\n******Warning: failed to load IDF template for zone '{zoneName}': {exc}")
+            continue
+
+        if zTemplate.isEmpty():
+            print(f"\n******Warning: skip empty IDF template for zone '{zoneName}'")
+            continue
+
+        for spId in spaceIds:
+            space = model.spaceIdDict.get(spId)
+            if space is None:
+                continue
+            if hasattr(space, "settings") and isinstance(space.settings, dict):
+                if "idf_template" in space.settings:
+                    zoneIDFSettings[spId] = space.settings["idf_template"]
+
+    # Keep backward compatibility with existing consumers.
+    model.idfZoneSettings = dict(zoneMap)
+    model.zoneIDFSettings = zoneIDFSettings
+    model.idfZoneTemplate = dict(zoneIDFSettings)
+
+
+def readIDF(idfPath: str, geoPath: str = None, xmlPath: str = None, iddPath: str = None) -> MoosasModel:
+    """Convert IDF to GEO/XML and construct a MoosasModel through loadXml."""
+    if geoPath is not None and xmlPath is not None:
+        IDFtoGeo(idfPath, geoPath, iddPath)
+        IDFtoXml(idfPath, xmlPath, iddPath)
+        model = loadXml(xmlPath, geoPath)
+        _idf_apply_zone_templates(model, idfPath)
+        return model
+
+    with tempfile.TemporaryDirectory(prefix="moosas_idf_") as tmpdir:
+        temp_geo = geoPath or os.path.join(tmpdir, "from_idf.geo")
+        temp_xml = xmlPath or os.path.join(tmpdir, "from_idf.xml")
+        IDFtoGeo(idfPath, temp_geo, iddPath)
+        IDFtoXml(idfPath, temp_xml, iddPath)
+        model = loadXml(temp_xml, temp_geo)
+        _idf_apply_zone_templates(model, idfPath)
+        return model

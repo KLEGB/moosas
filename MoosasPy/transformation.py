@@ -11,7 +11,7 @@ import time
 
 import pygeos
 
-from .IO import modelFromFile, loadRDF, saveModel, loadXml
+from .IO import modelFromFile, saveModel, loadModel
 from .geometry.cleanse import *
 from .geometry.contour import packing_edges, outerBoundary
 from .geometry.geos import *
@@ -19,39 +19,6 @@ from .geometry.spaceGen import CCRSpaceGeneration
 from .models import MoosasModel
 from .utils.constant import geom
 from .utils.tools import searchBy
-
-
-def loadModel(filePath: str, geoPath: str = None, fileFormat='turtle') -> MoosasModel:
-    """
-    Loading MoosasModel from rdf format file. See doc/MoosasRDF for file namespace and description.
-
-    Parameters
-    ----------
-    filePath : str
-        any input rdf file
-    geoPath : str, optional
-        any input *.geo file
-    fileFormat : str, optional
-        rdf format, following the definition of rdflib module. Default : 'turtle'
-
-    Returns
-    -------
-    MoosasModel
-        The model for further transformation or analysis.
-    """
-    if fileFormat == 'xml':
-        if geoPath is None:
-            raise FileNotFoundError('No *.geo file provided.')
-        model = loadXml(filePath, geoPath)
-    else:
-        model = loadRDF(filePath, fileFormat=fileFormat)
-    """2nd level space boundaries topology"""
-    model = spaceTopology(model, True)
-    model = faceTopology(model)
-    print("-" * 20)
-    model.summary()
-    print("-" * 20)
-    return model
 
 
 def transform(input_path: str, input_type: str = None,

@@ -1181,6 +1181,31 @@ def overlapArea(geo1: pygeos.Geometry, geo2: pygeos.Geometry) -> float:
     return area1
 
 
+def area3d(geo: pygeos.Geometry) -> float:
+    """Calculate polygon area in 3D by projecting to its local UV plane.
+
+    pygeos only measures planar 2D area, so this helper projects each
+    polygon part to its own UV coordinate system and sums UV areas.
+    """
+    if geo is None or pygeos.is_empty(geo):
+        return 0.0
+
+    total = 0.0
+    try:
+        parts = [p for p in pygeos.get_parts(geo) if pygeos.get_dimensions(p) == 2]
+    except Exception:
+        parts = [geo] if pygeos.get_dimensions(geo) == 2 else []
+
+    for part in parts:
+        try:
+            proj = Projection.fromPolygon(part)
+            uv = pygeos.force_2d(proj.toUV(part))
+            total += float(pygeos.area(uv))
+        except Exception:
+            continue
+    return total
+
+
 def makeValid(geo: pygeos.Geometry, error='raise') -> list[pygeos.Geometry] | None:
     """revise method of pygeos.make_valid()"""
     geos = pygeos.make_valid(geo)

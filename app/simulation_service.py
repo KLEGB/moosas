@@ -47,6 +47,7 @@ from app.core.storage import save_output_file
 from app.core.logger import log_custom
 from ..MoosasPy import utils
 from ..MoosasPy import loadModel, saveModel, transform
+from ..MoosasPy.IO import readIDF
 from ..MoosasPy import energyAnalysis
 from ..MoosasPy.energy import facadeAnnualGeneration, roofAnnualGeneration
 from ..MoosasPy.weather import includeEpw,MoosasWeather
@@ -685,14 +686,25 @@ def _worker_transform(
     input_path = Path(input_path_str)
     start_time = time.perf_counter()
 
-    accepted_param_names = transform.__code__.co_varnames
-    filtered_params = {
-        key: value
-        for key, value in transform_params.items()
-        if key in accepted_param_names
-    }
+    input_suffix = input_path.suffix.lower()
+    input_type = str(transform_params.get("input_type", "")).lower()
 
-    converted_model = transform(str(input_path.resolve()), **filtered_params)
+    if input_suffix == ".idf" or input_type == "idf":
+        read_idf_accepted = list(readIDF.__code__.co_varnames)
+        read_idf_params = {
+            key: value
+            for key, value in transform_params.items()
+            if key in read_idf_accepted
+        }
+        converted_model = readIDF(str(input_path.resolve()), **read_idf_params)
+    else:
+        accepted_param_names = transform.__code__.co_varnames
+        filtered_params = {
+            key: value
+            for key, value in transform_params.items()
+            if key in accepted_param_names
+        }
+        converted_model = transform(str(input_path.resolve()), **filtered_params)
 
     if "output_filename" in transform_params:
         output_path = settings.OUTPUT_DIR / transform_params["output_filename"]

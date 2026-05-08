@@ -2,14 +2,77 @@
 MoosasModel should be imported inside the function to avoid circular import.
 please use the general import func modelFromFile() instead of any private funcs.
 """
+from __future__ import annotations
+
 from ._geo import _readGeo, writeGeo , preClassified
 from ._graph import writeGraph
-from ._idf import writeIDF
+from ._idf import writeIDF, readIDF
 from ._json import _readGeojson, writeJson, writeGeojson
 from ._obj import _readObj
-from ._rdf import writeRDF
-from ._xml import writeXml
+from ._rdf import writeRDF, loadRDF
+from ._xml import writeXml, loadXml
 from ..utils import path
+
+
+def loadModel(filePath: str, geoPath: str = None, fileFormat='turtle', xmlPath: str = None,
+              iddPath: str = None):
+    """
+    Loading MoosasModel from rdf/xml/idf format file.
+
+    Parameters
+    ----------
+    filePath : str
+        Input model file path.
+    geoPath : str, optional
+        Required when fileFormat is xml.
+        For idf, optionally provides output geo path during conversion.
+    fileFormat : str, optional
+        Input format. Supported: xml, idf, and rdflib formats (default: turtle).
+    xmlPath : str, optional
+        Optional output xml path during idf conversion.
+    iddPath : str, optional
+        Optional Energy+.idd path used by IDF reader.
+
+    Returns
+    -------
+    MoosasModel
+        The model for further transformation or analysis.
+    """
+    formatHint = (fileFormat or '').lower()
+    if formatHint == '' or formatHint == 'turtle':
+        suffix = filePath.lower().split('.')[-1] if '.' in filePath else ''
+        if suffix == 'xml':
+            formatHint = 'xml'
+        elif suffix == 'idf':
+            formatHint = 'idf'
+
+    if formatHint == 'xml':
+        if geoPath is None:
+            raise FileNotFoundError('No *.geo file provided.')
+        model = loadXml(filePath, geoPath)
+    elif formatHint == 'idf':
+        model = readIDF(filePath, geoPath=geoPath, xmlPath=xmlPath, iddPath=iddPath)
+    else:
+        model = loadRDF(filePath, fileFormat=fileFormat)
+
+    # Delayed import avoids circular dependency at module import time.
+    from ..transformation import _glazingToFace, spaceTopology, faceTopology
+
+    attached_glazing = 0
+    if hasattr(model, "wallList"):
+        attached_glazing += sum(len(getattr(w, "glazingElement", [])) for w in model.wallList)
+    if hasattr(model, "faceList"):
+        attached_glazing += sum(len(getattr(f, "glazingElement", [])) for f in model.faceList)
+
+    if (len(getattr(model, "glazingList", [])) + len(getattr(model, "skylightList", [])) > 0) and attached_glazing == 0:
+        model = _glazingToFace(model)
+
+    model = spaceTopology(model, True)
+    model = faceTopology(model)
+    print("-" * 20)
+    model.summary()
+    print("-" * 20)
+    return model
 
 
 def modelFromFile(inputPath: str, inputType=None):
@@ -51,7 +114,8 @@ def modelFromFile(inputPath: str, inputType=None):
 
 
 
-def saveModel(model, out_path: str, save_type: str = None, idfTemplate=None, iddFile=None, dumpUseless=True):
+def saveModel(model, out_path: str, save_type: str = None, idfTemplate=None, iddFile=None,
+              zoneNameToSpaceDict=None, dumpUseless=True):
     """
         Save the model into any format.
 
@@ -74,6 +138,9 @@ def saveModel(model, out_path: str, save_type: str = None, idfTemplate=None, idd
             optional idf template for writing idf file
         iddFile: str, optional
             optional idd file path for writing idd file
+        zoneNameToSpaceDict : dict, optional
+            Mapping from template zone name to target space ids for IDF export.
+            Example: {"Zone_A": "Space-1", "Zone_B": ["Space-2", "Space-3"]}
         dumpUseless : bool, optional
             cut out the unuse nodes (elements and faces)
 
@@ -85,7 +152,7 @@ def saveModel(model, out_path: str, save_type: str = None, idfTemplate=None, idd
     if save_type is None:
         save_type = out_path.lower().split('.')[-1]
     if save_type.lower() == 'idf':
-        writeIDF(model, out_path, idfTemplate, iddFile)
+        writeIDF(model, out_path, idfTemplate, iddFile, zoneNameToSpaceDict=zoneNameToSpaceDict)
     elif save_type.lower() == 'rdf':
         writeRDF(model, out_path, fileFormat="turtle", dumpUseless=dumpUseless)
     elif save_type.lower() == 'geo':
