@@ -24,7 +24,7 @@ class geom:
     PATH_MAX_DEPTH = 50  # Deep search stack is deep, too deep will affect the speed, too shallow is easy to identify
     # failure
 
-    # Fuzzy recognition accuracy (meters), directly passed into pygeos.set_precision() does not
+    # Fuzzy recognition accuracy (meters), directly passed into shapely.set_precision() does not
     # change the original geometry, and is only called in the force_2d() method used for recognition
     POINT_PRECISION = 0.01
     AREA_PRECISION = 1.0

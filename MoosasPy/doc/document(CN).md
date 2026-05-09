@@ -16,7 +16,7 @@ MOOSAS的核心是建立在ruby之上的，界面是建立在javascript和html�
 
 ### MoosasPy Package
 如果你想通过python调用Moosas+，请确保你已经安装了以下软件包：
-<br> **pygeos == 0.14**
+<br> **shapely == 0.14**
 <br> **xgboost == 2.0.3**
 <br> **numpy == 1.26.3**
 <br> 所有需要的包实际上都嵌入在 **.\pythonDist** 中。

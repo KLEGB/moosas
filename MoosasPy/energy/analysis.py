@@ -421,7 +421,7 @@ def getEnergyInput(model: MoosasModel,
         for b in s.edge.wall:
             if b.isOuter:
                 total_outside_area += b.area
-                outside_area += non(pygeos.length(b.force_2d()) - 5.0) * 5.0
+                outside_area += non(shapely.length(b.force_2d()) - 5.0) * 5.0
                 facade_area += b.area * (1 - b.wwr)
                 window_area += b.area * b.wwr
                 o = calculate_orientation(b.normal)

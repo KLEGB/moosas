@@ -26,8 +26,8 @@ class TopoEdge(object):
         """
         self.modelId = idd
         line2d = edge.force_2d()
-        self.fromLocation = pygeos.set_precision(pygeos.get_point(line2d, 0), geom.POINT_PRECISION)
-        self.toLocation = pygeos.set_precision(pygeos.get_point(line2d, 1), geom.POINT_PRECISION)
+        self.fromLocation = shapely.set_precision(shapely.get_point(line2d, 0), geom.POINT_PRECISION)
+        self.toLocation = shapely.set_precision(shapely.get_point(line2d, 1), geom.POINT_PRECISION)
         self.uid = edge.Uid
         self.fromP: TopoNode | None = None
         self.toP: TopoNode | None = None
@@ -42,7 +42,7 @@ class TopoEdge(object):
         self : object
             The instance of the class containing this property. It is expected to have
             `fromLocation` and `toLocation` attributes, which are geometric points,
-            and access to `pygeos` and `geom.POINT_PRECISION` for distance evaluation.
+            and access to `shapely` and `geom.POINT_PRECISION` for distance evaluation.
         
         Returns
         -------
@@ -52,7 +52,7 @@ class TopoEdge(object):
         """
         if self.fromLocation is None or self.toLocation is None:
             return False
-        if pygeos.dwithin(self.fromLocation, self.toLocation, geom.POINT_PRECISION):
+        if shapely.dwithin(self.fromLocation, self.toLocation, geom.POINT_PRECISION):
             return False
         return True
 
@@ -65,7 +65,7 @@ class TopoEdge(object):
         ----------
         self : object
             The instance of the class containing the `fromLocation` attribute. It is expected to have a `fromLocation` 
-            property accessible, which can be processed by `pygeos.get_coordinates`.
+            property accessible, which can be processed by `shapely.get_coordinates`.
         
         Returns
         -------
@@ -73,7 +73,7 @@ class TopoEdge(object):
             A string formed by joining the coordinates of `fromLocation` with underscores, where each coordinate value 
             is converted to its string representation.
         """
-        return '_'.join(pygeos.get_coordinates(self.fromLocation)[0].astype(str))
+        return '_'.join(shapely.get_coordinates(self.fromLocation)[0].astype(str))
 
     @property
     def toPStr(self):
@@ -84,14 +84,14 @@ class TopoEdge(object):
         ----------
         self : object
             The instance of the class containing the `toLocation` attribute. It is expected to have a `toLocation` 
-            property or attribute that returns a geometry object compatible with `pygeos.get_coordinates`.
+            property or attribute that returns a geometry object compatible with `shapely.get_coordinates`.
         
         Returns
         -------
         str
             A string formed by converting the first coordinate point (x, y) to strings and joining them with an underscore.
         """
-        return '_'.join(pygeos.get_coordinates(self.toLocation)[0].astype(str))
+        return '_'.join(shapely.get_coordinates(self.toLocation)[0].astype(str))
 
     @staticmethod
     def overlap(this: TopoEdge, other: TopoEdge):
@@ -111,10 +111,10 @@ class TopoEdge(object):
             True if the endpoints of the two edges are within POINT_PRECISION distance 
             of each other, indicating overlap; False otherwise.
         """
-        if pygeos.dwithin(this.fromLocation, other.fromLocation, geom.POINT_PRECISION) or pygeos.dwithin(
+        if shapely.dwithin(this.fromLocation, other.fromLocation, geom.POINT_PRECISION) or shapely.dwithin(
                 this.fromLocation, other.toLocation,
                 geom.POINT_PRECISION):
-            if pygeos.dwithin(this.toLocation, other.fromLocation, geom.POINT_PRECISION) or pygeos.dwithin(
+            if shapely.dwithin(this.toLocation, other.fromLocation, geom.POINT_PRECISION) or shapely.dwithin(
                     this.toLocation, other.toLocation,
                     geom.POINT_PRECISION):
                 return True
@@ -172,7 +172,7 @@ class TopoEdge(object):
 class TopoNode(object):
     __slots__ = ('idd', 'connectedEdges', 'neighbor', 'neiAngle', 'location')
 
-    def __init__(self, idd, location: pygeos.Geometry):
+    def __init__(self, idd, location: shapely.Geometry):
         """
         Initialize a TopoNode instance with an identifier, location, and empty lists for neighbors, angles, and connected edges.
         
@@ -180,7 +180,7 @@ class TopoNode(object):
         ----------
         idd : hashable
             Unique identifier for the node.
-        location : pygeos.Geometry
+        location : shapely.Geometry
             Geometric representation of the node's location.
         
         Returns
@@ -329,14 +329,14 @@ class TopoNetwork(object):
         for edge in edges:
             if edge.fromLocation not in location:
                 for poi in location:
-                    if pygeos.dwithin(edge.fromLocation, poi, 1.1 * geom.POINT_PRECISION):
+                    if shapely.dwithin(edge.fromLocation, poi, 1.1 * geom.POINT_PRECISION):
                         edge.fromLocation = poi
                         break
                 location.add(edge.fromLocation)
 
             if edge.toLocation not in location:
                 for poi in location:
-                    if pygeos.dwithin(edge.toLocation, poi, 1.1 * geom.POINT_PRECISION):
+                    if shapely.dwithin(edge.toLocation, poi, 1.1 * geom.POINT_PRECISION):
                         edge.toLocation = poi
                         break
                 location.add(edge.toLocation)
@@ -527,9 +527,9 @@ class TopoNetwork(object):
         group = self.nodes
 
         group_xy = np.append(np.arange(len(group)).reshape(len(group), 1),
-                             pygeos.get_coordinates([node.location for node in group]), axis=1)
+                             shapely.get_coordinates([node.location for node in group]), axis=1)
 
-        # group_xy = np.array([[node, pygeos.get_x(node.location), pygeos.get_y(node.location)] for node in group])
+        # group_xy = np.array([[node, shapely.get_x(node.location), shapely.get_y(node.location)] for node in group])
         max_x = np.max(group_xy[:, 1])
 
         group_xy = group_xy[[i for i in range(len(group)) if group_xy[i][1] == max_x]]
@@ -726,11 +726,11 @@ class TopoBound(object):
     @property
     def geometry(self):
         """get the polygon or linestring from the nodeLoop"""
-        loc = pygeos.get_coordinates([node.location for node in self.nodeLoop])
+        loc = shapely.get_coordinates([node.location for node in self.nodeLoop])
         if self.isClose():
-            return pygeos.polygons(loc)
+            return shapely.polygons(loc)
         else:
-            return pygeos.linestrings(loc)
+            return shapely.linestrings(loc)
 
     def __repr__(self):
         """

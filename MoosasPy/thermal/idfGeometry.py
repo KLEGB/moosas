@@ -8,7 +8,7 @@ from .settings import *
 from ..encoding.convexify import triangulate2dFace
 from ..geometry.element import MoosasSpace, MoosasElement
 from ..geometry.geos import ccwNormal, Vector, offset, trim, projectTo
-from ..utils import pygeos, path
+from ..utils import shapely, path
 from .zone import ZoneTemplate
 
 def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
@@ -112,7 +112,7 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
     return faceObject
 
 
-def encodeFace(obj: MoosasSettings, polygon: pygeos.Geometry, normal: Vector):
+def encodeFace(obj: MoosasSettings, polygon: shapely.Geometry, normal: Vector):
     """
     Encode face geometry into a given settings object by storing vertex coordinates.
     
@@ -120,7 +120,7 @@ def encodeFace(obj: MoosasSettings, polygon: pygeos.Geometry, normal: Vector):
     ----------
     obj : MoosasSettings
         The settings object where face parameters will be stored.
-    polygon : pygeos.Geometry
+    polygon : shapely.Geometry
         A polygonal geometry whose coordinates define the face.
     normal : Vector
         A vector used to determine the orientation of the face; 
@@ -131,7 +131,7 @@ def encodeFace(obj: MoosasSettings, polygon: pygeos.Geometry, normal: Vector):
     None
         This function modifies the `obj` in place and does not return a value.
     """
-    coordinates = pygeos.get_coordinates(polygon, include_z=True)
+    coordinates = shapely.get_coordinates(polygon, include_z=True)
     obj.params['Number_of_Vertices'] = len(coordinates) - 1
     if Vector.dot(ccwNormal(polygon), normal) < 0:
         coordinates = coordinates[::-1]

@@ -162,16 +162,16 @@ def polygon_from_node(nodelist: list, location: list):
     nodelist : list
         List of indices referring to positions in the location list.
     location : list
-        List of point geometries (e.g., PyGEOS points) corresponding to node locations.
+        List of point geometries (e.g., Shapely points) corresponding to node locations.
     
     Returns
     -------
-    pygeos.Geometry
+    shapely.Geometry
         A polygon geometry constructed from the ordered sequence of points.
     """
     polist = [location[i] for i in nodelist]
-    polist = [[pygeos.get_x(node), pygeos.get_y(node)] for node in polist]
-    return pygeos.polygons(polist)
+    polist = [[shapely.get_x(node), shapely.get_y(node)] for node in polist]
+    return shapely.polygons(polist)
 
 # 轮廓识别方法
 def useful_wall(wall_list, model):
@@ -201,8 +201,8 @@ def useful_wall(wall_list, model):
     for i in wall_list:
         line = model.wallList[i].force_2d()
         vec_list.append([i,
-                         pygeos.get_point(line, 0),
-                         pygeos.get_point(line, 1)
+                         shapely.get_point(line, 0),
+                         shapely.get_point(line, 1)
                          ])
     for vec in vec_list:
         if vec[1] == vec[2]:
@@ -239,15 +239,15 @@ def useful_wall(wall_list, model):
         vec_list_simple = []
         for i in wall_list:
             line = model.wallList[i].force_2d()
-            vec_list_simple.append(pygeos.get_point(line, 0))
-            vec_list_simple.append(pygeos.get_point(line, 1))
+            vec_list_simple.append(shapely.get_point(line, 0))
+            vec_list_simple.append(shapely.get_point(line, 1))
         vec_list_simple = np.array(vec_list_simple)
         for i in wall_list:
             line = model.wallList[i].force_2d()
-            point0 = pygeos.get_point(line, 0)
-            point1 = pygeos.get_point(line, 1)
-            sum0 = np.sum([1 for vec in vec_list_simple if pygeos.equals_exact(point0, vec, tolerance=geom.POINT_PRECISION)])
-            sum1 = np.sum([1 for vec in vec_list_simple if pygeos.equals_exact(point1, vec, tolerance=geom.POINT_PRECISION)])
+            point0 = shapely.get_point(line, 0)
+            point1 = shapely.get_point(line, 1)
+            sum0 = np.sum([1 for vec in vec_list_simple if shapely.equals_exact(point0, vec, tolerance=geom.POINT_PRECISION)])
+            sum1 = np.sum([1 for vec in vec_list_simple if shapely.equals_exact(point1, vec, tolerance=geom.POINT_PRECISION)])
             if not (sum0 >= 2 and sum1 >= 2):
                 wall_list.remove(i)
         return wall_list
@@ -262,8 +262,8 @@ def useful_wall(wall_list, model):
     vec_list = []
     for i in wall_list:
         line = model.wallList[i].force_2d()
-        vec_list.append([i, pygeos.get_point(line, 0), pygeos.get_point(line, 1)])
-        vec_list.append([i, pygeos.get_point(line, 1), pygeos.get_point(line, 0)])
+        vec_list.append([i, shapely.get_point(line, 0), shapely.get_point(line, 1)])
+        vec_list.append([i, shapely.get_point(line, 1), shapely.get_point(line, 0)])
     vec_list = [vec_list[i] for i in range(len(vec_list))
                 if vec_list[i][1] != None and vec_list[i][2] != None]
     # plot_object(model.wallList[wall_list], color='black')
@@ -387,7 +387,7 @@ def nodegroup_outerboundary(node_groups, node_list, location_list, angle_list):
     node_list : list of list of int
         Adjacency list representation of the graph; node_list[i] contains the neighbors of node i.
     location_list : list of object
-        List of point objects representing the spatial location of each node; supports coordinate extraction via pygeos.
+        List of point objects representing the spatial location of each node; supports coordinate extraction via shapely.
     angle_list : list of list of float
         For each node, a list of angles (in radians) to its neighboring nodes, aligned with node_list.
     
@@ -401,7 +401,7 @@ def nodegroup_outerboundary(node_groups, node_list, location_list, angle_list):
     for group in node_groups:
         # 对node进行二段关键词排序，第一关键词为x坐标(最大)，第二关键词为y坐标(最小),即右下角
         group_xy = np.array(
-            [[node, pygeos.get_x(location_list[node]), pygeos.get_y(location_list[node])] for node in group])
+            [[node, shapely.get_x(location_list[node]), shapely.get_y(location_list[node])] for node in group])
         max_x = np.max(group_xy.T[1])
         group_xy = group_xy[[i for i in range(len(group)) if group_xy[i][1] == max_x]]
         start_node = int(group_xy[np.argmin(group_xy.T[2])][0])  # start_node: 开始节点编号
@@ -516,7 +516,7 @@ def divide_boundary_node(boundary_iteration, node_list, location_list, eligible)
             inside_node = None
             region = polygon_from_node(node_of_region, location_list)
             for node in eligible:
-                if pygeos.contains_properly(region, location_list[node]):
+                if shapely.contains_properly(region, location_list[node]):
                     inside_node = node
                     ContinueSplit = True
                     break

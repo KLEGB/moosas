@@ -1,5 +1,5 @@
 import os
-from ..utils import np, pygeos, ET, json,GeometryError
+from ..utils import np, shapely, ET, json,GeometryError
 from ..utils import to_dictionary, path, parseFile, mixItemListToList
 from ..utils.constant import geom
 from ..geometry.element import MoosasGeometry
@@ -106,10 +106,10 @@ def _readObj(file_path) -> list[MoosasGeometry]:
     cat, idd, normal, faces = [], [], [], []
     for i in range(len(obj_faces)):
         idd.append(i)
-        normal.append(pygeos.points(obj_faces[i]['normal']))
+        normal.append(shapely.points(obj_faces[i]['normal']))
         pts = obj_faces[i]['vertices']
         pts.append(pts[0])
-        faces.append(pygeos.polygons(pts))
+        faces.append(shapely.polygons(pts))
         cat.append(0)
         if 'd' in material_lab[obj_faces[i]['material']].keys():
             if float(material_lab[obj_faces[i]['material']]['d'][0]) < 1.0:
@@ -118,13 +118,13 @@ def _readObj(file_path) -> list[MoosasGeometry]:
     faces = _roundPolygons(faces,geom.POINT_PRECISION)
     return [MoosasGeometry(f, i, n, c) for f, i, n, c in zip(faces, idd, normal, cat)]
 
-def _roundPolygons(polygons: np.ndarray[pygeos.Geometry], precision: float) -> np.ndarray:
+def _roundPolygons(polygons: np.ndarray[shapely.Geometry], precision: float) -> np.ndarray:
     """
     round the coordinates of polygons according to precision.
     graping the next near coordinates (x,y,z) to the past if their distance is less than precision.
 
         Args:
-            polygons(np.ndarray[pygeos.Geometry]): polygons in np.ndarray format
+            polygons(np.ndarray[shapely.Geometry]): polygons in np.ndarray format
             precision(float): round precision, usually would be geom.POINT_PRECISION
 
         Returns:
@@ -132,7 +132,7 @@ def _roundPolygons(polygons: np.ndarray[pygeos.Geometry], precision: float) -> n
     """
     coordinates,coorLengthIndex = [],[0]
     for p in polygons:
-        coor = pygeos.get_coordinates(p, include_z=True)
+        coor = shapely.get_coordinates(p, include_z=True)
         coordinates+= list(coor)
         coorLengthIndex += [coorLengthIndex[-1]+len(coor)]
     coordinates = np.array(coordinates)
@@ -146,4 +146,4 @@ def _roundPolygons(polygons: np.ndarray[pygeos.Geometry], precision: float) -> n
         coordinates = coordinates[xReindex]
     coordinates = geom.round(coordinates, precision)
     coordinates = [coordinates[idxS:idxE] for idxS,idxE in zip(coorLengthIndex[:-1],coorLengthIndex[1:])]
-    return np.array([pygeos.polygons(coors) for coors in coordinates])
+    return np.array([shapely.polygons(coors) for coors in coordinates])

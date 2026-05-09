@@ -5,7 +5,7 @@ from rdflib import Graph, Namespace, Literal, URIRef
 from rdflib.namespace import RDF, RDFS, GEO, BRICK, WGS
 
 from ..models import *
-from ..utils import np, pygeos, mixItemListToList, mixItemListToObject, searchBy, generate_code, path
+from ..utils import np, shapely, mixItemListToList, mixItemListToObject, searchBy, generate_code, path
 from ..utils.constant import geom
 
 specChar = {" ": "~0~",
@@ -412,12 +412,12 @@ class MoosasGraph(Graph):
         self.add((URIRef(geo.faceId), self.moosas.faceId, Literal(geo.faceId)))
         self.add((URIRef(geo.faceId), self.geo.hasGeometry, URIRef(geo.faceId + "fv")))
         self.add((URIRef(geo.faceId + "fv"), self.geo.asWKT,
-                  Literal(pygeos.polygons(geo.boundary).__str__(), datatype=self.geo.wktLiteral)))
+                  Literal(shapely.polygons(geo.boundary).__str__(), datatype=self.geo.wktLiteral)))
         if len(geo.holes) > 0:
             for hi, hole in enumerate(geo.holes):
                 self.add((URIRef(geo.faceId), self.moosas.hasHole, URIRef(geo.faceId + f"fh{hi}")))
                 self.add((URIRef(geo.faceId + f"fh{hi}"), self.geo.asWKT,
-                          Literal(pygeos.polygons(hole).__str__(), datatype=self.geo.wktLiteral)))
+                          Literal(shapely.polygons(hole).__str__(), datatype=self.geo.wktLiteral)))
 
     def encodeElement(self, Element: MoosasElement, typeName: str = "rawElement", mask=None, ExportIFC=False):
         """
@@ -653,13 +653,13 @@ class MoosasGraph(Graph):
                 return geo[0]
         cat = int(float(self.getObject(geoUri, self.moosas.Category)))
         face = URIRef(str(self.getObject(geoUri, self.geo.hasGeometry)))
-        face = pygeos.Geometry(self.getObject(face, self.geo.asWKT))
+        face = shapely.Geometry(self.getObject(face, self.geo.asWKT))
         if self.getObject(geoUri, self.moosas.hasHole) is not None:
             holes = []
             for hole in self.getObject(geoUri, self.moosas.hasHole):
                 hole = self.getObject(URIRef(str(hole)), self.geo.asWKT)
                 if hole:
-                    holes.append(pygeos.Geometry(str(hole)))
+                    holes.append(shapely.Geometry(str(hole)))
 
         else:
             holes = []

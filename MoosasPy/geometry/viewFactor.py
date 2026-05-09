@@ -1,6 +1,6 @@
 from __future__ import annotations
 from .geos import Ray, Vector, rayFaceIntersect, Projection
-from ..utils import np, pygeos
+from ..utils import np, shapely
 from ..utils.constant import geom
 from .element import MoosasElement, MoosasWall
 from .contour import TopoEdge, TopoNetwork
@@ -31,7 +31,7 @@ class ViewFactorFace(Ray):
         self.element = element
         normal = normal if normal is not None else element.normal
         normal = Vector(normal).unit()
-        origin = np.mean(pygeos.get_coordinates(element.face, include_z=True), axis=0)
+        origin = np.mean(shapely.get_coordinates(element.face, include_z=True), axis=0)
         self.objects: set[ViewFactorFace] = set()
         super().__init__(origin, normal, value)
 
@@ -141,18 +141,18 @@ def viewFactorTopology(model, elementList,vfNumber=64):
     for faceSet in vfGroup:
         wallElements = [w.element for w in faceSet if isinstance(w.element, MoosasWall)]
         wallElements = [w for w in wallElements if
-                        w.force_2d() is not None and pygeos.get_dimensions(w.force_2d()) != 0]
+                        w.force_2d() is not None and shapely.get_dimensions(w.force_2d()) != 0]
         walls = [TopoEdge(list(model.wallList).index(w), w) for w in wallElements]
         outBound = TopoNetwork(edges=walls).outerBoundary()
         if len(outBound) > 0:
             for b in outBound:
                 walls = list(set(walls).difference(b.edgeLoop))
             for wi, w in enumerate(walls):
-                cen = pygeos.force_2d(pygeos.centroid(model.wallList[w.modelId].representation()))
+                cen = shapely.force_2d(shapely.centroid(model.wallList[w.modelId].representation()))
                 target, distance = wallElements[0], 10000
                 for b in outBound:
                     for edge in b.edgeLoop:
-                        _dist = pygeos.distance(cen, model.wallList[edge.modelId].force_2d())
+                        _dist = shapely.distance(cen, model.wallList[edge.modelId].force_2d())
                         if _dist < distance:
                             target, distance = model.wallList[edge.modelId], _dist
                 target.shading.append(model.wallList[w.modelId])

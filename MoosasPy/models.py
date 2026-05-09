@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import os.path
 
-import pygeos
+import shapely
 import xml.etree.ElementTree as ET
 from .utils.standard import loadBuildingTemplate
 from .utils.tools import path
@@ -462,7 +462,7 @@ class MoosasModel(MoosasContainer):
             and polygon geometry defined by coordinates.
         """
         """build a geojson from the model's geometry library.
-        the geojson file can be read by gis software or by pygeos package.
+        the geojson file can be read by gis software or by shapely package.
 
         Returns:
             dict: geojson dictionary
@@ -479,13 +479,13 @@ class MoosasModel(MoosasContainer):
             {
                 "type": "Feature",
                 "properties": {
-                    "normal": pygeos.get_coordinates(geo.normal, include_z=True),
+                    "normal": shapely.get_coordinates(geo.normal, include_z=True),
                     "id": geo.faceId,
                     "is_glazing": geo.category
                 },
                 "geometries": {
                     "type": "Polygon",
-                    "coordinates": pygeos.get_coordinates(geo.face, include_z=True)
+                    "coordinates": shapely.get_coordinates(geo.face, include_z=True)
                 }
             }
             for geo in validGeo

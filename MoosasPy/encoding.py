@@ -1,19 +1,19 @@
 """experimented module"""
 from .geometry.geos import *
 from .models import MoosasModel, MoosasSpace, searchBy
-import pygeos
+import shapely
 import numpy as np
 from pythonDist.MoosasPy.utils.constant import geom
 
 class Moosasboundary(object):
-    def __init__(self,polygon:pygeos.Geometry):
+    def __init__(self,polygon:shapely.Geometry):
         """
         Initialize the object with a polygon geometry and compute transformed edges based on angular thresholds.
         
         Parameters
         ----------
-        polygon : pygeos.Geometry
-            A PyGEOS geometry object representing a polygon. The polygon's coordinates are used to create edge linestrings
+        polygon : shapely.Geometry
+            A Shapely geometry object representing a polygon. The polygon's coordinates are used to create edge linestrings
             and apply transformations based on alignment with orthogonal basis vectors.
         
         Returns
@@ -21,12 +21,12 @@ class Moosasboundary(object):
         None
             This method initializes instance attributes and does not return any value.
         """
-        coordinates = pygeos.get_coordinates(polygon)
-        self.originalEdge = np.array([pygeos.linestrings(coordinates[i:i+2]) for i in range(len(coordinates)-1)])
+        coordinates = shapely.get_coordinates(polygon)
+        self.originalEdge = np.array([shapely.linestrings(coordinates[i:i+2]) for i in range(len(coordinates)-1)])
         self.edgeTransformation = [Transformation2d() for edge in self.originalEdge]
 
         self.regularEdge = [edge for edge in self.originalEdge]
-        edgeVector = [pygeos.get_coordinates(edge)[1] - pygeos.get_coordinates(edge)[0] for edge in self.regularEdge]
+        edgeVector = [shapely.get_coordinates(edge)[1] - shapely.get_coordinates(edge)[0] for edge in self.regularEdge]
         edgeVector = [Vector(vec).unit().dump for vec in edgeVector]
         lastVector=Projection.findOrthogonalBasis(polygon).axisX[:2]
         for i in range(len(self.regularEdge)):
@@ -44,7 +44,7 @@ class Moosasboundary(object):
 
             # 对边进行变换
             self.regularEdge[i] = self.edgeTransformation[i].transfrom(self.originalEdge[i])
-            lastVector = pygeos.get_coordinates(self.regularEdge[i])[1] - pygeos.get_coordinates(self.regularEdge[i])[0]
+            lastVector = shapely.get_coordinates(self.regularEdge[i])[1] - shapely.get_coordinates(self.regularEdge[i])[0]
 
     @property
     def regularize(self):
@@ -71,51 +71,51 @@ class Moosasboundary(object):
         ----------
         self : object
             The instance of the class containing this method.
-        segments : array-like of pygeos geometries (LineString)
+        segments : array-like of shapely geometries (LineString)
             A sequence of line segment geometries. Each segment is expected to be a two-point LineString.
         
         Returns
         -------
-        pygeos.geometry.Polygon
+        shapely.geometry.Polygon
             A closed polygon formed by connecting the input segments, with intersections computed at joints.
             If consecutive segments are parallel, their common vertex is replaced with an intersection point 
             from the previous and current segment to ensure proper closure and geometry continuity.
         """
         coordinates = []
         for i in range(len(segments)):
-            veci = pygeos.get_coordinates(segments[i])[1] - pygeos.get_coordinates(segments[i])[0]
-            veci_1 = pygeos.get_coordinates(segments[i-1])[1] - pygeos.get_coordinates(segments[i-1])[0]
+            veci = shapely.get_coordinates(segments[i])[1] - shapely.get_coordinates(segments[i])[0]
+            veci_1 = shapely.get_coordinates(segments[i-1])[1] - shapely.get_coordinates(segments[i-1])[0]
             if Vector.parallel(veci, veci_1):
                 coordinates.pop()
-                p = pygeos.get_coordinates(lineIntersection(segments[i-2],segments[i]))[0]
+                p = shapely.get_coordinates(lineIntersection(segments[i-2],segments[i]))[0]
                 coordinates.append(p)
-                p = pygeos.get_coordinates(segments[i])[0]
+                p = shapely.get_coordinates(segments[i])[0]
             else:
-                p = pygeos.get_coordinates(lineIntersection(segments[i - 1], segments[i]))[0]
+                p = shapely.get_coordinates(lineIntersection(segments[i - 1], segments[i]))[0]
             coordinates.append(p)
         coordinates.append(coordinates[0])
-        return pygeos.polygons(coordinates)
+        return shapely.polygons(coordinates)
 
-    def deRegularize(self,geo:pygeos.Geometry):
+    def deRegularize(self,geo:shapely.Geometry):
         """
         De-regularizes a geometry by applying transformation based on a reference regularized polygon.
         
         Parameters
         ----------
-        geo : pygeos.Geometry
+        geo : shapely.Geometry
             Input geometry whose coordinate structure is used to compute new edge transformations.
             Must have the same number of coordinates as the original regularized polygon.
         
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
             A reconnected geometry formed by transforming and connecting de-regularized edges.
         """
         regularPolygon = self.regularize
-        medianOri = pygeos.get_coordinates(regularPolygon)
+        medianOri = shapely.get_coordinates(regularPolygon)
         edgesOri = [medianOri[i+1]-medianOri[i] for i in range(len(medianOri)-1)]
         medianOri = [medianOri[i]+medianOri[i+1]/2 for i in range(len(medianOri)-1)]
-        medianNew = pygeos.get_coordinates(geo)
+        medianNew = shapely.get_coordinates(geo)
         edgesNew = [medianNew[i+1] - medianNew[i] for i in range(len(medianNew) - 1)]
         medianNew = [medianNew[i] + medianNew[i + 1] / 2 for i in range(len(medianNew) - 1)]
         if len(medianNew)!=len(medianOri):
@@ -168,7 +168,7 @@ class Moosasboundary(object):
         
         Returns
         -------
-        spliter : list of pygeos geometries (LineString)
+        spliter : list of shapely geometries (LineString)
             A list of splitting lines used to subdivide the input boundary when it cannot be represented as a quadrilateral after 
             orthogonalization. Each LineString connects vertices to reduce the number of boundary points until a quadrilateral is formed.
         """
@@ -176,8 +176,8 @@ class Moosasboundary(object):
         if proj is None:
             proj = Projection.findOrthogonalBasis(boundary)
         # 将boundary投影到坐标系，并整理每条边的点和方向
-        edgeProj = proj.toUV(pygeos.force_3d(boundary, z=0))
-        edgeProjCoordiantes = pygeos.get_coordinates(edgeProj)
+        edgeProj = proj.toUV(shapely.force_3d(boundary, z=0))
+        edgeProjCoordiantes = shapely.get_coordinates(edgeProj)
         edgeProjCoordiantes = [[edgeProjCoordiantes[i], edgeProjCoordiantes[i + 1]] for i in
                                    range(len(edgeProjCoordiantes) - 1)] # 每条边的点，初始为两个（起止点）可扩充为三个（半边化节点转变斜线为正交）
         edgeProjVector = [coorTwin[1] - coorTwin[0] for coorTwin in edgeProjCoordiantes]
@@ -200,19 +200,19 @@ class Moosasboundary(object):
                     lastVector = Vector(poi1 - edgeProjCoordiantes[i][0]).unit().array
         coordinates = [coor for edge in edgeProjCoordiantes for coor in edge[:-1]]
         coordinates.append(coordinates[0])
-        boundary = simplify(pygeos.polygons(coordinates))
-        coordinates = pygeos.get_coordinates(boundary)
+        boundary = simplify(shapely.polygons(coordinates))
+        coordinates = shapely.get_coordinates(boundary)
         # 当最简化图形非四边形时切割图形
         spliter = []
         while len(coordinates)>5:
-            spliter.append(pygeos.linestrings([coordinates[0], coordinates[-4]]))
+            spliter.append(shapely.linestrings([coordinates[0], coordinates[-4]]))
             coordinates=list(coordinates[:-3])
             coordinates.append(coordinates[0])
             print('???',coordinates)
 
-            boundary = simplify(pygeos.polygons(coordinates))
+            boundary = simplify(shapely.polygons(coordinates))
             print(boundary)
-            coordinates = pygeos.get_coordinates(boundary)
+            coordinates = shapely.get_coordinates(boundary)
         return spliter
 
 def encodingModel(model: MoosasModel):

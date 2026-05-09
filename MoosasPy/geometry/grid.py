@@ -1,5 +1,5 @@
 import numpy as np
-import pygeos
+import shapely
 from .element import MoosasElement
 from .geos import Ray, Vector, Projection, faceNormal
 
@@ -58,7 +58,7 @@ class MoosasGrid(MoosasElement):
         # Create projection for the face
         self.proj = Projection.fromPolygon(self.face)
         self.UVFace = self.proj.toUV(self.face)
-        bbox = pygeos.bounds(self.UVFace)
+        bbox = shapely.bounds(self.UVFace)
         if grid_size is None:
             grid_size = max(bbox[2]- bbox[2],bbox[3]- bbox[1])/5
         self.gridSize = grid_size
@@ -74,7 +74,7 @@ class MoosasGrid(MoosasElement):
                 position = MoosasGridCell(
                     origin=Vector([x, y, z]),
                     direction=Vector(self.normal),
-                    valid=pygeos.contains(self.UVFace, pygeos.points([x, y]))
+                    valid=shapely.contains(self.UVFace, shapely.points([x, y]))
                 )
                 self.gridCell[i].append(position)
         self.gridCell = np.array(self.gridCell)
@@ -146,7 +146,7 @@ class MoosasGrid(MoosasElement):
             for colIdx, col in enumerate(self.gridCell[rowIdx]):
                 if self.gridCell[rowIdx, colIdx].valid:
                     center = self.gridCell[rowIdx, colIdx].origin.array
-                    poly = pygeos.polygons([
+                    poly = shapely.polygons([
                         [center[0] - 0.5 * self.gridSize, center[1] - 0.5 * self.gridSize],
                         [center[0] - 0.5 * self.gridSize, center[1] + 0.5 * self.gridSize],
                         [center[0] + 0.5 * self.gridSize, center[1] + 0.5 * self.gridSize],
@@ -156,10 +156,10 @@ class MoosasGrid(MoosasElement):
 
                     # Trim the grid polygons on the edges
                     if self.gridCell[rowIdx, colIdx].valid != bound:
-                        poly = pygeos.intersection(self.UVFace, poly)
+                        poly = shapely.intersection(self.UVFace, poly)
                         bound = self.gridCell[rowIdx, colIdx].valid
 
-                    self.gridCell[rowIdx, colIdx].polygon = self.proj.toWorld(pygeos.force_3d(poly, z=0))
+                    self.gridCell[rowIdx, colIdx].polygon = self.proj.toWorld(shapely.force_3d(poly, z=0))
         return self.gridCell
 
 
@@ -217,4 +217,4 @@ class MoosasGridCell(Ray):
         normal = faceNormal(self.polygon)
         dot = Vector.dot(normal, self.direction)
         if dot < -1 + Vector.ANGLE_TOLERANCE:
-            self.polygon = pygeos.reverse(self.polygon)
+            self.polygon = shapely.reverse(self.polygon)

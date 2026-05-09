@@ -1,6 +1,6 @@
 import numpy as np
 import os
-import pygeos
+import shapely
 
 from ..utils import Iterable
 from ..utils.tools import path
@@ -90,7 +90,7 @@ def pressureInput(windVector: Vector, glazing: MoosasGlazing):
 
     """boundary box of the wall faces"""
     wallBoundBox = [1e+9, -1e+9, 1e+9, -1e+9]
-    for v in pygeos.get_coordinates(glazing.parentFace.face, include_z=True):
+    for v in shapely.get_coordinates(glazing.parentFace.face, include_z=True):
         ht, hn = round(float(v[2]), 2), round(float(v[verticalDimensionIdx]), 2)
         wallBoundBox[0] = min(ht, wallBoundBox[0])
         wallBoundBox[1] = max(ht, wallBoundBox[1])
@@ -98,7 +98,7 @@ def pressureInput(windVector: Vector, glazing: MoosasGlazing):
         wallBoundBox[3] = max(hn, wallBoundBox[3])
 
     """weight center of the glazing faces"""
-    vMean = np.mean(pygeos.get_coordinates(glazing.face, include_z=True)[:-1], axis=0)
+    vMean = np.mean(shapely.get_coordinates(glazing.face, include_z=True)[:-1], axis=0)
     height = round((vMean[2] - wallBoundBox[0]) / (wallBoundBox[1] - wallBoundBox[0]), 2)
     horizon = round((vMean[verticalDimensionIdx] - wallBoundBox[2]) / (wallBoundBox[3] - wallBoundBox[2]), 2)
 

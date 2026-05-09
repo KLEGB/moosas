@@ -1,7 +1,7 @@
 from .element import MoosasContainer, MoosasEdge
 from .contour import closed_contour_calculation
 from .viewFactor import viewFactorTopology
-from ..utils import np, searchBy, pygeos
+from ..utils import np, searchBy, shapely
 from .contour import _documentBoundary
 
 

@@ -269,7 +269,7 @@ def to_dictionary(etree):
         elements with the same tag exist.
     """
     """
-        3d objects are not support in pygeos.to_geojson.
+        3d objects are not support in shapely.to_geojson.
         in this case we must write the geojson by ourselves using the model.buildGeojson() method
         this method can reform the given elementTree (xml) into dictionary
     """

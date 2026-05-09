@@ -6,13 +6,13 @@
 """
 from __future__ import annotations
 
-from ..utils import pygeos, np, GeometryError, Iterable
+from ..utils import shapely, np, GeometryError, Iterable
 from ..utils.constant import geom
 
 
 class Vector(object):
     """
-        The geometric operations of points and vectors and related 2D and 3D are defined, and the data formats of pygeos
+        The geometric operations of points and vectors and related 2D and 3D are defined, and the data formats of shapely
         and numpy are fused with high fault tolerance x,y,z: vector three-dimensional components style: The format of the
         data used to create the vector, which will be returned according to the format
     """
@@ -20,16 +20,16 @@ class Vector(object):
 
     ANGLE_TOLERANCE = 0.01
 
-    def __init__(self, *vec: Vector | Iterable | pygeos.Geometry | float | int):
+    def __init__(self, *vec: Vector | Iterable | shapely.Geometry | float | int):
         """
         Initialize a Vector object from various input types.
         
         Parameters
         ----------
-        vec : Vector or Iterable or pygeos.Geometry or float or int
+        vec : Vector or Iterable or shapely.Geometry or float or int
             Input representing a vector, which can be provided as:
             - A Vector instance
-            - A pygeos.Geometry (point, line, etc.)
+            - A shapely.Geometry (point, line, etc.)
             - An Iterable (list, tuple, numpy array) of coordinates
             - Individual float or int values (as variable arguments)
         
@@ -39,7 +39,7 @@ class Vector(object):
             This constructor initializes the instance attributes x, y, z, and style.
         """
         """
-            accepts input in 5 formats: Vector, pygeos.Geometry, np.ndarry, list, numbers
+            accepts input in 5 formats: Vector, shapely.Geometry, np.ndarry, list, numbers
             default: ndarry
         """
         if len(vec) == 1:
@@ -47,18 +47,18 @@ class Vector(object):
         if isinstance(vec, Vector):
             vec = vec.array
             self.style = np.ndarray
-        if isinstance(vec, pygeos.Geometry):
-            if pygeos.is_empty(vec):
+        if isinstance(vec, shapely.Geometry):
+            if shapely.is_empty(vec):
                 vec = np.array([0, 0, 0])
                 self.style = np.ndarray
             else:
-                vec = pygeos.force_3d(vec, z=0)
-                vec = pygeos.get_coordinates(vec, include_z=True)
+                vec = shapely.force_3d(vec, z=0)
+                vec = shapely.get_coordinates(vec, include_z=True)
                 if len(vec) > 1:
                     vec = vec[-1] - vec[0]
                 else:
                     vec = vec[0]
-                self.style = pygeos.Geometry
+                self.style = shapely.Geometry
         else:
             if not (isinstance(vec, Iterable)):
                 raise Exception(f'Expect Iterable, got{type(vec)}')
@@ -82,18 +82,18 @@ class Vector(object):
         
         Returns
         -------
-        numpy.ndarray or pygeos.Geometry
-            If `self.style` is `pygeos.Geometry`, returns `self.geometry`; otherwise, returns `self.array`.
+        numpy.ndarray or shapely.Geometry
+            If `self.style` is `shapely.Geometry`, returns `self.geometry`; otherwise, returns `self.array`.
         """
-        if self.style == pygeos.Geometry:
+        if self.style == shapely.Geometry:
             return self.geometry
         else:
             return self.array
 
     @property
-    def geometry(self) -> pygeos.Geometry:
+    def geometry(self) -> shapely.Geometry:
         """get geometry representation of the vector"""
-        return pygeos.points([self.x, self.y, self.z])
+        return shapely.points([self.x, self.y, self.z])
 
     @property
     def array(self) -> np.ndarray:
@@ -294,8 +294,8 @@ class Vector(object):
         vec2 = Vector(vec2).array
         if style == np.ndarray:
             return np.cross(vec1, vec2)
-        elif style == pygeos.Geometry:
-            return pygeos.points(np.cross(vec1, vec2))
+        elif style == shapely.Geometry:
+            return shapely.points(np.cross(vec1, vec2))
         else:
             return Vector(np.cross(vec1, vec2))
 
@@ -647,7 +647,7 @@ class Ray(Vector):
 class Projection(Ray):
     """
     Establish a three-dimensional coordinate system based on the infinite plane input and realize the conversion with
-    the world coordinate system Since pygeos does not provide 3D processing, it is necessary to process 3D collection
+    the world coordinate system Since shapely does not provide 3D processing, it is necessary to process 3D collection
     processing on UVs after projection through the coordinate system
     """
     __slots__ = ['axisX']
@@ -700,13 +700,13 @@ class Projection(Ray):
         return cls(plane.origin, plane.direction)
 
     @classmethod
-    def fromPolygon(cls, polygon: pygeos.Geometry):
+    def fromPolygon(cls, polygon: shapely.Geometry):
         """
         Construct a coordinate system from a given polygon.
         
         Parameters
         ----------
-        polygon : pygeos.Geometry
+        polygon : shapely.Geometry
             A polygon geometry used to define the coordinate system. Must be a valid 3D polygon.
         
         Returns
@@ -719,8 +719,8 @@ class Projection(Ray):
         if Vector.parallel(unitz, np.array([0, 0, 1])):
             return cls.findOrthogonalBasis([polygon])
         else:
-            center = np.mean(pygeos.get_coordinates(polygon, include_z=True), axis=0)
-            sectionVector = pygeos.get_coordinates(section(polygon, center[2], False), include_z=True)
+            center = np.mean(shapely.get_coordinates(polygon, include_z=True), axis=0)
+            sectionVector = shapely.get_coordinates(section(polygon, center[2], False), include_z=True)
             sectionVector = sectionVector[1] - sectionVector[0]
             return cls(center, unitz, unitX=sectionVector)
 
@@ -731,7 +731,7 @@ class Projection(Ray):
         
         Parameters
         ----------
-        polygons : pygeos.Geometry or list of pygeos.Geometry
+        polygons : shapely.Geometry or list of shapely.Geometry
             A single polygon or a list of polygons from which edge vectors are extracted 
             to determine the dominant orthogonal axes.
         
@@ -746,13 +746,13 @@ class Projection(Ray):
         """
         Find a twin of orthogonal axis from given polygons by counting the most popular vectors in the polygons' edges
         """
-        if isinstance(polygons, pygeos.Geometry):
+        if isinstance(polygons, shapely.Geometry):
             polygons = [polygons]
         # Organize the axis of the boundary, and find the most oriented direction to establish the coordinate system
         projAxisCount = {}  # statistics of the axis
         edgeVectors = []  # the orientation of all edges
         for boundary in polygons:
-            coordinates = pygeos.get_coordinates(pygeos.force_3d(boundary, z=0), include_z=True)
+            coordinates = shapely.get_coordinates(shapely.force_3d(boundary, z=0), include_z=True)
             coordinates = np.nan_to_num(coordinates, nan=0)
             edgeVectors += [coordinates[i] - coordinates[i + 1] for i in range(len(coordinates) - 1)]
             for vec in edgeVectors:
@@ -768,7 +768,7 @@ class Projection(Ray):
         sortlist.sort(key=lambda x: (x[1]))
         unitX = sortlist[-1][0]
         unitX = [eval(dim) for dim in unitX.split('_')]
-        center = np.mean(pygeos.get_coordinates(polygons, include_z=True), axis=0)
+        center = np.mean(shapely.get_coordinates(polygons, include_z=True), axis=0)
         proj = cls(center, [0, 0, 1], unitX)  # The orthogonal coordinate system applied when orthogonalization
         return proj
 
@@ -814,19 +814,19 @@ class Projection(Ray):
         """
         return np.cross(self.axisX, self.axisZ)
 
-    def toUV(self, worldGeometry: pygeos.Geometry):
+    def toUV(self, worldGeometry: shapely.Geometry):
         """
         Converts a geometry from world coordinates to UV coordinates on a specified plane.
         
         Parameters
         ----------
-        worldGeometry : pygeos.Geometry
+        worldGeometry : shapely.Geometry
             The input geometry in world coordinates to be transformed. Can be a point, 
             line, or polygon. Must be a valid 2D or 3D geometry.
         
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
             The geometry transformed into UV coordinates on the specified plane. The 
             output retains the type (point, linestring, polygon, etc.) of the input 
             geometry but is represented in the 2D UV coordinate system of the plane.
@@ -834,66 +834,66 @@ class Projection(Ray):
         """
         Converts geometry from world coordinates to a specified plane, obtaining UV coordinates on that plane
         """
-        if pygeos.get_dimensions(worldGeometry) == -1:
+        if shapely.get_dimensions(worldGeometry) == -1:
             raise Exception(f'invalid geometry: {worldGeometry}')
-        if pygeos.get_dimensions(worldGeometry) == 2:
-            rings = [[self.toUV(ring) for ring in pygeos.get_rings(part)] for part in pygeos.get_parts(worldGeometry)]
+        if shapely.get_dimensions(worldGeometry) == 2:
+            rings = [[self.toUV(ring) for ring in shapely.get_rings(part)] for part in shapely.get_parts(worldGeometry)]
             parts = []
             for ring in rings:
                 if len(ring) > 1:
                     try:
-                        parts.append(pygeos.polygons(rings[0], rings[1:]))
+                        parts.append(shapely.polygons(rings[0], rings[1:]))
                     except Exception as e:
                         # failed to create hole
-                        parts.append(pygeos.polygons(rings[0]))
+                        parts.append(shapely.polygons(rings[0]))
                 else:
-                    parts.append(pygeos.polygons(rings[0]))
-            return pygeos.union_all(parts)
-        worldGeometry = pygeos.force_3d(worldGeometry, z=0)
-        coors = pygeos.get_coordinates(worldGeometry, include_z=True)
+                    parts.append(shapely.polygons(rings[0]))
+            return shapely.union_all(parts)
+        worldGeometry = shapely.force_3d(worldGeometry, z=0)
+        coors = shapely.get_coordinates(worldGeometry, include_z=True)
         coors = np.nan_to_num(coors, nan=0)
         coor_new = [coor - self.origin.array for coor in coors]
         if not (Vector.parallel(self.axisZ, np.array([0, 0, 1])) and Vector.parallel(self.axisX, np.array([1, 0, 0]))):
             coor_new = [np.asmatrix(coor) * self.rotateMatrix for coor in coor_new]
         coor_new = np.array([np.array(coor).flatten() for coor in coor_new])
-        if pygeos.get_dimensions(worldGeometry) == 0:
-            return pygeos.points(coor_new[0])
-        if pygeos.get_dimensions(worldGeometry) == 1:
-            if pygeos.points(coor_new[0]) == pygeos.points(coor_new[-1]):
-                return pygeos.linearrings(coor_new)
+        if shapely.get_dimensions(worldGeometry) == 0:
+            return shapely.points(coor_new[0])
+        if shapely.get_dimensions(worldGeometry) == 1:
+            if shapely.points(coor_new[0]) == shapely.points(coor_new[-1]):
+                return shapely.linearrings(coor_new)
             else:
-                return pygeos.linestrings(coor_new)
-        # if pygeos.get_dimensions(worldGeometry) == 2:
-        #     return pygeos.polygons(coor_new)
+                return shapely.linestrings(coor_new)
+        # if shapely.get_dimensions(worldGeometry) == 2:
+        #     return shapely.polygons(coor_new)
 
-    def toWorld(self, UVGeometry: pygeos.Geometry):
+    def toWorld(self, UVGeometry: shapely.Geometry):
         """
         Converts a geometry from UV coordinate system to world coordinate system.
         
         Parameters
         ----------
-        UVGeometry : pygeos.Geometry
+        UVGeometry : shapely.Geometry
             The input geometry in UV coordinates to be transformed. Must be a valid 2D or 3D geometry.
         
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
             The transformed geometry in the world coordinate system. The type of geometry (point, linestring, polygon) 
             is preserved after transformation.
         """
         """
         Converts the geometry represented by UV coordinates to the world coordinate system
         """
-        if pygeos.get_dimensions(UVGeometry) == -1:
+        if shapely.get_dimensions(UVGeometry) == -1:
             raise Exception(f'invalid geometry: {UVGeometry}')
-        if pygeos.get_dimensions(UVGeometry) == 2:
-            rings = [self.toWorld(ring) for ring in pygeos.get_rings(UVGeometry)]
+        if shapely.get_dimensions(UVGeometry) == 2:
+            rings = [self.toWorld(ring) for ring in shapely.get_rings(UVGeometry)]
             if len(rings) > 1:
-                return pygeos.polygons(rings[0], rings[1:])
+                return shapely.polygons(rings[0], rings[1:])
             else:
-                return pygeos.polygons(pygeos.get_coordinates(rings[0], include_z=True))
-        UVGeometry = pygeos.force_3d(UVGeometry, z=0)
-        coors = pygeos.get_coordinates(UVGeometry, include_z=True)
+                return shapely.polygons(shapely.get_coordinates(rings[0], include_z=True))
+        UVGeometry = shapely.force_3d(UVGeometry, z=0)
+        coors = shapely.get_coordinates(UVGeometry, include_z=True)
         if not (Vector.parallel(self.axisZ, np.array([0, 0, 1])) and Vector.parallel(self.axisX, np.array([1, 0, 0]))):
             coor_new = [np.asmatrix(coor) * self.rotateMatrix.I for coor in coors]
         else:
@@ -902,10 +902,10 @@ class Projection(Ray):
 
         coor_new = np.array([np.array(coor).flatten() for coor in coor_new])
 
-        if pygeos.get_dimensions(UVGeometry) == 0:
-            return pygeos.points(coor_new[0])
-        if pygeos.get_dimensions(UVGeometry) == 1:
-            return pygeos.linestrings(coor_new)
+        if shapely.get_dimensions(UVGeometry) == 0:
+            return shapely.points(coor_new[0])
+        if shapely.get_dimensions(UVGeometry) == 1:
+            return shapely.linestrings(coor_new)
 
 
 class Transformation2d:
@@ -920,23 +920,23 @@ class Transformation2d:
         
         Parameters
         ----------
-        moveVec : array-like or pygeos.Geometry, optional
-            Vector representing the translation to apply. If a pygeos Geometry is provided,
+        moveVec : array-like or shapely.Geometry, optional
+            Vector representing the translation to apply. If a shapely Geometry is provided,
             its coordinates are extracted. Default is numpy array [0, 0].
         rotateRadius : float, optional
             Angular distance (in radians) to rotate. Default is 0.
-        rotateOrigin : array-like or pygeos.Geometry, optional
-            Point around which rotation occurs. If a pygeos Geometry is provided,
+        rotateOrigin : array-like or shapely.Geometry, optional
+            Point around which rotation occurs. If a shapely Geometry is provided,
             its coordinates are extracted. If None, no rotation origin is set. Default is None.
         
         Returns
         -------
         None
         """
-        if isinstance(moveVec, pygeos.Geometry):
-            moveVec = pygeos.get_coordinates(moveVec)
-        if isinstance(rotateOrigin, pygeos.Geometry):
-            rotateOrigin = pygeos.get_coordinates(rotateOrigin)
+        if isinstance(moveVec, shapely.Geometry):
+            moveVec = shapely.get_coordinates(moveVec)
+        if isinstance(rotateOrigin, shapely.Geometry):
+            rotateOrigin = shapely.get_coordinates(rotateOrigin)
         self.rotateRadius = rotateRadius
         self.moveVec = np.array(moveVec)
         self.rotateOrigin = None
@@ -995,18 +995,18 @@ class Transformation2d:
         else:
             return cls(- transformation.moveVec, - transformation.rotateAngle)
 
-    def transfrom(self, geo: pygeos.Geometry):
+    def transfrom(self, geo: shapely.Geometry):
         """
         Transform a geometry by applying translation followed by rotation.
         
         Parameters
         ----------
-        geo : pygeos.Geometry
+        geo : shapely.Geometry
             The input geometry to be transformed. Can be a point, linestring, or polygon.
         
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
             The transformed geometry after applying translation and optional rotation.
             The output type matches the input geometry type (point, linestring, or polygon).
         """
@@ -1015,7 +1015,7 @@ class Transformation2d:
         rotateOrigin = np.array([np.mean(coor) for coor in coordiantes.T])
         It can accept geometries in different dimensions
         """
-        coordiantes = pygeos.get_coordinates(geo)
+        coordiantes = shapely.get_coordinates(geo)
         coordiantes = np.array([coor + self.moveVec for coor in coordiantes])
         if self.rotateRadius != 0:
             rotateOrigin = self.rotateOrigin
@@ -1024,15 +1024,15 @@ class Transformation2d:
             coordinatesRelative = np.array([coor - rotateOrigin for coor in coordiantes])
             coordinatesRelative = np.array([np.asmatrix(coor) * self.rotateMatrix for coor in coordinatesRelative])
             coordiantes = np.array([np.array(coor + rotateOrigin).flatten() for coor in coordinatesRelative])
-        if pygeos.get_dimensions(geo) == 0:
-            return pygeos.points(coordiantes[0])
-        if pygeos.get_dimensions(geo) == 1:
-            return pygeos.linestrings(coordiantes)
-        if pygeos.get_dimensions(geo) == 2:
-            return pygeos.polygons(coordiantes)
+        if shapely.get_dimensions(geo) == 0:
+            return shapely.points(coordiantes[0])
+        if shapely.get_dimensions(geo) == 1:
+            return shapely.linestrings(coordiantes)
+        if shapely.get_dimensions(geo) == 2:
+            return shapely.polygons(coordiantes)
 
 
-def bBox(geo: pygeos.Geometry):
+def bBox(geo: shapely.Geometry):
     """calculate the bounding box of the geometry with direction(calculating by OrthogonalBasis):
     two projection will be done:
     1. project the geo to 2d faces geoProj as projection 1
@@ -1041,7 +1041,7 @@ def bBox(geo: pygeos.Geometry):
     3. construct bBoxProjection using the projection2World.axisX and projection1.axisZ
 
     ----------------------------------------
-    geo (pygeos.Geometry) : input 3d geometry
+    geo (shapely.Geometry) : input 3d geometry
 
     returns: dict() include:
     Projection:(Projection) the OrthogonalBasis projection (3d)
@@ -1051,21 +1051,21 @@ def bBox(geo: pygeos.Geometry):
     proj1 = Projection.fromPolygon(geo)
     geoProj = proj1.toUV(geo)
     proj2 = Projection.findOrthogonalBasis(geoProj)
-    minX, minY, maxX, maxY = pygeos.bounds(geoProj)
+    minX, minY, maxX, maxY = shapely.bounds(geoProj)
     worldAxisX = proj1.toWorld(Vector(proj2.axisX).geometry)
     worldAxisZ = proj1.axisZ
-    origin = pygeos.centroid(geo)
+    origin = shapely.centroid(geo)
     bBoxProjection = Projection(origin=origin, unitZ=worldAxisZ, unitX=worldAxisX)
     return {"Projection": bBoxProjection, "x-domain": (minX, maxX), "y-domain": (minY, maxY)}
 
 
-def is_ccw(geo: pygeos.Geometry) -> bool:
+def is_ccw(geo: shapely.Geometry) -> bool:
     """
     Determine if a polygon's ring is oriented counter-clockwise.
     
     Parameters
     ----------
-    geo : pygeos.Geometry
+    geo : shapely.Geometry
         A geometry object representing a polygon or line string. Must have at least 3 points to form a ring.
     
     Returns
@@ -1074,7 +1074,7 @@ def is_ccw(geo: pygeos.Geometry) -> bool:
         True if the ring is oriented counter-clockwise, False otherwise.
     """
 
-    poilist = pygeos.get_coordinates(geo)
+    poilist = shapely.get_coordinates(geo)
     veclist = [poilist[i] - poilist[i - 1] for i in range(1, len(poilist))]
     crosslist = [np.cross(veclist[i], veclist[i - 1]) for i in range(len(veclist))]
     ccw = np.sum([2 for vec in crosslist if vec > 0])
@@ -1082,14 +1082,14 @@ def is_ccw(geo: pygeos.Geometry) -> bool:
     return ccw < 0
 
 
-def selfIntersect(geo: pygeos.Geometry) -> bool:
+def selfIntersect(geo: shapely.Geometry) -> bool:
     """
     Test whether a geometry is self-intersecting.
     
     Parameters
     ----------
-    geo : pygeos.Geometry
-        A PyGEOS geometry object to be tested for self-intersection.
+    geo : shapely.Geometry
+        A Shapely geometry object to be tested for self-intersection.
     
     Returns
     -------
@@ -1100,23 +1100,23 @@ def selfIntersect(geo: pygeos.Geometry) -> bool:
     test whether a geometry is self-intersect
     """
 
-    pointList = pygeos.points(pygeos.get_coordinates(geo, include_z=True))
+    pointList = shapely.points(shapely.get_coordinates(geo, include_z=True))
     if (len(pointList) - len(set(pointList))) > 1:
         return True
-    # if str(pygeos.is_valid_reason(geo)).startswith('Self-intersection'):
+    # if str(shapely.is_valid_reason(geo)).startswith('Self-intersection'):
     #     return True
     return False
 
 
-def overlapEdge(geo1: pygeos.Geometry, geo2: pygeos.Geometry) -> bool:
+def overlapEdge(geo1: shapely.Geometry, geo2: shapely.Geometry) -> bool:
     """
     Determine if two geometries share at least two endpoints, indicating a common edge.
     
     Parameters
     ----------
-    geo1 : pygeos.Geometry
+    geo1 : shapely.Geometry
         First geometry object to compare.
-    geo2 : pygeos.Geometry
+    geo2 : shapely.Geometry
         Second geometry object to compare.
     
     Returns
@@ -1129,13 +1129,13 @@ def overlapEdge(geo1: pygeos.Geometry, geo2: pygeos.Geometry) -> bool:
     which means that they share an exact same edge
     """
     try:
-        geo1 = pygeos.get_coordinates(geo1, include_z=True)
-        geo1 = set(pygeos.set_precision(
-            pygeos.points(geo1),
+        geo1 = shapely.get_coordinates(geo1, include_z=True)
+        geo1 = set(shapely.set_precision(
+            shapely.points(geo1),
             geom.POINT_PRECISION))
-        geo2 = pygeos.get_coordinates(geo2, include_z=True)
-        geo2 = set(pygeos.set_precision(
-            pygeos.points(geo2),
+        geo2 = shapely.get_coordinates(geo2, include_z=True)
+        geo2 = set(shapely.set_precision(
+            shapely.points(geo2),
             geom.POINT_PRECISION))
         if len(geo1.intersection(geo2)) >= 2:
             return True
@@ -1144,15 +1144,15 @@ def overlapEdge(geo1: pygeos.Geometry, geo2: pygeos.Geometry) -> bool:
         return False
 
 
-def overlapArea(geo1: pygeos.Geometry, geo2: pygeos.Geometry) -> float:
+def overlapArea(geo1: shapely.Geometry, geo2: shapely.Geometry) -> float:
     """
     Calculate the overlapping area between two geometries.
     
     Parameters
     ----------
-    geo1 : pygeos.Geometry
+    geo1 : shapely.Geometry
         The first input geometry.
-    geo2 : pygeos.Geometry
+    geo2 : shapely.Geometry
         The second input geometry.
     
     Returns
@@ -1165,51 +1165,51 @@ def overlapArea(geo1: pygeos.Geometry, geo2: pygeos.Geometry) -> float:
     retrun the containBy area of two geometries
     """
 
-    if pygeos.is_empty(geo1) or pygeos.is_empty(geo1):
+    if shapely.is_empty(geo1) or shapely.is_empty(geo1):
         return 0.0
     geo1 = makeValid(geo1)[0]
     geo2 = makeValid(geo2)[0]
     try:
-        if pygeos.disjoint(geo1, geo2):
+        if shapely.disjoint(geo1, geo2):
             return 0.0
-        intersections = pygeos.intersection(geo1, geo2, grid_size=geom.POINT_PRECISION)
-        if pygeos.get_dimensions(intersections) != 2:
+        intersections = shapely.intersection(geo1, geo2, grid_size=geom.POINT_PRECISION)
+        if shapely.get_dimensions(intersections) != 2:
             return 0.0
-        area1 = pygeos.area(intersections)
+        area1 = shapely.area(intersections)
     except:
         return 0.0
     return area1
 
 
-def area3d(geo: pygeos.Geometry) -> float:
+def area3d(geo: shapely.Geometry) -> float:
     """Calculate polygon area in 3D by projecting to its local UV plane.
 
-    pygeos only measures planar 2D area, so this helper projects each
+    shapely only measures planar 2D area, so this helper projects each
     polygon part to its own UV coordinate system and sums UV areas.
     """
-    if geo is None or pygeos.is_empty(geo):
+    if geo is None or shapely.is_empty(geo):
         return 0.0
 
     total = 0.0
     try:
-        parts = [p for p in pygeos.get_parts(geo) if pygeos.get_dimensions(p) == 2]
+        parts = [p for p in shapely.get_parts(geo) if shapely.get_dimensions(p) == 2]
     except Exception:
-        parts = [geo] if pygeos.get_dimensions(geo) == 2 else []
+        parts = [geo] if shapely.get_dimensions(geo) == 2 else []
 
     for part in parts:
         try:
             proj = Projection.fromPolygon(part)
-            uv = pygeos.force_2d(proj.toUV(part))
-            total += float(pygeos.area(uv))
+            uv = shapely.force_2d(proj.toUV(part))
+            total += float(shapely.area(uv))
         except Exception:
             continue
     return total
 
 
-def makeValid(geo: pygeos.Geometry, error='raise') -> list[pygeos.Geometry] | None:
-    """revise method of pygeos.make_valid()"""
-    geos = pygeos.make_valid(geo)
-    geos = [g for g in pygeos.get_parts(geos) if pygeos.get_dimensions(g) == 2]
+def makeValid(geo: shapely.Geometry, error='raise') -> list[shapely.Geometry] | None:
+    """revise method of shapely.make_valid()"""
+    geos = shapely.make_valid(geo)
+    geos = [g for g in shapely.get_parts(geos) if shapely.get_dimensions(g) == 2]
     if len(geos) == 0:
         if error == 'raise':
             raise GeometryError(geo, "No valid geometries")
@@ -1217,27 +1217,27 @@ def makeValid(geo: pygeos.Geometry, error='raise') -> list[pygeos.Geometry] | No
             print('******Warning: GeometryError: no valid geometries')
             return None
     for i, g in enumerate(geos):
-        rings = pygeos.get_rings(g)
+        rings = shapely.get_rings(g)
         if len(rings) > 1:
-            innerRings = [pygeos.intersection(r, rings[0], grid_size=geom.POINT_PRECISION) for r in rings[1:]]
-            innerRings = [r for r in innerRings if pygeos.get_dimensions(r) == 2]
+            innerRings = [shapely.intersection(r, rings[0], grid_size=geom.POINT_PRECISION) for r in rings[1:]]
+            innerRings = [r for r in innerRings if shapely.get_dimensions(r) == 2]
             # print(rings[0],innerRings)
             if len(innerRings) > 0:
-                geos[i] = pygeos.polygons(pygeos.get_coordinates(rings[0], include_z=True), holes=innerRings)
+                geos[i] = shapely.polygons(shapely.get_coordinates(rings[0], include_z=True), holes=innerRings)
             else:
-                geos[i] = pygeos.linestrings(pygeos.get_coordinates(rings[0], include_z=True))
+                geos[i] = shapely.linestrings(shapely.get_coordinates(rings[0], include_z=True))
     return geos
 
 
-def contains(child: pygeos.Geometry, parent: pygeos.Geometry):
+def contains(child: shapely.Geometry, parent: shapely.Geometry):
     """
     Check if all points of a child geometry are within a specified distance from a parent geometry.
     
     Parameters
     ----------
-    child : pygeos.Geometry
+    child : shapely.Geometry
         The geometry whose points are to be checked for proximity to the parent.
-    parent : pygeos.Geometry
+    parent : shapely.Geometry
         The geometry used as reference for proximity checking.
     
     Returns
@@ -1246,30 +1246,30 @@ def contains(child: pygeos.Geometry, parent: pygeos.Geometry):
         True if all points of the child geometry are within twice the POINT_PRECISION distance 
         from the parent geometry, False otherwise. Returns False if an error occurs during processing.
     """
-    # child = pygeos.set_precision(child, geom.POINT_PRECISION)
-    child = pygeos.get_coordinates(child)
+    # child = shapely.set_precision(child, geom.POINT_PRECISION)
+    child = shapely.get_coordinates(child)
     # print(child)
-    # parent = pygeos.set_precision(parent, geom.POINT_PRECISION)
-    # geo1=pygeos.get_point(geo1,[0,1])
+    # parent = shapely.set_precision(parent, geom.POINT_PRECISION)
+    # geo1=shapely.get_point(geo1,[0,1])
     try:
         for i in range(len(child)):
-            # if pygeos.dwithin(geo1[0],geo2,2*geom.POINT_PRECISION) and pygeos.dwithin(geo1[1],geo2,2*geom.POINT_PRECISION):
-            if not pygeos.dwithin(pygeos.points(child[i]), parent, 2 * geom.POINT_PRECISION):
-                # if not pygeos.contains(parent,pygeos.points(child[i])):
+            # if shapely.dwithin(geo1[0],geo2,2*geom.POINT_PRECISION) and shapely.dwithin(geo1[1],geo2,2*geom.POINT_PRECISION):
+            if not shapely.dwithin(shapely.points(child[i]), parent, 2 * geom.POINT_PRECISION):
+                # if not shapely.contains(parent,shapely.points(child[i])):
                 return False
     except:
         return False
     return True
 
 
-def equals(geo1: pygeos.Geometry, geo2: pygeos.Geometry):
+def equals(geo1: shapely.Geometry, geo2: shapely.Geometry):
     """Check if two geometries are approximately equal by comparing their points within a tolerance.
     
     Parameters
     ----------
-    geo1 : pygeos.Geometry
+    geo1 : shapely.Geometry
         First geometry to compare.
-    geo2 : pygeos.Geometry
+    geo2 : shapely.Geometry
         Second geometry to compare.
     
     Returns
@@ -1278,18 +1278,18 @@ def equals(geo1: pygeos.Geometry, geo2: pygeos.Geometry):
         True if the geometries have the same number of points and all corresponding points 
         (in forward or reverse order) are within 1.2 * geom.POINT_PRECISION distance; otherwise False.
     """
-    geo1 = pygeos.get_point(geo1, range(pygeos.get_num_points(geo1)))
-    geo2 = pygeos.get_point(geo2, range(pygeos.get_num_points(geo2)))
+    geo1 = shapely.get_point(geo1, range(shapely.get_num_points(geo1)))
+    geo2 = shapely.get_point(geo2, range(shapely.get_num_points(geo2)))
     if len(geo1) != len(geo2): return False
     valid = True
     for i in range(len(geo1)):
-        if not pygeos.dwithin(geo1[i], geo2[i], 1.2 * geom.POINT_PRECISION):
+        if not shapely.dwithin(geo1[i], geo2[i], 1.2 * geom.POINT_PRECISION):
             valid = False
     if not valid:
         valid = True
         geo2 = geo2[::-1]
         for i in range(len(geo1)):
-            if not pygeos.dwithin(geo1[i], geo2[i], 1.2 * geom.POINT_PRECISION):
+            if not shapely.dwithin(geo1[i], geo2[i], 1.2 * geom.POINT_PRECISION):
                 valid = False
     if valid:
         return True
@@ -1297,20 +1297,20 @@ def equals(geo1: pygeos.Geometry, geo2: pygeos.Geometry):
         return False
 
 
-def projectTo(child: pygeos.Geometry, parent: pygeos.Geometry) -> pygeos.Geometry:
+def projectTo(child: shapely.Geometry, parent: shapely.Geometry) -> shapely.Geometry:
     """
         project a child surface to the parent surface.
 
         Parameters
         ----------
-        child : pygeos.Geometry
-            3D polygon geometry with z-coordinates (pygeos.Polygon type) to be projected.
-        parent : pygeos.Geometry
-            3D polygon geometry with z-coordinates (pygeos.Polygon type) as the Projection aixs system.
+        child : shapely.Geometry
+            3D polygon geometry with z-coordinates (shapely.Polygon type) to be projected.
+        parent : shapely.Geometry
+            3D polygon geometry with z-coordinates (shapely.Polygon type) as the Projection aixs system.
 
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
 
         Notes
         -----
@@ -1318,81 +1318,81 @@ def projectTo(child: pygeos.Geometry, parent: pygeos.Geometry) -> pygeos.Geometr
     """
     proj = Projection.fromPolygon(parent)
     childProj = proj.toUV(child)
-    childProj = pygeos.force_3d(pygeos.force_2d(childProj), z=0)
+    childProj = shapely.force_3d(shapely.force_2d(childProj), z=0)
     child = proj.toWorld(childProj)
     if Vector.dot(faceNormal(child), faceNormal(parent)) < 0:
-        coordinates = pygeos.get_coordinates(child,include_z=True)[::-1]
-        child = pygeos.polygons(coordinates)
+        coordinates = shapely.get_coordinates(child,include_z=True)[::-1]
+        child = shapely.polygons(coordinates)
     return child
 
 
-def trim(child: pygeos.Geometry, parent: pygeos.Geometry) -> pygeos.Geometry | None:
+def trim(child: shapely.Geometry, parent: shapely.Geometry) -> shapely.Geometry | None:
     """
     Trim a child surface with the parent surface.
 
     Parameters
     ----------
-    child : pygeos.Geometry
-        3D polygon geometry with z-coordinates (pygeos.Polygon type) to be trimmed.
-    parent : pygeos.Geometry
-        3D polygon geometry with z-coordinates (pygeos.Polygon type) as the splitter.
+    child : shapely.Geometry
+        3D polygon geometry with z-coordinates (shapely.Polygon type) to be trimmed.
+    parent : shapely.Geometry
+        3D polygon geometry with z-coordinates (shapely.Polygon type) as the splitter.
 
     Returns
     -------
-    pygeos.Geometry
+    shapely.Geometry
 
     Notes
     -----
-    - pygeos.intersection method
+    - shapely.intersection method
     """
     proj = Projection.fromPolygon(parent)
     childProj = proj.toUV(child)
     parentProj = proj.toUV(parent)
-    if overlapArea(childProj, parentProj) < pygeos.area(childProj):
-        childProjIntersection = pygeos.intersection(childProj, parentProj)
-        if pygeos.get_dimensions(childProjIntersection) == 2:
-            childProjIntersection = pygeos.get_parts(childProjIntersection)[0]
+    if overlapArea(childProj, parentProj) < shapely.area(childProj):
+        childProjIntersection = shapely.intersection(childProj, parentProj)
+        if shapely.get_dimensions(childProjIntersection) == 2:
+            childProjIntersection = shapely.get_parts(childProjIntersection)[0]
             return proj.toWorld(childProjIntersection)
         else:
             return None
     return child
 
 
-def offset(polygon: pygeos.Geometry, offset: float) -> pygeos.Geometry:
+def offset(polygon: shapely.Geometry, offset: float) -> shapely.Geometry:
     """
     Offset a geometry by a specified offset. Positive for outer offset and negative for inner offset.
 
     Parameters
     ----------
-    polygon : pygeos.Geometry
-        3D polygon geometry with z-coordinates (pygeos.Polygon type) to be offset.
+    polygon : shapely.Geometry
+        3D polygon geometry with z-coordinates (shapely.Polygon type) to be offset.
     offset : float
         offset distance
 
     Returns
     -------
-    pygeos.Geometry
+    shapely.Geometry
 
     Notes
     -----
-    - pygeos.buffer method
+    - shapely.buffer method
 
 
     """
     proj = Projection.fromPolygon(polygon)
     polygonProj = proj.toUV(polygon)
-    polygonProjOffset = pygeos.buffer(polygonProj, offset)
+    polygonProjOffset = shapely.buffer(polygonProj, offset)
     return proj.toWorld(polygonProjOffset)
 
 
-def faceNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vector:
+def faceNormal(poly: shapely.Geometry, EPS: float = geom.POINT_PRECISION) -> Vector:
     """
     Compute stable normal vector for 3D polygon (handles non-convex/non-coplanar vertices)
 
     Parameters
     ----------
-    poly : pygeos.Geometry
-        3D polygon geometry with z-coordinates (pygeos.Polygon type)
+    poly : shapely.Geometry
+        3D polygon geometry with z-coordinates (shapely.Polygon type)
     EPS : float, optional
         Floating point precision threshold (default: 1e-9)
 
@@ -1411,7 +1411,7 @@ def faceNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vect
     # ------------------- Step 1: Validate input and extract 3D coordinates -------------------
 
     # Extract 3D coordinates (remove closing duplicate point)
-    coords = pygeos.get_coordinates(poly, include_z=True)
+    coords = shapely.get_coordinates(poly, include_z=True)
     if coords.shape[1] != 3:
         return Vector(0, 0, 1)
 
@@ -1468,15 +1468,15 @@ def faceNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vect
     else:
         raise GeometryError(poly, "******GeometryError: invalid face results in zero normal")
 
-def ccwNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vector:
+def ccwNormal(poly: shapely.Geometry, EPS: float = geom.POINT_PRECISION) -> Vector:
     """
     enhance Normal method for 3D polygon to ensure the normal pass the ccw test.
     using the faceNormal method.
 
     Parameters
     ----------
-    poly : pygeos.Geometry
-        3D polygon geometry with z-coordinates (pygeos.Polygon type)
+    poly : shapely.Geometry
+        3D polygon geometry with z-coordinates (shapely.Polygon type)
     EPS : float, optional
         Floating point precision threshold (default: 1e-9)
 
@@ -1493,19 +1493,19 @@ def ccwNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vecto
     - Ensures consistent orientation via right-hand rule
     """
     norm = faceNormal(poly, EPS)
-    proj = Projection(origin=pygeos.get_coordinates(poly)[0],unitZ=norm)
+    proj = Projection(origin=shapely.get_coordinates(poly)[0],unitZ=norm)
     polyProj = proj.toUV(poly)
-    polyProj = pygeos.force_2d(polyProj)
+    polyProj = shapely.force_2d(polyProj)
     if is_ccw(polyProj):
         return norm
     else:
         return -norm
-# def faceNormalLegacy(face: pygeos.Geometry) -> Vector:
+# def faceNormalLegacy(face: shapely.Geometry) -> Vector:
 # #     """Calculate the normal vector of a face using cross product of non-parallel edges.
 # #
 # #         Parameters
 # #         ----------
-# #         face : pygeos.Geometry
+# #         face : shapely.Geometry
 # #             A geometry object representing a face or linestring. Coordinates are extracted to compute edge vectors.
 # #
 # #         Returns
@@ -1518,7 +1518,7 @@ def ccwNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vecto
 # #     we only need to find two edges that do not parallel.
 # #     in this case, this method is valid even if a linestring is provided
 # #     """
-# #     coordinates = pygeos.get_coordinates(face, include_z=True)
+# #     coordinates = shapely.get_coordinates(face, include_z=True)
 # #     edges = [coordinates[i] - coordinates[i + 1] for i in range(len(coordinates) - 1)]
 # #     for i in range(1, len(edges)):
 # #         if not Vector.parallel(edges[i], edges[0]):
@@ -1529,7 +1529,7 @@ def ccwNormal(poly: pygeos.Geometry, EPS: float = geom.POINT_PRECISION) -> Vecto
 """constructive methods"""
 
 
-def difference(geoBase: pygeos.Geometry, geoDifference: pygeos.Geometry) -> list[pygeos.Geometry]:
+def difference(geoBase: shapely.Geometry, geoDifference: shapely.Geometry) -> list[shapely.Geometry]:
     """
     3D difference operation between two polygons.
     
@@ -1538,69 +1538,69 @@ def difference(geoBase: pygeos.Geometry, geoDifference: pygeos.Geometry) -> list
     
     Parameters
     ----------
-    geoBase : pygeos.Geometry
+    geoBase : shapely.Geometry
         The base geometry from which parts will be subtracted. Must be a valid polygon.
-    geoDifference : pygeos.Geometry
+    geoDifference : shapely.Geometry
         The geometry to subtract from the base. Must be a valid polygon.
     
     Returns
     -------
-    list of pygeos.Geometry
+    list of shapely.Geometry
         A list of geometries representing the result of the 3D difference operation.
     """
     """
         3d difference for polygons
     """
     proj = Projection(
-        origin=pygeos.points(pygeos.get_coordinates(geoBase)[0]),
+        origin=shapely.points(shapely.get_coordinates(geoBase)[0]),
         unitZ=faceNormal(geoBase)
     )
-    geoBaseProj = pygeos.set_precision(proj.toUV(geoBase), geom.POINT_PRECISION)
-    geoDifferenceProj = pygeos.set_precision(proj.toUV(geoDifference), geom.POINT_PRECISION)
-    geoBaseProj = pygeos.difference(geoBaseProj, geoDifferenceProj, grid_size=geom.POINT_PRECISION)
+    geoBaseProj = shapely.set_precision(proj.toUV(geoBase), geom.POINT_PRECISION)
+    geoDifferenceProj = shapely.set_precision(proj.toUV(geoDifference), geom.POINT_PRECISION)
+    geoBaseProj = shapely.difference(geoBaseProj, geoDifferenceProj, grid_size=geom.POINT_PRECISION)
     return proj.toWorld(geoBaseProj)
 
 
-def intersection(geoBase: pygeos.Geometry, geoDifference: pygeos.Geometry) -> list[pygeos.Geometry]:
+def intersection(geoBase: shapely.Geometry, geoDifference: shapely.Geometry) -> list[shapely.Geometry]:
     """
     Compute the 3D intersection of two geometric polygons by projecting them into 2D, performing the intersection, and transforming back.
     
     Parameters
     ----------
-    geoBase : pygeos.Geometry
+    geoBase : shapely.Geometry
         The base geometry (polygon) involved in the intersection.
-    geoDifference : pygeos.Geometry
+    geoDifference : shapely.Geometry
         The geometry to intersect with the base geometry.
     
     Returns
     -------
-    list of pygeos.Geometry
+    list of shapely.Geometry
         A list containing the resulting geometry or geometries from the intersection operation in 3D space.
     """
     """
         3d difference for polygons
     """
     proj = Projection(
-        origin=pygeos.points(pygeos.get_coordinates(geoBase)[0]),
+        origin=shapely.points(shapely.get_coordinates(geoBase)[0]),
         unitZ=faceNormal(geoBase)
     )
-    geoBaseProj = pygeos.set_precision(proj.toUV(geoBase), geom.POINT_PRECISION)
-    geoDifferenceProj = pygeos.set_precision(proj.toUV(geoDifference), geom.POINT_PRECISION)
-    geoBaseProj = pygeos.difference(geoBaseProj, geoDifferenceProj, grid_size=geom.POINT_PRECISION)
+    geoBaseProj = shapely.set_precision(proj.toUV(geoBase), geom.POINT_PRECISION)
+    geoDifferenceProj = shapely.set_precision(proj.toUV(geoDifference), geom.POINT_PRECISION)
+    geoBaseProj = shapely.difference(geoBaseProj, geoDifferenceProj, grid_size=geom.POINT_PRECISION)
     return proj.toWorld(geoBaseProj)
 
 
-def rayFaceIntersect(ray: Ray, face: pygeos.Geometry,
-                     normal: Vector = None, infinity_face=False, limit_distance=None) -> pygeos.Geometry | None:
+def rayFaceIntersect(ray: Ray, face: shapely.Geometry,
+                     normal: Vector = None, infinity_face=False, limit_distance=None) -> shapely.Geometry | None:
     """func to calculate the intersection for face and ray in many circumstances.
 
     ray: input ray as Ray object
-    face: input face as pygeos.Geometry
+    face: input face as shapely.Geometry
     normal: faceNormal(face), you can provide one to accelerate the calculation
     infinity_face: do not test the containment of the face and the intersection
     limit_distance: the "ray" is a line and have limit length
 
-    return: point as pygeos.points, None if no intersection
+    return: point as shapely.points, None if no intersection
 
     --------------------------------------
         plan expression: (P - p0).n = 0
@@ -1616,7 +1616,7 @@ def rayFaceIntersect(ray: Ray, face: pygeos.Geometry,
     vec = ray.direction.unit().array
     normal = Vector(normal).unit().array
 
-    p0 = pygeos.get_coordinates(face, include_z=True)[0]
+    p0 = shapely.get_coordinates(face, include_z=True)[0]
     p1 = ray.origin.array
     t = np.dot((p0 - p1), normal) / np.dot(normal, vec)
     if t < 0:
@@ -1626,35 +1626,35 @@ def rayFaceIntersect(ray: Ray, face: pygeos.Geometry,
             return None
     pt = p1 + t * vec
     if infinity_face:
-        return pygeos.points(pt)
+        return shapely.points(pt)
     else:
-        coordinates = pygeos.get_coordinates(face, include_z=True)
+        coordinates = shapely.get_coordinates(face, include_z=True)
         if np.min(coordinates[:, 0]) <= pt[0] <= np.max(coordinates[:, 0]):
             if np.min(coordinates[:, 1]) <= pt[1] <= np.max(coordinates[:, 1]):
                 if np.min(coordinates[:, 2]) <= pt[2] <= np.max(coordinates[:, 2]):
-                    return pygeos.points(pt)
+                    return shapely.points(pt)
         # proj = Projection(origin=p0, unitZ=normal)
         # face = proj.toUV(face)
         # pt = proj.toUV(pt)
-        # if pygeos.contains(pygeos.force_2d(face), pygeos.force_2d(pt)):
+        # if shapely.contains(shapely.force_2d(face), shapely.force_2d(pt)):
         #     return proj.toWorld(pt)
 
         else:
             return None
 
 
-def simplify(geo: pygeos.Geometry, include_z=False) -> pygeos.Geometry:
+def simplify(geo: shapely.Geometry, include_z=False) -> shapely.Geometry:
     """simplified the geometry to remove redundant points where the last and next directions are parallel"""
 
-    coordinates = pygeos.get_coordinates(geo, include_z=include_z)[:-1]
-    points = pygeos.points(coordinates)
+    coordinates = shapely.get_coordinates(geo, include_z=include_z)[:-1]
+    points = shapely.points(coordinates)
     delPoints = []
     # remove overlap points
     for i in range(1, len(points)):
         if Vector(coordinates[i] - coordinates[i - 1]).length(power=True) == 0:
             delPoints.append(i)
     points = np.delete(points, delPoints)
-    coordinates = pygeos.get_coordinates(points, include_z=include_z)
+    coordinates = shapely.get_coordinates(points, include_z=include_z)
     edges = [coordinates[i] - coordinates[i - 1] for i in range(len(coordinates))]
 
     # remove parallel redundant points
@@ -1664,25 +1664,25 @@ def simplify(geo: pygeos.Geometry, include_z=False) -> pygeos.Geometry:
             delPoints.append(i)
     points = np.delete(points, delPoints)
     points = np.append(points, points[0])
-    if pygeos.get_dimensions(geo) == 1:
-        return pygeos.linestrings(pygeos.get_coordinates(points, include_z=include_z))
-    if pygeos.get_dimensions(geo) == 2:
+    if shapely.get_dimensions(geo) == 1:
+        return shapely.linestrings(shapely.get_coordinates(points, include_z=include_z))
+    if shapely.get_dimensions(geo) == 2:
         try:
-            return pygeos.polygons(pygeos.get_coordinates(points, include_z=include_z))
+            return shapely.polygons(shapely.get_coordinates(points, include_z=include_z))
         except Exception as e:
             raise GeometryError(geo, str(e))
 
 
-def split(geo: pygeos.Geometry, spliter: Ray | pygeos.Geometry, normal=None) -> list[list[pygeos.Geometry]]:
+def split(geo: shapely.Geometry, spliter: Ray | shapely.Geometry, normal=None) -> list[list[shapely.Geometry]]:
     """
     Split a polygon geometry using a curve or plane.
     
     Parameters
     ----------
-    geo : pygeos.Geometry
+    geo : shapely.Geometry
         The input polygon geometry to be split. Only polygon geometries are supported.
-    spliter : Ray or pygeos.Geometry
-        The splitting element, which can be a Ray object representing a plane, or a pygeos.Geometry
+    spliter : Ray or shapely.Geometry
+        The splitting element, which can be a Ray object representing a plane, or a shapely.Geometry
         (e.g., line or polygon) used to define the split. If a Ray is provided, it defines both the
         splitting plane and its normal direction.
     normal : array-like or None, optional
@@ -1692,31 +1692,31 @@ def split(geo: pygeos.Geometry, spliter: Ray | pygeos.Geometry, normal=None) -> 
     
     Returns
     -------
-    list[list[pygeos.Geometry]]
+    list[list[shapely.Geometry]]
         A list containing one or more lists of geometric components resulting from the split.
-        Each inner list represents a connected part of the split result, composed of pygeos.Geometry objects.
+        Each inner list represents a connected part of the split result, composed of shapely.Geometry objects.
     """
     """
     split the polygon by curve or plane
     In this version only polygon can be accepted as geo,
-    line(pygoes.Geometry) polygon(pygeos.Geometry) plane(Ray) can be accepted as spliter.
+    line(pygoes.Geometry) polygon(shapely.Geometry) plane(Ray) can be accepted as spliter.
     the normal of the spliter can be automatically calculated.
     Besides, you can send a Ray object as a spliter to create both the normal and spliter plane
     """
     if isinstance(spliter, Ray):
         normal = spliter.direction
         proj = Projection(spliter.origin, spliter.direction)
-        spliter = proj.toWorld(pygeos.polygons(
+        spliter = proj.toWorld(shapely.polygons(
             [[-9999, -9999, 0], [-9999, 9999, 0], [9999, 9999, 0], [9999, -9999, 0], [-9999, -9999, 0]]))
-    elif not isinstance(spliter, pygeos.Geometry):
-        raise Exception(f'wrong type of spliter, except{pygeos.Geometry} or {Ray} got {type(spliter)}')
+    elif not isinstance(spliter, shapely.Geometry):
+        raise Exception(f'wrong type of spliter, except{shapely.Geometry} or {Ray} got {type(spliter)}')
 
     # if spliter is a linestring, call splitByCurve directly
-    if pygeos.get_dimensions(spliter) == 1:
+    if shapely.get_dimensions(spliter) == 1:
         return splitByCurve(geo, spliter)
 
-    coordinates = pygeos.get_coordinates(geo, include_z=True)
-    edges = [[pygeos.points(coordinates[i]), pygeos.points([coordinates[i + 1] - coordinates[i]])] for i in
+    coordinates = shapely.get_coordinates(geo, include_z=True)
+    edges = [[shapely.points(coordinates[i]), shapely.points([coordinates[i + 1] - coordinates[i]])] for i in
              range(len(coordinates) - 1)]
     if normal is None:
         normal = faceNormal(spliter).array
@@ -1730,22 +1730,22 @@ def split(geo: pygeos.Geometry, spliter: Ray | pygeos.Geometry, normal=None) -> 
     intersectPoint = [poi for poi in intersectPoint if poi is not None]
 
     # Sort intersect points according to the order of x, y, and z
-    sortlist = np.array([intersectPoint, pygeos.get_x(intersectPoint), pygeos.get_y(intersectPoint),
-                         pygeos.get_z(intersectPoint)]).T.tolist()
+    sortlist = np.array([intersectPoint, shapely.get_x(intersectPoint), shapely.get_y(intersectPoint),
+                         shapely.get_z(intersectPoint)]).T.tolist()
     sortlist.sort(key=lambda x: (x[3], x[2], x[1]))
 
     # construct 3d split lines
-    spliter = pygeos.linestrings(pygeos.get_coordinates([sortlist[0][0], sortlist[-1][0]]))
+    spliter = shapely.linestrings(shapely.get_coordinates([sortlist[0][0], sortlist[-1][0]]))
     return splitByCurve(geo, spliter)
 
 
-def section(geo: pygeos.Geometry, elevation: float, segment=True) -> list[pygeos.Geometry] | pygeos.Geometry | None:
+def section(geo: shapely.Geometry, elevation: float, segment=True) -> list[shapely.Geometry] | shapely.Geometry | None:
     """Calculate the section for a geometry on given elevation(z value), which can be used to do a section on z
     Return all parts of the section if segment==True
     Otherwise, only the biggest line will be return, it can be used to split the geometry by split() method
     """
-    coordinates = pygeos.get_coordinates(geo)
-    points = pygeos.points([np.append(coor, elevation) for coor in coordinates])
+    coordinates = shapely.get_coordinates(geo)
+    points = shapely.points([np.append(coor, elevation) for coor in coordinates])
 
     points = [poi for poi in points if distance(poi, geo) < geom.POINT_PRECISION]
 
@@ -1757,21 +1757,21 @@ def section(geo: pygeos.Geometry, elevation: float, segment=True) -> list[pygeos
     sort_list.sort(key=lambda x: (x[1], x[2]))
     points = [item[0] for item in sort_list]
     if segment:
-        edges = [pygeos.linestrings(pygeos.get_coordinates(points, include_z=True)[i:i + 2]) for i in
+        edges = [shapely.linestrings(shapely.get_coordinates(points, include_z=True)[i:i + 2]) for i in
                  range(len(points) - 1)]
         secionedges = []
         for edge in edges:
-            if pygeos.contains(geo, edge):
+            if shapely.contains(geo, edge):
                 secionedges.append(edge)
         return secionedges
     else:
-        if pygeos.distance(points[0], points[-1]) > geom.POINT_PRECISION:
-            return pygeos.linestrings(pygeos.get_coordinates([points[0], points[-1]], include_z=True))
+        if shapely.distance(points[0], points[-1]) > geom.POINT_PRECISION:
+            return shapely.linestrings(shapely.get_coordinates([points[0], points[-1]], include_z=True))
         else:
             return None
 
 
-def distance(point, polygon: pygeos.Geometry, normal=None):
+def distance(point, polygon: shapely.Geometry, normal=None):
     """
     Get the distance from a point to a polygon or plane.
     
@@ -1780,7 +1780,7 @@ def distance(point, polygon: pygeos.Geometry, normal=None):
     point : array-like
         The point for which the distance to the polygon or plane is calculated.
         It will be converted to a numpy array internally.
-    polygon : pygeos.Geometry
+    polygon : shapely.Geometry
         A geometric object representing the polygon. Coordinates of the polygon
         are used to compute the distance.
     normal : array-like, optional
@@ -1805,11 +1805,11 @@ def distance(point, polygon: pygeos.Geometry, normal=None):
         normal = faceNormal(polygon).array
     else:
         normal = Vector(normal).array
-    vec = pygeos.get_coordinates(polygon, include_z=True)[0] - point
+    vec = shapely.get_coordinates(polygon, include_z=True)[0] - point
     return np.abs(Vector.dot(vec, normal))
 
 
-def splitByCurveLagacy(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list[list[pygeos.Geometry]]:
+def splitByCurveLagacy(geoBase: shapely.Geometry, curve: shapely.Geometry) -> list[list[shapely.Geometry]]:
     """
     Split a geometry into two parts based on intersection with a dividing curve using legacy projection-based method.
     
@@ -1817,14 +1817,14 @@ def splitByCurveLagacy(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list
     
     Parameters
     ----------
-    geoBase : pygeos.Geometry
+    geoBase : shapely.Geometry
         The base geometry to be split, typically a linestring or polygon.
-    curve : pygeos.Geometry
+    curve : shapely.Geometry
         The curve geometry used as the splitting divider; intersections with `geoBase` determine split locations.
     
     Returns
     -------
-    list[list[pygeos.Geometry]]
+    list[list[shapely.Geometry]]
         A list containing two lists of geometries: the first sublist represents geometries on one side of the split curve,
         and the second sublist represents geometries on the other side. Each sublist contains reconstructed curve segments
         after splitting and re-projection back to world coordinates.
@@ -1833,12 +1833,12 @@ def splitByCurveLagacy(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list
         This function is part of the split function. It should not be used directly.
     """
     proj = Projection(
-        origin=pygeos.points(pygeos.get_coordinates(geoBase, include_z=True)[0]),
+        origin=shapely.points(shapely.get_coordinates(geoBase, include_z=True)[0]),
         unitZ=faceNormal(geoBase)
     )
-    geoBaseProj = pygeos.set_precision(proj.toUV(geoBase), geom.POINT_PRECISION)
-    curveProj = pygeos.set_precision(proj.toUV(curve), geom.POINT_PRECISION)
-    points = pygeos.points(pygeos.get_coordinates(geoBaseProj, include_z=True))
+    geoBaseProj = shapely.set_precision(proj.toUV(geoBase), geom.POINT_PRECISION)
+    curveProj = shapely.set_precision(proj.toUV(curve), geom.POINT_PRECISION)
+    points = shapely.points(shapely.get_coordinates(geoBaseProj, include_z=True))
     geoCollection = [[], []]
     breakPoint = 0
     pointOnCurve = None
@@ -1847,22 +1847,22 @@ def splitByCurveLagacy(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list
     # Start by segmenting the curve according to both sides of the dividing line
     for i in range(len(points) - 1):
         # If the current point is on the split line, move the split point to that point and continue
-        if pygeos.covers(curveProj, points[i]):
+        if shapely.covers(curveProj, points[i]):
             breakPoint = i
             pointOnCurve = None
             continue
 
         # If the current and back points are on opposite sides of z, or the back point is on the dividing line,
         # the segment crosses the dividing line (the current point will not be on the dividing line)
-        edge = pygeos.linestrings(pygeos.get_coordinates([points[i], points[i + 1]]))
-        if pygeos.intersects(edge, curveProj):
+        edge = shapely.linestrings(shapely.get_coordinates([points[i], points[i + 1]]))
+        if shapely.intersects(edge, curveProj):
             subCurve = points[breakPoint:i + 1]
             breakPoint = i + 1
             # Insert last point
             if pointOnCurve is not None:
                 subCurve = np.append([pointOnCurve], subCurve)
             # Insert next point
-            pointOnCurve = pygeos.intersection(edge, curveProj, grid_size=geom.POINT_PRECISION)
+            pointOnCurve = shapely.intersection(edge, curveProj, grid_size=geom.POINT_PRECISION)
             subCurve = np.append(subCurve, pointOnCurve)
             geoCollection[int((side + 1) / 2)].append(subCurve)
             side *= -1
@@ -1884,16 +1884,16 @@ def splitByCurveLagacy(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list
     # the positive and negative shapes, and hollowed out
     for group in [0, 1]:
         collection = []
-        geoCollection[group] = [closeTheCurve(pygeos.linestrings(pygeos.get_coordinates(curve, include_z=True))) for
+        geoCollection[group] = [closeTheCurve(shapely.linestrings(shapely.get_coordinates(curve, include_z=True))) for
                                 curve in geoCollection[group]]
         voidVolume = [1 for i in geoCollection[group]]
         diffDict = {i: [] for i in range(len(geoCollection[group]))}
         for i in range(len(geoCollection[group])):
             for j in range(i, len(geoCollection[group])):
-                if pygeos.contains(geoCollection[group][i], geoCollection[group][j]):
+                if shapely.contains(geoCollection[group][i], geoCollection[group][j]):
                     voidVolume[j] *= -1
                     diffDict[i].append(j)
-                if pygeos.contains(geoCollection[group][j], geoCollection[group][i]):
+                if shapely.contains(geoCollection[group][j], geoCollection[group][i]):
                     voidVolume[i] *= -1
                     diffDict[j].append(i)
 
@@ -1916,13 +1916,13 @@ def splitByCurveLagacy(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list
     return geoCollection
 
 
-def splitOnZ(geoBase: pygeos.Geometry, level: float, EPS: float = 1e-9) -> list[list[pygeos.Geometry]]:
+def splitOnZ(geoBase: shapely.Geometry, level: float, EPS: float = 1e-9) -> list[list[shapely.Geometry]]:
     """
     Simple logic for 3D polygon cutting: insert intersection points → reorder path → split segments → close to rings → classify output
 
     Parameters
     ----------
-    geoBase : pygeos.Geometry
+    geoBase : shapely.Geometry
         3D simple polygon (no inner rings) with z-coordinates
     level : float
         Cutting height (z-coordinate value)
@@ -1931,7 +1931,7 @@ def splitOnZ(geoBase: pygeos.Geometry, level: float, EPS: float = 1e-9) -> list[
 
     Returns
     -------
-    list[list[pygeos.Geometry]]
+    list[list[shapely.Geometry]]
         List containing two sublists:
         - First sublist: Upper polygons (z > level)
         - Second sublist: Lower polygons (z < level)
@@ -1949,7 +1949,7 @@ def splitOnZ(geoBase: pygeos.Geometry, level: float, EPS: float = 1e-9) -> list[
 
     # ------------------- Step 1: Extract coordinates and insert intersection points -------------------
     # Get original 3D coordinates (remove closing point which duplicates first point)
-    coords = pygeos.get_coordinates(geoBase, include_z=True)[:-1].tolist()
+    coords = shapely.get_coordinates(geoBase, include_z=True)[:-1].tolist()
     new_coords = []
     intersections = []  # Store all intersection points with z=level plane
 
@@ -2070,7 +2070,7 @@ def splitOnZ(geoBase: pygeos.Geometry, level: float, EPS: float = 1e-9) -> list[
     # Create upper polygons
     for ring in upper_rings:
         try:
-            poly = pygeos.polygons(ring)
+            poly = shapely.polygons(ring)
             final_polygons_upper.append(poly)
         except Exception:
             continue
@@ -2078,7 +2078,7 @@ def splitOnZ(geoBase: pygeos.Geometry, level: float, EPS: float = 1e-9) -> list[
     # Create lower polygons
     for ring in lower_rings:
         try:
-            poly = pygeos.polygons(ring)
+            poly = shapely.polygons(ring)
             final_polygons_lower.append(poly)
         except Exception:
             continue
@@ -2090,8 +2090,8 @@ def splitOnZ(geoBase: pygeos.Geometry, level: float, EPS: float = 1e-9) -> list[
     return [final_polygons_upper, final_polygons_lower]
 
 
-def splitFace2d(geoBaseProj: pygeos.Geometry, curveProj: pygeos.Geometry) -> list[list[pygeos.Geometry]]:
-    points = pygeos.points(pygeos.get_coordinates(geoBaseProj, include_z=True))
+def splitFace2d(geoBaseProj: shapely.Geometry, curveProj: shapely.Geometry) -> list[list[shapely.Geometry]]:
+    points = shapely.points(shapely.get_coordinates(geoBaseProj, include_z=True))
     geoCollection = [[], []]
     pointOnCurve = []
     curveWithBreakPoint = list(np.array(points))
@@ -2099,14 +2099,14 @@ def splitFace2d(geoBaseProj: pygeos.Geometry, curveProj: pygeos.Geometry) -> lis
     # Start by adding breakPoints
     for i in range(len(points) - 1):
         # If the current point is on the split line, append to pointOnCurve and continue
-        if pygeos.covers(curveProj, points[i]):
+        if shapely.covers(curveProj, points[i]):
             pointOnCurve.append(i)
-        elif not pygeos.covers(curveProj, points[i + 1]):
+        elif not shapely.covers(curveProj, points[i + 1]):
             # If the current and back points are on opposite sides of z, or the back point is on the dividing line,
             # the segment crosses the dividing line (the current point will not be on the dividing line)
-            edge = pygeos.linestrings(pygeos.get_coordinates([points[i], points[i + 1]]))
-            if pygeos.intersects(edge, curveProj):
-                breakPoint = pygeos.intersection(edge, curveProj, grid_size=geom.POINT_PRECISION)
+            edge = shapely.linestrings(shapely.get_coordinates([points[i], points[i + 1]]))
+            if shapely.intersects(edge, curveProj):
+                breakPoint = shapely.intersection(edge, curveProj, grid_size=geom.POINT_PRECISION)
                 shift = len(curveWithBreakPoint) - len(points)
                 curveWithBreakPoint = curveWithBreakPoint[:i + 1 + shift] + [breakPoint] + curveWithBreakPoint[
                                                                                            i + 1 + shift:]
@@ -2120,7 +2120,7 @@ def splitFace2d(geoBaseProj: pygeos.Geometry, curveProj: pygeos.Geometry) -> lis
             print("******GeometryError: Failed to split: overlap")
             return None
 
-    if pygeos.covers(curveProj, points[-1]):
+    if shapely.covers(curveProj, points[-1]):
         pointOnCurve.append(len(curveWithBreakPoint) - 1)
 
     # Translate the pointOnCurve into index
@@ -2154,19 +2154,19 @@ def splitFace2d(geoBaseProj: pygeos.Geometry, curveProj: pygeos.Geometry) -> lis
         collection = []
         geoCollection[group] = [np.array(curveWithBreakPoint)[curve] for curve in geoCollection[group] if
                                 len(curve) > 3]
-        geoCollection[group] = [pygeos.polygons(pygeos.get_coordinates(curve, include_z=True)) for curve in
+        geoCollection[group] = [shapely.polygons(shapely.get_coordinates(curve, include_z=True)) for curve in
                                 geoCollection[group]]
         # faceWorld=[proj.toWorld(faceProj) for faceProj in geoCollection[group]]
-        # z = pygeos.get_coordinates(faceWorld, include_z=True)[:,2]
+        # z = shapely.get_coordinates(faceWorld, include_z=True)[:,2]
         # print(z.min(),z.max())
         voidVolume = [1 for i in geoCollection[group]]
         diffDict = {i: [] for i in range(len(geoCollection[group]))}
         for i in range(len(geoCollection[group])):
             for j in range(i + 1, len(geoCollection[group])):
-                if pygeos.contains(geoCollection[group][i], geoCollection[group][j]):
+                if shapely.contains(geoCollection[group][i], geoCollection[group][j]):
                     voidVolume[j] *= -1
                     diffDict[i].append(j)
-                if pygeos.contains(geoCollection[group][j], geoCollection[group][i]):
+                if shapely.contains(geoCollection[group][j], geoCollection[group][i]):
                     voidVolume[i] *= -1
                     diffDict[j].append(i)
 
@@ -2181,24 +2181,24 @@ def splitFace2d(geoBaseProj: pygeos.Geometry, curveProj: pygeos.Geometry) -> lis
     return geoCollection
 
 
-def splitByCurve(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list[list[pygeos.Geometry]]:
+def splitByCurve(geoBase: shapely.Geometry, curve: shapely.Geometry) -> list[list[shapely.Geometry]]:
     """
     Split a geometric object by a curve using projection and intersection analysis.
     
     Parameters
     ----------
-    geoBase : pygeos.Geometry
+    geoBase : shapely.Geometry
         The base geometry to be split, typically a polygon or linestring in 3D space.
         It serves as the input shape that will be divided based on its intersection with the curve.
-    curve : pygeos.Geometry
+    curve : shapely.Geometry
         A curve (linestring) used to split the geoBase. This curve is projected into the same
         plane as geoBase for intersection calculations.
     
     Returns
     -------
-    list of list of pygeos.Geometry
+    list of list of shapely.Geometry
         A list containing two groups of geometries resulting from the split operation.
-        Each group is a list of pygeos.Geometry objects representing polygons.
+        Each group is a list of shapely.Geometry objects representing polygons.
         The first sublist typically represents one side of the split, and the second sublist
         the other side, with holes properly subtracted based on containment relationships.
     """
@@ -2206,10 +2206,10 @@ def splitByCurve(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list[list[
         This function is part of the split function. It should not be used directly.
     """
     proj = Projection(
-        origin=pygeos.points(pygeos.get_coordinates(geoBase, include_z=True)[0]),
+        origin=shapely.points(shapely.get_coordinates(geoBase, include_z=True)[0]),
         unitZ=faceNormal(geoBase)
     )
-    # z=pygeos.get_coordinates(geoBase, include_z=True)
+    # z=shapely.get_coordinates(geoBase, include_z=True)
     # print(z.min(),z.max())
     # print(curve)
     geoBaseProj = proj.toUV(geoBase)
@@ -2229,20 +2229,20 @@ def splitByCurve(geoBase: pygeos.Geometry, curve: pygeos.Geometry) -> list[list[
     return geoCollection
 
 
-def lineIntersection(l1: pygeos.Geometry, l2: pygeos.Geometry):
+def lineIntersection(l1: shapely.Geometry, l2: shapely.Geometry):
     """
     Compute the intersection point of two line segments using vector mathematics.
     
     Parameters
     ----------
-    l1 : pygeos.Geometry
+    l1 : shapely.Geometry
         A LineString geometry representing the first line segment.
-    l2 : pygeos.Geometry
+    l2 : shapely.Geometry
         A LineString geometry representing the second line segment.
     
     Returns
     -------
-    pygeos.Geometry
+    shapely.Geometry
         A Point geometry representing the intersection point of the two lines,
         or None if the lines are parallel or nearly collinear.
     """
@@ -2254,42 +2254,42 @@ def lineIntersection(l1: pygeos.Geometry, l2: pygeos.Geometry):
         which means: np.cross(o1-o2,v2) + np.cross(t*v1,v2)== np.cross(o1-o2,v2) + t * np.cross(v1,v2) ==0
         which means: t=-np.cross(o1-o2,v2)/np.cross(v1,v2)
     '''
-    edge1 = pygeos.get_coordinates(l1)
-    edge2 = pygeos.get_coordinates(l2)
+    edge1 = shapely.get_coordinates(l1)
+    edge2 = shapely.get_coordinates(l2)
     o1, v1 = edge1[0], edge1[1] - edge1[0]
     o2, v2 = edge2[0], edge2[1] - edge2[0]
     if np.abs(Vector.dot(Vector(v1).unit(), Vector(v2).unit())) > 0.999: return None
     t = -np.cross(o1 - o2, v2) / np.cross(v1, v2)
     p = o1 + t * v1
-    return pygeos.points(p)
+    return shapely.points(p)
 
 
-def closeTheCurve(geo: pygeos.Geometry):
+def closeTheCurve(geo: shapely.Geometry):
     """
     Close an open geometric curve by adding the first coordinate to the end if not already closed.
     
     Parameters
     ----------
-    geo : pygeos.Geometry
+    geo : shapely.Geometry
         A geometric object (e.g., LineString) that may be open or closed. If the geometry is already closed,
         it is returned as-is.
     
     Returns
     -------
-    pygeos.Geometry
+    shapely.Geometry
         A new geometry where the input curve is closed by connecting the last point to the first.
         If the input was already closed, the original geometry is returned.
     """
     # Ver 2.0 使曲线闭合
-    if pygeos.is_closed(geo):
+    if shapely.is_closed(geo):
         return geo
-    coordinates = pygeos.get_coordinates(geo, include_z=True).tolist()
+    coordinates = shapely.get_coordinates(geo, include_z=True).tolist()
     coordinates.append(coordinates[0])
-    return pygeos.polygons(coordinates)
+    return shapely.polygons(coordinates)
 
 
 # 旧版本的vector计算
-# 向量计算 / 整合了pygeos.Geometry类型，比np的泛用性广
+# 向量计算 / 整合了shapely.Geometry类型，比np的泛用性广
 # def vector.dot(vec1, vec2):
 #    vec1 = vector(vec1).array
 #    vec2 = vector(vec2).array
@@ -2354,8 +2354,8 @@ Compute a normalized angular measure of a 2D vector relative to the positive x-a
 
 Parameters
 ----------
-vec : array-like or pygeos.Geometry
-    Input 2D vector. If a pygeos geometry is provided, it will be converted to a numpy array.
+vec : array-like or shapely.Geometry
+    Input 2D vector. If a shapely geometry is provided, it will be converted to a numpy array.
     Must have at least two components (x, y).
 
 Returns
@@ -2370,7 +2370,7 @@ float or None
 #    返回值与沿逆时针方向[-3,1]的角度大小正相关
 #    '''
 #
-#    if type(vec) == pygeos.Geometry:
+#    if type(vec) == shapely.Geometry:
 #        vec = vector.to_array(vec, False)
 #    if vec_length(vec) == 0:
 #        print('zero length vector')

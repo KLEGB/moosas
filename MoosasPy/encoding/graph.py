@@ -1,5 +1,5 @@
 import os
-import pygeos
+import shapely
 import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
@@ -50,7 +50,7 @@ class OBB:
             obb_params: dict，包含 OBB 相关参数
         """
         # 以z轴和法向量创建相对坐标架
-        geometry = pygeos.multipoints(points)
+        geometry = shapely.multipoints(points)
         z_axis = np.array([0,0,1])
         z_r = normal
         
@@ -58,11 +58,11 @@ class OBB:
         if np.abs(z_r[0]) <= 1e-3 and np.abs(z_r[1]) <= 1e-3:  # 法向量判定                  
 
             z_r = z_axis
-            # 使用 pygeos 计算最小外接矩形（OBB），返回旋转的包围盒
-            min_rotated_rectangle = pygeos.minimum_rotated_rectangle(geometry)
+            # 使用 shapely 计算最小外接矩形（OBB），返回旋转的包围盒
+            min_rotated_rectangle = shapely.minimum_rotated_rectangle(geometry)
             
             # 获取 OBB 参数
-            obb_coords = np.array(pygeos.get_coordinates(min_rotated_rectangle, include_z=True)) [:-1] 
+            obb_coords = np.array(shapely.get_coordinates(min_rotated_rectangle, include_z=True)) [:-1] 
             obb_coords = np.nan_to_num(obb_coords, nan=points[0,2])
             obb_coords[:,2] = (np.min(points[:, 2])+ np.max(points[:, 2]))/2
 

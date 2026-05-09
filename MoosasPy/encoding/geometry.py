@@ -7,7 +7,7 @@ from typing import List, Tuple, Union
 
 from scipy.spatial.transform import Rotation as R
 
-from ..utils import np, pygeos
+from ..utils import np, shapely
 
 
 class GeometryBasic:
@@ -471,14 +471,14 @@ class GeometryOperator:
 
 def create_obb(points, normal, min_scale=0.1):
     """Create an oriented bounding box (OBB) for a set of points."""
-    geometry = pygeos.multipoints(points)
+    geometry = shapely.multipoints(points)
     z_axis = np.array([0, 0, 1])
     z_r = normal
 
     if np.abs(z_r[0]) <= 1e-3 and np.abs(z_r[1]) <= 1e-3:
         z_r = z_axis
-        min_rotated_rectangle = pygeos.minimum_rotated_rectangle(geometry)
-        obb_coords = np.array(pygeos.get_coordinates(min_rotated_rectangle, include_z=True))[:-1]
+        min_rotated_rectangle = shapely.minimum_rotated_rectangle(geometry)
+        obb_coords = np.array(shapely.get_coordinates(min_rotated_rectangle, include_z=True))[:-1]
         obb_coords = np.nan_to_num(obb_coords, nan=points[0, 2])
         obb_coords[:, 2] = (np.min(points[:, 2]) + np.max(points[:, 2])) / 2
 

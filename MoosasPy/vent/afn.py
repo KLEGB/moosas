@@ -73,7 +73,7 @@ class AfnZone(object):
         theZone["position_y"] = pos[1]
         theZone["position_z"] = pos[2]
         theZone["boundary"] = ' '.join(
-            [' '.join(coor) for coor in pygeos.get_coordinates(space.edge.force_2d()).astype(str)])
+            [' '.join(coor) for coor in shapely.get_coordinates(space.edge.force_2d()).astype(str)])
         theZone['element'] = space
         z = cls(**theZone)
         z.heatLoad = z.calculateHeatLoad()
@@ -150,7 +150,7 @@ class AfnZone(object):
             - temperature (float): Initial zone temperature in Celsius (C).
             - volume (float): Zone volume in cubic meters (m³).
             - position (object): Object with x, y, z attributes representing position in meters (m).
-            - edge (pygeos geometry): Geometry representing the zone boundary; must have `force_2d()` method and coordinates accessible via `pygeos.get_coordinates()`.
+            - edge (shapely geometry): Geometry representing the zone boundary; must have `force_2d()` method and coordinates accessible via `shapely.get_coordinates()`.
         
         Returns
         -------
@@ -266,7 +266,7 @@ class AfnPath(object):
             boundary points lying on the minimum Z-plane.
         """
         if self.pathWidth is None:
-            coordinates = pygeos.get_coordinates(self.element.face, include_z=True)
+            coordinates = shapely.get_coordinates(self.element.face, include_z=True)
             minZ = np.min(coordinates[:, 2])
             sortlist = [[coor[0], coor[1]] for coor in coordinates if
                         minZ - geom.POINT_PRECISION < coor[2] < minZ + geom.POINT_PRECISION]

@@ -11,7 +11,7 @@ import re
 from .geos import Projection, Vector, faceNormal, simplify, overlapArea, equals, selfIntersect, makeValid, bBox
 from ..encoding.convexify import triangulate2dFace
 from ..utils import generate_code, searchBy, mixItemListToObject, mixItemListToList, encodeParams, GeometryError
-from ..utils import pygeos, np, ET
+from ..utils import shapely, np, ET
 from ..utils.constant import geom
 
 # 不做inch meter转换
@@ -55,23 +55,23 @@ class MoosasGeometry(object):
     """
     __slots__ = ['__face', '__normal', '__faceId', '__category', '__holes', 'delete', 'flip']
 
-    def __init__(self, face: pygeos.Geometry | np.ndarray, faceId, normal: pygeos.Geometry | Vector | np.ndarray = None,
+    def __init__(self, face: shapely.Geometry | np.ndarray, faceId, normal: shapely.Geometry | Vector | np.ndarray = None,
                  category=0,
-                 holes: list[pygeos.Geometry | np.ndarray] = None, errors='ignore'):
+                 holes: list[shapely.Geometry | np.ndarray] = None, errors='ignore'):
         """
         Initialize a polygon object with face geometry, identifier, normal vector, and optional holes.
         
         Parameters
         ----------
-        face : pygeos.Geometry or np.ndarray
+        face : shapely.Geometry or np.ndarray
             The outer boundary of the polygon as a geometry object or coordinate array.
         faceId : hashable
             Identifier for the face, converted to string internally.
-        normal : pygeos.Geometry or Vector or np.ndarray, optional
+        normal : shapely.Geometry or Vector or np.ndarray, optional
             Normal vector of the face; if None, computed automatically using faceNormal.
         category : int, default 0
             Category label associated with the face.
-        holes : list of pygeos.Geometry or np.ndarray, optional
+        holes : list of shapely.Geometry or np.ndarray, optional
             List of inner boundaries (holes) within the face; defaults to empty list.
         errors : {'ignore', 'raise'}, default 'ignore'
             Specifies behavior when invalid geometry is detected: 'ignore' prints a warning,
@@ -112,9 +112,9 @@ class MoosasGeometry(object):
         
         Parameters
         ----------
-        face : array-like or pygeos.Geometry
-            The input face or hole, either as a PyGEOS geometry object or a sequence of coordinate points.
-            If it is a PyGEOS geometry, coordinates are extracted using `pygeos.get_coordinates` with Z included.
+        face : array-like or shapely.Geometry
+            The input face or hole, either as a Shapely geometry object or a sequence of coordinate points.
+            If it is a Shapely geometry, coordinates are extracted using `shapely.get_coordinates` with Z included.
         
         Returns
         -------
@@ -126,13 +126,13 @@ class MoosasGeometry(object):
         """preprocess the face or holes."""
 
         # force planner by project and reproject
-        face = pygeos.polygons(face) if not isinstance(face, pygeos.Geometry) else face
-        proj = Projection(origin=pygeos.get_coordinates(face, include_z=True)[0], unitZ=faceNormal(face))
+        face = shapely.polygons(face) if not isinstance(face, shapely.Geometry) else face
+        proj = Projection(origin=shapely.get_coordinates(face, include_z=True)[0], unitZ=faceNormal(face))
         face = proj.toUV(face)
-        face = pygeos.force_3d(pygeos.force_2d(face), z=0)
+        face = shapely.force_3d(shapely.force_2d(face), z=0)
         face = proj.toWorld(face)
 
-        face = pygeos.get_coordinates(face, include_z=True)
+        face = shapely.get_coordinates(face, include_z=True)
         _coordinates = []
         for point in face:
             if len(point) == 2:
@@ -168,17 +168,17 @@ class MoosasGeometry(object):
         """
         geos = [self.__face] + self.__holes
         for geo in geos:
-            # if not pygeos.points(geo[-1]) == pygeos.points(geo[0]):
+            # if not shapely.points(geo[-1]) == shapely.points(geo[0]):
             #             #     return f"not a closed polygon"
-            if selfIntersect(pygeos.polygons(geo)):
+            if selfIntersect(shapely.polygons(geo)):
                 return f"self-intersect geo"
         # for hole in self.holes:
-        #     if not pygeos.contains(pygeos.polygons(self.boundary), pygeos.polygons(hole)):
+        #     if not shapely.contains(shapely.polygons(self.boundary), shapely.polygons(hole)):
         #         return "holes outside"
         return None
 
     @property
-    def face(self) -> pygeos.Geometry:
+    def face(self) -> shapely.Geometry:
         """
         Return the face geometry of the object as a polygon.
         
@@ -189,11 +189,11 @@ class MoosasGeometry(object):
         
         Returns
         -------
-        pygeos.Geometry
-            A PyGEOS geometry representing the polygon formed by the boundary and optional holes.
+        shapely.Geometry
+            A Shapely geometry representing the polygon formed by the boundary and optional holes.
         """
         holes = self.holes if len(self.__holes) > 0 else None
-        return pygeos.polygons(geometries=self.boundary, holes=holes)
+        return shapely.polygons(geometries=self.boundary, holes=holes)
 
     @property
     def boundary(self):
@@ -201,7 +201,7 @@ class MoosasGeometry(object):
         Boundary of the face as a LinearRing.
         
         Returns a LinearRing geometry representing the boundary of the face
-        using the pygeos.linearrings function applied to the internal face data.
+        using the shapely.linearrings function applied to the internal face data.
         
         Parameters
         ----------
@@ -210,13 +210,13 @@ class MoosasGeometry(object):
         
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
             A LinearRing geometry representing the boundary of the face.
         """
-        return pygeos.linearrings(self.__face)
+        return shapely.linearrings(self.__face)
 
     @property
-    def normal(self) -> pygeos.Geometry:
+    def normal(self) -> shapely.Geometry:
         """
         Geometry of the normal vector, optionally flipped.
         
@@ -228,7 +228,7 @@ class MoosasGeometry(object):
         
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
             The geometry of the normal vector. If `self.flip` is True, returns the negated
             normal's geometry; otherwise, returns the original normal's geometry.
         """
@@ -299,11 +299,11 @@ class MoosasGeometry(object):
                 self.__category = 1
 
     @property
-    def holes(self) -> list[pygeos.Geometry]:
+    def holes(self) -> list[shapely.Geometry]:
         """
         List of hole geometries as linearrings.
         
-        Returns a list of hole geometries in the object, converted to linearrings using pygeos.
+        Returns a list of hole geometries in the object, converted to linearrings using shapely.
         
         Parameters
         ----------
@@ -312,17 +312,17 @@ class MoosasGeometry(object):
         
         Returns
         -------
-        list of pygeos.Geometry
-            A list of pygeos Geometry objects representing the holes as linearrings.
+        list of shapely.Geometry
+            A list of shapely Geometry objects representing the holes as linearrings.
         """
-        return [pygeos.linearrings(hole) for hole in self.__holes]
+        return [shapely.linearrings(hole) for hole in self.__holes]
 
     def getEdgeStr(self) -> list[str]:
         """get a unique edge string of the boundary, ignore the direction of the edge."""
         faces = [self.boundary] + self.holes
         edge_str_s = {}
         for face in faces:
-            coors = pygeos.get_coordinates(face, include_z=True)
+            coors = shapely.get_coordinates(face, include_z=True)
 
             for i in range(1, len(coors)):
                 str1, str2 = '', ''
@@ -481,7 +481,7 @@ class MoosasElement(object):
         return glsId
 
     @property
-    def face(self) -> pygeos.Geometry | np.ndarray[pygeos.Geometry]:
+    def face(self) -> shapely.Geometry | np.ndarray[shapely.Geometry]:
         """if the element only contains one face, a pygoes.Geometry will be return
         if you want to get a list anyway,
         you can call mixItemListToList() func in utils.tools.
@@ -489,26 +489,26 @@ class MoosasElement(object):
         return mixItemListToObject([geo.face for geo in self.__geometries])
 
     @property
-    def mergedFace(self) -> pygeos.Geometry:
+    def mergedFace(self) -> shapely.Geometry:
         """return a single face merging all faces contained in this element"""
         if len(self.__geometries) == 1:
             return self.__geometries[0].face
-        proj = Projection(origin=np.mean(pygeos.get_coordinates(self.face, include_z=True), axis=0), unitZ=self.normal)
+        proj = Projection(origin=np.mean(shapely.get_coordinates(self.face, include_z=True), axis=0), unitZ=self.normal)
         UVFaces = [proj.toUV(g) for g in self.face]
-        mergedUVFace = pygeos.force_3d(pygeos.union_all(pygeos.force_2d(UVFaces)), z=0)
+        mergedUVFace = shapely.force_3d(shapely.union_all(shapely.force_2d(UVFaces)), z=0)
         return proj.toWorld(mergedUVFace)
 
     @property
-    def holes(self) -> pygeos.Geometry | np.ndarray[pygeos.Geometry]:
+    def holes(self) -> shapely.Geometry | np.ndarray[shapely.Geometry]:
         """
         List of hole geometries from all polygons in the collection.
         
         Returns a flattened list of hole geometries extracted from each polygon 
-        in the internal geometries array. Each hole is represented as a pygeos Geometry object.
+        in the internal geometries array. Each hole is represented as a shapely Geometry object.
         
         Returns
         -------
-        pygeos.Geometry or numpy.ndarray of pygeos.Geometry
+        shapely.Geometry or numpy.ndarray of shapely.Geometry
             A list or array containing the hole geometries from all polygons.
         """
         return [h for geo in self.__geometries for h in geo.holes]
@@ -521,7 +521,7 @@ class MoosasElement(object):
             return Vector(self.__geometries[0].normal).uniform.unit().array
 
         # PCA1: get covariance matrix
-        coordinates = pygeos.get_coordinates([geo.face for geo in self.__geometries], include_z=True) - np.array(
+        coordinates = shapely.get_coordinates([geo.face for geo in self.__geometries], include_z=True) - np.array(
             self.getWeightCenter())
         C = np.zeros((3, 3))
         for coor in coordinates:
@@ -592,7 +592,7 @@ class MoosasElement(object):
         for glsFace in self.glazingElement:
             gFace = np.append(gFace, glsFace.face)
         areaGlazing = self.area3d(faces=gFace)
-        surface = [pygeos.polygons(pygeos.get_exterior_ring(f)) for f in mixItemListToList(self.face)]
+        surface = [shapely.polygons(shapely.get_exterior_ring(f)) for f in mixItemListToList(self.face)]
         areaSurface = self.area3d(faces=surface)
         return areaGlazing / areaSurface
 
@@ -712,10 +712,10 @@ class MoosasElement(object):
             faces = np.array(self.face).flatten()
         # print(self.face)
         # [print(faceNormal(face), self.normal) for face in faces]
-        area = np.sum([pygeos.area(trans.toUV(face)) for face in faces]).item()
+        area = np.sum([shapely.area(trans.toUV(face)) for face in faces]).item()
         return area
 
-    def faceUV(self, uniform=False) -> list[pygeos.Geometry]:
+    def faceUV(self, uniform=False) -> list[shapely.Geometry]:
         """
         Get the UV-projected faces of a surface, optionally normalized to a unit square.
         
@@ -727,7 +727,7 @@ class MoosasElement(object):
         
         Returns
         -------
-        list of pygeos.Geometry
+        list of shapely.Geometry
             A list of 2D geometries representing the UV-projected faces. If `uniform` is True,
             the coordinates are scaled to the unit square; otherwise, they are in raw UV space.
         """
@@ -736,24 +736,24 @@ class MoosasElement(object):
         """
         trans = Projection(self.getWeightCenter(), self.normal)
         faces = np.array(self.face).flatten()
-        faces = [pygeos.force_2d(trans.toUV(face)) for face in faces]
+        faces = [shapely.force_2d(trans.toUV(face)) for face in faces]
         if uniform:
-            boundaryBox = pygeos.get_coordinates(faces)
+            boundaryBox = shapely.get_coordinates(faces)
             boundaryBox = [[np.min(boundaryBox.T[0]), np.min(boundaryBox.T[1])],
                            [np.max(boundaryBox.T[0]), np.max(boundaryBox.T[1])]]
             uniformFaces = []
             for face in faces:
-                face = pygeos.get_coordinates(face)
+                face = shapely.get_coordinates(face)
                 for i in range(len(face)):
                     face[i][0] = (face[i][0] - boundaryBox[0][0]) / (boundaryBox[1][0] - boundaryBox[0][0])
                     face[i][1] = (face[i][1] - boundaryBox[0][1]) / (boundaryBox[1][1] - boundaryBox[0][1])
-                uniformFaces.append(pygeos.polygons(face))
+                uniformFaces.append(shapely.polygons(face))
 
             return uniformFaces
         else:
             return faces
 
-    def glazingUV(self, uniform=False) -> list[pygeos.Geometry]:
+    def glazingUV(self, uniform=False) -> list[shapely.Geometry]:
         """
         Get UV-projected glazing faces from the surface.
         
@@ -767,7 +767,7 @@ class MoosasElement(object):
         
         Returns
         -------
-        list of pygeos.Geometry
+        list of shapely.Geometry
             A list of geometries representing the UV-projected glazing faces. If `uniform` is True, 
             the coordinates are normalized; otherwise, they are in raw UV space.
         """
@@ -783,16 +783,16 @@ class MoosasElement(object):
             trans = Projection(self.getWeightCenter(), self.normal)
             faces.append(trans.toUV(gface))
         if uniform:
-            boundaryBox = pygeos.get_coordinates(np.array(self.face).flatten())
+            boundaryBox = shapely.get_coordinates(np.array(self.face).flatten())
             boundaryBox = [[np.min(boundaryBox.T[0]), np.min(boundaryBox.T[1])],
                            [np.max(boundaryBox.T[0]), np.max(boundaryBox.T[1])]]
             uniformFaces = []
             for face in faces:
-                face = pygeos.get_coordinates(face)
+                face = shapely.get_coordinates(face)
                 for i in range(len(face)):
                     face[i][0] = (face[i][0] - boundaryBox[0][0]) / (boundaryBox[1][0] - boundaryBox[0][0])
                     face[i][1] = (face[i][1] - boundaryBox[0][1]) / (boundaryBox[1][1] - boundaryBox[0][1])
-                uniformFaces.append(pygeos.polygons(face))
+                uniformFaces.append(shapely.polygons(face))
             return uniformFaces
         else:
             return faces
@@ -812,7 +812,7 @@ class MoosasElement(object):
         ----------
         self : object
             The instance of the class containing the `face` attribute, which is a geometric object 
-            supported by pygeos representing a 2D or 3D polygonal face.
+            supported by shapely representing a 2D or 3D polygonal face.
         
         Returns
         -------
@@ -820,7 +820,7 @@ class MoosasElement(object):
             A 1D numpy array of shape (3,) containing the x, y, and z coordinates of the centroid, 
             computed as the mean of the face's vertex coordinates.
         """
-        point_list = pygeos.get_coordinates(self.face, include_z=True)[:-1]
+        point_list = shapely.get_coordinates(self.face, include_z=True)[:-1]
         return np.array([np.mean(point_list.T[0]), np.mean(point_list.T[1]), np.mean(point_list.T[2])])
 
     def add_glazing(self, glazingObject: MoosasGlazing | MoosasSkylight):
@@ -906,11 +906,11 @@ class MoosasElement(object):
         for gls in other.glazingElement:
             self.add_glazing(gls)
 
-    def force_2d(self) -> pygeos.Geometry:
-        """return a linestring formatted in pygeos,or an array vector object"""
+    def force_2d(self) -> shapely.Geometry:
+        """return a linestring formatted in shapely,or an array vector object"""
         raise NotImplementedError("force_2d method should be implemented in child class")
 
-    def representation(self) -> pygeos.Geometry:
+    def representation(self) -> shapely.Geometry:
         """return a simplified representation for the geometry"""
         raise NotImplementedError("representation method should be implemented in child class")
 
@@ -999,7 +999,7 @@ class MoosasElement(object):
             obj.text = str(' '.join(self.neighbor[key]))
         if writeGeometry:
             geo = ET.SubElement(geometry, "geometries")
-            for pts in pygeos.get_coordinates(self.face, include_z=True).astype(str):
+            for pts in shapely.get_coordinates(self.face, include_z=True).astype(str):
                 ET.SubElement(geo, "pt").text = ' '.join(pts)
 
         return geometry
@@ -1054,7 +1054,7 @@ class MoosasFace(MoosasElement):
                                          space=space, glazingId=glazingId, uid=uid)
         self.parentFloors: list[MoosasFloor] = []
         # calculates the plane elevation
-        pointlist = pygeos.get_coordinates(self.face, include_z=True)
+        pointlist = shapely.get_coordinates(self.face, include_z=True)
         coordinates_z = pointlist[:, 2]
         # Ver1.2 Changing to an average height to define the surface height is prone to errors on the bottom surface
         _facebotheight = np.round(np.mean(coordinates_z), 3)
@@ -1095,7 +1095,7 @@ class MoosasFace(MoosasElement):
             model.builtData.elements[fid] = faceElement
         return faceElement
 
-    def force_2d(self, region=True) -> pygeos.Geometry:
+    def force_2d(self, region=True) -> shapely.Geometry:
         """
         Force the geometry into 2 dimensions.
         
@@ -1106,12 +1106,12 @@ class MoosasFace(MoosasElement):
         
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
             The input geometry converted to 2D.
         """
         # region is an useless arg to ensure consistency
 
-        return pygeos.force_2d(self.face)
+        return shapely.force_2d(self.face)
 
     def to_xml(self, model: MoosasContainer, Element_tag='face', writeGeometry=False):
         """
@@ -1153,7 +1153,7 @@ class MoosasFace(MoosasElement):
         """
         raise Exception("MoosasFace cannot used to dissolve")
 
-    def representation(self) -> pygeos.Geometry:
+    def representation(self) -> shapely.Geometry:
         """
         Return a 3D geometric representation of the object with specified elevation.
         
@@ -1165,10 +1165,10 @@ class MoosasFace(MoosasElement):
         
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
             A 3D geometry created by converting the 2D forced geometry to 3D using the given elevation.
         """
-        return pygeos.force_3d(self.force_2d(), z=self.elevation)
+        return shapely.force_3d(self.force_2d(), z=self.elevation)
 
 
 class MoosasSkylight(MoosasFace):
@@ -1323,7 +1323,7 @@ class MoosasWall(MoosasElement):
             uid = f"wall_{mixItemListToList(faceId)[0]}" if uid is None else uid
         super(MoosasWall, self).__init__(model, faceId, level=level, offset=offset, glazingElement=glazingElement,
                                          space=space, glazingId=glazingId, uid=uid)
-        pointlist = pygeos.get_coordinates(self.face, include_z=True)
+        pointlist = shapely.get_coordinates(self.face, include_z=True)
         self.toplevel = None
         self.isOuter = True
         self.orientation: Vector = Vector(self.normal)
@@ -1391,14 +1391,14 @@ class MoosasWall(MoosasElement):
         return faceElement
 
     @classmethod
-    def fromProjection(cls, prjLine: pygeos.Geometry, bottom: float, top: float, model: MoosasContainer,
+    def fromProjection(cls, prjLine: shapely.Geometry, bottom: float, top: float, model: MoosasContainer,
                        airBoundary=False):
         """
         Create a wall or glazing object from a 2D projection line and elevation bounds.
         
         Parameters
         ----------
-        prjLine : pygeos.Geometry
+        prjLine : shapely.Geometry
             A 2D line geometry representing the projection of the wall.
         bottom : float
             The bottom elevation (z-coordinate) of the wall.
@@ -1414,7 +1414,7 @@ class MoosasWall(MoosasElement):
         wall : cls
             An instance of the class (e.g., Wall) created from the projected geometry and added to the model.
         """
-        stPoint, edPoint = pygeos.get_coordinates(prjLine)
+        stPoint, edPoint = shapely.get_coordinates(prjLine)
         airBound = [
             np.append(stPoint, bottom),
             np.append(edPoint, bottom),
@@ -1424,18 +1424,18 @@ class MoosasWall(MoosasElement):
         ]
 
         if airBoundary:
-            idx = model.includeGeo(pygeos.polygons(airBound), cat=2)
+            idx = model.includeGeo(shapely.polygons(airBound), cat=2)
             wall = cls(model, idx)
             gls = MoosasGlazing(model, idx)
             model.glazingList = np.append(model.glazingList, gls)
             wall.add_glazing(gls)
         else:
-            idx = model.includeGeo(pygeos.polygons(airBound), cat=0)
+            idx = model.includeGeo(shapely.polygons(airBound), cat=0)
             wall = cls(model, idx)
         return wall
 
     @classmethod
-    def break_(cls, wall: MoosasWall, breakPoints: list[pygeos.Geometry] | pygeos.Geometry):
+    def break_(cls, wall: MoosasWall, breakPoints: list[shapely.Geometry] | shapely.Geometry):
         """
         Break a wall into multiple segments at specified break points.
         
@@ -1445,8 +1445,8 @@ class MoosasWall(MoosasElement):
             The class instance (used as part of a classmethod).
         wall : MoosasWall
             The wall object to be broken into segments. Must have 2D geometry and level/top-level attributes.
-        breakPoints : list[pygeos.Geometry] or pygeos.Geometry
-            A single point or a list of pygeos geometry points where the wall should be broken.
+        breakPoints : list[shapely.Geometry] or shapely.Geometry
+            A single point or a list of shapely geometry points where the wall should be broken.
         
         Returns
         -------
@@ -1454,21 +1454,21 @@ class MoosasWall(MoosasElement):
             A list of new wall objects (type determined by `cls`) created by breaking the original wall at the specified points.
             If insufficient break points are provided, returns a list containing the original unbroken wall.
         """
-        twins = pygeos.get_coordinates(wall.force_2d())
+        twins = shapely.get_coordinates(wall.force_2d())
         if len(twins) < 2:
             return [wall]
         bottom = wall.level + wall.offset
         top = wall.toplevel + wall.topoffset
         unit = Vector(twins[1] - twins[0]).unit()
         breakPoints = np.array([breakPoints]).flatten()
-        breakPoints = np.append(pygeos.points(twins), breakPoints)
+        breakPoints = np.append(shapely.points(twins), breakPoints)
         for i, bp in enumerate(breakPoints):
-            vecBp = Vector(pygeos.get_coordinates(bp)[0] - twins[0])
+            vecBp = Vector(shapely.get_coordinates(bp)[0] - twins[0])
             breakPoints[i] = Vector(unit * Vector.dot(vecBp, unit) + Vector(twins[0])).geometry
-        # breakPoints = [breakP for breakP in breakPoints if pygeos.contains(wall.force_2d(), breakP)]
-        breakPoints = pygeos.force_2d(breakPoints)
+        # breakPoints = [breakP for breakP in breakPoints if shapely.contains(wall.force_2d(), breakP)]
+        breakPoints = shapely.force_2d(breakPoints)
 
-        coor = pygeos.get_coordinates(breakPoints)
+        coor = shapely.get_coordinates(breakPoints)
         argIdx = np.lexsort((coor[:, 0], coor[:, 1]))
         st, ed = list(argIdx).index(0), list(argIdx).index(1)
         argIdx = argIdx[min(st, ed):max(st, ed) + 1]
@@ -1482,14 +1482,14 @@ class MoosasWall(MoosasElement):
         return newWalls
 
     @classmethod
-    def fromSeriesPoint(cls, breakPoints: list[pygeos.Geometry] | pygeos.Geometry, bottom: float, top: float,
+    def fromSeriesPoint(cls, breakPoints: list[shapely.Geometry] | shapely.Geometry, bottom: float, top: float,
                         gls: list[MoosasGlazing], model: MoosasContainer) -> list[MoosasWall]:
         """
         Partition walls based on break points and reassign glazing elements.
         
         Parameters
         ----------
-        breakPoints : list[pygeos.Geometry] or pygeos.Geometry
+        breakPoints : list[shapely.Geometry] or shapely.Geometry
             A geometry or list of geometries representing the points where walls are to be split.
         bottom : float
             The bottom elevation for the generated wall segments.
@@ -1509,13 +1509,13 @@ class MoosasWall(MoosasElement):
         """partition the walls by sorting their coordinates and making polygon using the top and bottom boundaries
         the glazing of all walls will be collected and try to attach to the new wall again.
         """
-        coor = list(pygeos.get_coordinates(breakPoints))
+        coor = list(shapely.get_coordinates(breakPoints))
         coor.sort(key=lambda x: (x[0], x[1]))
 
         wallNew: list[MoosasWall] = []
         for thisPoi, nextPoi in zip(coor[:-1], coor[1:]):
             if Vector(thisPoi - nextPoi).length() > geom.POINT_PRECISION:
-                edges = pygeos.linestrings([thisPoi, nextPoi])
+                edges = shapely.linestrings([thisPoi, nextPoi])
                 wallNew.append(cls.fromProjection(edges, bottom, top, model))
         # oldGls = len(gls)
         gls = [newg for g in gls for newg in MoosasGlazing.break_(g, breakPoints)]
@@ -1526,7 +1526,7 @@ class MoosasWall(MoosasElement):
                 if not glazing in model.glazingList:
                     model.glazingList = list(np.append(model.glazingList, glazing))
                 for wall in wallNew:
-                    if pygeos.contains(wall.force_2d(), glazing.force_2d()):
+                    if shapely.contains(wall.force_2d(), glazing.force_2d()):
                         wall.add_glazing(glazing)
                         break
 
@@ -1566,7 +1566,7 @@ class MoosasWall(MoosasElement):
         self : object
             The instance of the class containing the face attribute and methods.
             Must have a `face` attribute accessible via `self.face` that represents
-            a geometry object compatible with pygeos, and a `geom.POINT_PRECISION`
+            a geometry object compatible with shapely, and a `geom.POINT_PRECISION`
             constant for precision control.
         
         Returns
@@ -1576,20 +1576,20 @@ class MoosasWall(MoosasElement):
             `__botProjection` and `__topProjection` by setting them to lists of projected
             2D points (with Z-coordinate filtered) at specified precision.
         """
-        pointlist = pygeos.get_coordinates(self.face, include_z=True)
+        pointlist = shapely.get_coordinates(self.face, include_z=True)
         bottom = np.min(pointlist[:, 2])
         above = np.max(pointlist[:, 2])
         self.__botProjection = []
         for _point in pointlist:
             if np.abs(_point[2] - bottom) < geom.POINT_PRECISION:
-                self.__botProjection.append(pygeos.set_precision(pygeos.points(_point), geom.POINT_PRECISION))
+                self.__botProjection.append(shapely.set_precision(shapely.points(_point), geom.POINT_PRECISION))
         self.__topProjection = []
         for _point in pointlist:
             if np.abs(_point[2] - above) < geom.POINT_PRECISION:
-                self.__topProjection.append(pygeos.set_precision(pygeos.points(_point), geom.POINT_PRECISION))
+                self.__topProjection.append(shapely.set_precision(shapely.points(_point), geom.POINT_PRECISION))
 
     # conceptual method in the based class
-    def force_2d(self, top=False, region=False) -> pygeos.Geometry | None:
+    def force_2d(self, top=False, region=False) -> shapely.Geometry | None:
         """
         Project the 3D geometry into a 2D representation based on top or bottom projections.
         
@@ -1603,26 +1603,26 @@ class MoosasWall(MoosasElement):
         
         Returns
         -------
-        pygeos.Geometry or None
+        shapely.Geometry or None
             A 2D geometric object representing the projected line, point, or polygon;
             returns None if the projection cannot be computed.
         """
         if region:
             lBot, lTop = self.force_2d(False, False), self.force_2d(True, False)
-            if not pygeos.disjoint(lBot, lTop):
+            if not shapely.disjoint(lBot, lTop):
                 return lBot
-            lBot = pygeos.get_coordinates(lBot).tolist()
-            lTop = pygeos.get_coordinates(lTop).tolist()
+            lBot = shapely.get_coordinates(lBot).tolist()
+            lTop = shapely.get_coordinates(lTop).tolist()
             if len(lTop) == 1 and len(lBot) == 1:
-                return pygeos.linestrings(list(lBot) + list(lTop))
+                return shapely.linestrings(list(lBot) + list(lTop))
             lTop.reverse()
             lbound = list(lBot) + list(lTop)
             for i in range(2, len(lbound)):
                 # detect the co-linear projections
                 if not Vector.parallel(Vector(Vector(lbound[1]) - Vector(lbound[0])),
                                        Vector(Vector(lbound[i]) - Vector(lbound[0]))):
-                    return simplify(pygeos.polygons(lbound + [lbound[0]]))
-            return pygeos.linestrings([lbound[0], lbound[-1]])
+                    return simplify(shapely.polygons(lbound + [lbound[0]]))
+            return shapely.linestrings([lbound[0], lbound[-1]])
 
         else:
             if top:
@@ -1636,8 +1636,8 @@ class MoosasWall(MoosasElement):
                     return self.force_2d(False, False)
                 else:
                     return target[0]
-            botx = np.array([pygeos.get_x(poi) for poi in target])
-            boty = np.array([pygeos.get_y(poi) for poi in target])
+            botx = np.array([shapely.get_x(poi) for poi in target])
+            boty = np.array([shapely.get_y(poi) for poi in target])
             if np.max(botx) == np.min(botx):
                 p1 = np.array([botx[np.argmin(boty)], boty[np.argmin(boty)]])
                 p2 = np.array([botx[np.argmax(boty)], boty[np.argmax(boty)]])
@@ -1645,9 +1645,9 @@ class MoosasWall(MoosasElement):
                 p1 = np.array([botx[np.argmin(botx)], boty[np.argmin(botx)]])
                 p2 = np.array([botx[np.argmax(botx)], boty[np.argmax(botx)]])
             if np.sum(np.array(p1 - p2)) != 0:
-                return pygeos.linestrings([p1, p2])
+                return shapely.linestrings([p1, p2])
             else:
-                return pygeos.points(p1)
+                return shapely.points(p1)
 
     def to_xml(self, model: MoosasContainer, Element_tag='wall', writeGeometry=False):
         """
@@ -1670,9 +1670,9 @@ class MoosasWall(MoosasElement):
         """
         wall = super(MoosasWall, self).to_xml(model, Element_tag, writeGeometry=writeGeometry)
         'faces, faceId, normal, glazingId=None, _area=None'
-        ET.SubElement(wall, 'length').text = str(pygeos.length(self.force_2d()) / INCH_METER_MULTIPLIER)
+        ET.SubElement(wall, 'length').text = str(shapely.length(self.force_2d()) / INCH_METER_MULTIPLIER)
         ET.SubElement(wall, 'force2d').text = str(
-            pygeos.get_coordinates(self.force_2d(), include_z=False) / INCH_METER_MULTIPLIER)
+            shapely.get_coordinates(self.force_2d(), include_z=False) / INCH_METER_MULTIPLIER)
         ET.SubElement(wall, 'toplevel').text = str(self.toplevel)
         ET.SubElement(wall, 'topoffset').text = str(self.topoffset)
 
@@ -1705,7 +1705,7 @@ class MoosasWall(MoosasElement):
         self.toplevel = toplevel
         self.prepareProjection()
 
-    def representation(self) -> pygeos.Geometry:
+    def representation(self) -> shapely.Geometry:
         """
         Return a 3D polygon representation of the glazing element.
         
@@ -1717,19 +1717,19 @@ class MoosasWall(MoosasElement):
         
         Returns
         -------
-        pygeos.Geometry
-            A 3D pygeos polygon representing the vertical extrusion of the glazing element,
+        shapely.Geometry
+            A 3D shapely polygon representing the vertical extrusion of the glazing element,
             constructed from bottom and top boundary coordinates.
         """
-        lBot = pygeos.force_3d(self.force_2d(False, False), z=self.level + self.offset)
-        lTop = pygeos.force_3d(self.force_2d(False, False), z=self.toplevel + self.topoffset)
-        # lTop = pygeos.force_3d(self.force_2d(True, False), z=self.toplevel + self.topoffset)
+        lBot = shapely.force_3d(self.force_2d(False, False), z=self.level + self.offset)
+        lTop = shapely.force_3d(self.force_2d(False, False), z=self.toplevel + self.topoffset)
+        # lTop = shapely.force_3d(self.force_2d(True, False), z=self.toplevel + self.topoffset)
 
-        lBot = pygeos.get_coordinates(lBot, include_z=True).tolist()
-        lTop = pygeos.get_coordinates(lTop, include_z=True).tolist()
+        lBot = shapely.get_coordinates(lBot, include_z=True).tolist()
+        lTop = shapely.get_coordinates(lTop, include_z=True).tolist()
         lTop.reverse()
 
-        return pygeos.polygons(list(lBot) + list(lTop) + [lBot[0]])
+        return shapely.polygons(list(lBot) + list(lTop) + [lBot[0]])
 
 
 class MoosasGlazing(MoosasWall):
@@ -1794,14 +1794,14 @@ class MoosasGlazing(MoosasWall):
             self.toplevel = new_level
 
     @classmethod
-    def fromProjection(cls, prjLine: pygeos.Geometry, bottom: float, top: float, model: MoosasContainer,
+    def fromProjection(cls, prjLine: shapely.Geometry, bottom: float, top: float, model: MoosasContainer,
                        airBoundary=False):
         """
         Create an instance from a projection line with defined bottom and top elevations.
         
         Parameters
         ----------
-        prjLine : pygeos.Geometry
+        prjLine : shapely.Geometry
             A linestring geometry representing the projection; must have sufficient length.
         bottom : float
             The bottom elevation (z-coordinate) of the generated geometry.
@@ -1817,9 +1817,9 @@ class MoosasGlazing(MoosasWall):
         gls : cls or None
             An instance of the class created from the projection, or None if the input line is too short.
         """
-        if pygeos.length(prjLine) < geom.POINT_PRECISION:
+        if shapely.length(prjLine) < geom.POINT_PRECISION:
             return None
-        stPoint, edPoint = pygeos.get_coordinates(prjLine)
+        stPoint, edPoint = shapely.get_coordinates(prjLine)
         airBound = [
             np.append(stPoint, bottom),
             np.append(edPoint, bottom),
@@ -1827,7 +1827,7 @@ class MoosasGlazing(MoosasWall):
             np.append(stPoint, top),
             np.append(stPoint, bottom),
         ]
-        idx = model.includeGeo(pygeos.polygons(airBound), cat=0)
+        idx = model.includeGeo(shapely.polygons(airBound), cat=0)
         gls = cls(model, idx)
         return gls
 
@@ -2055,7 +2055,7 @@ class MoosasFloor:
         center = np.array([face.getWeightCenter() for face in self.face])
         return np.array([np.mean(x) for x in center.T])
 
-    def force_2d(self) -> pygeos.Geometry:
+    def force_2d(self) -> shapely.Geometry:
         """
         Force the geometry into a 2D representation and return the union of all faces.
         
@@ -2067,15 +2067,15 @@ class MoosasFloor:
         
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
             A single 2D geometry representing the union of all faces. If the union fails,
             a multipolygon composed of the individual 2D faces is returned instead.
         """
         faces = [f.force_2d() for f in self.face]
         try:
-            return pygeos.union_all(faces, grid_size=geom.POINT_PRECISION)
+            return shapely.union_all(faces, grid_size=geom.POINT_PRECISION)
         except:
-            return pygeos.multipolygons(faces)
+            return shapely.multipolygons(faces)
 
     def to_xml(self, model: MoosasContainer, Element_tag='floor', writeGeometry=False) -> ET.Element:
         """
@@ -2208,7 +2208,7 @@ class MoosasEdge:
         return cls([MoosasWall.fromDict(f, model) for f in faces])
 
     @classmethod
-    def difference(cls, mainEdge: MoosasEdge, subBoundary: pygeos.Geometry):
+    def difference(cls, mainEdge: MoosasEdge, subBoundary: shapely.Geometry):
         """
         Compute the geometric difference between a main edge and a sub-boundary.
         
@@ -2216,28 +2216,28 @@ class MoosasEdge:
         ----------
         mainEdge : MoosasEdge
             The primary edge geometry to be processed. Must be valid.
-        subBoundary : pygeos.Geometry
+        subBoundary : shapely.Geometry
             The sub-boundary geometry to subtract from the main edge. Must fully overlap with the 2D projection of mainEdge.
         
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
             The resulting geometry after subtracting subBoundary from mainEdge.
         """
         if not mainEdge.is_valid():
             raise GeometryError(mainEdge, "invalid boundary:{}")
-        if overlapArea(mainEdge.force_2d(), subBoundary) != pygeos.area(subBoundary):
+        if overlapArea(mainEdge.force_2d(), subBoundary) != shapely.area(subBoundary):
             # must be the same or errors would occur when splitting the walls
             raise GeometryError(subBoundary, "invalid subBoundary in boundary divided:{}")
 
     @classmethod
-    def selectWall(cls, boundary: pygeos.Geometry, walls: list[MoosasWall]):
+    def selectWall(cls, boundary: shapely.Geometry, walls: list[MoosasWall]):
         """
         Select walls that match the edges of a given boundary or create new ones if no match is found.
         
         Parameters
         ----------
-        boundary : pygeos.Geometry
+        boundary : shapely.Geometry
             A geometry object representing the boundary whose edges are used to select or create walls.
         walls : list of MoosasWall
             A list of wall objects to be matched against the boundary edges. Must not be empty.
@@ -2249,10 +2249,10 @@ class MoosasEdge:
             that match the boundary edges or newly created walls where no match was found.
         """
         walls = np.array(walls).flatten()
-        boundary = pygeos.get_coordinates(boundary)
+        boundary = shapely.get_coordinates(boundary)
         # from ..visual.geometry import plot_object
         # plot_object(walls,boundary,colors=['red','black'])
-        edges = [pygeos.linestrings([poi1, poi2]) for poi1, poi2 in zip(boundary[:-1], boundary[1:])]
+        edges = [shapely.linestrings([poi1, poi2]) for poi1, poi2 in zip(boundary[:-1], boundary[1:])]
         validWalls = []
         for edg in edges:
             matched = False
@@ -2367,7 +2367,7 @@ class MoosasEdge:
             factor (determined by clockwise or counter-clockwise polygon winding) and 
             each edge vector of the polygon boundary.
         """
-        poly_coordinates = pygeos.get_coordinates(self.__botBound)
+        poly_coordinates = shapely.get_coordinates(self.__botBound)
         if self.is_ccw():
             factor = np.array([0, 0, -1])
         else:
@@ -2392,7 +2392,7 @@ class MoosasEdge:
         float
             The area of the geometry in 2D.
         """
-        return pygeos.area(self.force_2d())
+        return shapely.area(self.force_2d())
 
     def getWeightCenter(self) -> np.ndarray:
         """
@@ -2410,7 +2410,7 @@ class MoosasEdge:
             A 1D NumPy array containing the mean (center) coordinates along axis 0 
             of the 2D force coordinates extracted from all walls.
         """
-        return np.mean(pygeos.get_coordinates([w.force_2d() for w in self.wall]), axis=0)
+        return np.mean(shapely.get_coordinates([w.force_2d() for w in self.wall]), axis=0)
 
     def is_ccw(self) -> bool:
         """
@@ -2421,16 +2421,16 @@ class MoosasEdge:
         self : object
             The instance of the class containing the polygon boundary.
             It must have a private attribute `__botBound` that represents
-            the boundary geometry compatible with pygeos.
+            the boundary geometry compatible with shapely.
         
         Returns
         -------
         bool
             True if the polygon is oriented counter-clockwise, False otherwise.
         """
-        # Improved method for pygeos.is_ccw()
+        # Improved method for shapely.is_ccw()
         # accepts both convex & non-convex polygons，but maintains lower efficiency
-        poilist = pygeos.get_coordinates(self.__botBound)
+        poilist = shapely.get_coordinates(self.__botBound)
         veclist = [poilist[i] - poilist[i - 1] for i in range(1, len(poilist))]
         crosslist = [np.cross(veclist[i], veclist[i - 1]) for i in range(len(veclist))]
         ccw = np.sum([2 for crs in crosslist if crs < 0])
@@ -2442,7 +2442,7 @@ class MoosasEdge:
         # Therefore, ccw > 0 means that the polygon is ccw.
         return ccw > 0
 
-    def get_polygon(self, target) -> pygeos.Geometry:
+    def get_polygon(self, target) -> shapely.Geometry:
         """
         Get the polygon geometry for a given target.
         
@@ -2453,8 +2453,8 @@ class MoosasEdge:
         
         Returns
         -------
-        pygeos.Geometry
-            A PyGEOS geometry object representing the requested polygon.
+        shapely.Geometry
+            A Shapely geometry object representing the requested polygon.
         """
 
         def reverseTwin(point_twin):
@@ -2476,14 +2476,14 @@ class MoosasEdge:
             point_twin[1] = tmp
             return point_twin
 
-        point_twin = [pygeos.points(pygeos.get_coordinates(pygeos.set_precision(line, geom.POINT_PRECISION))) for line
+        point_twin = [shapely.points(shapely.get_coordinates(shapely.set_precision(line, geom.POINT_PRECISION))) for line
                       in target]
-        if not pygeos.dwithin(point_twin[0][0], point_twin[-1][0], 1.2 * geom.POINT_PRECISION):
-            if not pygeos.dwithin(point_twin[0][0], point_twin[-1][1], 1.2 * geom.POINT_PRECISION):
+        if not shapely.dwithin(point_twin[0][0], point_twin[-1][0], 1.2 * geom.POINT_PRECISION):
+            if not shapely.dwithin(point_twin[0][0], point_twin[-1][1], 1.2 * geom.POINT_PRECISION):
                 point_twin[0] = reverseTwin(point_twin[0])
 
         for i in range(1, len(point_twin)):
-            if not pygeos.dwithin(point_twin[i][0], point_twin[i - 1][1], 1.2 * geom.POINT_PRECISION):
+            if not shapely.dwithin(point_twin[i][0], point_twin[i - 1][1], 1.2 * geom.POINT_PRECISION):
                 point_twin[i] = reverseTwin(point_twin[i])
         polyPoints = [twin[0] for twin in point_twin]
         # polyPoints = np.array([])
@@ -2495,16 +2495,16 @@ class MoosasEdge:
         #     polyPoints = np.append(polyPoints, list(set(twins).difference(set(polyPoints))))
         # print(polyPoints)
         polyPoints = np.append(polyPoints, polyPoints[0])
-        poly_coordinates = pygeos.get_coordinates(polyPoints)
+        poly_coordinates = shapely.get_coordinates(polyPoints)
 
-        polyg = pygeos.polygons(poly_coordinates)
-        if str(pygeos.is_valid_reason(polyg)).find('Self-intersection') != -1:
+        polyg = shapely.polygons(poly_coordinates)
+        if str(shapely.is_valid_reason(polyg)).find('Self-intersection') != -1:
             polyg_ori = polyg
             polyg = makeValid(polyg)[0]
             print(f"******Warning: GeometryError, self-intersection:{polyg_ori.__repr__()}fix to {polyg.__repr__()}")
         return polyg
 
-    def force_2d(self, top=False) -> pygeos.Geometry:
+    def force_2d(self, top=False) -> shapely.Geometry:
         """
         Force the geometry into a 2D representation.
         
@@ -2515,7 +2515,7 @@ class MoosasEdge:
         
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
             The 2D geometry representing either the top or bottom boundary.
         """
         if top:
@@ -2535,7 +2535,7 @@ class MoosasEdge:
         ----------
         self : object
             The instance of the class containing geometric data. Must have attributes `area`, `level`, 
-            and method `force_2d()`. The `force_2d()` method should return a geometry object compatible with pygeos.
+            and method `force_2d()`. The `force_2d()` method should return a geometry object compatible with shapely.
         
         Returns
         -------
@@ -2547,7 +2547,7 @@ class MoosasEdge:
             if self.area < geom.ROOM_MIN_AREA:
                 print('******Warning: GeometryError, area invalid, floor:', self.level)
                 return False
-            boundary_box = pygeos.get_coordinates(pygeos.boundary(self.force_2d()))
+            boundary_box = shapely.get_coordinates(shapely.boundary(self.force_2d()))
             dimension = [np.max(boundary_box[:, 0]) - np.min(boundary_box[:, 0]),
                          np.max(boundary_box[:, 1]) - np.min(boundary_box[:, 1])]
             if dimension[0] <= geom.ROOM_MIN_DIMENSION or dimension[1] <= geom.ROOM_MIN_DIMENSION:
@@ -2555,7 +2555,7 @@ class MoosasEdge:
                       'floor:', self.level)
                 # print(boundary_box)
                 return False
-            if str(pygeos.is_valid_reason(self.force_2d())).find('Self-intersection') != -1:
+            if str(shapely.is_valid_reason(self.force_2d())).find('Self-intersection') != -1:
                 print("******Warning: GeometryError, self-intersection", self.force_2d())
                 return False
         except:
@@ -2847,7 +2847,7 @@ class MoosasSpace(object):
         self : object
             The instance of the class containing the `force_2d` method and geometric data.
             It is assumed that `self` has a method `force_2d()` which returns a 2D geometric representation,
-            and that `pygeos` and `bBox` utilities are available for area and bounding box computations.
+            and that `shapely` and `bBox` utilities are available for area and bounding box computations.
         
         Returns
         -------
@@ -2863,7 +2863,7 @@ class MoosasSpace(object):
         convexFaces, _ = triangulate2dFace(self.force_2d())
         narrowPart, mainPart = [], []
         for face in convexFaces:
-            if pygeos.area(face) > 9.0:
+            if shapely.area(face) > 9.0:
                 boxDict = bBox(face)
                 xSize = boxDict['x-domain'][1] - boxDict['x-domain'][0]
                 ySize = boxDict['y-domain'][1] - boxDict['y-domain'][0]
@@ -2876,7 +2876,7 @@ class MoosasSpace(object):
         if len(mainPart) == 0:
             return 'Corridor'
         else:
-            if np.sum([pygeos.area(p) for p in mainPart]) / 18 < 3.0:
+            if np.sum([shapely.area(p) for p in mainPart]) / 18 < 3.0:
                 """space less for 3 person"""
                 return 'privateSpace'
             else:
@@ -2925,7 +2925,7 @@ class MoosasSpace(object):
         # Record self.id to all MoosasGeometries
         self.regenerateId()
 
-    def force_2d(self, top=False) -> pygeos.Geometry:
+    def force_2d(self, top=False) -> shapely.Geometry:
         """
         Project the geometry to 2D and return a 2D polygon.
         
@@ -2937,14 +2937,14 @@ class MoosasSpace(object):
         
         Returns
         -------
-        pygeos.Geometry
+        shapely.Geometry
             A 2D polygon geometry. If the object has voids, a polygon with holes is constructed;
             otherwise, the 2D version of the edge is returned directly.
         """
         if len(self.void) > 0:
-            outerRing = pygeos.linearrings(pygeos.get_coordinates(self.edge.force_2d(top)))
-            innerRing = [pygeos.linearrings(pygeos.get_coordinates(v.edge.force_2d(top))) for v in self.void]
-            polygon = pygeos.polygons(outerRing, holes=innerRing)
+            outerRing = shapely.linearrings(shapely.get_coordinates(self.edge.force_2d(top)))
+            innerRing = [shapely.linearrings(shapely.get_coordinates(v.edge.force_2d(top))) for v in self.void]
+            polygon = shapely.polygons(outerRing, holes=innerRing)
         else:
             polygon = self.edge.force_2d(top)
         return polygon
@@ -3010,7 +3010,7 @@ class MoosasSpace(object):
         ----------
         self : object
             The instance of the class containing the `getAllFaces` method, which returns a list of face objects.
-            Each face object must have a `face` attribute compatible with `pygeos.get_coordinates`.
+            Each face object must have a `face` attribute compatible with `shapely.get_coordinates`.
         
         Returns
         -------
@@ -3018,7 +3018,7 @@ class MoosasSpace(object):
             A 2x3 array containing the minimum and maximum coordinates of the bounding box.
             The first row is the minimum (x, y, z) corner, and the second row is the maximum (x, y, z) corner.
         """
-        facesCoor = [pygeos.get_coordinates(moface.face, include_z=True) for moface in self.getAllFaces(to_dict=False)]
+        facesCoor = [shapely.get_coordinates(moface.face, include_z=True) for moface in self.getAllFaces(to_dict=False)]
         facesCoorMin = np.min([np.min(coor, axis=0) for coor in facesCoor], axis=0)
         facesCoorMax = np.max([np.max(coor, axis=0) for coor in facesCoor], axis=0)
         return np.array([facesCoorMin, facesCoorMax])
@@ -3177,7 +3177,7 @@ class MoosasSpace(object):
         string_out += '-Area' + ' ' + str((self.area) / INCH_METER_MULTIPLIER_SQR) + '\n'
         string_out += '-Height' + ' ' + str((self.height) / INCH_METER_MULTIPLIER) + '\n'
         string_out += '-Boundary\n'
-        corrdiantes = pygeos.get_coordinates(pygeos.force_3d(self.edge.force_2d(), z=self.floor.level), include_z=True)
+        corrdiantes = shapely.get_coordinates(shapely.force_3d(self.edge.force_2d(), z=self.floor.level), include_z=True)
         for poi in corrdiantes:
             string_out += str(poi[0] / INCH_METER_MULTIPLIER) + ' ' \
                           + str(poi[1] / INCH_METER_MULTIPLIER) + ' ' \
@@ -3188,7 +3188,7 @@ class MoosasSpace(object):
         for Moosasface in self.floor.face:
             string_out += str(Moosasface.faceId) + ' '
         string_out += '\n--Area' + ' ' + str((self.area) / INCH_METER_MULTIPLIER_SQR) + '\n'
-        floor_normal = pygeos.get_coordinates(model.geoNormal[model.geoId.index(self.floor.face[0].faceId)],
+        floor_normal = shapely.get_coordinates(model.geoNormal[model.geoId.index(self.floor.face[0].faceId)],
                                               include_z=True).flatten()
         string_out += '--Normal ' + str(floor_normal[0]) + ' ' + str(floor_normal[1]) + ' ' + str(
             floor_normal[2]) + '\n'
@@ -3199,7 +3199,7 @@ class MoosasSpace(object):
         for Moosasface in self.ceiling.face:
             string_out += str(Moosasface.faceId) + ' '
         string_out += '\n--Area' + ' ' + str((self.area) / INCH_METER_MULTIPLIER_SQR) + '\n'
-        floor_normal = pygeos.get_coordinates(model.geoNormal[model.geoId.index(self.ceiling.face[0].faceId)],
+        floor_normal = shapely.get_coordinates(model.geoNormal[model.geoId.index(self.ceiling.face[0].faceId)],
                                               include_z=True).flatten()
         string_out += '--Normal ' + str(floor_normal[0]) + ' ' + str(floor_normal[1]) + ' ' + str(
             floor_normal[2]) + '\n'
@@ -3224,7 +3224,7 @@ class MoosasSpace(object):
             else:
                 string_out += str(wall.glazingId) + ' '
             string_out += '\n--Edge\n'
-            twins = pygeos.get_coordinates(pygeos.force_3d(wall.force_2d()), include_z=True)
+            twins = shapely.get_coordinates(shapely.force_3d(wall.force_2d()), include_z=True)
             string_out += str(twins[0][0]) + ' ' + str(twins[0][1]) + ' ' + str(twins[0][2]) + '\n'
             string_out += str(twins[1][0]) + ' ' + str(twins[1][1]) + ' ' + str(twins[1][2]) + '\n'
 
@@ -3279,8 +3279,8 @@ class MoosasSpace(object):
         ET.SubElement(root, "void").text = " ".join([str(v) for v in self.void])
         bound = ET.SubElement(root, "boundary")
 
-        corrdiantes = pygeos.get_coordinates(
-            pygeos.force_3d(self.edge.force_2d(), z=self.edge.elevation), include_z=True)
+        corrdiantes = shapely.get_coordinates(
+            shapely.force_3d(self.edge.force_2d(), z=self.edge.elevation), include_z=True)
         for poi in corrdiantes:
             ET.SubElement(bound, "pt").text = ' '.join([str(p / INCH_METER_MULTIPLIER) for p in poi])
         settingXml = ET.SubElement(root, "setting")
@@ -3334,8 +3334,8 @@ class MoosasContainer(object):
         fromDict(cls, spaceDict: dict) -> MoosasSpace: Create MoosasSpace from a dictionary.
         update(self) -> None: update self.builtData, which is used to record current elements and glazing when creating space manually.
         getAllFaces(self) -> List: Get all elements in the model.
-        includeGeo(self, geo: pygeos.Geometry, normal: pygeos.Geometry | Vector | np.ndarray = None, cat: int = 0,
-                   holes=None) -> str: Include a pygeos.Geometry to the library.
+        includeGeo(self, geo: shapely.Geometry, normal: shapely.Geometry | Vector | np.ndarray = None, cat: int = 0,
+                   holes=None) -> str: Include a shapely.Geometry to the library.
         findFace(self, faceId) -> list[MoosasGeometry]: Find a geometry by its geoId.
     """
 
@@ -3405,7 +3405,7 @@ class MoosasContainer(object):
             self.update()
         space = MoosasSpace.fromDict(spaceDict, self)
         for void in self.voidList:
-            if pygeos.contains(space.force_2d(), void.force_2d()):
+            if shapely.contains(space.force_2d(), void.force_2d()):
                 space.voidList.append(void)
         self.spaceList.append(space)
         return space
@@ -3474,15 +3474,15 @@ class MoosasContainer(object):
                 mElements['MoosasGlazing'] = mElements['MoosasGlazing'] | set(elementDict['MoosasGlazing'])
             return mElements
 
-    def includeGeo(self, geo: pygeos.Geometry, normal: pygeos.Geometry | Vector | np.ndarray = None, cat: int = 0,
+    def includeGeo(self, geo: shapely.Geometry, normal: shapely.Geometry | Vector | np.ndarray = None, cat: int = 0,
                    holes=None) -> str:
         """Include a geometry into the geometry library.
 
         Args:
-            geo (pygeos.Geometry): The polygon to include.
-            normal (pygeos.Geometry, optional): The normal vector of the polygon. Defaults to None.
+            geo (shapely.Geometry): The polygon to include.
+            normal (shapely.Geometry, optional): The normal vector of the polygon. Defaults to None.
             cat (int, optional): Category of the geometry (opaque == 0, transparent == 1, aperture == 2). Defaults to 0.
-            holes (List[pygeos.Geometry], optional): The inner holes of the geometry. Defaults to None.
+            holes (List[shapely.Geometry], optional): The inner holes of the geometry. Defaults to None.
 
         Returns:
             str: GeoId of the geometry, can be used to construct faces.
@@ -3491,10 +3491,10 @@ class MoosasContainer(object):
             holes = []
         if normal is None:
             normal = faceNormal(geo)
-        rings = pygeos.get_rings(geo)
+        rings = shapely.get_rings(geo)
         if len(rings) > 1:
-            geo = pygeos.polygons(rings[0])
-            holes += [pygeos.polygons(r) for r in rings[1:]]
+            geo = shapely.polygons(rings[0])
+            holes += [shapely.polygons(r) for r in rings[1:]]
         faceId = f"n{self.newIndex}"
         self.newIndex += 1
 
@@ -3502,21 +3502,21 @@ class MoosasContainer(object):
         self.geoId = list(np.append(self.geoId, [faceId]))
         return self.geoId[-1]
 
-    def removeGeo(self, geo: MoosasGeometry | pygeos.Geometry | str):
+    def removeGeo(self, geo: MoosasGeometry | shapely.Geometry | str):
         """
         Remove a geometry from the internal geometry list.
         
         Parameters
         ----------
-        geo : MoosasGeometry or pygeos.Geometry or str
-            The geometry to be removed. Can be a MoosasGeometry object, a pygeos.Geometry object, 
+        geo : MoosasGeometry or shapely.Geometry or str
+            The geometry to be removed. Can be a MoosasGeometry object, a shapely.Geometry object, 
             or a string representing the face ID of the geometry.
         
         Returns
         -------
         None
         """
-        if isinstance(geo, pygeos.Geometry):
+        if isinstance(geo, shapely.Geometry):
             for geoItems in self.geometryList:
                 if geoItems.face == geo:
                     geo = geoItems

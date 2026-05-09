@@ -8,10 +8,10 @@ kiwisolver==1.4.8
 lxml==5.4.0
 munch==4.0.0
 networkx==3.4.2
-numpy ==1.24.4
+numpy==1.26.4
 packaging==24.2
 pluggy==1.5.0
-pygeos==0.14
+shapely==2.0.7
 pyparsing==3.2.1
 rdflib==7.1.4
 scikit-learn==1.5.2

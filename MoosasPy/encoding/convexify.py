@@ -5,7 +5,7 @@ Convexification utilities aligned with the current cuger implementation.
 import math
 
 from ..geometry.geos import Projection, simplify
-from ..utils import np, pygeos
+from ..utils import np, shapely
 from .geometry import GeometryBasic, GeometryOperator, GeometryValidator
 
 
@@ -449,26 +449,26 @@ class MoosasConvexify:
         return convex_faces, divide_lines
 
 
-def triangulate2dFace(boundary: pygeos.Geometry, holes: np.ndarray[pygeos.Geometry] = None):
+def triangulate2dFace(boundary: shapely.Geometry, holes: np.ndarray[shapely.Geometry] = None):
     """Triangulate a 2D face with optional holes into convex faces and divide lines."""
-    boundary = pygeos.polygons(pygeos.get_coordinates(pygeos.force_3d(boundary, z=0), include_z=True))
+    boundary = shapely.polygons(shapely.get_coordinates(shapely.force_3d(boundary, z=0), include_z=True))
     proj = Projection.fromPolygon(boundary)
     boundary = proj.toUV(boundary)
     boundary = simplify(boundary, include_z=True)
-    boundary = pygeos.get_coordinates(pygeos.force_3d(boundary, z=0), include_z=True)[:-1]
+    boundary = shapely.get_coordinates(shapely.force_3d(boundary, z=0), include_z=True)[:-1]
 
     if holes is None:
         holes = []
     else:
         holes = [proj.toUV(hole) for hole in holes]
-        holes = [pygeos.get_coordinates(pygeos.force_3d(hole, z=0), include_z=True)[:-1] for hole in holes]
+        holes = [shapely.get_coordinates(shapely.force_3d(hole, z=0), include_z=True)[:-1] for hole in holes]
 
     convex_faces, divided_lines = MoosasConvexify.convexify_faces_2d(
         [boundary],
         [holes],
         is_quad_clean=False,
     )
-    convex_faces = [pygeos.polygons(convex_face) for convex_face in convex_faces]
+    convex_faces = [shapely.polygons(convex_face) for convex_face in convex_faces]
     convex_faces = [proj.toWorld(convex_face) for convex_face in convex_faces]
-    divided_lines = [proj.toWorld(pygeos.linestrings(line)) for line in divided_lines]
+    divided_lines = [proj.toWorld(shapely.linestrings(line)) for line in divided_lines]
     return convex_faces, divided_lines

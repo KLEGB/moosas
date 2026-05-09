@@ -29,7 +29,7 @@ def coPlanner(inputFile: str, outputFile: str):
     from .models import MoosasModel, MoosasElement, MoosasGeometry
     from .IO import modelFromFile, writeGeo
     from .geometry.cleanse import _coPlannerCleanse
-    from .utils import pygeos
+    from .utils import shapely
     if isinstance(inputFile, MoosasModel):
         model = inputFile
     else:
@@ -40,10 +40,10 @@ def coPlanner(inputFile: str, outputFile: str):
 
     geometryList = []
     for element in cleanseElement:
-        multiFace = pygeos.get_parts(element.mergedFace)
+        multiFace = shapely.get_parts(element.mergedFace)
         face, holes = [], []
         for f in multiFace:
-            rings = pygeos.get_rings(f)
+            rings = shapely.get_rings(f)
             if len(rings) > 1:
                 face.append(rings[0])
                 holes.append(rings[1:])
@@ -84,7 +84,7 @@ def overlap(inputFile: str, outputFile: str):
     from .models import MoosasModel, MoosasElement, MoosasGeometry
     from .IO import modelFromFile, writeGeo
     from .geometry.cleanse import _groupByNormal, Projection
-    from .utils import pygeos, np
+    from .utils import shapely, np
     from .utils.constant import geom
     if isinstance(inputFile, MoosasModel):
         model = inputFile
@@ -98,25 +98,25 @@ def overlap(inputFile: str, outputFile: str):
         # project faces to 2d, and group them with the height and faces' category
         proj = Projection(origin=[0, 0, 0], unitZ=elements[0].normal)
         faces = [proj.toUV(ele.face) for ele in elements]
-        faceZ = np.array([pygeos.get_coordinates(f, include_z=True)[0] for f in faces])[:,2].flatten()
+        faceZ = np.array([shapely.get_coordinates(f, include_z=True)[0] for f in faces])[:,2].flatten()
         faceZ = np.round(faceZ, 2)
         for h in np.unique(faceZ):
             subElements = elements[faceZ == h]
             if len(subElements) > 0:
                 subProj = Projection(origin=[0, 0, 0], unitZ=subElements[0].normal)
-                subElementsFaces = [pygeos.force_2d(subProj.toUV(ele.face)) for ele in subElements]
+                subElementsFaces = [shapely.force_2d(subProj.toUV(ele.face)) for ele in subElements]
                 for j, ele in enumerate(subElements):
                     print(f"\rprocessing group {subProj.axisZ} on UVHeight {h}: {j}/{len(subElements)}", end='')
                     for jk in range(j + 1, len(subElements)):
                         if subElements[j].category == ele.category:
                             # check intersection
-                            intersection = pygeos.intersection(subElementsFaces[j], subElementsFaces[jk],
+                            intersection = shapely.intersection(subElementsFaces[j], subElementsFaces[jk],
                                                                grid_size=geom.POINT_PRECISION)
-                            if pygeos.get_dimensions(intersection) == 2 and pygeos.area(
+                            if shapely.get_dimensions(intersection) == 2 and shapely.area(
                                     intersection) > geom.AREA_PRECISION:
                                 try:
-                                    newFaceProj = pygeos.difference(subElementsFaces[j], subElementsFaces[jk])
-                                    newFace = subProj.toWorld(pygeos.force_3d(newFaceProj, z=0))
+                                    newFaceProj = shapely.difference(subElementsFaces[j], subElementsFaces[jk])
+                                    newFace = subProj.toWorld(shapely.force_3d(newFaceProj, z=0))
                                     newFaceId = model.includeGeo(newFace, cat=subElements[j].category)
                                     subElements[j].replaceGeo(newFaceId)
                                     treatFaces+=1

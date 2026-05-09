@@ -9,7 +9,7 @@ import os.path
 import sys
 import time
 
-import pygeos
+import shapely
 
 from .IO import modelFromFile, saveModel, loadModel
 from .geometry.cleanse import *
@@ -336,7 +336,7 @@ def structured(model: MoosasModel,
             2.3.5 Repeat 2.3 until all contours are inside the smallest closed area (no dots) 
 
         2.4 Simple wire cutting profiles that are not recognized 
-            2.4.1 Sorting out unrecognized simple lines can be done with pygeos.overlaps() 
+            2.4.1 Sorting out unrecognized simple lines can be done with shapely.overlaps() 
             or faster overlaps_from_node(). 
             2.4.2 Same as 2.3.4 
 
@@ -357,11 +357,11 @@ def structured(model: MoosasModel,
 
     """
     Packaging Moosasspace:
-        1.1 Package Moosasedge to identify windows based on force_2d() and pygeos.contains
+        1.1 Package Moosasedge to identify windows based on force_2d() and shapely.contains
         1.2 According to the level of the moosasedge group, 
-        pygeos.contains() gets the included slabs and feeds them to the model. MoosasFloor
+        shapely.contains() gets the included slabs and feeds them to the model. MoosasFloor
         1.3 Successfully match the moosasedge of the floor, 
-        above its level, pygeos.contains() gets the first ceiling encountered and feeds it to the model. MoosasFloor
+        above its level, shapely.contains() gets the first ceiling encountered and feeds it to the model. MoosasFloor
         1.4 Two models. Moosasfloor is combined with a model.Moosasedge to form a model.MoosasSpace
     """
     model = packing_edges(model, divided_zones)
@@ -483,7 +483,7 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
         for i, geo in enumerate(model.geometryList):
             if geo.faceId in ClearId: continue
             print(f'\rLOADING: triangulate horizontal faces {i + 1}/{len(model.geoId)}', end='')
-            if np.abs(Vector.dot(geo.normal, pygeos.points([0, 0, 1]))) >= geom.HORIZONTAL_ANGLE_THRESHOLD:
+            if np.abs(Vector.dot(geo.normal, shapely.points([0, 0, 1]))) >= geom.HORIZONTAL_ANGLE_THRESHOLD:
                 if len(geo.holes) > 0:
                     proj = Projection.fromPolygon(geo.face)
                     geoProj = proj.toUV(geo.face)
@@ -508,7 +508,7 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
     for i, geo in enumerate(model.geometryList):
         if geo.faceId in ClearId: continue
         print(f'\rLOADING: Filtering horizontal faces {i + 1}/{len(model.geoId)}', end='')
-        if np.abs(Vector.dot(geo.normal, pygeos.points([0, 0, 1]))) >= 0.99:
+        if np.abs(Vector.dot(geo.normal, shapely.points([0, 0, 1]))) >= 0.99:
             if geo.category != 0:
                 # print(' skylight',end='')
                 face = MoosasSkylight(model, geo)
@@ -526,7 +526,7 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
     for i, geo in enumerate(model.geometryList):
         if geo.faceId in ClearId: continue
         print(f'\rLOADING: Filtering inclined faces {i + 1}/{len(model.geoId)}', end='')
-        if 0.99 > np.abs(Vector.dot(geo.normal, pygeos.points([0, 0, 1]))) >= geom.HORIZONTAL_ANGLE_THRESHOLD:
+        if 0.99 > np.abs(Vector.dot(geo.normal, shapely.points([0, 0, 1]))) >= geom.HORIZONTAL_ANGLE_THRESHOLD:
             # horizontal faces!
             if geo.category != 0:
                 # print(' skylight',end='')
@@ -551,21 +551,21 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
         # Ver2.0 break the walls into each level
         wallList = [model.geoId[i] for i in range(len(model.geoId)) if
                     np.abs(Vector.dot(model.geometryList[i].normal,
-                                      pygeos.points([0, 0, 1]))) < geom.HORIZONTAL_ANGLE_THRESHOLD]
+                                      shapely.points([0, 0, 1]))) < geom.HORIZONTAL_ANGLE_THRESHOLD]
         for i, idd in enumerate(wallList):
             if idd in ClearId: continue
             model = _break_vertical_faces(model, idd)
             print(f'\rLOADING: Break walls {i + 1}/{len(wallList)}', end='')
         wallList_new = [model.geoId[i] for i in range(len(model.geoId)) if
                         np.abs(Vector.dot(model.geometryList[i].normal,
-                                          pygeos.points([0, 0, 1]))) < geom.HORIZONTAL_ANGLE_THRESHOLD]
+                                          shapely.points([0, 0, 1]))) < geom.HORIZONTAL_ANGLE_THRESHOLD]
         # print(f'break walls: {len(wallList) - wallcount}')
         print(f'\t\t\tadd walls:{len(wallList_new) - len(wallList)}')
 
     for i, geo in enumerate(model.geometryList):
         if geo.faceId in ClearId: continue
         print(f'\rLOADING: Filtering vertical faces {i + 1}/{len(model.geoId)}', end='')
-        if np.abs(Vector.dot(geo.normal, pygeos.points([0, 0, 1]))) < geom.HORIZONTAL_ANGLE_THRESHOLD:
+        if np.abs(Vector.dot(geo.normal, shapely.points([0, 0, 1]))) < geom.HORIZONTAL_ANGLE_THRESHOLD:
             # this is the vertical face！
             if geo.category != 0:
                 # print(' glazing',end='')
@@ -587,12 +587,12 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
     # # force2d for each wall and glazing, identify the isolated elements
     # print("LOADING: Identifying shadings",end='')
     # def validIntersect(geo1, geo2):
-    #     intersect = pygeos.intersection(geo1, geo2)
-    #     if pygeos.get_dimensions(intersect) == 0:
-    #         twins = pygeos.points(pygeos.get_coordinates(geo1))
-    #         if pygeos.distance(twins[0],intersect) < geom.POINT_PRECISION:
+    #     intersect = shapely.intersection(geo1, geo2)
+    #     if shapely.get_dimensions(intersect) == 0:
+    #         twins = shapely.points(shapely.get_coordinates(geo1))
+    #         if shapely.distance(twins[0],intersect) < geom.POINT_PRECISION:
     #             return 1
-    #         if pygeos.distance(twins[1],intersect) < geom.POINT_PRECISION:
+    #         if shapely.distance(twins[1],intersect) < geom.POINT_PRECISION:
     #             return 1
     #         return 2
     #     return 0
@@ -681,14 +681,14 @@ def _matchFaceGlazing(face: MoosasFace | MoosasWall, glazing: MoosasSkylight | M
 
     a = face.force_2d(region=True)
     b = glazing.force_2d(region=True)
-    if pygeos.get_dimensions(a) == pygeos.get_dimensions(b) and pygeos.get_dimensions(a) == 1:
-        for p in pygeos.points(pygeos.get_coordinates(b)):
-            if not pygeos.distance(a, p) <= 2 * geom.POINT_PRECISION:
+    if shapely.get_dimensions(a) == shapely.get_dimensions(b) and shapely.get_dimensions(a) == 1:
+        for p in shapely.points(shapely.get_coordinates(b)):
+            if not shapely.distance(a, p) <= 2 * geom.POINT_PRECISION:
                 return False
         face.add_glazing(glazing)
         return True
     else:
-        if pygeos.contains(face.force_2d(region=True), glazing.force_2d(region=True)):
+        if shapely.contains(face.force_2d(region=True), glazing.force_2d(region=True)):
             face.add_glazing(glazing)
             return True
         else:
@@ -731,8 +731,8 @@ def _glazingToFace(model: MoosasModel) -> MoosasModel:
             glsCount += 1
             print(f"\rLOADING: Matching glazing {glsCount}/{len(model.glazingList)}", end='')
             located = False
-            dist = np.argsort([pygeos.distance(window.force_2d(), w) for w in w2d])
-            # print(pygeos.distance(window.force_2d(), wallList[dist][0].force_2d()))
+            dist = np.argsort([shapely.distance(window.force_2d(), w) for w in w2d])
+            # print(shapely.distance(window.force_2d(), wallList[dist][0].force_2d()))
             for wall in wallList[dist][:min(5, len(wallList))]:
                 if _matchFaceGlazing(wall, window):
                     located = True
@@ -787,8 +787,8 @@ def _break_vertical_faces(model: MoosasModel, faceId) -> MoosasModel:
 
     geo: MoosasGeometry = model.geometryList[model.geoId.index(faceId)]
     cat = geo.category
-    geo: pygeos.Geometry = geo.face
-    z = [coor[2] for coor in pygeos.get_coordinates(geo, include_z=True)]
+    geo: shapely.Geometry = geo.face
+    z = [coor[2] for coor in shapely.get_coordinates(geo, include_z=True)]
 
     # check where the wall's bottom lays
     top = np.max(z)
@@ -807,10 +807,10 @@ def _break_vertical_faces(model: MoosasModel, faceId) -> MoosasModel:
         # a typical wall do not cross a floor
         return model
     else:
-        # print(pygeos.get_coordinates(geo, include_z=True))
+        # print(shapely.get_coordinates(geo, include_z=True))
         # # try making the wall valid
         # try:
-        #     geo: pygeos.Geometry = makeValid(geo)[0]
+        #     geo: shapely.Geometry = makeValid(geo)[0]
         #     if geo is None:
         #         return model
         # except GeometryError:
@@ -824,7 +824,7 @@ def _break_vertical_faces(model: MoosasModel, faceId) -> MoosasModel:
         while len(working_faces) > 0:
             face = working_faces.pop()
             miniFace = True  # hint decides that whether the face has been cut
-            z = [coor[2] for coor in pygeos.get_coordinates(face, include_z=True)]
+            z = [coor[2] for coor in shapely.get_coordinates(face, include_z=True)]
 
             for bld_level in model.levelList[bot_level + 1: top_level + 1]:
                 if np.min(z) + geom.POINT_PRECISION < bld_level < np.max(
@@ -834,8 +834,8 @@ def _break_vertical_faces(model: MoosasModel, faceId) -> MoosasModel:
                     splitfaces = splitOnZ(face, bld_level)
                     if splitfaces is not None:
                         if len(splitfaces[0]) * len(splitfaces[1]) > 0:
-                            # z = [coor[2] for coor in pygeos.get_coordinates(splitfaces[0][0], include_z=True)]
-                            # z = [coor[2] for coor in pygeos.get_coordinates(splitfaces[1][0], include_z=True)]
+                            # z = [coor[2] for coor in shapely.get_coordinates(splitfaces[0][0], include_z=True)]
+                            # z = [coor[2] for coor in shapely.get_coordinates(splitfaces[1][0], include_z=True)]
                             # print(len(splitfaces[0]),len(splitfaces[1]),bld_level, cat)
                             working_faces = list(np.append(working_faces, splitfaces[0]))
                             working_faces = list(np.append(working_faces, splitfaces[1]))
@@ -924,7 +924,7 @@ def _packing_model(model: MoosasModel, solve_overlap) -> MoosasModel:
                 totalShadowArea = 0
                 matchFaces = []
                 for j in face:
-                    edge2d = model.edgeList[i].force_2d(top=True) if pygeos.is_valid(
+                    edge2d = model.edgeList[i].force_2d(top=True) if shapely.is_valid(
                         model.edgeList[i].force_2d(top=True)) else model.edgeList[i].force_2d()
                     intersectArea = overlapArea(edge2d, model.faceList[j].force_2d())
                     if intersectArea > geom.AREA_PRECISION:
@@ -993,7 +993,7 @@ def _packing_model(model: MoosasModel, solve_overlap) -> MoosasModel:
             print(f"\rPACKING: attach void to space {spcCount}/{len(spaceToAdd)}", end='')
             for j, other in enumerate(spacesList[i:]):
                 if space != other:
-                    if pygeos.contains_properly(space.force_2d(), other.force_2d()):
+                    if shapely.contains_properly(space.force_2d(), other.force_2d()):
                         if other.is_void() and space not in other.void:
                             space.add_void(other)
                         else:
@@ -1001,7 +1001,7 @@ def _packing_model(model: MoosasModel, solve_overlap) -> MoosasModel:
                             model.voidList.append(newVoid)
                         # plot_object(spacesList,space,colors=['black','red'])
 
-                    if pygeos.contains_properly(other.force_2d(), space.force_2d()):
+                    if shapely.contains_properly(other.force_2d(), space.force_2d()):
                         if space.is_void() and other not in space.void:
                             other.add_void(space)
                         else:
@@ -1026,7 +1026,7 @@ def _packing_model(model: MoosasModel, solve_overlap) -> MoosasModel:
     return model
 
 
-def _capFloor(boundary: pygeos.Geometry, level, model: MoosasModel,
+def _capFloor(boundary: shapely.Geometry, level, model: MoosasModel,
               baseFloor: MoosasFloor | None = None) -> MoosasFloor:
     """
         cap a boundary using MoosasFloor, based on the floor input.
@@ -1035,7 +1035,7 @@ def _capFloor(boundary: pygeos.Geometry, level, model: MoosasModel,
 
         Parameters
         ----------
-        boundary : pygeos.Geometry
+        boundary : shapely.Geometry
             the void boundary to cap (2d or 3d)
 
         level : float
@@ -1059,38 +1059,38 @@ def _capFloor(boundary: pygeos.Geometry, level, model: MoosasModel,
 
     # find useful parts from the based face
     for f in baseFace:
-        multiFaces = pygeos.multipolygons(mixItemListToList(f.face))
-        useful = pygeos.intersection(boundary, multiFaces, grid_size=geom.POINT_PRECISION)
-        if not pygeos.is_empty(useful):
-            useful = pygeos.get_parts(useful)
+        multiFaces = shapely.multipolygons(mixItemListToList(f.face))
+        useful = shapely.intersection(boundary, multiFaces, grid_size=geom.POINT_PRECISION)
+        if not shapely.is_empty(useful):
+            useful = shapely.get_parts(useful)
             for _useful in useful:
-                _useful = pygeos.force_3d(_useful, z=level)
-                if pygeos.get_dimensions(_useful) != 2: continue
+                _useful = shapely.force_3d(_useful, z=level)
+                if shapely.get_dimensions(_useful) != 2: continue
                 idx = model.includeGeo(_useful, Vector([0, 0, 1]).geometry, cat=0)
                 model.faceList.append(MoosasFace(model=model, faceId=idx))
                 floorFace.append(model.faceList[-1])
 
-            remainPart = pygeos.difference(multiFaces, boundary, grid_size=geom.POINT_PRECISION)
-            if not pygeos.is_empty(remainPart):
-                remainPart = pygeos.get_parts(remainPart)
+            remainPart = shapely.difference(multiFaces, boundary, grid_size=geom.POINT_PRECISION)
+            if not shapely.is_empty(remainPart):
+                remainPart = shapely.get_parts(remainPart)
                 for _remain in remainPart:
-                    _remain = pygeos.force_3d(_remain, z=level)
-                    if pygeos.get_dimensions(_remain) != 2: continue
+                    _remain = shapely.force_3d(_remain, z=level)
+                    if shapely.get_dimensions(_remain) != 2: continue
                     idx = model.includeGeo(_remain, Vector([0, 0, 1]).geometry, cat=0)
                     model.faceList.append(MoosasFace(model, idx))
                     remainFace.append(model.faceList[-1])
 
     # minus the boundary by those useful faces
     for f in floorFace:
-        multiFaces = pygeos.multipolygons(mixItemListToList(f.face))
-        boundary = pygeos.difference(boundary, multiFaces)
+        multiFaces = shapely.multipolygons(mixItemListToList(f.face))
+        boundary = shapely.difference(boundary, multiFaces)
 
     # construct aperture
-    if not pygeos.is_empty(boundary):
-        boundary = pygeos.get_parts(boundary)
+    if not shapely.is_empty(boundary):
+        boundary = shapely.get_parts(boundary)
         for bound in boundary:
             try:
-                bound = pygeos.force_3d(bound, z=level)
+                bound = shapely.force_3d(bound, z=level)
                 idx = model.includeGeo(bound, Vector([0, 0, 1]).geometry, cat=2)  # aperture
                 model.faceList.append(MoosasFace(model, idx))
                 model.skylightList.append(MoosasSkylight(model, idx))
@@ -1115,7 +1115,7 @@ def _capFloor(boundary: pygeos.Geometry, level, model: MoosasModel,
     return MoosasFloor(floorFace)
 
 
-def _capFloorSimple(boundary: pygeos.Geometry, level, model: MoosasModel,
+def _capFloorSimple(boundary: shapely.Geometry, level, model: MoosasModel,
                     baseFaces: MoosasFloor | None = None) -> MoosasFloor:
     """
         cap a boundary using MoosasFloor, based on the floor input.
@@ -1124,7 +1124,7 @@ def _capFloorSimple(boundary: pygeos.Geometry, level, model: MoosasModel,
 
         Parameters
         ----------
-        boundary : pygeos.Geometry
+        boundary : shapely.Geometry
             the void boundary to cap (2d or 3d)
 
         level : float
@@ -1146,14 +1146,14 @@ def _capFloorSimple(boundary: pygeos.Geometry, level, model: MoosasModel,
     model.skylightList = list(model.skylightList)
     # minus the boundary by those useful faces
     for f in floorFace:
-        multiFaces = pygeos.multipolygons(mixItemListToList(f.face))
-        boundary = pygeos.difference(boundary, multiFaces)
+        multiFaces = shapely.multipolygons(mixItemListToList(f.face))
+        boundary = shapely.difference(boundary, multiFaces)
 
     # construct air boundary
-    if not pygeos.is_empty(boundary):
-        boundary = pygeos.get_parts(boundary)
+    if not shapely.is_empty(boundary):
+        boundary = shapely.get_parts(boundary)
         for bound in boundary:
-            bound = pygeos.force_3d(bound, z=level)
+            bound = shapely.force_3d(bound, z=level)
             idx = model.includeGeo(bound, Vector([0, 0, 1]).geometry, cat=2)  # aperture
             model.faceList.append(MoosasFace(model, idx))
             model.skylightList.append(MoosasSkylight(model, idx))
@@ -1187,9 +1187,9 @@ def _findVoidAbove(voidWithFloor: MoosasSpace) -> MoosasSpace | None:
         topVoidList = np.array(model.voidList)[searchBy('level', voidTopLevel, model.voidList)]
         for topVoid in topVoidList:
             if topVoid.floor is None:
-                if pygeos.contains(voidWithFloor.force_2d(top=True), topVoid.force_2d()):
+                if shapely.contains(voidWithFloor.force_2d(top=True), topVoid.force_2d()):
                     return topVoid
-                elif pygeos.contains(topVoid.force_2d(), voidWithFloor.force_2d(top=True)):
+                elif shapely.contains(topVoid.force_2d(), voidWithFloor.force_2d(top=True)):
                     return topVoid
     return None
 
@@ -1216,20 +1216,20 @@ def _findCoCeiling(spaceBottom: MoosasSpace, spaceTop: MoosasSpace) -> (MoosasFl
     co1 = spaceBottom.ceiling.face if spaceBottom.ceiling else []
     co2 = spaceTop.floor.face if spaceTop.floor else []
     allCoFaces = list(set(co1) | set(co2))
-    intersection = pygeos.intersection(spaceBottom.force_2d(True), spaceTop.force_2d(), grid_size=geom.POINT_PRECISION)
+    intersection = shapely.intersection(spaceBottom.force_2d(True), spaceTop.force_2d(), grid_size=geom.POINT_PRECISION)
     print(spaceBottom.force_2d(True), spaceTop.force_2d(), intersection)
-    ceilingFace = pygeos.difference(spaceBottom.force_2d(True), intersection, grid_size=geom.POINT_PRECISION)
-    floorFace = pygeos.difference(spaceTop.force_2d(), intersection, grid_size=geom.POINT_PRECISION)
-    ceilingFace = pygeos.force_3d(ceilingFace, z=z)
-    floorFace = pygeos.force_3d(floorFace, z=z)
+    ceilingFace = shapely.difference(spaceBottom.force_2d(True), intersection, grid_size=geom.POINT_PRECISION)
+    floorFace = shapely.difference(spaceTop.force_2d(), intersection, grid_size=geom.POINT_PRECISION)
+    ceilingFace = shapely.force_3d(ceilingFace, z=z)
+    floorFace = shapely.force_3d(floorFace, z=z)
 
-    if pygeos.is_empty(intersection):
+    if shapely.is_empty(intersection):
         raise Exception("space disjoint")
     else:
         intersection = _capFloor(spaceTop.force_2d(), spaceTop.level, model, MoosasFloor(allCoFaces))
-        if not pygeos.is_empty(floorFace):
+        if not shapely.is_empty(floorFace):
             includedFaces = []
-            for f in mixItemListToList(pygeos.get_parts(floorFace)):
+            for f in mixItemListToList(shapely.get_parts(floorFace)):
                 try:
                     idx = model.includeGeo(f, Vector([0, 0, 1]).geometry)
                     includedFaces.append(MoosasFace(model, idx))
@@ -1241,9 +1241,9 @@ def _findCoCeiling(spaceBottom: MoosasSpace, spaceTop: MoosasSpace) -> (MoosasFl
             floorFace = floorFace.face + intersection.face
         else:
             floorFace = intersection.face
-        if not pygeos.is_empty(ceilingFace):
+        if not shapely.is_empty(ceilingFace):
             includedFaces = []
-            for f in mixItemListToList(pygeos.get_parts(ceilingFace)):
+            for f in mixItemListToList(shapely.get_parts(ceilingFace)):
                 try:
                     idx = model.includeGeo(f, Vector([0, 0, 1]).geometry)
                     includedFaces.append(MoosasFace(model, idx))
@@ -1418,7 +1418,7 @@ def _attach_shading(model: MoosasModel) -> MoosasModel:
         print(f'\rCONTENT: attach internal thermal mass:{eleidx}/{len(check_shading)}', end='')
         spaceList = searchBy('level', element.level, model.spaceList)
         for i in spaceList:
-            if pygeos.contains(model.spaceList[i].force_2d(), element.force_2d()):
+            if shapely.contains(model.spaceList[i].force_2d(), element.force_2d()):
                 model.spaceList[i].addInternalMass(element)
                 mask[i] = False
                 break
@@ -1436,7 +1436,7 @@ def _attach_shading(model: MoosasModel) -> MoosasModel:
             target_glazing = [glazing[0], 10000.0]
             face_2d = face.force_2d()
             for gls in glazing:
-                dis = pygeos.distance(face_2d, gls.force_2d())
+                dis = shapely.distance(face_2d, gls.force_2d())
                 if dis < target_glazing[1]:
                     target_glazing = [gls, dis]
             if target_glazing[1] < 1.5:
@@ -1468,7 +1468,7 @@ def _copy_air_boundaries(model: MoosasModel) -> MoosasModel:
                 print(f'\rTOPOLOGY: Copy air boundaries in level {bld_level} {wid}/{len(model.wallList)}', end='')
                 if w.level != bld_level:
                     for bound in outerBound:
-                        if pygeos.contains(bound, w.force_2d()):
+                        if shapely.contains(bound, w.force_2d()):
                             # hit the range of the boundary of bld_level
                             found = False
                             for wIL in wallInLevel:

@@ -1,5 +1,5 @@
 from ..geometry.element import MoosasElement
-from ..utils import pygeos,GeometryError
+from ..utils import shapely,GeometryError
 from .settings import MoosasSettings, FaceDefault, WindowDefault
 from eppy.modeleditor import IDF
 
@@ -52,7 +52,7 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
         kwargs["Wind_Exposure"] = 'NoWind'
         kwargs["View_Factor_to_Ground"] = '0'
     ThermalSettings.updateParams(**kwargs)
-    coordinates = pygeos.get_coordinates(element.representation(), include_z=True)
+    coordinates = shapely.get_coordinates(element.representation(), include_z=True)
     ThermalSettings.params['Number_of_Vertices'] = len(coordinates)
     for i, point in enumerate(coordinates):
         ThermalSettings.params[f'Vertex_{i}_Xcoordinate'] = point[0]
@@ -101,7 +101,7 @@ def createWindowSurface(idf: IDF, element: MoosasElement, parentElement: MoosasE
               "Building_Surface_Name": parentElement.space[0] + '-' + parentElement.Uid,
               "Construction_Name": Construction_Name}
     ThermalSettings = MoosasSettings(default=WindowDefault,**kwargs)
-    coordinates = pygeos.get_coordinates(element.representation(), include_z=True)
+    coordinates = shapely.get_coordinates(element.representation(), include_z=True)
     if len(coordinates) >4:
         raise GeometryError(element.representation(),"idf FenestrationSurface:Detailed do not allow over 4 coordinates")
     ThermalSettings.params['Number_of_Vertices'] = len(coordinates)

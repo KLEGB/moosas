@@ -1,7 +1,7 @@
 from .rad import _meshToRadObject, _materialLib, _getSky
 from .models import MoosasModel
 from .geometry import MoosasElement, MoosasGrid, Vector, MoosasSpace,Projection
-from .utils import np, pygeos, path, callCmd, os,mixItemListToList
+from .utils import np, shapely, path, callCmd, os,mixItemListToList
 from datetime import datetime
 
 
@@ -149,7 +149,7 @@ def modelToRad(model: MoosasModel, date: datetime, skyType, lat, lon, diff=10000
         f.write(radStr)
     return radStr
 
-def triOpaque(moFace:MoosasElement)->list[pygeos.Geometry]:
+def triOpaque(moFace:MoosasElement)->list[shapely.Geometry]:
     """
     Compute triangulated opaque geometry from a MoosasElement face.
     
@@ -161,26 +161,26 @@ def triOpaque(moFace:MoosasElement)->list[pygeos.Geometry]:
     
     Returns
     -------
-    list[pygeos.Geometry]
-        A list of pygeos Geometry objects representing the triangulated opaque regions in world coordinates,
+    list[shapely.Geometry]
+        A list of shapely Geometry objects representing the triangulated opaque regions in world coordinates,
         with glazing areas subtracted as holes and projected back from UV to 3D space.
     """
-    proj = Projection(origin=np.mean(pygeos.get_coordinates(moFace.face, include_z=True), axis=0), unitZ=moFace.normal)
+    proj = Projection(origin=np.mean(shapely.get_coordinates(moFace.face, include_z=True), axis=0), unitZ=moFace.normal)
     baseFace = mixItemListToList(moFace.face)
     baseBrep,holes=[],[]
     for face in baseFace:
-        baseBrep.append(pygeos.get_exterior_ring(face))
-        if len(pygeos.get_rings(face))>1:
-            holes+=list(pygeos.get_rings(face))[1:]
+        baseBrep.append(shapely.get_exterior_ring(face))
+        if len(shapely.get_rings(face))>1:
+            holes+=list(shapely.get_rings(face))[1:]
     for gls in moFace.glazingElement:
         holes.append(gls.representation())
     baseBrep = [proj.toUV(face) for face in baseBrep]
-    baseBrep = pygeos.union_all(baseBrep)
+    baseBrep = shapely.union_all(baseBrep)
     holes = [proj.toUV(face) for face in holes]
     for h in holes:
-        baseBrep = pygeos.difference(baseBrep,h)
-    baseBrep = pygeos.delaunay_triangles(baseBrep)
-    baseBrep = [proj.toWorld(tri) for tri in pygeos.get_parts(baseBrep)]
+        baseBrep = shapely.difference(baseBrep,h)
+    baseBrep = shapely.delaunay_triangles(baseBrep)
+    baseBrep = [proj.toWorld(tri) for tri in shapely.get_parts(baseBrep)]
     return baseBrep
 def spaceToRad(space: MoosasSpace, date: datetime, skyType, lat, lon, diff=10000,
                radPath=rf"{path.libDir}\rad\model.rad"):
@@ -257,7 +257,7 @@ def writeGrid(element: MoosasElement, gridPath=rf"{path.libDir}\rad\grid.input",
     gridStr = []
     grid = MoosasGrid(element)
     for pts in grid.gridPoints:
-        pts = pygeos.get_coordinates(pts, include_z=True).astype(str)[0]
+        pts = shapely.get_coordinates(pts, include_z=True).astype(str)[0]
         nor = grid.normal.astype(str) if normal is None else Vector(normal).array.astype(str)
 
         gridStr += [" ".join(pts) + " " + " ".join(nor)]

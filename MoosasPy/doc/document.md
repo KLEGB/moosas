@@ -46,7 +46,7 @@ eppy==0.5.63
 xgboost==2.1.2  
 scikit-learn==1.5.2  
 rdflib==7.1.4  
-pygeos==0.14  
+shapely==0.14  
 Generally, you can call energy analysis and afn analysis like:
 
 ```python
@@ -565,7 +565,7 @@ __slots__ = \['origin', 'direction', 'value']
 > **Vector(vec)**
 
 __slots__ = \['x', 'y', 'z', 'style']
-- ***vec*** : pygeos.Geometry (POINT) or np.ndarry or list. It will be forced to 3d (z=0).
+- ***vec*** : shapely.Geometry (POINT) or np.ndarry or list. It will be forced to 3d (z=0).
 
 ## EXE in moosas+
 We kindly provide all executions in analysis for users. They are coded in Golang and enable their

@@ -1,5 +1,5 @@
 """
-    This is the i/o module of encodling and representation algorithm. Different from the Moosas+ i/o module, this algorithm do not use pygeos to process geometry !!!
+    This is the i/o module of encodling and representation algorithm. Different from the Moosas+ i/o module, this algorithm do not use shapely to process geometry !!!
 """
 import sys
 import os

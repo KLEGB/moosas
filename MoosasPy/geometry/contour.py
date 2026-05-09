@@ -4,7 +4,7 @@ from __future__ import annotations
 from .geos import *
 from .element import MoosasEdge, MoosasWall, MoosasGlazing, MoosasContainer
 from ..encoding.convexify import triangulate2dFace
-from ..utils import searchBy, pygeos, np, TopologyError
+from ..utils import searchBy, shapely, np, TopologyError
 from ..utils.constant import geom
 from .topology import TopoNode, TopoBound, TopoEdge, TopoNetwork
 
@@ -114,7 +114,7 @@ def _divideBoundaryByNode(boundaries: list[TopoBound], nodeList: list[TopoNode])
             inside_node = None
             """2.1 judge whether the boundary is a minimum boundary: do not have other nodes inside it"""
             for node in nodeList:
-                if pygeos.contains_properly(bound.geometry, node.location):
+                if shapely.contains_properly(bound.geometry, node.location):
                     inside_node = node
                     nodeList.remove(node)
                     break
@@ -304,8 +304,8 @@ def _divideBoundary(boundaries: list[TopoBound], edgeList: list[TopoBound] | lis
         for bound in boundaries:
             targetEdge = None
             for edgeBound in edgeList:
-                midPoint = pygeos.points(np.average(pygeos.get_coordinates(edgeBound.geometry),axis=0))
-                if pygeos.contains(bound.geometry,midPoint):
+                midPoint = shapely.points(np.average(shapely.get_coordinates(edgeBound.geometry),axis=0))
+                if shapely.contains(bound.geometry,midPoint):
                     targetEdge = edgeBound
                     edgeList.remove(edgeBound)
                     break
@@ -363,7 +363,7 @@ def _divideBoundary(boundaries: list[TopoBound], edgeList: list[TopoBound] | lis
     return boundaries
 
 
-def outerBoundary(model: MoosasContainer, bld_level: float) -> list[pygeos.Geometry]:
+def outerBoundary(model: MoosasContainer, bld_level: float) -> list[shapely.Geometry]:
     """
     Calculate the outer boundary of a network at a specified building level.
     
@@ -376,8 +376,8 @@ def outerBoundary(model: MoosasContainer, bld_level: float) -> list[pygeos.Geome
     
     Returns
     -------
-    list[pygeos.Geometry]
-        A list of pygeos Geometry objects representing the outer boundaries of each network component.
+    list[shapely.Geometry]
+        A list of shapely Geometry objects representing the outer boundaries of each network component.
     """
     """only Calculate the outer boundary of a network
 
@@ -385,7 +385,7 @@ def outerBoundary(model: MoosasContainer, bld_level: float) -> list[pygeos.Geome
     bld_level: building level to retrieve in float
     model: get topoEdge from this model
 
-    return: list[pygeos.Geometry]
+    return: list[shapely.Geometry]
     """
 
     network = TopoNetwork.inLevel(bld_level, model)
@@ -431,7 +431,7 @@ def closed_contour_calculation(model: MoosasContainer, bld_level: float) -> Moos
     if network.edges is None or network.nodes is None:
         return model
     # for ed in network.edges:
-    #     print(pygeos.get_coordinates([ed.fromP.location,ed.toP.location]).tolist())
+    #     print(shapely.get_coordinates([ed.fromP.location,ed.toP.location]).tolist())
 
     networks = TopoNetwork.splitNetwork(network)
     print(f'\rTOPOLOGY: in {bld_level}: Calculate outer Boundary', end='')
@@ -530,11 +530,11 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
             edges = np.array(model.edgeList)[searchBy('level', bldLevel, model.edgeList)]
             for edgeIdx, edge in enumerate(edges):
                 holes = [subEdge.force_2d() for subEdge in edges if
-                         pygeos.contains(edge.force_2d(), subEdge.force_2d())]
+                         shapely.contains(edge.force_2d(), subEdge.force_2d())]
                 newEdges, dividedLines = triangulate2dFace(edge.force_2d(), holes)
                 if len(newEdges) > 1:
                     for li in dividedLines:
-                        if pygeos.length(li) > geom.POINT_PRECISION:
+                        if shapely.length(li) > geom.POINT_PRECISION:
                             try:
 
                                 airWall = MoosasWall.fromProjection(li,
@@ -592,16 +592,16 @@ def plot_TopoObject(*collection: TopoNode | TopoNetwork | TopoEdge | TopoBound, 
     plotPoint, plotEdge, plotArea = [], [], []
     for obj in collection:
         if isinstance(obj, TopoNode):
-            plotPoint.append(pygeos.get_coordinates(obj.location)[0])
+            plotPoint.append(shapely.get_coordinates(obj.location)[0])
         if isinstance(obj, TopoEdge):
-            plotEdge.append(pygeos.get_coordinates([obj.fromLocation, obj.toLocation]))
+            plotEdge.append(shapely.get_coordinates([obj.fromLocation, obj.toLocation]))
         if isinstance(obj, TopoBound):
-            plotArea.append(pygeos.get_coordinates(obj.geometry))
+            plotArea.append(shapely.get_coordinates(obj.geometry))
         if isinstance(obj, TopoNetwork):
             for poi in obj.nodes:
-                plotPoint.append(pygeos.get_coordinates(poi.location)[0])
+                plotPoint.append(shapely.get_coordinates(poi.location)[0])
             for edge in obj.edges:
-                plotEdge.append(pygeos.get_coordinates([edge.fromLocation, edge.toLocation]))
+                plotEdge.append(shapely.get_coordinates([edge.fromLocation, edge.toLocation]))
 
     if len(plotPoint) > 0:
         if color == '':

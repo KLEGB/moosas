@@ -1,4 +1,4 @@
-from ..utils import np, pygeos, GeometryError
+from ..utils import np, shapely, GeometryError
 from ..utils import path, parseFile, mixItemListToList
 from ..utils.constant import geom
 from ..geometry.element import MoosasGeometry
@@ -115,12 +115,12 @@ def writeGeo(file_path, model=None, geoList=None, mask=None) -> str:
         faceStr = 'f,' + str(geo.category) + ',' + str(geo.faceId) + '\n'
         faceStr += 'fn,'
         faceStr += ','.join([str(x) for x in Vector(geo.normal).array]) + '\n'
-        rings = pygeos.get_rings(geo.face)
-        for poi in pygeos.get_coordinates(rings[0], include_z=True)[:-1]:
+        rings = shapely.get_rings(geo.face)
+        for poi in shapely.get_coordinates(rings[0], include_z=True)[:-1]:
             faceStr += 'fv,' + ','.join(poi.astype(str)) + '\n'
         if len(rings) > 1:
             for i in range(1, len(rings)):
-                for poi in pygeos.get_coordinates(rings[i], include_z=True)[:-1]:
+                for poi in shapely.get_coordinates(rings[i], include_z=True)[:-1]:
                     faceStr += f'fh,{i - 1},' + ','.join(poi.astype(str)) + '\n'
 
         geoStr += faceStr + ';\n'
@@ -242,7 +242,7 @@ def _readGeo(file_path) -> list[MoosasGeometry]:
                 continue
             if li[0] == "fn":
                 try:
-                    normal.append(pygeos.points(np.array(li[1:]).astype(float)))
+                    normal.append(shapely.points(np.array(li[1:]).astype(float)))
                 except:
                     print('******Warning: FileError, empty face normal.')
                     normal.append(None)
@@ -259,8 +259,8 @@ def _readGeo(file_path) -> list[MoosasGeometry]:
                 holeCoordinates[li[1]].append(list(coor))
                 continue
         if len(coordinates) > 2:
-            faces.append(pygeos.polygons(coordinates + [coordinates[0]]))
-            holes.append([pygeos.polygons(holeCoordinates[coors] + [holeCoordinates[coors][0]]) for coors in
+            faces.append(shapely.polygons(coordinates + [coordinates[0]]))
+            holes.append([shapely.polygons(holeCoordinates[coors] + [holeCoordinates[coors][0]]) for coors in
                           holeCoordinates.keys()])
 
     faces = _roundPolygons(faces, geom.POINT_PRECISION)
@@ -286,13 +286,13 @@ def _readGeo(file_path) -> list[MoosasGeometry]:
     return geos
 
 
-def _roundPolygons(polygons: np.ndarray[pygeos.Geometry], precision: float) -> np.ndarray:
+def _roundPolygons(polygons: np.ndarray[shapely.Geometry], precision: float) -> np.ndarray:
     """
     round the coordinates of polygons according to precision.
     graping the next near coordinates (x,y,z) to the past if their distance is less than precision.
 
         Args:
-            polygons(np.ndarray[pygeos.Geometry]): polygons in np.ndarray format
+            polygons(np.ndarray[shapely.Geometry]): polygons in np.ndarray format
             precision(float): round precision, usually would be geom.POINT_PRECISION
 
         Returns:
@@ -300,7 +300,7 @@ def _roundPolygons(polygons: np.ndarray[pygeos.Geometry], precision: float) -> n
     """
     coordinates, coorLengthIndex = [], [0]
     for p in polygons:
-        coor = pygeos.get_coordinates(p, include_z=True)
+        coor = shapely.get_coordinates(p, include_z=True)
         coordinates += list(coor)
         coorLengthIndex += [coorLengthIndex[-1] + len(coor)]
     coordinates = np.array(coordinates)
@@ -314,7 +314,7 @@ def _roundPolygons(polygons: np.ndarray[pygeos.Geometry], precision: float) -> n
         coordinates = coordinates[xReindex]
     coordinates = geom.round(coordinates, precision)
     coordinates = [coordinates[idxS:idxE] for idxS, idxE in zip(coorLengthIndex[:-1], coorLengthIndex[1:])]
-    return np.array([pygeos.polygons(coors) for coors in coordinates])
+    return np.array([shapely.polygons(coors) for coors in coordinates])
 
 
 def _readGeoLegacy(file_path) -> list[MoosasGeometry]:
@@ -345,7 +345,7 @@ def _readGeoLegacy(file_path) -> list[MoosasGeometry]:
             if read[0:4] == "Norm":
                 normal_t = str(f.readline().strip('\n')).split(" ")
                 normal_t = np.array(normal_t).astype(float)
-                normal.append(pygeos.points(normal_t))
+                normal.append(shapely.points(normal_t))
                 read = f.readline()
                 continue
             if read[0:4] == "Vert":
@@ -360,8 +360,8 @@ def _readGeoLegacy(file_path) -> list[MoosasGeometry]:
                 # pts_t.append(pts_t[0])
                 pts_t.append(pts_t[0])
 
-                # faces.append(pygeos.linestrings(pts_t))
-                faces.append(pygeos.polygons(pts_t))
+                # faces.append(shapely.linestrings(pts_t))
+                faces.append(shapely.polygons(pts_t))
                 continue
             read = f.readline()
     faces = _roundPolygons(faces, geom.POINT_PRECISION)

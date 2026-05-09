@@ -1,4 +1,4 @@
-from ..utils import pygeos
+from ..utils import shapely
 from datetime import datetime
 from ..geometry import Projection
 
@@ -9,7 +9,7 @@ def _meshToRadObject(geos, material, id):
     
     Parameters
     ----------
-    geos : pygeos.Geometry or list of pygeos.Geometry
+    geos : shapely.Geometry or list of shapely.Geometry
         Input geometry or list of geometries to convert.
     material : str
         Material name to assign to the Radiance object.
@@ -23,7 +23,7 @@ def _meshToRadObject(geos, material, id):
         polygon identifiers, and vertex coordinates. Returns an empty string if no valid
         triangles are generated.
     """
-    if isinstance(geos, pygeos.Geometry):
+    if isinstance(geos, shapely.Geometry):
         geos = [geos]
     geoStr = []
     for gid,geo in enumerate(geos):
@@ -34,12 +34,12 @@ def _meshToRadObject(geos, material, id):
             continue
         try:
             geoUV = proj.toUV(geo)
-            triangles = pygeos.delaunay_triangles(geoUV)
-            triangles = [proj.toWorld(tri) for tri in pygeos.get_parts(triangles)]
+            triangles = shapely.delaunay_triangles(geoUV)
+            triangles = [proj.toWorld(tri) for tri in shapely.get_parts(triangles)]
             if len(triangles) == 0:
                 return ""
             for trIdx, tri in enumerate(triangles):
-                pts = pygeos.get_coordinates(tri, include_z=True)
+                pts = shapely.get_coordinates(tri, include_z=True)
                 geoStr += [f"{material} polygon {id}_{gid}_{trIdx} 0 0 {(len(pts)-1) * 3}"]
                 for pt in pts[:-1]:
                     geoStr += ["    "+" ".join(pt.astype(str))]

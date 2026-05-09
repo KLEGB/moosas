@@ -1,6 +1,7 @@
 --0.8.6
 # transformation update 05.08
 - 0.8.6.1 include idf as valid input for transformation.
+- 0.8.6.2 replace pygeos requirement with shapely to accomplish with python 3.12
 
 --0.8.5
 # energy module update 04.04

@@ -5,7 +5,7 @@ import json
 import networkx as nx
 from scipy.spatial.transform import Rotation as R
 
-from ..utils import np, path, pygeos
+from ..utils import np, path, shapely
 
 FACE_PARAM_TEMPLATE = {
     "t": None,
@@ -38,15 +38,15 @@ def create_obb(points, normal, min_scale=0.1):
     else:
         normal = normal / np.linalg.norm(normal)
 
-    geometry = pygeos.multipoints(points)
+    geometry = shapely.multipoints(points)
     z_axis = np.array([0.0, 0.0, 1.0], dtype=float)
     z_r = normal
 
     if np.abs(z_r[0]) <= 1e-3 and np.abs(z_r[1]) <= 1e-3:
         z_r = z_axis
-        min_rotated_rectangle = pygeos.minimum_rotated_rectangle(geometry)
+        min_rotated_rectangle = shapely.minimum_rotated_rectangle(geometry)
         obb_coords = np.array(
-            pygeos.get_coordinates(min_rotated_rectangle, include_z=True)
+            shapely.get_coordinates(min_rotated_rectangle, include_z=True)
         )[:-1]
         obb_coords = np.nan_to_num(obb_coords, nan=points[0, 2])
         obb_coords[:, 2] = (np.min(points[:, 2]) + np.max(points[:, 2])) / 2
@@ -137,13 +137,13 @@ def _parse_vector(text: str | None) -> np.ndarray | None:
 def _geometry_lookup(model) -> dict[str, dict]:
     lookup = {}
     for geo in model.geometryList:
-        rings = pygeos.get_rings(geo.face)
+        rings = shapely.get_rings(geo.face)
         boundary = np.array(
-            pygeos.get_coordinates(rings[0], include_z=True)[:-1],
+            shapely.get_coordinates(rings[0], include_z=True)[:-1],
             dtype=float,
         )
         normal = np.array(
-            pygeos.get_coordinates(geo.normal, include_z=True)[0],
+            shapely.get_coordinates(geo.normal, include_z=True)[0],
             dtype=float,
         )
         lookup[geo.faceId] = {
@@ -151,7 +151,7 @@ def _geometry_lookup(model) -> dict[str, dict]:
             "category": int(float(geo.category)),
             "vertices": boundary,
             "normal": normal,
-            "area": float(pygeos.area(geo.face)),
+            "area": float(shapely.area(geo.face)),
         }
     return lookup
 

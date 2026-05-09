@@ -4,7 +4,7 @@ all module has MoosasConatiner as an entrance/return
 from __future__ import annotations
 import copy
 import numpy as np
-import pygeos
+import shapely
 
 from .element import *
 from ..utils.tools import searchBy
@@ -13,7 +13,7 @@ from .geos import equals, overlapEdge, Vector
 from ..encoding.convexify import triangulate2dFace
 
 
-def _groupByNormal(listToGroup: list, listOfNormal: list[pygeos.Geometry | np.ndarray]) -> list[list]:
+def _groupByNormal(listToGroup: list, listOfNormal: list[shapely.Geometry | np.ndarray]) -> list[list]:
     """
     Group items in a list based on their corresponding normal vectors.
     
@@ -21,7 +21,7 @@ def _groupByNormal(listToGroup: list, listOfNormal: list[pygeos.Geometry | np.nd
     ----------
     listToGroup : list
         A list of elements to be grouped. The elements can be of any type.
-    listOfNormal : list of pygeos.Geometry or numpy.ndarray
+    listOfNormal : list of shapely.Geometry or numpy.ndarray
         A list of normal vectors (geometric objects or arrays) used as grouping criteria.
         Must have the same length as `listToGroup`.
     
@@ -101,8 +101,8 @@ def _groupRelateArray(sequences: list) -> list:
     return [list(s) for s in sequenceSet]
 
 
-def _groupByCollinear(listToGroup: list, listOfNormal: list[pygeos.Geometry | np.ndarray],
-                      listOfGeometry: list[pygeos.Geometry]) -> list[list]:
+def _groupByCollinear(listToGroup: list, listOfNormal: list[shapely.Geometry | np.ndarray],
+                      listOfGeometry: list[shapely.Geometry]) -> list[list]:
     """
     Group elements of a list based on collinearity of corresponding geometries.
     
@@ -110,10 +110,10 @@ def _groupByCollinear(listToGroup: list, listOfNormal: list[pygeos.Geometry | np
     ----------
     listToGroup : list
         A list of elements to be grouped. Can be any type, but typically corresponds to geometric objects or identifiers.
-    listOfNormal : list of pygeos.Geometry or numpy.ndarray
+    listOfNormal : list of shapely.Geometry or numpy.ndarray
         A list of normal vectors (as geometries or coordinate arrays) associated with each element in `listToGroup`.
         Used to determine directional alignment (collinearity). Must have the same length as `listToGroup`.
-    listOfGeometry : list of pygeos.Geometry
+    listOfGeometry : list of shapely.Geometry
         A list of LineString geometries used to test spatial relationships (e.g., intersections and point alignments).
         Must have the same length as `listToGroup`.
     
@@ -144,8 +144,8 @@ def _groupByCollinear(listToGroup: list, listOfNormal: list[pygeos.Geometry | np
     listOfGeometry = [np.array(listOfGeometry)[group] for group in groupIdx]
     groups = []
     for itemGroup, norGroup, geometryGroup in zip(listToGroup, listOfNormal, listOfGeometry):
-        extremePoint = np.min(pygeos.get_coordinates(geometryGroup), axis=0)
-        pointOnLines = [pygeos.get_coordinates(geo)[0] for geo in geometryGroup]
+        extremePoint = np.min(shapely.get_coordinates(geometryGroup), axis=0)
+        pointOnLines = [shapely.get_coordinates(geo)[0] for geo in geometryGroup]
         distance = [Vector.dot(nor, poi - extremePoint) for nor, poi in zip(norGroup, pointOnLines)]
         thisGroups = {dist: [] for dist in np.unique(distance)}
         for item, dist in zip(itemGroup, distance):
@@ -181,9 +181,9 @@ def partitionWall(walls: list[MoosasWall], model: MoosasContainer, bottom=None, 
 
     ***Warning: A legacy method. It should be replaced by MoosasWall._break() in the future!
     """
-    coor = pygeos.points(pygeos.get_coordinates([w.force_2d() for w in walls]))
+    coor = shapely.points(shapely.get_coordinates([w.force_2d() for w in walls]))
 
-    coor = list(pygeos.get_coordinates(list(set(coor))))
+    coor = list(shapely.get_coordinates(list(set(coor))))
 
     coor.sort(key=lambda x: (x[0], x[1]))
     top = np.max([wall.toplevel + wall.topoffset for wall in walls]) if top is None else top
@@ -193,19 +193,19 @@ def partitionWall(walls: list[MoosasWall], model: MoosasContainer, bottom=None, 
         gls = list(np.append(gls, np.array(wall.glazingElement)))
 
     # print(coor, bottom, top, gls)
-    wallNew: list[MoosasWall] = MoosasWall.fromSeriesPoint(pygeos.points(coor), bottom, top, gls, model)
+    wallNew: list[MoosasWall] = MoosasWall.fromSeriesPoint(shapely.points(coor), bottom, top, gls, model)
     return wallNew
 
 
-def _fastOverlap(wall1: pygeos.Geometry, wall2: pygeos.Geometry) -> bool:
+def _fastOverlap(wall1: shapely.Geometry, wall2: shapely.Geometry) -> bool:
     """
     Very fast check whether two walls overlap based on coordinate sequence.
     
     Parameters
     ----------
-    wall1 : pygeos.Geometry
+    wall1 : shapely.Geometry
         First wall geometry to compare.
-    wall2 : pygeos.Geometry
+    wall2 : shapely.Geometry
         Second wall geometry to compare.
     
     Returns
@@ -216,7 +216,7 @@ def _fastOverlap(wall1: pygeos.Geometry, wall2: pygeos.Geometry) -> bool:
     """very fast calculate weather two walls are containBy one another
     according the sequence of their coordinates.
     """
-    coor = list(np.append(pygeos.get_coordinates([wall1, wall2]), [[0], [0], [1], [1]], axis=1))
+    coor = list(np.append(shapely.get_coordinates([wall1, wall2]), [[0], [0], [1], [1]], axis=1))
     coor.sort(key=lambda x: (x[0], x[1]))
     if not coor[0][2] == coor[1][2]:
         if Vector(coor[1][:2] - coor[2][:2]).length() > geom.POINT_PRECISION:
@@ -252,7 +252,7 @@ def cleanseDuplicatedLevel(model: MoosasContainer) -> MoosasContainer:
         target = searchBy('level', model.levelList[i], model.faceList)
         # print(f'level {model.levelList[i]}, floors {len(target)}')
         # plot_object(np.array(model.faceList)[target])
-        sum_area = np.sum([pygeos.area(model.faceList[item].force_2d()) for item in target])
+        sum_area = np.sum([shapely.area(model.faceList[item].force_2d()) for item in target])
         if sum_area < geom.LEVEL_MIN_AREA:
             for item in target:
                 model.faceList[item].offset = \
@@ -281,7 +281,7 @@ def cleanseOverlapFace(model: MoosasContainer) -> MoosasContainer:
         during the process.
     """
     """
-        Identify the duplicated faces with pygeos
+        Identify the duplicated faces with shapely
         you must solve duplication before solving containment
 
         *** One of the duplicated walls would be removed from MoosasContainer.wallList.
@@ -296,7 +296,7 @@ def cleanseOverlapFace(model: MoosasContainer) -> MoosasContainer:
             faces = np.array(model.faceList)[faceId]
 
             # sort the faces based on the face area, to solve the containment at the same time.
-            area = [ - pygeos.area(face) for face in faces] # sort from bigger faces to smaller faces
+            area = [ - shapely.area(face) for face in faces] # sort from bigger faces to smaller faces
             argIdx = np.argsort(area)
             faces = faces[argIdx]
             faceId = np.array(faceId)[argIdx]
@@ -309,14 +309,14 @@ def cleanseOverlapFace(model: MoosasContainer) -> MoosasContainer:
                     overArea = overlapArea(face,other)
                     if overArea>geom.AREA_PRECISION:
                         # check if face is redundant
-                        if abs(overArea - pygeos.area(face))<geom.AREA_PRECISION:
+                        if abs(overArea - shapely.area(face))<geom.AREA_PRECISION:
                             delId.append(faceId[fid])
                             break
 
                         # boolean difference
                         else:
                             delId.append(faceId[fid])
-                            face = pygeos.force_3d(pygeos.difference(face, other),z=bld_level)
+                            face = shapely.force_3d(shapely.difference(face, other),z=bld_level)
                             moFace = MoosasFace(model,faceId=model.includeGeo(face, Vector([0, 0, 1]).geometry, cat=0),level=bld_level)
                             model.faceList = np.append(model.faceList, moFace)
 
@@ -460,7 +460,7 @@ def cleanseInvalidWall(model: MoosasContainer) -> MoosasContainer:
     Parameters
     ----------
     model : MoosasContainer
-        The container object holding the wall list to be cleansed. Walls that are invalid due to zero height, zero length, or invalid pygeos.Geometry 
+        The container object holding the wall list to be cleansed. Walls that are invalid due to zero height, zero length, or invalid shapely.Geometry 
         will be removed. Invalid walls that are geometrically coincident with valid walls below them will be dissolved into those walls.
     
     Returns
@@ -470,7 +470,7 @@ def cleanseInvalidWall(model: MoosasContainer) -> MoosasContainer:
     """
     """check if the walls are valid including:
     1.zone length or zero height wall
-    2.invalid pygeos.Geometry
+    2.invalid shapely.Geometry
     3.then dissolve those walls to others valid walls,
     which have coincident edge with the invalid walls and lay below the them.
 
@@ -496,10 +496,10 @@ def cleanseInvalidWall(model: MoosasContainer) -> MoosasContainer:
             Walls that fail validation are either deleted or merged, and the updated wallList is returned within the model.
         """
         # for face in np.array(wall.face).flatten():
-        # if not pygeos.is_valid(face):
+        # if not shapely.is_valid(face):
         #    print(face)
         #    return -1
-        if pygeos.get_dimensions(wall.force_2d()) <= 0:
+        if shapely.get_dimensions(wall.force_2d()) <= 0:
             return 1
         if Vector(wall.force_2d()).length() < geom.POINT_PRECISION:
             return 2
@@ -563,7 +563,7 @@ def cleanseInvalidFace(model: MoosasContainer) -> MoosasContainer:
     """
     delface = []
     for i, face in enumerate(model.faceList):
-        if not pygeos.is_valid(face.force_2d()):
+        if not shapely.is_valid(face.force_2d()):
             print(f"***Warning: invalid horizontal face detected:{face.face}")
             delface.append(i)
     model.faceList = np.delete(model.faceList, delface)
@@ -749,11 +749,11 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
             newWalls.append(wall)
             w2d = wall.force_2d()
             for w2dOther in otherWall2d:
-                intersection = pygeos.intersection(w2d, w2dOther, grid_size= 1.5 * geom.POINT_PRECISION)
+                intersection = shapely.intersection(w2d, w2dOther, grid_size= 1.5 * geom.POINT_PRECISION)
                 # print(w2d, w2dOther,Vector.parallel(Vector(w2d), Vector(w2dOther)),intersection)
-                if (not pygeos.is_empty(intersection)) and pygeos.get_dimensions(intersection) == 0:
-                    twins = pygeos.points(pygeos.get_coordinates(w2d))
-                    if not (pygeos.dwithin(twins[0], intersection, geom.POINT_PRECISION) or pygeos.dwithin(twins[1],
+                if (not shapely.is_empty(intersection)) and shapely.get_dimensions(intersection) == 0:
+                    twins = shapely.points(shapely.get_coordinates(w2d))
+                    if not (shapely.dwithin(twins[0], intersection, geom.POINT_PRECISION) or shapely.dwithin(twins[1],
                                                                                                            intersection,
                                                                                                            geom.POINT_PRECISION)):
 
@@ -803,19 +803,19 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
         #     parallel = [not(Vector.parallel(Vector(wall.normal), Vector(w.normal))) for w in wallElement]
         #     testSet2d = wall2d[parallel]
         #     for w2dOther in testSet2d:
-        #         intersection = pygeos.intersection(w2d, w2dOther,grid_size=1.5*geom.POINT_PRECISION)
+        #         intersection = shapely.intersection(w2d, w2dOther,grid_size=1.5*geom.POINT_PRECISION)
         #         # print(w2d, w2dOther,Vector.parallel(Vector(w2d), Vector(w2dOther)),intersection)
-        #         if (not pygeos.is_empty(intersection)) and pygeos.get_dimensions(intersection)==0:
-        #             twins =pygeos.points(pygeos.get_coordinates(w2d))
-        #             if not (pygeos.dwithin(twins[0], intersection, geom.POINT_PRECISION) or pygeos.dwithin(twins[1], intersection,geom.POINT_PRECISION)):
+        #         if (not shapely.is_empty(intersection)) and shapely.get_dimensions(intersection)==0:
+        #             twins =shapely.points(shapely.get_coordinates(w2d))
+        #             if not (shapely.dwithin(twins[0], intersection, geom.POINT_PRECISION) or shapely.dwithin(twins[1], intersection,geom.POINT_PRECISION)):
         #                 print(intersection)
         #                 brkResult = MoosasWall.break_(wall, intersection)
         #                 if brkResult is not None:
         #                     newWalls += brkResult
         #                     delWalls.append(i)
-                # if pygeos.contains(w2d, poi):
-                #     twins = pygeos.points(pygeos.get_coordinates(w2d))
-                #     if not (pygeos.dwithin(twins[0], poi, geom.POINT_PRECISION) or pygeos.dwithin(twins[1], poi,
+                # if shapely.contains(w2d, poi):
+                #     twins = shapely.points(shapely.get_coordinates(w2d))
+                #     if not (shapely.dwithin(twins[0], poi, geom.POINT_PRECISION) or shapely.dwithin(twins[1], poi,
                 #                                                                                   geom.POINT_PRECISION)):
                 #         wall1, wall2 = MoosasWall.break_(wall, poi)
                 #         newWalls += [wall1, wall2]
@@ -910,7 +910,7 @@ def splitFaces(face: MoosasFace, edge: MoosasEdge) -> (MoosasFace, list[MoosasFa
 
     ***you should check if the face overlaps with the edge first by overlapArea method!!
 
-    ***intersection will only create one face, but pygeos.difference can create multi faces!!
+    ***intersection will only create one face, but shapely.difference can create multi faces!!
 
         ---------------------------------
     face: MoosasFace as input to be split
@@ -925,21 +925,21 @@ def splitFaces(face: MoosasFace, edge: MoosasEdge) -> (MoosasFace, list[MoosasFa
         return [face,[]]
 
     f2d = makeValid(face.force_2d())[0]
-    # print(pygeos.is_valid_reason(f2d), edge.force_2d())
+    # print(shapely.is_valid_reason(f2d), edge.force_2d())
     """split opaque part"""
-    innerFace = pygeos.force_3d(pygeos.intersection(f2d, edge.force_2d(),grid_size=geom.POINT_PRECISION), z=face.elevation)
-    outerFace = pygeos.force_3d(pygeos.difference(f2d, edge.force_2d(),grid_size=geom.POINT_PRECISION), z=face.elevation)
+    innerFace = shapely.force_3d(shapely.intersection(f2d, edge.force_2d(),grid_size=geom.POINT_PRECISION), z=face.elevation)
+    outerFace = shapely.force_3d(shapely.difference(f2d, edge.force_2d(),grid_size=geom.POINT_PRECISION), z=face.elevation)
 
     innerFace = makeValid(innerFace)[0]
-    outerFace = [makeValid(outf)[0] for outf in pygeos.get_parts(outerFace) if not pygeos.is_empty(outf)]
+    outerFace = [makeValid(outf)[0] for outf in shapely.get_parts(outerFace) if not shapely.is_empty(outf)]
     # outerFace = [makeValid(f)[0] for ff in outerFace for f in ff]
-    if pygeos.area(innerFace)>geom.AREA_PRECISION:
+    if shapely.area(innerFace)>geom.AREA_PRECISION:
         innerFace = MoosasFace(model=model,
                                faceId=model.includeGeo(innerFace, Vector([0, 0, 1]).geometry, face.category))
     else:
         return None
     for i, outf in enumerate(outerFace):
-        if pygeos.area(outerFace[i]) > geom.AREA_PRECISION:
+        if shapely.area(outerFace[i]) > geom.AREA_PRECISION:
             outerFace[i] = MoosasFace(model=model,
                                       faceId=model.includeGeo(outf, Vector([0, 0, 1]).geometry, face.category))
         else:
@@ -966,9 +966,9 @@ def splitFaces(face: MoosasFace, edge: MoosasEdge) -> (MoosasFace, list[MoosasFa
 
         # aperture need to be split
         else:
-            innerGls = pygeos.force_3d(pygeos.intersection(g2d, edge.force_2d(),grid_size=geom.POINT_PRECISION), z=face.elevation)
-            outerGls = pygeos.force_3d(pygeos.difference(g2d, edge.force_2d(),grid_size=geom.POINT_PRECISION), z=face.elevation)
-            outerGls = pygeos.get_parts(outerGls)
+            innerGls = shapely.force_3d(shapely.intersection(g2d, edge.force_2d(),grid_size=geom.POINT_PRECISION), z=face.elevation)
+            outerGls = shapely.force_3d(shapely.difference(g2d, edge.force_2d(),grid_size=geom.POINT_PRECISION), z=face.elevation)
+            outerGls = shapely.get_parts(outerGls)
 
             innerGls = MoosasSkylight(model=model,
                                       faceId=model.includeGeo(makeValid(innerGls)[0], Vector([0, 0, 1]).geometry,
@@ -987,7 +987,7 @@ def splitFaces(face: MoosasFace, edge: MoosasEdge) -> (MoosasFace, list[MoosasFa
         innerFace.add_glazing(gls)
     for gls in outerGlazings:
         for outf in outerFace:
-            if pygeos.contains(outf.force_2d(), gls.force_2d()):
+            if shapely.contains(outf.force_2d(), gls.force_2d()):
                 outf.add_glazing(gls)
                 break
 

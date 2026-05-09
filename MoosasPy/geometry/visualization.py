@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections import Iterable
 
 import numpy as np
-import pygeos
+import shapely
 
 from ..geometry.element import MoosasGeometry
 
@@ -55,8 +55,8 @@ def plot_plan_in_node(node_list, boundary_list, location_list, save=False, show=
         None
             This function does not return any value. It modifies the current matplotlib plot.
         """
-        p1 = [pygeos.get_x(location_list[i]), pygeos.get_y(location_list[i])]
-        p2 = [pygeos.get_x(location_list[j]), pygeos.get_y(location_list[j])]
+        p1 = [shapely.get_x(location_list[i]), shapely.get_y(location_list[i])]
+        p2 = [shapely.get_x(location_list[j]), shapely.get_y(location_list[j])]
         plt.plot([p1[0], p2[0]], [p1[1], p2[1]], color=color)
 
     def patch(boundary, color=None):
@@ -76,8 +76,8 @@ def plot_plan_in_node(node_list, boundary_list, location_list, save=False, show=
         None
             This function does not return a value. It modifies the current matplotlib plot by adding a filled polygon and optionally a text annotation.
         """
-        x = [pygeos.get_x(location_list[boundary[i]]) for i in range(len(boundary))]
-        y = [pygeos.get_y(location_list[boundary[i]]) for i in range(len(boundary))]
+        x = [shapely.get_x(location_list[boundary[i]]) for i in range(len(boundary))]
+        y = [shapely.get_y(location_list[boundary[i]]) for i in range(len(boundary))]
         if color:
             plt.fill(x, y, color=color)
             plt.text(np.mean(x), np.mean(y), f'{np.round(color[0], 2)}')
@@ -105,9 +105,9 @@ def plot_object(*geoCollection, colors='black', show=True, filled=False):
     
     Parameters
     ----------
-    geoCollection : iterable of array-like or pygeos.Geometry objects
+    geoCollection : iterable of array-like or shapely.Geometry objects
         Variable number of geometric collections or individual geometries to plot.
-        Each can be a pygeos geometry, an iterable of coordinates, or an object with a `force_2d` method.
+        Each can be a shapely geometry, an iterable of coordinates, or an object with a `force_2d` method.
     colors : str or list of str, optional
         Color(s) to use for plotting the geometries. If a single string is provided,
         it is applied to all collections. If a list, must have length matching `geoCollection`,
@@ -136,13 +136,13 @@ def plot_object(*geoCollection, colors='black', show=True, filled=False):
         plotCollection = []
         for figure in collection:
 
-            if isinstance(figure, pygeos.Geometry):
-                plotCollection.append(pygeos.get_coordinates(figure))
+            if isinstance(figure, shapely.Geometry):
+                plotCollection.append(shapely.get_coordinates(figure))
             elif isinstance(figure, Iterable):
                 plotCollection.append(figure)
             elif hasattr(figure, 'force_2d'):
-                if isinstance(figure.force_2d(),pygeos.Geometry):
-                    plotCollection.append(pygeos.get_coordinates(figure.force_2d()))
+                if isinstance(figure.force_2d(),shapely.Geometry):
+                    plotCollection.append(shapely.get_coordinates(figure.force_2d()))
 
         for fig in plotCollection:
             plt.plot(fig.T[0], fig.T[1], color=color)
