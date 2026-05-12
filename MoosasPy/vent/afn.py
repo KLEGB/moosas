@@ -101,12 +101,24 @@ class AfnZone(object):
             The total heat load in watts (W), calculated as the sum of solar, occupant,
             equipment, and lighting heat gains.
         """
+        def _safe_float(value, default=0.0):
+            if value is None:
+                return default
+            if isinstance(value, str) and value.strip().lower() in ("", "none", "null", "nan"):
+                return default
+            try:
+                return float(value)
+            except Exception:
+                return default
+
         heat = 0
-        heat += self.element.settings['zone_summerrad'] / (MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY) * 1000 * float(self.element.settings['zone_win_SHGC'])
-        heat += float(self.element.settings['zone_ppsm']) * float(
-            self.element.settings['zone_popheat']) * self.element.area
-        heat += float(self.element.settings['zone_equipment']) * self.element.area
-        heat += float(self.element.settings['zone_lighting']) * self.element.area
+        heat += _safe_float(self.element.settings.get('zone_summerrad')) / (
+                MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY) * 1000 * _safe_float(
+            self.element.settings.get('zone_win_SHGC'))
+        heat += _safe_float(self.element.settings.get('zone_ppsm')) * _safe_float(
+            self.element.settings.get('zone_popheat')) * self.element.area
+        heat += _safe_float(self.element.settings.get('zone_equipment')) * self.element.area
+        heat += _safe_float(self.element.settings.get('zone_lighting')) * self.element.area
         return heat
 
     def printHeatLoad(self):
@@ -608,7 +620,10 @@ def buildNetworkFile(model=None, pathList: list[AfnPath] = None, zoneList: list[
         if model is None:
             raise Exception("model, pathList and zoneList cannot be all None")
         zoneList, pathList = getZoneAndPath(model)
-        pathList, zoneList = cleanseNetwork(pathList, zoneList)
+
+    # Always run cleansing here, no matter path/zone source.
+    # buildPrj/buildZoneInfoFile may pass pre-built lists and previously bypass cleaning.
+    pathList, zoneList = cleanseNetwork(pathList, zoneList)
 
     if windVector:
         pathList = applyWindPressure(pathList, windVector=windVector, speed=windVector.length(), airDensity=airDensity,
@@ -651,63 +666,89 @@ def cleanseNetwork(pathList: list[AfnPath], zoneList: list[AfnZone]) -> (list[Af
     those zones will cause error in ContamX and their air change is 0.
     """
 
-    cleansed = True
-    while cleansed:
-        cleansed = False
-        invalidZone = np.arange(len(zoneList))
-        topology = {i: set() for i in invalidZone}
-        topology[-1] = set()
-        validZone = {-1}
-        invalidZone = set(invalidZone)
+    zone_count = len(zoneList)
+    if zone_count == 0:
+        return list(pathList), list(zoneList)
 
-        for p in pathList:
-            topology[p.fromZone].add(p.toZone)
-            topology[p.toZone].add(p.fromZone)
+    def _is_variable_path(p: AfnPath, eps=1e-9):
+        try:
+            h = float(p.pathHeight)
+            w = float(p.pathWidth)
+            op = float(p.operable) if p.operable is not None else 1.0
+            return h > eps and w > eps and op > eps
+        except Exception:
+            return False
 
-        valid=0
-        for zone in topology[-1]:
-            validZone.add(zone)  # branch first search all connected zones
-        while valid != len(validZone):
-            valid = len(validZone)
-            validZoneCopy = validZone.copy()
-            for item in validZoneCopy:
-                for zone in topology[item]:
-                    validZone.add(zone) # branch first search all connected zones
+    # keep only paths with valid endpoint indices first
+    valid_index_paths: list[AfnPath] = []
+    dropped_invalid_index = []
+    for i, p in enumerate(pathList):
+        fz = int(p.fromZone)
+        tz = int(p.toZone)
+        f_ok = (fz == -1) or (0 <= fz < zone_count)
+        t_ok = (tz == -1) or (0 <= tz < zone_count)
+        if f_ok and t_ok:
+            valid_index_paths.append(p)
+        else:
+            dropped_invalid_index.append(i)
+    if dropped_invalid_index:
+        print(f'******Warning: drop paths with invalid zone index: {dropped_invalid_index}')
 
-        invalidZone = invalidZone.difference(validZone)  # find invalid zones
+    # BFS on variable flow topology from ambient (-1)
+    topology = {-1: set()}
+    for zi in range(zone_count):
+        topology[zi] = set()
 
-        # invalid = 0
-        # while invalid != len(invalidZone):
-        #     invalid = len(invalidZone)
-        #     _oriValid = list(validZone)
-        #     for zIdx in _oriValid:
-        #         validZone = validZone | topology[zIdx]  # add the connected zones to valid group
-        #     invalidZone = invalidZone.difference(validZone)  # find invalid zones
-        # print("QQQQQQQQQQQQQQQQQQQQQQQQQQQ",invalidZone)
-        if len(invalidZone) > 0:
-            print(f'******Warning: some zones do not linked to ambient.')
-            invalidPath = [i for i, p in enumerate(pathList) if p.fromZone in invalidZone or p.toZone in invalidZone]
-            print(f'******Warning: those zone will be removed:{list(invalidZone)}')
-            print(f'******Warning: those path will be removed:{list(invalidPath)}')
-            ZoneIdOri = [z.element.id for z in zoneList]
-            for p in pathList:
-                p.fromZone = ZoneIdOri[p.fromZone] if p.fromZone >= 0 else -1
-                p.toZone = ZoneIdOri[p.toZone] if p.toZone >= 0 else -1
+    for p in valid_index_paths:
+        if not _is_variable_path(p):
+            continue
+        fz = int(p.fromZone)
+        tz = int(p.toZone)
+        topology[fz].add(tz)
+        topology[tz].add(fz)
 
-            zoneList = np.delete(zoneList, list(invalidZone))
-            pathList = np.delete(pathList, list(invalidPath))
-            ZoneIdOri = [z.element.id for z in zoneList]
-            for i, p in enumerate(pathList):
-                p.fromZone = ZoneIdOri.index(p.fromZone) if p.fromZone != -1 else -1
-                p.toZone = ZoneIdOri.index(p.toZone) if p.toZone != -1 else -1
-                p.prjIndex = i
+    visited = {-1}
+    queue = [-1]
+    while queue:
+        cur = queue.pop(0)
+        for nxt in topology.get(cur, ()):
+            if nxt not in visited:
+                visited.add(nxt)
+                queue.append(nxt)
 
-            for i, z in enumerate(zoneList):
-                z.prjIndex = i
+    keep_zone_idx = sorted([z for z in visited if z >= 0])
+    remove_zone_idx = sorted(set(range(zone_count)).difference(keep_zone_idx))
 
-            cleansed = True
+    if remove_zone_idx:
+        print('******Warning: some zones do not linked to ambient by variable flow path.')
+        print(f'******Warning: those zone will be removed:{remove_zone_idx}')
 
-    return pathList, zoneList
+    idx_map = {old: new for new, old in enumerate(keep_zone_idx)}
+    new_zones: list[AfnZone] = [zoneList[i] for i in keep_zone_idx]
+    for i, z in enumerate(new_zones, start=1):
+        z.prjIndex = i
+
+    new_paths: list[AfnPath] = []
+    removed_path_idx = []
+    for i, p in enumerate(valid_index_paths):
+        fz = int(p.fromZone)
+        tz = int(p.toZone)
+        f_keep = (fz == -1) or (fz in idx_map)
+        t_keep = (tz == -1) or (tz in idx_map)
+        if not (f_keep and t_keep):
+            removed_path_idx.append(i)
+            continue
+        p.fromZone = -1 if fz == -1 else idx_map[fz]
+        p.toZone = -1 if tz == -1 else idx_map[tz]
+        new_paths.append(p)
+
+    if removed_path_idx:
+        print(f'******Warning: those path will be removed:{removed_path_idx}')
+
+    for i, p in enumerate(new_paths, start=1):
+        p.prjIndex = i
+
+    return new_paths, new_zones
 
 
 def buildPrj(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone] = None,
@@ -833,7 +874,8 @@ def buildZoneInfoFile(model=None, zoneList: list[AfnZone] = None, networkFilePat
     Returns
     -------
     str
-        The file path to the generated zone info file containing zone name, heat load, and user-defined name in CSV format.
+        If `zoneInfoFilePath` is provided, returns generated file path.
+        If `zoneInfoFilePath` is None, returns in-memory zoneInfo text stream.
     """
     """
         This method can build the zoneInfo file by:
@@ -885,7 +927,7 @@ def buildZoneInfoFile(model=None, zoneList: list[AfnZone] = None, networkFilePat
 
     zoneStr = '\n'.join(zoneStr)
     if zoneInfoFilePath is None:
-        zoneInfoFilePath = os.path.join(path.tempDir, generate_code(4) + '.info')
+        return zoneStr
 
     path.checkBuildDir(zoneInfoFilePath)
     with open(zoneInfoFilePath, 'w+') as f:

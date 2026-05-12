@@ -592,7 +592,7 @@ The description may have confusion due to the poor interpretability of LLM. If y
 ---
 
 
-## 📄 File: energy.py
+## ?? File: energy.py
 <a id='energy_py'></a>
 
 ### Contents
@@ -600,164 +600,49 @@ The description may have confusion due to the poor interpretability of LLM. If y
   - [energyAnalysis()](#energy_py_func_energyAnalysis)
   - [parseEnergyOutput()](#energy_py_func_parseEnergyOutput)
   - [getEnergyInput()](#energy_py_func_getEnergyInput)
-  - [calculate_orientation()](#energy_py_func_calculate_orientation)
-  - [non()](#energy_py_func_non)
+- Notes:
+  - `calculate_orientation()` / `non()` are legacy items and are not present in current `MoosasPy/energy/analysis.py`.
 
 ---
 
-### 🔧 Functions
+### ?? Functions
 ###### <a id='energy_py_func_energyAnalysis'></a>`energyAnalysis`
 - **Type:** Function
-- **Parameters:** model: MoosasModel, core: Any, requireRadiation: Any, inputPath: Any, resultPath: Any
-- **Returns:** dict
-    A dictionary containing the energy analysis results with the following structure:
-    - 'total': dict with keys 'cooling', 'heating', 'lighting', and 'total' representing annual energy demands.
-    - 'spaces': list of ThermalSettings objects, with energy loads recorded in their `load` attribute.
-    - 'months': dict for each month (Jan, Feb, ...) with daily energy demand breakdown including 'cooling', 'heating', 'lighting', and 'total'.
-- **Comments:**
-  > Function:
-  > Quick energy analysis function.
-  > 
-  > Performs an energy demand analysis on a building model using specified core type and radiation settings.
-  > Parameters:
-  > model : MoosasModel
-  >     The building model to be analyzed.
-  > core : buildingType, optional
-  >     Specifies the analysis core to use; choose between `buildingType.RESIDENTIAL` and other types. 
-  >     Default is `buildingType.RESIDENTIAL`.
-  > requireRadiation : bool, optional
-  >     If True, performs accurate radiation calculation using MoosasRad. If False, uses default solar heat estimation based on Beijing's cumSky. 
-  >     Default is False.
-  > inputPath : str, optional
-  >     Path to save the input file for the energy simulation. 
-  >     Default is "data\energy\Energy.i".
-  > resultPath : str, optional
-  >     Path to save the output result file from the energy simulation. 
-  >     Default is "data\energy\Energy.o".
-  > 
-  > Returns
-  > dict
-  >     A dictionary containing the energy analysis results with the following structure:
-  >     - 'total': dict with keys 'cooling', 'heating', 'lighting', and 'total' representing annual energy demands.
-  >     - 'spaces': list of ThermalSettings objects, with energy loads recorded in their `load` attribute.
-  >     - 'months': dict for each month (Jan, Feb, ...) with daily energy demand breakdown including 'cooling', 'heating', 'lighting', and 'total'.
-  > Returns:
-  > dict
-  >     A dictionary containing the energy analysis results with the following structure:
-  >     - 'total': dict with keys 'cooling', 'heating', 'lighting', and 'total' representing annual energy demands.
-  >     - 'spaces': list of ThermalSettings objects, with energy loads recorded in their `load` attribute.
-  >     - 'months': dict for each month (Jan, Feb, ...) with daily energy demand breakdown including 'cooling', 'heating', 'lighting', and 'total'.
-
----
+- **Current Source:** `MoosasPy/energy/analysis.py`
+- **Signature:** `energyAnalysis(model: MoosasModel=None, core=buildingType.RESIDENTIAL, requireRadiation=False, exportDaily=False, exportHourly=False, exportByZone=False, schedulePath=None, energyInput=None, inputPath=os.path.join(energyDataDir, 'Energy.i'), resultPath=os.path.join(energyDataDir, 'Energy.o')) -> dict`
 
 ###### <a id='energy_py_func_parseEnergyOutput'></a>`parseEnergyOutput`
 - **Type:** Function
-- **Parameters:** resultPath: Any, zoneList: list[ThermalSettings]
-- **Returns:** e_data : dict
-    A dictionary containing the parsed energy results with the following keys:
-    - 'total': dict with keys 'cooling', 'heating', 'lighting', and 'total' representing total energy demands.
-    - 'spaces': list of ThermalSettings (if zoneList provided) with load attributes set, or list of dicts with energy demands per space.
-    - 'months': dict mapping month names to their respective energy demand dictionaries (cooling, heating, lighting, total).
-- **Comments:**
-  > Function:
-  > Parse the output file from MoosasResidential.exe or MoosasPublic.exe.
-  > Parameters:
-  > resultPath : str
-  >     Path to the result file to parse.
-  > zoneList : list of ThermalSettings, optional
-  >     List of ThermalSettings objects to record the results. If None, results are returned as dictionaries.
-  >     Default is None.
-  > 
-  > Returns
-  > e_data : dict
-  >     A dictionary containing the parsed energy results with the following keys:
-  >     - 'total': dict with keys 'cooling', 'heating', 'lighting', and 'total' representing total energy demands.
-  >     - 'spaces': list of ThermalSettings (if zoneList provided) with load attributes set, or list of dicts with energy demands per space.
-  >     - 'months': dict mapping month names to their respective energy demand dictionaries (cooling, heating, lighting, total).
-  > Returns:
-  > e_data : dict
-  >     A dictionary containing the parsed energy results with the following keys:
-  >     - 'total': dict with keys 'cooling', 'heating', 'lighting', and 'total' representing total energy demands.
-  >     - 'spaces': list of ThermalSettings (if zoneList provided) with load attributes set, or list of dicts with energy demands per space.
-  >     - 'months': dict mapping month names to their respective energy demand dictionaries (cooling, heating, lighting, total).
-
----
+- **Current Source:** `MoosasPy/energy/analysis.py`
+- **Signature:** `parseEnergyOutput(resultPath, zoneList: list[ThermalSettings]=None, exportDaily=False, exportHourly=False, exportByZone=False)`
 
 ###### <a id='energy_py_func_getEnergyInput'></a>`getEnergyInput`
 - **Type:** Function
-- **Parameters:** model: MoosasModel, require_radiation: Any
-- **Returns:** dict
-    A dictionary containing the energy input configuration with the following keys:
-    - 'zones': list of ThermalSettings objects representing thermal settings for each zone.
-    - 'args': list of command-line arguments including weather file, latitude, altitude, and shape factor.
-- **Comments:**
-  > Function:
-  > Get the energy input configuration for a given MoosasModel.
-  > Parameters:
-  > model : MoosasModel
-  >     The model for which to generate the energy input file.
-  > require_radiation : bool, optional
-  >     If True, enables accurate radiation calculation using MoosasRad. Default is False.
-  > 
-  > Returns
-  > dict
-  >     A dictionary containing the energy input configuration with the following keys:
-  >     - 'zones': list of ThermalSettings objects representing thermal settings for each zone.
-  >     - 'args': list of command-line arguments including weather file, latitude, altitude, and shape factor.
-  > Returns:
-  > dict
-  >     A dictionary containing the energy input configuration with the following keys:
-  >     - 'zones': list of ThermalSettings objects representing thermal settings for each zone.
-  >     - 'args': list of command-line arguments including weather file, latitude, altitude, and shape factor.
+- **Current Source:** `MoosasPy/energy/analysis.py`
+- **Signature:** `getEnergyInput(model: MoosasModel, core=buildingType.RESIDENTIAL, requireRadiation=False, exportDaily=False, exportHourly=False, exportByZone=False, schedulePath=None)`
 
 ---
 
-###### <a id='energy_py_func_calculate_orientation'></a>`calculate_orientation`
+## ?? File: energy\ventilation.py
+<a id='energy_ventilation_py'></a>
+
+### Contents
+- Functions:
+  - [_linear_interpolate_nan_series()](#energy_ventilation_py_func__linear_interpolate_nan_series)
+  - [postprocess_zone_results_linear()](#energy_ventilation_py_func_postprocess_zone_results_linear)
+
+### ?? Functions
+###### <a id='energy_ventilation_py_func__linear_interpolate_nan_series'></a>`_linear_interpolate_nan_series`
 - **Type:** Function
-- **Parameters:** n: Any
-- **Returns:** int
-    The orientation angle in degrees, measured clockwise from the positive y-axis, 
-    ranging from 0 to 360 degrees.
-- **Comments:**
-  > Function:
-  > Calculate the orientation angle in degrees from a 2D vector.
-  > Parameters:
-  > n : array_like
-  >     A 2-element array or list representing a 2D vector [n[0], n[1]].
-  > 
-  > Returns
-  > int
-  >     The orientation angle in degrees, measured clockwise from the positive y-axis, 
-  >     ranging from 0 to 360 degrees.
-  > Returns:
-  > int
-  >     The orientation angle in degrees, measured clockwise from the positive y-axis, 
-  >     ranging from 0 to 360 degrees.
+- **Current Source:** `MoosasPy/energy/ventilation.py`
+- **Signature:** `_linear_interpolate_nan_series(values)`
 
----
-
-###### <a id='energy_py_func_non'></a>`non`
+###### <a id='energy_ventilation_py_func_postprocess_zone_results_linear'></a>`postprocess_zone_results_linear`
 - **Type:** Function
-- **Parameters:** x: Any
-- **Returns:** int or float
-    The input value `x` if it is greater than 0, otherwise 0.
-- **Comments:**
-  > Function:
-  > Return the input value if it is positive, otherwise return 0.
-  > Parameters:
-  > x : float or int
-  >     The input number to be evaluated.
-  > 
-  > Returns
-  > int or float
-  >     The input value `x` if it is greater than 0, otherwise 0.
-  > Returns:
-  > int or float
-  >     The input value `x` if it is greater than 0, otherwise 0.
+- **Current Source:** `MoosasPy/energy/ventilation.py`
+- **Signature:** `postprocess_zone_results_linear(zones: list[ZoneResult]) -> list[ZoneResult]`
 
 ---
-
-
 ## 📄 File: models.py
 <a id='models_py'></a>
 
@@ -10251,123 +10136,37 @@ str
 ---
 
 
-## 📄 File: IO\transIO.py
+## ?? File: IO\transIO.py
 <a id='IO_transIO_py'></a>
 
 ### Contents
 - Functions:
+  - [loadModel()](#IO_transIO_py_func_loadModel)
   - [modelFromFile()](#IO_transIO_py_func_modelFromFile)
-  - [preClassified()](#IO_transIO_py_func_preClassified)
-  - [modelToFile()](#IO_transIO_py_func_modelToFile)
+  - [saveModel()](#IO_transIO_py_func_saveModel)
   - [writeSpc()](#IO_transIO_py_func_writeSpc)
 
----
+### ?? Functions
+###### <a id='IO_transIO_py_func_loadModel'></a>`loadModel`
+- **Signature:** `loadModel(filePath: str, geoPath: str=None, fileFormat='turtle', xmlPath: str=None, iddPath: str=None)`
 
-### 🔧 Functions
 ###### <a id='IO_transIO_py_func_modelFromFile'></a>`modelFromFile`
-- **Type:** Function
-- **Parameters:** inputPath: str, inputType: Any
-- **Returns:** :
-    model(MoosasModel): the MoosasModel contain the geometry data.
-- **Comments:**
-  > Function:
-  > Get a MoosasModel from geometry file *.geo,*.xml,*.obj,*.json(geoJson)
-  > 
-  > please check the file requirement in each function:
-  > _readGeo,_readXml,_readObj,readGeoJson
-  > this can be used to generate a model to test whether your geometries are read corectly.
-  > 
-  > Args:
-  >     inputPath(str): input geometry file.
-  >     inputType(str): input file type. If None the type will be interpreted from the file directly (default: None)
-  > Parameters:
-  > No parameter descriptions.
-  > Returns:
-  > :
-  >     model(MoosasModel): the MoosasModel contain the geometry data.
+- **Signature:** `modelFromFile(inputPath: str, inputType=None)`
 
----
-
-###### <a id='IO_transIO_py_func_preClassified'></a>`preClassified`
-- **Type:** Function
-- **Parameters:** model: Any
-- **Returns:** object
-    The modified model object with added `geoId` (list of face IDs) and `newIndex` (integer representing 
-    the length of the geometry list).
-- **Comments:**
-  > Function:
-  > Preprocesses a model by assigning face IDs to geoId and setting a new index based on geometry list length.
-  > Parameters:
-  > model : object
-  >     The model object containing a `geometryList` attribute, where each element has a `faceId` attribute.
-  >     This object is modified in place by adding `geoId` and `newIndex` attributes.
-  > 
-  > Returns
-  > object
-  >     The modified model object with added `geoId` (list of face IDs) and `newIndex` (integer representing 
-  >     the length of the geometry list).
-  > Returns:
-  > object
-  >     The modified model object with added `geoId` (list of face IDs) and `newIndex` (integer representing 
-  >     the length of the geometry list).
-
----
-
-###### <a id='IO_transIO_py_func_modelToFile'></a>`modelToFile`
-- **Type:** Function
-- **Parameters:** model: Any, outputPath: Any, outputType: Any, geoPath: Any, geoType: Any
-- **Returns:** :
-    None
-- **Comments:**
-  > Function:
-  > write the space topology data or geometry data to the file
-  > 
-  > please check the file description in each function:
-  > _readGeo,_readXml,_readObj,readGeoJson
-  > 
-  > Args:
-  >     model(MoosasModel): model to write the space data and geometries data
-  >     outputPath(str): input geometry file.
-  >     geoPath(str): output geometry file.
-  >     outputType(str): input file type. If None the type will be interpreted from the file directly (default: None)
-  >     geoType(str): output geometry file.
-  > Parameters:
-  > No parameter descriptions.
-  > Returns:
-  > :
-  >     None
-
----
+###### <a id='IO_transIO_py_func_saveModel'></a>`saveModel`
+- **Signature:** `saveModel(model, out_path: str, save_type: str=None, idfTemplate=None, iddFile=None, zoneNameToSpaceDict=None, dumpUseless=True)`
 
 ###### <a id='IO_transIO_py_func_writeSpc'></a>`writeSpc`
-- **Type:** Function
-- **Parameters:** file_path: Any, model: Any
-- **Returns:** :
-    None
-- **Comments:**
-  > Function:
-  > write the string of each space.
-  > 
-  > we get the string from space.to_string method instead of __str__() method
-  > since the string output is too long.
-  > 
-  > Args:
-  >     file_path(str): output space string file path
-  >     model(MoosasModel): model to export
-  > Parameters:
-  > No parameter descriptions.
-  > Returns:
-  > :
-  >     None
+- **Signature:** `writeSpc(file_path, model) -> str`
 
 ---
 
-
-## 📄 File: IO\_geo.py
+## ?? File: IO\_geo.py
 <a id='IO__geo_py'></a>
 
 ### Contents
 - Functions:
+  - [preClassified()](#IO__geo_py_func_preClassified)
   - [writeGeo()](#IO__geo_py_func_writeGeo)
   - [objToGeo()](#IO__geo_py_func_objToGeo)
   - [geoLegacyToGeo()](#IO__geo_py_func_geoLegacyToGeo)
@@ -10375,481 +10174,70 @@ str
   - [_roundPolygons()](#IO__geo_py_func__roundPolygons)
   - [_readGeoLegacy()](#IO__geo_py_func__readGeoLegacy)
 
----
+### ?? Functions
+###### <a id='IO__geo_py_func_preClassified'></a>`preClassified`
+- **Signature:** `preClassified(model)`
 
-### 🔧 Functions
 ###### <a id='IO__geo_py_func_writeGeo'></a>`writeGeo`
-- **Type:** Function
-- **Parameters:** file_path: Any, model: Any, geoList: Any, mask: Any
-- **Returns:** :
-    geo file string
-- **Comments:**
-  > Function:
-  > Get a *.geo file for the geometry library in the model
-  > 
-  > .geo is a moosasPy dedicated file format, which uses a simplified file structure to increase I/O speed......
-  > cateories of the surface (polygon type cat):
-  > -2 == ignore faces (would not be included in calculation)
-  > -1 == shading faces (included as shading element)
-  > 0 == opaque surface
-  > 1 == translucent surface
-  > 2 == the air wall
-  > 3 == wall element.MoosasWall
-  > 4 == plane element.MoosasFace
-  > 5 == glazing element.MoosasGlazing
-  > 6 == skylight element.MoosasSkylight
-  > 
-  > The .geo file format is:
-  > f,{polygon type cat},{polygon number idd}
-  > fn, {normal x}, {normal y}, {normal z}
-  > fv, {vertex 1x}, {vertex 1y}, {vertex 1z}
-  > ...
-  > fv,{vertex nx},{vertex ny},{vertex nz}
-  > fh,{aperture number},{vertex 1x},{vertex 1y},{vertex 1z}
-  > fh,{aperture number},{vertex nx},{vertex ny},{vertex nz}
-  > ;
-  > A face should end with ';'
-  > 
-  > For example, there are two vertical faces with two openings with a positive x-axis normal vector:
-  > f,1,0
-  > fn,1.0,0.0,0.0
-  > fv,15.5,10.0,2.2
-  > fv,15.5,10.0,0.0
-  > fv,15.5,10.8,0.0
-  > fv,15.5,10.8,2.2
-  > fh,0,15.5,10.1,1.8
-  > fh,0,15.5,10.1,0.9
-  > fh,0,15.5,10.3,0.9
-  > fh,0,15.5,10.3,1.8
-  > fh,1,15.5,10.5,1.8
-  > fh,1,15.5,10.5,0.9
-  > fh,1,15.5,10.7,0.9
-  > fh,1,15.5,10.7,1.8
-  > ;
-  > f,1,0
-  > fn,1.0,0.0,0.0
-  > fv,12.5,10.0,2.2
-  > fv,12.5,10.0,0.0
-  > fv,12.5,10.8,0.0
-  > fv,12.5,10.8,2.2
-  > fh,0,12.5,10.1,1.8
-  > fh,0,12.5,10.1,0.9
-  > fh,0,12.5,10.3,0.9
-  > fh,0,12.5,10.3,1.8
-  > fh,1,12.5,10.5,1.8
-  > fh,1,12.5,10.5,0.9
-  > fh,1,12.5,10.7,0.9
-  > fh,1,12.5,10.7,1.8
-  > ;
-  > ...
-  > 
-  > Args:
-  >     file_path(str): output geo file path
-  >     model(MoosasModel): model to export
-  >     geoList(list(MoosasGeometry)): list of geometry objects to export
-  >     mask(list[int]): mask for the geometry index in the geometry library. default is None
-  > Parameters:
-  > No parameter descriptions.
-  > Returns:
-  > :
-  >     geo file string
-
----
+- **Signature:** `writeGeo(file_path, model=None, geoList=None, mask=None) -> str`
 
 ###### <a id='IO__geo_py_func_objToGeo'></a>`objToGeo`
-- **Type:** Function
-- **Parameters:** file_path: Any, geo_path: Any
-- **Returns:** :
-    None
-- **Comments:**
-  > Function:
-  > Transform an *.obj file to *.geo file.
-  > 
-  > Args:
-  >     file_path(str): *.obj file path
-  >     geo_path(str): *.geo file path
-  > Parameters:
-  > No parameter descriptions.
-  > Returns:
-  > :
-  >     None
-
----
+- **Signature:** `objToGeo(file_path, geo_path)`
 
 ###### <a id='IO__geo_py_func_geoLegacyToGeo'></a>`geoLegacyToGeo`
-- **Type:** Function
-- **Parameters:** file_path: Any, geo_path: Any
-- **Returns:** :
-    None
-- **Comments:**
-  > Function:
-  > Transform a legacy *.geo file to new *.geo file.
-  > 
-  > Args:
-  >     file_path(str): legacy *.geo file path
-  >     geo_path(str): *.geo file path. if None we will overwrite the original file.
-  > Parameters:
-  > No parameter descriptions.
-  > Returns:
-  > :
-  >     None
-
----
+- **Signature:** `geoLegacyToGeo(file_path, geo_path=None)`
 
 ###### <a id='IO__geo_py_func__readGeo'></a>`_readGeo`
-- **Type:** Function
-- **Parameters:** file_path: Any
-- **Returns:** list of MoosasGeometry
-    A list of MoosasGeometry instances constructed from the parsed faces in the .geo file. 
-    Each geometry includes vertex data, normal vectors, category, ID, and optional holes. 
-    Invalid geometries are skipped with a warning printed to stdout.
-
-.geo is a moosasPy dedicated file format, which uses a simplified file structure to increase I/O speed......
-The .geo file format is:
-f,{polygon type cat},{polygon number idd}
-fn, {normal x}, {normal y}, {normal z}
-fv, {vertex 1x}, {vertex 1y}, {vertex 1z}
-...
-fv,{vertex nx},{vertex ny},{vertex nz}
-fh,{aperture number},{vertex 1x},{vertex 1y},{vertex 1z}
-fh,{aperture number},{vertex nx},{vertex ny},{vertex nz}
-;
-A face should end with ';'
-
-For example, there are two vertical faces with two openings with a positive x-axis normal vector:
-f,1,0
-fn,1.0,0.0,0.0
-fv,15.5,10.0,2.2
-fv,15.5,10.0,0.0
-fv,15.5,10.8,0.0
-fv,15.5,10.8,2.2
-fh,0,15.5,10.1,1.8
-fh,0,15.5,10.1,0.9
-fh,0,15.5,10.3,0.9
-fh,0,15.5,10.3,1.8
-fh,1,15.5,10.5,1.8
-fh,1,15.5,10.5,0.9
-fh,1,15.5,10.7,0.9
-fh,1,15.5,10.7,1.8
-;
-f,-1,0
-fn,1.0,0.0,0.0
-fv,12.5,10.0,2.2
-fv,12.5,10.0,0.0
-fv,12.5,10.8,0.0
-fv,12.5,10.8,2.2
-fh,0,12.5,10.1,1.8
-fh,0,12.5,10.1,0.9
-fh,0,12.5,10.3,0.9
-fh,0,12.5,10.3,1.8
-fh,1,12.5,10.5,1.8
-fh,1,12.5,10.5,0.9
-fh,1,12.5,10.7,0.9
-fh,1,12.5,10.7,1.8
-;
-...
-- **Comments:**
-  > Function:
-  > Read a .geo file and return a list of MoosasGeometry objects representing the geometric data.
-  > Parameters:
-  > file_path : str
-  >     Path to the .geo file to be read. The .geo format is a custom simplified format used by moosasPy 
-  >     for efficient I/O, containing polygon definitions, normals, vertices, and apertures.
-  > 
-  > Returns
-  > list of MoosasGeometry
-  >     A list of MoosasGeometry instances constructed from the parsed faces in the .geo file. 
-  >     Each geometry includes vertex data, normal vectors, category, ID, and optional holes. 
-  >     Invalid geometries are skipped with a warning printed to stdout.
-  > 
-  > .geo is a moosasPy dedicated file format, which uses a simplified file structure to increase I/O speed......
-  > The .geo file format is:
-  > f,{polygon type cat},{polygon number idd}
-  > fn, {normal x}, {normal y}, {normal z}
-  > fv, {vertex 1x}, {vertex 1y}, {vertex 1z}
-  > ...
-  > fv,{vertex nx},{vertex ny},{vertex nz}
-  > fh,{aperture number},{vertex 1x},{vertex 1y},{vertex 1z}
-  > fh,{aperture number},{vertex nx},{vertex ny},{vertex nz}
-  > ;
-  > A face should end with ';'
-  > 
-  > For example, there are two vertical faces with two openings with a positive x-axis normal vector:
-  > f,1,0
-  > fn,1.0,0.0,0.0
-  > fv,15.5,10.0,2.2
-  > fv,15.5,10.0,0.0
-  > fv,15.5,10.8,0.0
-  > fv,15.5,10.8,2.2
-  > fh,0,15.5,10.1,1.8
-  > fh,0,15.5,10.1,0.9
-  > fh,0,15.5,10.3,0.9
-  > fh,0,15.5,10.3,1.8
-  > fh,1,15.5,10.5,1.8
-  > fh,1,15.5,10.5,0.9
-  > fh,1,15.5,10.7,0.9
-  > fh,1,15.5,10.7,1.8
-  > ;
-  > f,-1,0
-  > fn,1.0,0.0,0.0
-  > fv,12.5,10.0,2.2
-  > fv,12.5,10.0,0.0
-  > fv,12.5,10.8,0.0
-  > fv,12.5,10.8,2.2
-  > fh,0,12.5,10.1,1.8
-  > fh,0,12.5,10.1,0.9
-  > fh,0,12.5,10.3,0.9
-  > fh,0,12.5,10.3,1.8
-  > fh,1,12.5,10.5,1.8
-  > fh,1,12.5,10.5,0.9
-  > fh,1,12.5,10.7,0.9
-  > fh,1,12.5,10.7,1.8
-  > ;
-  > ...
-  > Returns:
-  > list of MoosasGeometry
-  >     A list of MoosasGeometry instances constructed from the parsed faces in the .geo file. 
-  >     Each geometry includes vertex data, normal vectors, category, ID, and optional holes. 
-  >     Invalid geometries are skipped with a warning printed to stdout.
-  > 
-  > .geo is a moosasPy dedicated file format, which uses a simplified file structure to increase I/O speed......
-  > The .geo file format is:
-  > f,{polygon type cat},{polygon number idd}
-  > fn, {normal x}, {normal y}, {normal z}
-  > fv, {vertex 1x}, {vertex 1y}, {vertex 1z}
-  > ...
-  > fv,{vertex nx},{vertex ny},{vertex nz}
-  > fh,{aperture number},{vertex 1x},{vertex 1y},{vertex 1z}
-  > fh,{aperture number},{vertex nx},{vertex ny},{vertex nz}
-  > ;
-  > A face should end with ';'
-  > 
-  > For example, there are two vertical faces with two openings with a positive x-axis normal vector:
-  > f,1,0
-  > fn,1.0,0.0,0.0
-  > fv,15.5,10.0,2.2
-  > fv,15.5,10.0,0.0
-  > fv,15.5,10.8,0.0
-  > fv,15.5,10.8,2.2
-  > fh,0,15.5,10.1,1.8
-  > fh,0,15.5,10.1,0.9
-  > fh,0,15.5,10.3,0.9
-  > fh,0,15.5,10.3,1.8
-  > fh,1,15.5,10.5,1.8
-  > fh,1,15.5,10.5,0.9
-  > fh,1,15.5,10.7,0.9
-  > fh,1,15.5,10.7,1.8
-  > ;
-  > f,-1,0
-  > fn,1.0,0.0,0.0
-  > fv,12.5,10.0,2.2
-  > fv,12.5,10.0,0.0
-  > fv,12.5,10.8,0.0
-  > fv,12.5,10.8,2.2
-  > fh,0,12.5,10.1,1.8
-  > fh,0,12.5,10.1,0.9
-  > fh,0,12.5,10.3,0.9
-  > fh,0,12.5,10.3,1.8
-  > fh,1,12.5,10.5,1.8
-  > fh,1,12.5,10.5,0.9
-  > fh,1,12.5,10.7,0.9
-  > fh,1,12.5,10.7,1.8
-  > ;
-  > ...
-
----
+- **Signature:** `_readGeo(file_path) -> list[MoosasGeometry]`
 
 ###### <a id='IO__geo_py_func__roundPolygons'></a>`_roundPolygons`
-- **Type:** Function
-- **Parameters:** polygons: np.ndarray[pygeos.Geometry], precision: float
-- **Returns:** :
-        np.ndarray rounded polygons
-- **Comments:**
-  > Function:
-  > round the coordinates of polygons according to precision.
-  > graping the next near coordinates (x,y,z) to the past if their distance is less than precision.
-  > 
-  >     Args:
-  >         polygons(np.ndarray[pygeos.Geometry]): polygons in np.ndarray format
-  >         precision(float): round precision, usually would be geom.POINT_PRECISION
-  > Parameters:
-  > No parameter descriptions.
-  > Returns:
-  > :
-  >         np.ndarray rounded polygons
-
----
+- **Signature:** `_roundPolygons(polygons: np.ndarray[shapely.Geometry], precision: float) -> np.ndarray`
 
 ###### <a id='IO__geo_py_func__readGeoLegacy'></a>`_readGeoLegacy`
-- **Type:** Function
-- **Parameters:** file_path: Any
-- **Returns:** a list of MoosasGeometry objects.
-
-Parameters
-file_path : str
-    Path to the .geo file to be read. The file contains geometric data in a custom plain text format,
-    with face type (cat), ID, normal vector, and vertices defined per face.
-
-Returns
-list[MoosasGeometry]
-    A list of MoosasGeometry instances constructed from the parsed faces, each containing
-    geometry, identifier, normal vector, and category as specified in the input file.
-- **Comments:**
-  > Function:
-  > Reads a legacy .geo file format used by moosasPy and
-  > Parameters:
-  > file_path : str
-  >     Path to the .geo file to be read. The file contains geometric data in a custom plain text format,
-  >     with face type (cat), ID, normal vector, and vertices defined per face.
-  > 
-  > Returns
-  > list[MoosasGeometry]
-  >     A list of MoosasGeometry instances constructed from the parsed faces, each containing
-  >     geometry, identifier, normal vector, and category as specified in the input file.
-  > Returns:
-  > a list of MoosasGeometry objects.
-  > 
-  > Parameters
-  > file_path : str
-  >     Path to the .geo file to be read. The file contains geometric data in a custom plain text format,
-  >     with face type (cat), ID, normal vector, and vertices defined per face.
-  > 
-  > Returns
-  > list[MoosasGeometry]
-  >     A list of MoosasGeometry instances constructed from the parsed faces, each containing
-  >     geometry, identifier, normal vector, and category as specified in the input file.
+- **Signature:** `_readGeoLegacy(file_path) -> list[MoosasGeometry]`
 
 ---
 
-
-## 📄 File: IO\_idf.py
+## ?? File: IO\_idf.py
 <a id='IO__idf_py'></a>
 
 ### Contents
-- Functions:
+- Key public functions:
+  - [loadIDFTemplate()](#IO__idf_py_func_loadIDFTemplate)
   - [writeIDF()](#IO__idf_py_func_writeIDF)
-  - [encodeURI()](#IO__idf_py_func_encodeURI)
   - [IDFtoOWL()](#IO__idf_py_func_IDFtoOWL)
   - [OWLtoIDF()](#IO__idf_py_func_OWLtoIDF)
+  - [IDFtoGeo()](#IO__idf_py_func_IDFtoGeo)
+  - [IDFtoXml()](#IO__idf_py_func_IDFtoXml)
+  - [readIDF()](#IO__idf_py_func_readIDF)
 
----
+### ?? Functions
+###### <a id='IO__idf_py_func_loadIDFTemplate'></a>`loadIDFTemplate`
+- **Signature:** `loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zoneName: str='') -> idfGeometry.ZoneTemplate`
 
-### 🔧 Functions
 ###### <a id='IO__idf_py_func_writeIDF'></a>`writeIDF`
-- **Type:** Function
-- **Parameters:** outputPath: str, model: Any
-- **Returns:** None
-    This function does not return any value. It writes the IDF file to the specified path and prints progress information.
-- **Comments:**
-  > Function:
-  > Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
-  > Parameters:
-  > outputPath : str
-  >     Path to save the generated IDF file. The directory must be writable.
-  > model : MoosasModel
-  >     A model instance containing building geometry and settings to be converted into IDF format.
-  >     Must provide methods `getAllFaces`, `spaceIdDict`, and `spaceList`, and associated attributes
-  >     for space and surface properties.
-  > 
-  > Returns
-  > None
-  >     This function does not return any value. It writes the IDF file to the specified path and prints progress information.
-  > Returns:
-  > None
-  >     This function does not return any value. It writes the IDF file to the specified path and prints progress information.
-
----
-
-###### <a id='IO__idf_py_func_encodeURI'></a>`encodeURI`
-- **Type:** Function
-- **Parameters:** hint: Any
-- **Returns:** rdflib.term.URIRef
-    A URIRef object created from the processed hint string.
-
-Raises
-Exception
-    If the input string contains an exclamation mark ('!').
-- **Comments:**
-  > Function:
-  > Encode a string into a URI by replacing spaces with underscores and converting to a URIRef object.
-  > Parameters:
-  > hint : str
-  >     The input string to be encoded into a URI. It will be stripped of leading/trailing whitespace 
-  >     and have spaces replaced with underscores.
-  > 
-  > Returns
-  > rdflib.term.URIRef
-  >     A URIRef object created from the processed hint string.
-  > 
-  > Raises
-  > Exception
-  >     If the input string contains an exclamation mark ('!').
-  > Returns:
-  > rdflib.term.URIRef
-  >     A URIRef object created from the processed hint string.
-  > 
-  > Raises
-  > Exception
-  >     If the input string contains an exclamation mark ('!').
-
----
+- **Signature:** `writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, iddFile=None, zoneNameToSpaceDict=None)`
 
 ###### <a id='IO__idf_py_func_IDFtoOWL'></a>`IDFtoOWL`
-- **Type:** Function
-- **Parameters:** idfTemplatePath: Any
-- **Returns:** Graph
-        An RDFlib Graph object representing the IDF data as an OWL ontology. The graph includes classes,
-        properties, and instances derived from the IDF file, with semantics aligned to the EnergyPlus
-        InputOutputReference documentation. Subjects are defined under the 'idf' namespace.
-- **Comments:**
-  > Function:
-  > Translate an IDF (Input Data File) knowledge base into an OWL (Web Ontology Language) RDF graph.
-  > Parameters:
-  > idfTemplatePath : str
-  >         Path to the IDF template file to be converted. The file contains building energy model input data
-  >         structured according to EnergyPlus Input/Output Reference definitions.
-  > 
-  >     Returns
-  >     Graph
-  >         An RDFlib Graph object representing the IDF data as an OWL ontology. The graph includes classes,
-  >         properties, and instances derived from the IDF file, with semantics aligned to the EnergyPlus
-  >         InputOutputReference documentation. Subjects are defined under the 'idf' namespace.
-  > Returns:
-  > Graph
-  >         An RDFlib Graph object representing the IDF data as an OWL ontology. The graph includes classes,
-  >         properties, and instances derived from the IDF file, with semantics aligned to the EnergyPlus
-  >         InputOutputReference documentation. Subjects are defined under the 'idf' namespace.
-
----
+- **Signature:** `IDFtoOWL(idfTemplatePath)`
 
 ###### <a id='IO__idf_py_func_OWLtoIDF'></a>`OWLtoIDF`
-- **Type:** Function
-- **Parameters:** owl: Graph, outFile: Any
-- **Returns:** IDF
-    An IDF object representing the EnergyPlus input data file, populated with objects 
-    derived from the input OWL graph and saved to the specified output path.
-- **Comments:**
-  > Function:
-  > Convert an OWL ontology graph to an IDF (Input Data File) format used by EnergyPlus.
-  > Parameters:
-  > owl : Graph or str
-  >     An RDFlib Graph object containing the OWL ontology data, or a string path to an OWL file.
-  > outFile : str
-  >     Path to the output file where the generated IDF will be saved.
-  > 
-  > Returns
-  > IDF
-  >     An IDF object representing the EnergyPlus input data file, populated with objects 
-  >     derived from the input OWL graph and saved to the specified output path.
-  > Returns:
-  > IDF
-  >     An IDF object representing the EnergyPlus input data file, populated with objects 
-  >     derived from the input OWL graph and saved to the specified output path.
+- **Signature:** `OWLtoIDF(owl, outFile)`
+
+###### <a id='IO__idf_py_func_IDFtoGeo'></a>`IDFtoGeo`
+- **Signature:** `IDFtoGeo(idfPath: str, outputPath: str=None, iddPath: str=None) -> None`
+
+###### <a id='IO__idf_py_func_IDFtoXml'></a>`IDFtoXml`
+- **Signature:** `IDFtoXml(idfPath: str, outputPath: str=None, iddPath: str=None) -> None`
+
+###### <a id='IO__idf_py_func_readIDF'></a>`readIDF`
+- **Signature:** `readIDF(idfPath: str, geoPath: str=None, xmlPath: str=None, iddPath: str=None) -> MoosasModel`
+
+- **Note:** `encodeURI/decodeURI` belong to `IO/_rdf.py`, not `IO/_idf.py`.
 
 ---
 
-
-## 📄 File: IO\_json.py
+## ?? File: IO\_json.py
 <a id='IO__json_py'></a>
 
 ### Contents
@@ -10858,124 +10246,19 @@ Exception
   - [writeGeojson()](#IO__json_py_func_writeGeojson)
   - [_readGeojson()](#IO__json_py_func__readGeojson)
 
----
-
-### 🔧 Functions
+### ?? Functions
 ###### <a id='IO__json_py_func_writeJson'></a>`writeJson`
-- **Type:** Function
-- **Parameters:** file_path: Any, model: Any
-- **Returns:** :
-    json string of the file
-- **Comments:**
-  > Function:
-  > Get a json file describe the space topology.
-  > we have 3 different level of data:
-  > 
-  > faces:{
-  >     Uid: unique id, which is random generated.
-  >     faceId: the faceId of the faces in the geo data or file.
-  >     level: building level where the element locates.
-  >     offset: the element's offset from the building level.
-  >     area: the total surface area.
-  >     glazingId: glazing faceId in the geo data or file.
-  >     height: level + offset
-  >     normal: element's normal, point to exterior.
-  >     external: whether the element is connected to exterior.
-  >     space: the space id which this element belongs to.
-  >     }
-  > 
-  > topology:{
-  >     floor:{faces:[{faces}..]}
-  >     edge:{faces:[{faces}..]}
-  >     ceiling:{faces:[{faces}..]}
-  > }
-  > 
-  > space:{
-  >     id: unique space id, which is calculated based on the shape & location of the space. It is the same in each we call transfrom()
-  >     area: space area
-  >     height: space height
-  >     boundary: space 1 level space boundary (1LSB){pt:[[x,y,z]...]}
-  >     internalMass: the internalMass in the space {faces:[{faces}..]}
-  >     topology:{topology}
-  >     neighbor: the neighborhood space share the same 2 level space boundary (2LSB)
-  >         [{
-  >             faceId: the faceId of the 2LSB in the geo file,
-  >             id: the neighbor space id
-  >         }]
-  >     settings: thermal settings of the space in dictionary, you can find their names in .thermal.settings
-  >     void: the void inside the space, also formatted in space[{space}..]
-  > }
-  > 
-  > Args:
-  >     file_path(str): output space json file path
-  >     model(MoosasModel): model to export
-  > Parameters:
-  > No parameter descriptions.
-  > Returns:
-  > :
-  >     json string of the file
-
----
+- **Signature:** `writeJson(file_path, model) -> str`
 
 ###### <a id='IO__json_py_func_writeGeojson'></a>`writeGeojson`
-- **Type:** Function
-- **Parameters:** file_path: Any, model: Any
-- **Returns:** :
-    json file string
-- **Comments:**
-  > Function:
-  > Get a geojson file for the geometry library in the model
-  > 
-  > features = [
-  >     {
-  >         "type": "Feature",
-  >         "properties": {
-  >             "normal": geometries' normal,
-  >             "id": geometries' faceId,
-  >             "is_glazing": geo.category
-  >         },
-  > 
-  >         "geometries": {
-  >             "type": "Polygon",
-  >             "coordinates": coordinates for each polygon
-  >         }
-  >     }
-  > ]
-  > 
-  > Args:
-  >     file_path(str): output geojson file path
-  >     model(MoosasModel): model to export
-  > Parameters:
-  > No parameter descriptions.
-  > Returns:
-  > :
-  >     json file string
-
----
+- **Signature:** `writeGeojson(file_path, model) -> str`
 
 ###### <a id='IO__json_py_func__readGeojson'></a>`_readGeojson`
-- **Type:** Function
-- **Parameters:** file_path: Any
-- **Returns:** list[MoosasGeometry]
-    A list of MoosasGeometry objects parsed from the GeoJSON file.
-- **Comments:**
-  > Function:
-  > Read a GeoJSON file and return a list of MoosasGeometry objects.
-  > Parameters:
-  > file_path : str
-  >     Path to the GeoJSON file to be read.
-  > 
-  > Returns
-  > list[MoosasGeometry]
-  >     A list of MoosasGeometry objects parsed from the GeoJSON file.
-  > Returns:
-  > list[MoosasGeometry]
-  >     A list of MoosasGeometry objects parsed from the GeoJSON file.
+- **Signature:** `_readGeojson(file_path) -> list[MoosasGeometry]`
 
 ---
 
-
-## 📄 File: IO\_obj.py
+## ?? File: IO\_obj.py
 <a id='IO__obj_py'></a>
 
 ### Contents
@@ -10983,662 +10266,60 @@ Exception
   - [_readObj()](#IO__obj_py_func__readObj)
   - [_roundPolygons()](#IO__obj_py_func__roundPolygons)
 
----
-
-### 🔧 Functions
+### ?? Functions
 ###### <a id='IO__obj_py_func__readObj'></a>`_readObj`
-- **Type:** Function
-- **Parameters:** file_path: Any
-- **Returns:** list[MoosasGeometry]
-    A list of MoosasGeometry instances constructed from the geometry, material properties,
-    and face data parsed from the OBJ and MTL files. Each MoosasGeometry object contains
-    polygonal face data, identifier, normal vector, and category based on material transparency.
-- **Comments:**
-  > Function:
-  > Reads an OBJ file and its associated MTL file to construct a list of MoosasGeometry objects.
-  > Parameters:
-  > file_path : str
-  >     Path to the input .obj file. The corresponding .mtl file is expected to be referenced 
-  >     within the OBJ file and located in the same directory.
-  > 
-  > Returns
-  > list[MoosasGeometry]
-  >     A list of MoosasGeometry instances constructed from the geometry, material properties,
-  >     and face data parsed from the OBJ and MTL files. Each MoosasGeometry object contains
-  >     polygonal face data, identifier, normal vector, and category based on material transparency.
-  > Returns:
-  > list[MoosasGeometry]
-  >     A list of MoosasGeometry instances constructed from the geometry, material properties,
-  >     and face data parsed from the OBJ and MTL files. Each MoosasGeometry object contains
-  >     polygonal face data, identifier, normal vector, and category based on material transparency.
-
----
+- **Signature:** `_readObj(file_path) -> list[MoosasGeometry]`
 
 ###### <a id='IO__obj_py_func__roundPolygons'></a>`_roundPolygons`
-- **Type:** Function
-- **Parameters:** polygons: np.ndarray[pygeos.Geometry], precision: float
-- **Returns:** :
-        np.ndarray rounded polygons
-- **Comments:**
-  > Function:
-  > round the coordinates of polygons according to precision.
-  > graping the next near coordinates (x,y,z) to the past if their distance is less than precision.
-  > 
-  >     Args:
-  >         polygons(np.ndarray[pygeos.Geometry]): polygons in np.ndarray format
-  >         precision(float): round precision, usually would be geom.POINT_PRECISION
-  > Parameters:
-  > No parameter descriptions.
-  > Returns:
-  > :
-  >         np.ndarray rounded polygons
+- **Signature:** `_roundPolygons(polygons: np.ndarray[shapely.Geometry], precision: float) -> np.ndarray`
 
 ---
 
-
-## 📄 File: IO\_rdf.py
+## ?? File: IO\_rdf.py
 <a id='IO__rdf_py'></a>
 
 ### Contents
-- Classes:
-  - [MoosasGraph](#IO__rdf_py_class_MoosasGraph)
 - Functions:
+  - [encodeURI()](#IO__rdf_py_func_encodeURI)
+  - [decodeURI()](#IO__rdf_py_func_decodeURI)
   - [writeRDF()](#IO__rdf_py_func_writeRDF)
   - [loadRDF()](#IO__rdf_py_func_loadRDF)
 
----
+### ?? Functions
+###### <a id='IO__rdf_py_func_encodeURI'></a>`encodeURI`
+- **Signature:** `encodeURI(hint)`
 
-### 📦 Class: MoosasGraph
-<a id='IO__rdf_py_class_MoosasGraph'></a>
-**Description:** No class documentation.
+###### <a id='IO__rdf_py_func_decodeURI'></a>`decodeURI`
+- **Signature:** `decodeURI(hint)`
 
-#### Methods
-###### <a id='IO__rdf_py_class_MoosasGraph_method___init__'></a>`__init__`
-- **Type:** Instance Method
-- **Parameters:** self: Any, model: MoosasModel, dumpUseless: Any, ExportIFC: Any
-- **Returns:** None
-- **Comments:**
-  > Function:
-  > Initialize the MoosasGraph instance with optional model encoding and namespace bindings.
-  > Parameters:
-  > model : MoosasModel, optional
-  >     The model to encode into the graph. If provided, the model is encoded using the `encodeModel` method.
-  >     Default is None.
-  > dumpUseless : bool, default True
-  >     If True, useless or redundant information is excluded during model encoding. 
-  >     This parameter is passed to the `encodeModel` method.
-  > ExportIFC : bool, default False
-  >     If True, enables IFC-specific export features during model encoding.
-  >     This parameter is passed to the `encodeModel` method.
-  > 
-  > Returns
-  > None
-  > Returns:
-  > None
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_load'></a>`load`
-- **Type:** Class Method
-- **Parameters:** cls: Any, filePath: Any, fileFormat: Any
-- **Returns:** rdflib.Graph
-    A new instance of the class populated with the parsed data.
-- **Comments:**
-  > Function:
-  > Load a graph from a file.
-  > Parameters:
-  > filePath : str
-  >     Path to the file containing the serialized graph.
-  > fileFormat : str, optional
-  >     Serialization format of the file (e.g., 'turtle', 'xml', 'n3'). Default is 'turtle'.
-  > 
-  > Returns
-  > rdflib.Graph
-  >     A new instance of the class populated with the parsed data.
-  > Returns:
-  > rdflib.Graph
-  >     A new instance of the class populated with the parsed data.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_encodeModel'></a>`encodeModel`
-- **Type:** Instance Method
-- **Parameters:** self: Any, model: MoosasModel, dumpUseless: Any, ExportIFC: Any
-- **Returns:** None
-    This function does not return any value.
-- **Comments:**
-  > Function:
-  > Encode a MoosasModel into the ontology representation.
-  > Parameters:
-  > model : MoosasModel
-  >     The model to be encoded, containing building elements, geometry, spaces, and other data.
-  > dumpUseless : bool, optional
-  >     If True, retrieves all faces including those marked as useless; otherwise, uses only specific element lists.
-  >     Default is True.
-  > ExportIFC : bool, optional
-  >     If True, enables IFC-specific export logic during encoding. Default is False.
-  > 
-  > Returns
-  > None
-  >     This function does not return any value.
-  > Returns:
-  > None
-  >     This function does not return any value.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_buildOntology'></a>`buildOntology`
-- **Type:** Instance Method
-- **Parameters:** self: Any, model: MoosasModel
-- **Returns:** None
-    This function modifies the internal state of the object by adding RDF triples to represent 
-    the ontology but does not return any value.
-- **Comments:**
-  > Function:
-  > Constructs an ontology hierarchy for classes in Moosas based on the provided model.
-  > Parameters:
-  > model : MoosasModel
-  >     The input model containing building templates and other information used to construct 
-  >     the ontology. The model's `buildingTemplate` attribute is accessed to extract zone 
-  >     information, which is used to define properties and relationships in the ontology.
-  > 
-  > Returns
-  > None
-  >     This function modifies the internal state of the object by adding RDF triples to represent 
-  >     the ontology but does not return any value.
-  > Returns:
-  > None
-  >     This function modifies the internal state of the object by adding RDF triples to represent 
-  >     the ontology but does not return any value.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_ifcOntology'></a>`ifcOntology`
-- **Type:** Instance Method
-- **Parameters:** self: Any
-- **Returns:** None
-    This function does not return any value. It modifies the state of the instance by adding 
-    RDF triples representing IFC4.0 ontology elements and their relationships.
-- **Comments:**
-  > Function:
-  > Add IFC4.0 ontology definitions to the current graph for data coupling and semantic interoperability.
-  > Parameters:
-  > self : object
-  >     The instance of the class containing namespaces (ifc, rdfs, moosas) and an `add` method 
-  >     for adding RDF triples. It is assumed that this object has attributes `ifc`, `rdfs`, 
-  >     `moosas`, and a method `add(triple)` that accepts an RDF triple.
-  > 
-  > Returns
-  > None
-  >     This function does not return any value. It modifies the state of the instance by adding 
-  >     RDF triples representing IFC4.0 ontology elements and their relationships.
-  > Returns:
-  > None
-  >     This function does not return any value. It modifies the state of the instance by adding 
-  >     RDF triples representing IFC4.0 ontology elements and their relationships.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_encodeWeather'></a>`encodeWeather`
-- **Type:** Instance Method
-- **Parameters:** self: Any, model: MoosasModel
-- **Returns:** None
-    This function does not return any value. It modifies the internal RDF graph by adding weather-related triples.
-- **Comments:**
-  > Function:
-  > Encode weather data from a MoosasModel into RDF triples.
-  > Parameters:
-  > self : object
-  >     The instance of the class containing this method, providing access to RDF graph and namespaces.
-  > model : MoosasModel
-  >     An instance of MoosasModel containing weather data to be encoded, including location and file information.
-  > 
-  > Returns
-  > None
-  >     This function does not return any value. It modifies the internal RDF graph by adding weather-related triples.
-  > Returns:
-  > None
-  >     This function does not return any value. It modifies the internal RDF graph by adding weather-related triples.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_encodeProgram'></a>`encodeProgram`
-- **Type:** Instance Method
-- **Parameters:** self: Any, pgName: str, pgDict: dict
-- **Returns:** None
-    This function modifies the instance's RDF graph in place and does not return a value.
-- **Comments:**
-  > Function:
-  > Encode a program into the RDF graph with associated metadata.
-  > Parameters:
-  > pgName : str
-  >     The name of the program, used as a term and UID in the RDF graph.
-  > pgDict : dict
-  >     A dictionary containing metadata or properties of the program, where keys are 
-  >     predicate names and values are corresponding literals to be added as triples.
-  > 
-  > Returns
-  > None
-  >     This function modifies the instance's RDF graph in place and does not return a value.
-  > Returns:
-  > None
-  >     This function modifies the instance's RDF graph in place and does not return a value.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_encodeGeo'></a>`encodeGeo`
-- **Type:** Instance Method
-- **Parameters:** self: Any, geo: MoosasGeometry
-- **Returns:** None
-    This function does not return a value. It modifies the internal state by adding 
-    RDF triples to the instance.
-- **Comments:**
-  > Function:
-  > Encode a geometric object into RDF triples.
-  > Parameters:
-  > geo : MoosasGeometry
-  >     The geometric object to encode, containing attributes such as faceId, category, 
-  >     boundary, and holes. The object is converted into RDF triples representing 
-  >     its properties and geometry in WKT format.
-  > 
-  > Returns
-  > None
-  >     This function does not return a value. It modifies the internal state by adding 
-  >     RDF triples to the instance.
-  > Returns:
-  > None
-  >     This function does not return a value. It modifies the internal state by adding 
-  >     RDF triples to the instance.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_encodeElement'></a>`encodeElement`
-- **Type:** Instance Method
-- **Parameters:** self: Any, Element: MoosasElement, typeName: str, mask: Any, ExportIFC: Any
-- **Returns:** None
-    This function does not return a value. It modifies the internal RDF graph by adding triples.
-- **Comments:**
-  > Function:
-  > Encode a MoosasElement into RDF triples within the graph.
-  > Parameters:
-  > Element : MoosasElement
-  >     The element to be encoded, containing properties such as Uid, offset, area, normal, etc.
-  > typeName : str, optional
-  >     The type name of the element (e.g., 'rawElement', 'Wall', 'Glazing'), used to assign semantic type. Default is "rawElement".
-  > mask : set or list, optional
-  >     A collection of neighbor element identifiers to filter which neighbors are added. If provided, only neighbors in the mask are included. Default is None.
-  > ExportIFC : bool, optional
-  >     If True, generates IFC-compliant RDF triples for the element, including GlobalID and corresponding IFC types. Default is False.
-  > 
-  > Returns
-  > None
-  >     This function does not return a value. It modifies the internal RDF graph by adding triples.
-  > Returns:
-  > None
-  >     This function does not return a value. It modifies the internal RDF graph by adding triples.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_encodeStorey'></a>`encodeStorey`
-- **Type:** Instance Method
-- **Parameters:** self: Any, model: MoosasModel
-- **Returns:** None
-    This function modifies the RDF graph in place and does not return any value.
-- **Comments:**
-  > Function:
-  > Encode building storeys and their associated spaces into the RDF graph.
-  > Parameters:
-  > self : object
-  >     The instance of the class containing the method. Holds the RDF graph and namespaces.
-  > model : MoosasModel
-  >     The model containing level and space information to be encoded. Must have `levelList` 
-  >     and `spaceList` attributes, where `levelList` contains elevation levels and `spaceList` 
-  >     contains space objects with 'level' and 'id' properties.
-  > 
-  > Returns
-  > None
-  >     This function modifies the RDF graph in place and does not return any value.
-  > Returns:
-  > None
-  >     This function modifies the RDF graph in place and does not return any value.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_encode2LSB'></a>`encode2LSB`
-- **Type:** Instance Method
-- **Parameters:** self: Any, spaceId: str, element: MoosasElement
-- **Returns:** None
-    This function does not return a value. It modifies the internal state by adding RDF triples
-    representing the IfcRelSpaceBoundary2ndLevel relationship.
-- **Comments:**
-  > Function:
-  > Encode a building element into a second-level space boundary representation using RDF triples.
-  > Parameters:
-  > spaceId : str
-  >     Identifier for the space, used to construct URIs and determine spatial relationships.
-  >     Special value 'outer' indicates an external spatial element.
-  > element : MoosasElement
-  >     The building element to encode, containing properties such as Uid, category, level,
-  >     normal vector, space membership, and glazing elements.
-  > 
-  > Returns
-  > None
-  >     This function does not return a value. It modifies the internal state by adding RDF triples
-  >     representing the IfcRelSpaceBoundary2ndLevel relationship.
-  > Returns:
-  > None
-  >     This function does not return a value. It modifies the internal state by adding RDF triples
-  >     representing the IfcRelSpaceBoundary2ndLevel relationship.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_encodeSpace'></a>`encodeSpace`
-- **Type:** Instance Method
-- **Parameters:** self: Any, space: MoosasSpace, ExportIFC: Any
-- **Returns:** None
-    This function does not return any value. It modifies the graph state by adding RDF triples.
-- **Comments:**
-  > Function:
-  > Encode a MoosasSpace object into RDF triples within the graph, optionally exporting to IFC format.
-  > Parameters:
-  > space : MoosasSpace
-  >     The space object to be encoded, containing properties such as id, area, height, ceiling, floor, edge, and voids.
-  > ExportIFC : bool, optional
-  >     If True, exports the space and associated elements to IFC-compatible RDF triples. Default is False.
-  > 
-  > Returns
-  > None
-  >     This function does not return any value. It modifies the graph state by adding RDF triples.
-  > Returns:
-  > None
-  >     This function does not return any value. It modifies the graph state by adding RDF triples.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_decodeGeo'></a>`decodeGeo`
-- **Type:** Instance Method
-- **Parameters:** self: Any, geoUri: Any, model: MoosasModel
-- **Returns:** MoosasGeometry
-    A MoosasGeometry object representing the decoded geometry, including face, face ID, category, and any holes.
-- **Comments:**
-  > Function:
-  > Decode a geographic URI into a MoosasGeometry object.
-  > Parameters:
-  > geoUri : str or rdflib.term.URIRef
-  >     The geographic URI to decode. If a string is provided, it will be converted to a URIRef.
-  > model : MoosasModel, optional
-  >     An optional model used to look up the face by face ID. If provided and a matching geometry is found, it will be returned directly.
-  > 
-  > Returns
-  > MoosasGeometry
-  >     A MoosasGeometry object representing the decoded geometry, including face, face ID, category, and any holes.
-  > Returns:
-  > MoosasGeometry
-  >     A MoosasGeometry object representing the decoded geometry, including face, face ID, category, and any holes.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_decodeElement'></a>`decodeElement`
-- **Type:** Instance Method
-- **Parameters:** self: Any, elementUri: Any, model: MoosasModel
-- **Returns:** MoosasElement or None
-    The decoded MoosasElement instance if found or successfully created; otherwise, None.
-- **Comments:**
-  > Function:
-  > Decode an element from its URI by retrieving and interpreting semantic information.
-  > Parameters:
-  > elementUri : str or rdflib.term.URIRef
-  >     The URI reference of the element to decode. If a string is provided, it will be converted to a URIRef.
-  > model : MoosasModel, optional
-  >     The model instance containing element lists (e.g., faceList, wallList). Used to search for existing elements. 
-  >     If not provided, a new element will be constructed based on retrieved properties.
-  > 
-  > Returns
-  > MoosasElement or None
-  >     The decoded MoosasElement instance if found or successfully created; otherwise, None.
-  > Returns:
-  > MoosasElement or None
-  >     The decoded MoosasElement instance if found or successfully created; otherwise, None.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_isClass'></a>`isClass`
-- **Type:** Instance Method
-- **Parameters:** self: Any, _from: str, _class: URIRef
-- **Returns:** bool
-    True if the subject has the specified class as its type, False otherwise.
-- **Comments:**
-  > Function:
-  > Check if the given subject is an instance of the specified class.
-  > Parameters:
-  > _from : str
-  >     The subject URI as a string.
-  > _class : rdflib.term.URIRef
-  >     The class URI to check against, represented as a URIRef.
-  > 
-  > Returns
-  > bool
-  >     True if the subject has the specified class as its type, False otherwise.
-  > Returns:
-  > bool
-  >     True if the subject has the specified class as its type, False otherwise.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_getObject'></a>`getObject`
-- **Type:** Instance Method
-- **Parameters:** self: Any, _from: Any, _property: Any
-- **Returns:** list
-    A list of objects obtained by collecting unique values from the `objects` generator and converting them using `mixItemListToObject`.
-- **Comments:**
-  > Function:
-  > Get a list of objects associated with a given subject and property.
-  > Parameters:
-  > self : object
-  >     The instance of the class containing the `objects` method and `mixItemListToObject` function.
-  > _from : hashable
-  >     The subject or source entity from which to retrieve associated objects.
-  > _property : hashable
-  >     The property or predicate used to filter the relationships.
-  > 
-  > Returns
-  > list
-  >     A list of objects obtained by collecting unique values from the `objects` generator and converting them using `mixItemListToObject`.
-  > Returns:
-  > list
-  >     A list of objects obtained by collecting unique values from the `objects` generator and converting them using `mixItemListToObject`.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_getSubject'></a>`getSubject`
-- **Type:** Instance Method
-- **Parameters:** self: Any, _property: Any, _to: Any
-- **Returns:** list
-    A list of subject objects obtained from matching triples, with mixed items converted into objects.
-- **Comments:**
-  > Function:
-  > Get a list of subjects for a given property and object, returned as a mixed item list converted to objects.
-  > Parameters:
-  > _property : str or rdflib.term.URIRef
-  >     The property (predicate) to match in the RDF triples.
-  > _to : str or rdflib.term.Identifier
-  >     The object value to match in the RDF triples.
-  > 
-  > Returns
-  > list
-  >     A list of subject objects obtained from matching triples, with mixed items converted into objects.
-  > Returns:
-  > list
-  >     A list of subject objects obtained from matching triples, with mixed items converted into objects.
-
----
-
-###### <a id='IO__rdf_py_class_MoosasGraph_method_getRelate'></a>`getRelate`
-- **Type:** Instance Method
-- **Parameters:** self: Any, node: Any
-- **Returns:** list
-    A list of nodes that are related to the input node, either as objects in subject-predicate-node triples or as subjects in node-predicate-object triples. Duplicates are removed using a set.
-- **Comments:**
-  > Function:
-  > Get all nodes related to the given node through outgoing or incoming triples.
-  > Parameters:
-  > node : hashable
-  >     The node for which related nodes are to be retrieved. Can be any hashable type representing a subject or object in the triples.
-  > 
-  > Returns
-  > list
-  >     A list of nodes that are related to the input node, either as objects in subject-predicate-node triples or as subjects in node-predicate-object triples. Duplicates are removed using a set.
-  > Returns:
-  > list
-  >     A list of nodes that are related to the input node, either as objects in subject-predicate-node triples or as subjects in node-predicate-object triples. Duplicates are removed using a set.
-
----
-
-### 🔧 Functions
 ###### <a id='IO__rdf_py_func_writeRDF'></a>`writeRDF`
-- **Type:** Function
-- **Parameters:** model: MoosasModel, out_path: str, fileFormat: Any, dumpUseless: Any, ExportIFC: Any
-- **Returns:** MoosasGraph
-    The generated MoosasGraph object that was serialized to the file.
-- **Comments:**
-  > Function:
-  > Serialize a MoosasModel to an RDF file in the specified format.
-  > Parameters:
-  > model : MoosasModel
-  >     The MoosasModel instance to be serialized into RDF.
-  > out_path : str
-  >     The file path where the RDF output will be written.
-  > fileFormat : str, optional
-  >     The serialization format for the RDF output (e.g., 'turtle', 'xml'). Default is "turtle".
-  > dumpUseless : bool, optional
-  >     If True, includes unnecessary or auxiliary information in the output. Default is True.
-  > ExportIFC : bool, optional
-  >     If True, exports IFC-related data in the RDF output. Default is False.
-  > 
-  > Returns
-  > MoosasGraph
-  >     The generated MoosasGraph object that was serialized to the file.
-  > Returns:
-  > MoosasGraph
-  >     The generated MoosasGraph object that was serialized to the file.
-
----
+- **Signature:** `writeRDF(model: MoosasModel, out_path: str, fileFormat='turtle', dumpUseless=True, ExportIFC=False)`
 
 ###### <a id='IO__rdf_py_func_loadRDF'></a>`loadRDF`
-- **Type:** Function
-- **Parameters:** input_path: str, fileFormat: Any
-- **Returns:** MoosasModel
-    A constructed MoosasModel instance populated with data from the RDF file.
-- **Comments:**
-  > Function:
-  > Load RDF data from a file and construct a MoosasModel instance.
-  > Parameters:
-  > input_path : str
-  >     Path to the input RDF file.
-  > fileFormat : str, optional
-  >     Format of the RDF file (default is "turtle").
-  > 
-  > Returns
-  > MoosasModel
-  >     A constructed MoosasModel instance populated with data from the RDF file.
-  > Returns:
-  > MoosasModel
-  >     A constructed MoosasModel instance populated with data from the RDF file.
+- **Signature:** `loadRDF(input_path: str, fileFormat='turtle') -> MoosasModel`
 
 ---
 
-
-## 📄 File: IO\_xml.py
+## ?? File: IO\_xml.py
 <a id='IO__xml_py'></a>
 
 ### Contents
 - Functions:
   - [writeXml()](#IO__xml_py_func_writeXml)
+  - [loadXml()](#IO__xml_py_func_loadXml)
+  - [praseXml()](#IO__xml_py_func_praseXml)
 
----
-
-### 🔧 Functions
+### ?? Functions
 ###### <a id='IO__xml_py_func_writeXml'></a>`writeXml`
-- **Type:** Function
-- **Parameters:** file_path: Any, model: Any, writeGeometry: Any
-- **Returns:** :
-    ElementTree
-- **Comments:**
-  > Function:
-  > Get a xml file describe the space topology.
-  > we have 3 different level of data:
-  > 
-  > <face>
-  >     <Uid> unique id, which is random generated. </Uid>
-  >     <faceId> the faceId of the faces in the geo data or file. </faceId>
-  >     <level> the faceId of the faces in the geo data or file. </level>
-  >     <offset> the element's offset from the building level. </offset>
-  >     <area> the total surface area. </area>
-  >     <glazingId> glazing faceId in the geo data or file. </glazingId>
-  >     <height> level + offset </height>
-  >     <normal> element's normal, point to exterior. (x y z) </normal>
-  >     <external> whether the element is connected to exterior. </external>
-  >     <space> the space id which this element belongs to. </space>
-  > </face>
-  > 
-  > <topology>
-  >     <floor>
-  >         <face>...</face>
-  >     </floor>
-  >     <ceiling>
-  >         <face>...</face>
-  >     </ceiling>
-  >     <edge>
-  >         <face>...</face>
-  >     </edge>
-  > </topology>
-  > 
-  > <space>
-  >     <id>
-  >         unique space id, which is calculated based on the shape & location of the space.
-  >         It is the same in each we call transfrom()
-  >     </id>
-  >     <area> space area </area>
-  >     <height> space height </height>
-  >     <boundary> space 1 level space boundary (1LSB) {pt:[[x,y,z]...]}
-  >         <pt>216.53 393.70 0.0</pt>
-  >         <pt>... ... ...</pt>
-  >         <pt>216.53 177.16 0.0</pt>
-  >     </boundary>
-  > 
-  >     <internal_wall> the internalMass in the space
-  >         <face>...</face>
-  >     </internal_wall>
-  >     <topology>
-  >         <floor>...</floor>
-  >         <ceiling>...</ceiling>
-  >         <edge>...</edge>
-  >     </topology>
-  >     <neighbor> the neighborhood space share the same 2 level space boundary (2LSB)
-  >         <faceId> the faceId of the 2LSB in the geo file, </faceId>
-  >         <id> the neighbor space id </id>
-  >     </neighbor>
-  >     <setting> thermal settings of the space in dictionary, you can find their names in .thermal.settings
-  >         ...
-  >     </setting>
-  >     <void> the void inside the space, also formatted in space[{space}..]
-  >         ...
-  >     </void>
-  > </space>
-  > 
-  > Args:
-  >     file_path(str): output space xml file path
-  >     model(MoosasModel): model to export
-  >     writeGeometry(bool): whether write geometry in the file
-  > Parameters:
-  > No parameter descriptions.
-  > Returns:
-  > :
-  >     ElementTree
+- **Signature:** `writeXml(file_path, model: MoosasModel, writeGeometry=False) -> ET.ElementTree`
+
+###### <a id='IO__xml_py_func_loadXml'></a>`loadXml`
+- **Signature:** `loadXml(filePath, geoPath)`
+
+###### <a id='IO__xml_py_func_praseXml'></a>`praseXml`
+- **Signature:** `praseXml(xml_path: str) -> dict`
 
 ---
-
-
 ## 📄 File: rad\radiance.py
 <a id='rad_radiance_py'></a>
 

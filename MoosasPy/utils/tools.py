@@ -1,6 +1,7 @@
 from __future__ import annotations
 import string
 import random
+import shutil
 from .support import os, sys, np, json
 from .error import FileError, ShellError
 
@@ -48,11 +49,18 @@ class MoosasPath(object):
         Returns
         -------
         list
-            A list of None values, one for each file removed (result of os.remove calls).
+            A list of removed paths.
         """
         if os.path.exists(dir):
-            remove = [os.remove(os.path.join(dir, dell)) for dell in os.listdir(dir)]
-            return remove
+            removed = []
+            for dell in os.listdir(dir):
+                target = os.path.join(dir, dell)
+                if os.path.isdir(target):
+                    shutil.rmtree(target)
+                else:
+                    os.remove(target)
+                removed.append(target)
+            return removed
 
     @staticmethod
     def checkBuildDir(*dir):

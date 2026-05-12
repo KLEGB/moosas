@@ -10,6 +10,7 @@
 - 0.8.5.4 add endpoints for moosas backend
 - 0.8.5.5 fix bug in loadModel for energyAnalysis
 - 0.8.5.6 energy services for frontend in ./app
+- 0.8.6.3 Ventilation plus energy model update: allow 3 modes AFN coupling.
 
 --0.8.4
 # IO update 01.02

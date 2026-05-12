@@ -1,4 +1,4 @@
-import pygeos, os
+import shapely, os
 import numpy as np
 import sys, re, time
 from datetime import datetime

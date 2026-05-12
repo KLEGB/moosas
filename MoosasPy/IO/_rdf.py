@@ -653,13 +653,13 @@ class MoosasGraph(Graph):
                 return geo[0]
         cat = int(float(self.getObject(geoUri, self.moosas.Category)))
         face = URIRef(str(self.getObject(geoUri, self.geo.hasGeometry)))
-        face = shapely.Geometry(self.getObject(face, self.geo.asWKT))
+        face = shapely.from_wkt(str(self.getObject(face, self.geo.asWKT)))
         if self.getObject(geoUri, self.moosas.hasHole) is not None:
             holes = []
             for hole in self.getObject(geoUri, self.moosas.hasHole):
                 hole = self.getObject(URIRef(str(hole)), self.geo.asWKT)
                 if hole:
-                    holes.append(shapely.Geometry(str(hole)))
+                    holes.append(shapely.from_wkt(str(hole)))
 
         else:
             holes = []

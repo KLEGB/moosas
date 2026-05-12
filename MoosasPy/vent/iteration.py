@@ -12,6 +12,7 @@ import csv
 import random
 from ..utils.tools import path, callCmd,parseFile
 import os
+import shutil
 
 working_dir = os.path.join(path.libDir, r'vent')
 EXE_SUFFIX = '.exe' if os.name == 'nt' else ''
@@ -263,14 +264,12 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
     FilePath['project_file'] = prjFile
     if not test_exist():
         raise Exception('Error occurred while checking files.')
-    path.clean(FilePath['project_dir'])
-    FilePath['current_file'] = FilePath['project_file'][:-4] + str(iteration) + '.prj'
     FilePath['current_file'] = os.path.normpath(
-        os.path.join(FilePath['project_dir'], os.path.basename(FilePath['current_file'])))
-    callCmd(['copy',
-             "\"" + os.path.normpath(FilePath['project_file']) + "\"",
-             "\"" + FilePath['current_file'] + "\""
-             ])
+        os.path.join(FilePath['project_dir'], os.path.basename(FilePath['project_file'])))
+    src_prj = os.path.normcase(os.path.abspath(os.path.normpath(FilePath['project_file'])))
+    dst_prj = os.path.normcase(os.path.abspath(FilePath['current_file']))
+    if src_prj != dst_prj:
+        shutil.copy2(src_prj, dst_prj)
 
     """build zone series"""
     tempResult, ACHresult = [], []
@@ -281,33 +280,16 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
     while iteration <= maxIteration and residual > exitResidual:
         iteration += 1
 
-        """copy prj file"""
-        file0 = FilePath['current_file']
-        FilePath['current_file'] = FilePath['project_file'][:-4] + str(iteration) + '.prj'
-        FilePath['current_file'] = os.path.normpath(
-            os.path.join(FilePath['project_dir'], os.path.basename(FilePath['current_file'])))
-        callCmd(['copy',
-                 "\"" + file0 + "\"",
-                 "\"" + FilePath['current_file'] + "\""
-                 ])
         print('------------------------------')
         print("Iteration", iteration, FilePath['current_file'])
 
-        """run contamx.exe"""
-        execContam(exe=FilePath['contamx'], file=os.path.join(FilePath['project_dir'], FilePath['current_file']))
-
-        """run simread.exe"""
-        exe_simread(simread_path=FilePath['simread'], file_path=FilePath['current_file'],
-                    responseFile=FilePath['response'])
-
-        """build AirFlowNetwork matrix, in which zone_length includes outdoor"""
         try:
-            AFN = build_matrix(file_path=FilePath['current_file'])
-            # with open('temp.csv','w+') as f:
-            #    f.write('\n'.join([','.join(li) for li in AFN.astype(str)]))
-
-            """calculating the room indoor temperature"""
-            temperature = change_temperature(AFN=AFN, roomInfo=np.array([z.heat for z in zones]), t0=outdoorTemperature)
+            AFN = contam_iteration(prjFile=FilePath['current_file'])
+            temperature = sensible_heat_iteration(
+                AFN=AFN,
+                zoneInfo=np.array([z.heat for z in zones]),
+                outdoorTemperature=outdoorTemperature
+            )
             tempIteration = (np.array(temperature) - 273.15).flatten().tolist() + [outdoorTemperature]
             print(np.array(temperature) - 273.15)
             for i in range(temperature.shape[1]):
@@ -344,14 +326,7 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
                 print(' \t\t\t' + '\t'.join(np.round(thisResult, 1).astype(str)))
                 residual = np.mean(np.abs(residual1 + residual2))
 
-            """write the data into prj file"""
-            print(f'writing: {prjFile}')
-            head, temp, rear = read_file(FilePath['current_file'])
-            temp_revise = np.array(
-                [re.split(r'[ ]+', li) for li in temp.split('\n')[0:-1]])  # change the temperature info
-            temp_revise[:, 9] = temperature
-            temp_revise = '\n'.join([' '.join(li) for li in temp_revise]) + '\n'
-            write_file(FilePath['current_file'], head, temp_revise, rear)
+            write_contam(temperature=temperature, prjFile=FilePath['current_file'])
 
         except Exception as e:
             print('\033[40m' + f'Error occurred and simulation has collapsed: {e}' + '\033[0m')
@@ -366,11 +341,136 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
     if resultFile is None:
         return zones
     print('simulation finished :', resultFile)
-    callCmd(['copy',
-             "\"" + FilePath['current_file'] + "\"",
-             "\"" + prjFile[:-4]+'_final.prj' + "\""
-             ])
+    shutil.copy2(FilePath['current_file'], prjFile[:-4]+'_final.prj')
     return zones
+
+
+def contam_iteration(prjFile, contamExe=None, simreadExe=None, responseFile=None):
+    """
+    Run one CONTAM iteration and return the Air Flow Network matrix.
+
+    Parameters
+    ----------
+    prjFile : str
+        Path to the CONTAM project file (.prj).
+    contamExe : str, optional
+        Path to `contamx` executable. Defaults to package preset.
+    simreadExe : str, optional
+        Path to `simread` executable. Defaults to package preset.
+    responseFile : str, optional
+        Response file path for `simread`. Defaults to package preset.
+
+    Returns
+    -------
+    numpy.ndarray
+        AFN matrix parsed from generated CONTAM output files.
+    """
+    contam_exe = contamExe or FilePath['contamx']
+    simread_exe = simreadExe or FilePath['simread']
+    response_file = responseFile or FilePath['response']
+
+    execContam(exe=contam_exe, file=prjFile)
+    exe_simread(simread_path=simread_exe, file_path=prjFile, responseFile=response_file)
+    return build_matrix(file_path=prjFile)
+
+
+def _zoneinfo_text_to_roominfo(zoneInfoText):
+    """
+    Parse in-memory zoneInfo text stream into roomInfo list.
+    """
+    blocks = zoneInfoText.split(';')
+    lines = []
+    for bl in blocks:
+        for li in bl.split('\n'):
+            data = li.split('!')[0].strip()
+            if not data:
+                continue
+            arr = [x.strip() for x in data.split(',') if x.strip() != ""]
+            if arr:
+                lines.append(arr)
+    roomInfo = []
+    for data in lines:
+        if len(data) == 3:
+            roomInfo.append([data[0], float(data[1]), data[2]])
+        elif len(data) == 2:
+            dig = data[0].split('.')
+            if dig[0].isdigit():
+                roomInfo.append([None, float(data[0]), data[1]])
+            else:
+                roomInfo.append([data[0], float(data[1]), data[0]])
+        elif len(data) == 1:
+            roomInfo.append([None, float(data[0]), None])
+    return roomInfo
+
+
+def sensible_heat_iteration(AFN, zoneInfo, outdoorTemperature=25):
+    """
+    Solve sensible heat balance and return updated indoor temperature (Kelvin).
+
+    Parameters
+    ----------
+    AFN : numpy.ndarray
+        Air Flow Network matrix from `contam_iteration`.
+    zoneInfo : str or array-like
+        One of:
+        - zoneInfo file path
+        - zoneInfo text stream in-memory
+        - direct room heat-load sequence
+    outdoorTemperature : float, default 25
+        Outdoor temperature in Celsius.
+
+    Returns
+    -------
+    numpy.ndarray
+        Indoor temperatures in Kelvin (row vector).
+    """
+    roomInfo = None
+    if isinstance(zoneInfo, str):
+        if os.path.exists(zoneInfo):
+            parsed = readZoneInfo(prjFile=FilePath.get('current_file', FilePath.get('project_file', '')), roomInfoFile=zoneInfo)
+            roomInfo = [z.heat for z in parsed]
+        else:
+            parsed = _zoneinfo_text_to_roominfo(zoneInfo)
+            roomInfo = [float(li[1]) for li in parsed]
+    else:
+        roomInfo = np.array(zoneInfo).flatten().tolist()
+    if roomInfo is None:
+        raise ValueError('zoneInfo is required for sensible_heat_iteration')
+    temperature_k = change_temperature(AFN=AFN, roomInfo=np.array(roomInfo), t0=outdoorTemperature)
+    temp_c = np.array(temperature_k, dtype=float) - 273.15
+    temp_c = np.where(temp_c < 10.0, 22.0, temp_c)
+    temp_c = np.where(temp_c > 30.0, 30.0, temp_c)
+    return temp_c + 273.15
+
+
+def write_contam(temperature, prjFile, outputFile=None):
+    """
+    Write updated temperature back into CONTAM `.prj` file.
+
+    Parameters
+    ----------
+    temperature : numpy.ndarray
+        Indoor temperature row vector in Kelvin.
+    prjFile : str
+        Input project file path.
+    outputFile : str, optional
+        Output project file path. If None, overwrite `prjFile`.
+
+    Returns
+    -------
+    str
+        Path to written project file.
+    """
+    prj_file = prjFile
+    output_file = outputFile or prj_file
+
+    print(f'writing: {output_file}')
+    head, temp, rear = read_file(prj_file)
+    temp_revise = np.array([re.split(r'[ ]+', li) for li in temp.split('\n')[0:-1]])
+    temp_revise[:, 9] = temperature
+    temp_revise = '\n'.join([' '.join(li) for li in temp_revise]) + '\n'
+    write_file(output_file, head, temp_revise, rear)
+    return output_file
 
 def runFile(prjFiles):
     """run and read the AirFlowNetwork result of a *.prj file.
@@ -597,8 +697,8 @@ def test_exist():
     #        if not os.path.exists(FilePath[file]):
     #            print('File not found:',FilePath[file])
     #            return False
-    if os.path.exists(FilePath['project_dir']):
-        path.clean(FilePath['project_dir'])
+    # Do not clean project_dir here: input prj may already be placed inside this
+    # directory by upper-level workspace management.
     if not os.path.exists(FilePath['project_dir']):
         os.mkdir(FilePath['project_dir'])
     if not os.path.exists(FilePath['contam_dir']):
