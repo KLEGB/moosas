@@ -1,3 +1,7 @@
+--0.9.0
+# rdf protocol update 05.13
+- 0.9.0.0 rdf using the new structure to be more feasible for BTO and IFC4.0x. The old rdf files is still compatible.
+
 --0.8.6
 # transformation update 05.08
 - 0.8.6.1 include idf as valid input for transformation.

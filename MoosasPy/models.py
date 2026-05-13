@@ -264,6 +264,40 @@ class MoosasModel(MoosasContainer):
         plot_object(walls, gls, aperture, skylight, colors=['black', 'blue', 'grey', 'blue'], lineSize=[1, 3, 1, 1],
                     lineType=['-', '-', '-', '--'], show=show)
 
+    def autoDescribe(self):
+        """automatically generate description for each space and element in the model, based on their geometry and settings.
+        the description will be stored in the 'description' attribute of each space and element, and can be used in the analysis or output.
+        """
+        for spc in self.spaceList:
+            if spc.description == "":
+                walls = self.getAllFaces(dumpUseless=True)['MoosasWall']
+                description = f"This is a space named{spc.id} located in the level {spc.level},"
+                description += f" with an area of {spc.area} m2 and a height of {spc.height} m. "
+                description += f" average Window to wall ratio of this space is {np.round(np.mean([w.wwr for w in walls]), 2)}. "
+                spc.description = description
+            
+            for face in spc.getAllFaces():
+                if face.description == "":
+                    if isinstance(face, MoosasWall):
+                        face.description = f"This is a wall with an area of {face.area} m2, and a U-value of {face.U_Value} W/m2K. "
+                    elif isinstance(face, MoosasFace):
+                        face.description = f"This is a floor with an area of {face.area} m2, and a U-value of {face.U_Value} W/m2K. "
+                    elif isinstance(face, MoosasGlazing):
+                        face.description = f"This is a glazing with an area of {face.area} m2, and a U-value of {face.U_Value} W/m2K. "
+                    elif isinstance(face, MoosasSkylight):
+                        face.description = f"This is a skylight with an area of {face.area} m2, and a U-value of {face.U_Value} W/m2K. "
+                    else:
+                        face.description = f"This is a face with an area of {face.area} m2. "
+                    
+                    if len(face.space)==1:
+                        face.description += f" It belongs to space {face.space[0]}. "
+                    elif len(face.space)>1:
+                        face.description += f" It belongs to spaces {', '.join(face.space)}. "
+                    if face.isOuter:
+                        face.description += " It is an external face. "
+                    else:
+                        face.description += " It is an internal face. "
+
     def summary(self,wall_count=None):
         """
         Prints a formatted summary of building elements by level.

@@ -21,6 +21,21 @@ specChar = {" ": "~0~",
             "}": "~10~", }
 
 
+def _first_or_none(val):
+    """Normalize helper results to a single scalar value."""
+    if val is None:
+        return None
+    if isinstance(val, np.ndarray):
+        if val.size == 0:
+            return None
+        return val.flatten()[0]
+    if isinstance(val, (list, tuple, set)):
+        if len(val) == 0:
+            return None
+        return list(val)[0]
+    return val
+
+
 def encodeURI(hint):
     """
     Encode a string into a URI by replacing spaces with underscores and converting to a URIRef object.
@@ -106,6 +121,7 @@ class MoosasGraph(Graph):
         # self.add((URIRef("Site"), self.bot.hasBuilding, bld))
         # self.add((bld, self.rdf.type, self.bot.Building))
         if model:
+            model.autoDescribe()
             self.encodeModel(model, dumpUseless, ExportIFC)
 
     @classmethod
@@ -440,9 +456,10 @@ class MoosasGraph(Graph):
             This function does not return a value. It modifies the internal RDF graph by adding triples.
         """
         self.add((URIRef(f"element_{Element.Uid}"), self.rdf.type, self.bot.Element))
+        self.add((URIRef(f"element_{Element.Uid}"), self.rdfs.comment, Literal(Element.description)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.Uid, Literal(Element.Uid)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.Offset, Literal(Element.offset)))
-        self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasSurfaceType, self.moosas.term(typeName)))
+        # self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasSurfaceType, self.moosas.term(typeName)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.hasLevel, URIRef(f"Level_{Element.level}")))
         self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasArea_m2, Literal(Element.area)))
         self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasNormalVectorX_m, Literal(Element.normal[0])))
@@ -581,6 +598,7 @@ class MoosasGraph(Graph):
             This function does not return any value. It modifies the graph state by adding RDF triples.
         """
         self.add((URIRef(f"Space_{space.id}"), self.rdf.type, self.bot.Space))
+        self.add((URIRef(f"Space_{space.id}"), self.rdfs.comment, Literal(space.description)))
         self.add((URIRef(f"Space_{space.id}"), self.moosas.Uid, Literal(space.id)))
 
         # storage space settings
@@ -593,31 +611,47 @@ class MoosasGraph(Graph):
         self.add((URIRef(f"Space_{space.id}"), self.pgd.hasNorthDirection_deg, Literal(0e+00)))
         ifcElement = []
         if space.ceiling:
-            self.add((URIRef(f"ceil_{space.ceiling.Uid}"), self.rdf.type, self.moosas.TopoElement))
-            self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"ceil_{space.ceiling.Uid}")))
-            self.add((URIRef(f"ceil_{space.ceiling.Uid}"), self.pgd.hasSurfaceType, self.moosas.Ceiling))
+            # self.add((URIRef(f"ceil_{space.ceiling.Uid}"), self.rdf.type, self.moosas.TopoElement))
+            # self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"ceil_{space.ceiling.Uid}")))
+            # self.add((URIRef(f"ceil_{space.ceiling.Uid}"), self.pgd.hasSurfaceType, self.moosas.Ceiling))
             for faces in mixItemListToList(space.ceiling.face):
-                self.add((URIRef(f"ceil_{space.ceiling.Uid}"), self.bot.hasSubElement, URIRef(f"element_{faces.Uid}")))
+                # self.add((URIRef(f"ceil_{space.ceiling.Uid}"), self.bot.hasSubElement, URIRef(f"element_{faces.Uid}")))
+                self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"element_{faces.Uid}")))
+                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.rdf.type, self.bot.Interface))
+                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.pgd.hasSurfaceType, self.moosas.Ceiling))
+                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.bot.interfaceOf, URIRef(f"Space_{space.id}")))
+                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.bot.interfaceOf, URIRef(f"element_{faces.Uid}")))
                 ifcElement.append(faces)
 
         if space.floor:
-            self.add((URIRef(f"floor_{space.floor.Uid}"), self.rdf.type, self.moosas.TopoElement))
-            self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"floor_{space.floor.Uid}")))
-            self.add((URIRef(f"floor_{space.floor.Uid}"), self.pgd.hasSurfaceType, self.moosas.Floor))
+            # self.add((URIRef(f"floor_{space.floor.Uid}"), self.rdf.type, self.moosas.TopoElement))
+            # self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"floor_{space.floor.Uid}")))
+            # self.add((URIRef(f"floor_{space.floor.Uid}"), self.pgd.hasSurfaceType, self.moosas.Floor))
             for faces in mixItemListToList(space.floor.face):
-                self.add((URIRef(f"floor_{space.floor.Uid}"), self.bot.hasSubElement, URIRef(f"element_{faces.Uid}")))
+                # self.add((URIRef(f"floor_{space.floor.Uid}"), self.bot.hasSubElement, URIRef(f"element_{faces.Uid}")))
+                self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"element_{faces.Uid}")))
+                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.rdf.type, self.bot.Interface))
+                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.pgd.hasSurfaceType, self.moosas.Floor))
+                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.bot.interfaceOf, URIRef(f"Space_{space.id}")))
+                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.bot.interfaceOf, URIRef(f"element_{faces.Uid}")))
                 ifcElement.append(faces)
 
         if space.edge:
-            self.add((URIRef(f"edge_{space.edge.Uid}"), self.rdf.type, self.moosas.TopoElement))
-            self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"edge_{space.edge.Uid}")))
-            self.add((URIRef(f"edge_{space.edge.Uid}"), self.pgd.hasSurfaceType, self.moosas.Edge))
+            # self.add((URIRef(f"edge_{space.edge.Uid}"), self.rdf.type, self.moosas.TopoElement))
+            # self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"edge_{space.edge.Uid}")))
+            # self.add((URIRef(f"edge_{space.edge.Uid}"), self.pgd.hasSurfaceType, self.moosas.Edge))
             loop = []
-            for wall in mixItemListToList(space.edge.wall):
-                self.add((URIRef(f"edge_{space.edge.Uid}"), self.bot.hasSubElement, URIRef(f"element_{wall.Uid}")))
+            for lp,wall in enumerate(mixItemListToList(space.edge.wall)):
+                # self.add((URIRef(f"edge_{space.edge.Uid}"), self.bot.hasSubElement, URIRef(f"element_{wall.Uid}")))
+                self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"element_{wall.Uid}")))
+                self.add((URIRef(f"{space.id}_{wall.Uid}"), self.rdf.type, self.bot.Interface))
+                self.add((URIRef(f"{space.id}_{wall.Uid}"), self.moosas.subElementOrder, Literal(lp)))
+                self.add((URIRef(f"{space.id}_{wall.Uid}"), self.pgd.hasSurfaceType, self.moosas.Edge))
+                self.add((URIRef(f"{space.id}_{wall.Uid}"), self.bot.interfaceOf, URIRef(f"Space_{space.id}")))
+                self.add((URIRef(f"{space.id}_{wall.Uid}"), self.bot.interfaceOf, URIRef(f"element_{wall.Uid}")))
                 loop.append(wall.Uid)
                 ifcElement.append(wall)
-            self.add((URIRef(f"edge_{space.edge.Uid}"), self.moosas.subElementOrder, Literal(','.join(loop))))
+            # self.add((URIRef(f"edge_{space.edge.Uid}"), self.moosas.subElementOrder, Literal(','.join(loop))))
         for void in space.void:
             self.add((URIRef(f"Space_{space.id}"), self.bot.containsZone, URIRef(f"Space_{void.id}")))
 
@@ -684,8 +718,21 @@ class MoosasGraph(Graph):
         """
         if isinstance(elementUri, str):
             elementUri = URIRef(str(elementUri))
-        surfaceType = URIRef(str(self.getObject(elementUri, self.pgd.hasSurfaceType)))
         Uid = str(self.getObject(elementUri, self.moosas.Uid))
+        surfaceTypeRaw = _first_or_none(self.getObject(elementUri, self.pgd.hasSurfaceType))
+        surfaceType = URIRef(str(surfaceTypeRaw)) if surfaceTypeRaw is not None else None
+
+        # Fallback for newer RDF where element has no explicit hasSurfaceType.
+        if surfaceType is None:
+            if Uid.startswith("face_"):
+                surfaceType = self.moosas.Face
+            elif Uid.startswith("wall_"):
+                surfaceType = self.moosas.Wall
+            elif Uid.startswith("gls_"):
+                surfaceType = self.moosas.Glazing
+            elif Uid.startswith("sky_"):
+                surfaceType = self.moosas.Skylight
+
         if surfaceType == self.moosas.Face:
             element = searchBy('Uid', Uid, model.faceList, earlyEnd=True, asObject=True)
         elif surfaceType == self.moosas.Wall:
@@ -912,6 +959,29 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     skyList = rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.Skylight)
     skyList = mixItemListToList(skyList)
     skyList = np.append(skyList, rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.AirSkylight))
+
+    # Fallback for RDF variants where element has no hasSurfaceType and type is encoded in moosas:Uid.
+    allElements = mixItemListToList(rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.bot.Element))
+    faceTmp, wallTmp, glsTmp, skyTmp = [], [], [], []
+    for eleUri in allElements:
+        eleUri = URIRef(str(eleUri))
+        uid = str(rdfGraph.getObject(eleUri, rdfGraph.moosas.Uid))
+        if uid.startswith("face_"):
+            faceTmp.append(eleUri)
+        elif uid.startswith("wall_"):
+            wallTmp.append(eleUri)
+        elif uid.startswith("gls_"):
+            glsTmp.append(eleUri)
+        elif uid.startswith("sky_"):
+            skyTmp.append(eleUri)
+
+    typedCount = len(moFaceList) + len(moWallList) + len(glsList) + len(skyList)
+    uidCount = len(faceTmp) + len(wallTmp) + len(glsTmp) + len(skyTmp)
+    if uidCount > typedCount:
+        moFaceList = faceTmp
+        moWallList = wallTmp
+        glsList = glsTmp
+        skyList = skyTmp
     pgList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.moosas.Program)
     pgList = mixItemListToList(pgList)
     spList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.bot.Space)
@@ -999,26 +1069,60 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     # load Space
     for i, spaceUri in enumerate(spList):
         spaceUri = URIRef(str(spaceUri))
-        topoElements = mixItemListToList(rdfGraph.getObject(spaceUri, rdfGraph.bot.adjacentElement))
+        topology = {"Floor": [], "Ceiling": [], "Edge": []}
 
-        topology = {"Floor": None, "Ceiling": None, "Edge": None}
-        for topoElement in topoElements:
-            topoElement = URIRef(str(topoElement))
-            subElement = mixItemListToList(rdfGraph.getObject(topoElement, rdfGraph.bot.hasSubElement))
-            subElement = [rdfGraph.decodeElement(URIRef(subE), model) for subE in subElement]
-            subElement = {subE.Uid: subE for subE in subElement}
-            topoElementType = rdfGraph.getObject(topoElement, rdfGraph.pgd.hasSurfaceType)
+        # New format: Space --interfaceOf--> Interface --interfaceOf--> element_*
+        interfaceList = mixItemListToList(rdfGraph.getSubject(rdfGraph.bot.interfaceOf, spaceUri))
+        for interfaceUri in interfaceList:
+            interfaceUri = URIRef(str(interfaceUri))
+            topoElementTypeRaw = _first_or_none(rdfGraph.getObject(interfaceUri, rdfGraph.pgd.hasSurfaceType))
+            topoElementType = URIRef(str(topoElementTypeRaw)) if topoElementTypeRaw is not None else None
 
-            if URIRef(str(topoElementType)) == rdfGraph.moosas.Edge:
-                loop = str(rdfGraph.getObject(topoElement, rdfGraph.moosas.subElementOrder)).split(',')
-                subElement = [subElement[w] for w in loop]
-                topology["Edge"] = MoosasEdge(subElement)
-            if URIRef(str(topoElementType)) == rdfGraph.moosas.Floor:
-                topology["Floor"] = MoosasFloor(list(subElement.values()))
-            if URIRef(str(topoElementType)) == rdfGraph.moosas.Ceiling:
-                topology["Ceiling"] = MoosasFloor(list(subElement.values()))
+            linkedObjects = mixItemListToList(rdfGraph.getObject(interfaceUri, rdfGraph.bot.interfaceOf))
+            elementUris = [URIRef(str(obj)) for obj in linkedObjects if str(obj) != str(spaceUri)]
+            if len(elementUris) == 0:
+                continue
+            element = rdfGraph.decodeElement(elementUris[0], model)
+            if not element:
+                continue
 
-        spc = MoosasSpace(_floor=topology["Floor"], _ceiling=topology["Ceiling"], _edge=topology["Edge"])
+            if topoElementType == rdfGraph.moosas.Floor:
+                topology["Floor"].append(element)
+            elif topoElementType == rdfGraph.moosas.Ceiling:
+                topology["Ceiling"].append(element)
+            elif topoElementType == rdfGraph.moosas.Edge:
+                orderVal = _first_or_none(rdfGraph.getObject(interfaceUri, rdfGraph.moosas.subElementOrder))
+                order = int(float(orderVal)) if orderVal is not None else 0
+                topology["Edge"].append((order, element))
+
+        # Legacy fallback: Space -> TopoElement -> hasSubElement
+        if len(interfaceList) == 0:
+            topoElements = mixItemListToList(rdfGraph.getObject(spaceUri, rdfGraph.bot.adjacentElement))
+            for topoElement in topoElements:
+                topoElement = URIRef(str(topoElement))
+                subElement = mixItemListToList(rdfGraph.getObject(topoElement, rdfGraph.bot.hasSubElement))
+                subElement = [rdfGraph.decodeElement(URIRef(subE), model) for subE in subElement]
+                subElement = [subE for subE in subElement if subE]
+                subElementMap = {subE.Uid: subE for subE in subElement}
+                topoElementType = _first_or_none(rdfGraph.getObject(topoElement, rdfGraph.pgd.hasSurfaceType))
+
+                if topoElementType is not None and URIRef(str(topoElementType)) == rdfGraph.moosas.Edge:
+                    loopRaw = _first_or_none(rdfGraph.getObject(topoElement, rdfGraph.moosas.subElementOrder))
+                    loop = str(loopRaw).split(',') if loopRaw is not None else []
+                    topology["Edge"].extend([(idx, subElementMap[w]) for idx, w in enumerate(loop) if w in subElementMap])
+                elif topoElementType is not None and URIRef(str(topoElementType)) == rdfGraph.moosas.Floor:
+                    topology["Floor"].extend(list(subElementMap.values()))
+                elif topoElementType is not None and URIRef(str(topoElementType)) == rdfGraph.moosas.Ceiling:
+                    topology["Ceiling"].extend(list(subElementMap.values()))
+
+        floorTopo = MoosasFloor(topology["Floor"]) if len(topology["Floor"]) > 0 else None
+        ceilTopo = MoosasFloor(topology["Ceiling"]) if len(topology["Ceiling"]) > 0 else None
+        edgeTopo = None
+        if len(topology["Edge"]) > 0:
+            edgeElements = [ele for _, ele in sorted(topology["Edge"], key=lambda x: x[0])]
+            edgeTopo = MoosasEdge(edgeElements)
+
+        spc = MoosasSpace(_floor=floorTopo, _ceiling=ceilTopo, _edge=edgeTopo)
 
         # restore space settings
         spcSettings = mixItemListToList(rdfGraph.getObject(spaceUri, rdfGraph.moosas.hasSetting))

@@ -368,6 +368,7 @@ class MoosasElement(object):
     'isOuter': whether this face is an external faces
     'Uid': unique Id of the element
     'shading': a list of shading elements.
+    'U_Value' : U-value of this element
     level,offset,space: those in optional params.
 
     properties:
@@ -401,8 +402,8 @@ class MoosasElement(object):
     fromDict: construct an element from a dictionary which may be given by toDictionary method from a xmlTree
 
     """
-    __slots__ = ['__geometries', 'level', 'offset', 'Uid', '__glazingElement', 'parent', 'neighbor', 'isOuter', 'space',
-                 'shading']
+    __slots__ = ['__geometries', 'level', 'offset', 'Uid','U_Value', '__glazingElement', 'parent', 'neighbor', 'isOuter', 'space',
+                 'shading','description']
 
     def __init__(self, model: MoosasContainer,
                  faceId: str | list[str] | np.ndarray[str] | MoosasGeometry | list[MoosasGeometry] | np.ndarray[
@@ -442,6 +443,7 @@ class MoosasElement(object):
         self.level: float = level
         self.offset: float = offset
         self.shading = []
+        self.U_Value: float = 1.8  # default U value, can be changed by user
         self.__glazingElement: list[MoosasElement] = mixItemListToList(
             glazingElement) if glazingElement is not None else []
         if glazingId is not None:
@@ -449,6 +451,7 @@ class MoosasElement(object):
         self.space: list[str] = mixItemListToList(space) if space is not None else []
         self.isOuter: bool = True
         self.neighbor = {}
+        self.description = ""
 
         # get the geometry(s)
         faceId = mixItemListToList(faceId)
@@ -2600,7 +2603,7 @@ class MoosasSpace(object):
     it can be a void if floor or ceiling is None or area of floor/ceiling < area of edge
 
     """
-    __slots__ = ['floor', 'edge', 'ceiling', '__void', '__id', '__neighbor', 'internalMass', 'settings']
+    __slots__ = ['floor', 'edge', 'ceiling', '__void', '__id', '__neighbor', 'internalMass', 'settings','description']
 
     def __init__(self, _floor: MoosasFloor | None, _edge: MoosasEdge, _ceiling: MoosasFloor | None,
                  void: list[MoosasSpace] = None):
@@ -2625,6 +2628,7 @@ class MoosasSpace(object):
         self.floor: MoosasFloor | None = _floor
         self.edge: MoosasEdge = _edge
         self.ceiling: MoosasFloor | None = _ceiling
+        self.description = ""
 
         self.__neighbor = {}
         self.internalMass: list[MoosasElement] = _edge.internalMass
@@ -3058,6 +3062,14 @@ class MoosasSpace(object):
         self.settings['zone_template'] = buildingTemplateHint
         for key in template.keys():
             self.settings[key] = template[key]
+        
+        if 'zone_wallU' in self.settings:
+            faceDict = self.getAllFaces(to_dict=True)
+            for face in faceDict['MoosasWall']+faceDict['MoosasFloor']+faceDict['MoosasCeiling']:
+                face.U_Value = self.settings['zone_wallU']
+            for face in faceDict['MoosasGlazing']+faceDict['MoosasSkylight']:
+                face.U_Value = self.settings['zone_winU']
+
 
     def add_neighbor(self, neighbor_id, element: MoosasElement):
         """
