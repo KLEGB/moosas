@@ -79,6 +79,8 @@ Wen, J., Yang, S., Xie, Y., Yu, J., & Lin, B. (2022). A fast calculation tool fo
 #### Model Transformation
 Chen, H., Li, Z., Wang, X., & Lin, B. (n.d.). A graph- and feature-based building space recognition algorithm for performance simulation in the early design stage. Building Simulation, 11(2).  
 Xiao, J.; Zhou, H.; Yang, S.; Zhang, D.; Lin, B. A CAD-BEM Geometry Transformation Method for Face-Based Primary Geometric Input Based on Closed Contour Recognition. Build. Simul. 2023. https://doi.org/10.1007/s12273-023-1081-6.
+Li, Y., Xiao, J., Zhou, H., & Lin, B. (2026). From Geometry to Graph: Automation of Building Performance Modeling via Convex Graph Encoding. Automation in Construction, 183, 106815. https://doi.org/10.1016/j.autcon.2026.106815
+
 
 #### User Feadback
 Wang, C., Lu, S., Chen, H., Li, Z., & Lin, B. (2021). Effectiveness of one-click feedback of building energy efficiency in supporting early-stage architecture design: An experimental study. Building and Environment, 196, 107780. https://doi.org/10.1016/j.buildenv.2021.107780
