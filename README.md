@@ -1,4 +1,4 @@
-# MOOSAS Ver. 0.8.0
+# MOOSAS Ver. 0.9.0
 
 This is a program for building performance anaylsis and optimization for
 the building sketch design stage targeted on architects. Most of the detail settings and
@@ -7,6 +7,8 @@ will be solved behind the interface. The core of MOOSAS is built on python,
 the interface is built on javascript & html, and the extensions are built on
 golong including *.epw transformation, *.skp/*.obj transformation, wind pressure prediction, etc.
 Besides, a SketchUp Plugin version was embedded by src/ coded in ruby as an interface of MOOSAS
+
+The Moosas Skill and Moosas Agent is comming soon!!!
 
 ## 👀 instructions
 

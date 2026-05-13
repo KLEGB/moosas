@@ -6,3 +6,4 @@ from ._json import writeJson, writeGeojson
 from ._rdf import writeRDF, loadRDF
 from ._idf import writeIDF, IDFtoGeo, IDFtoXml, readIDF
 from . import _idf
+from .preprocess import *

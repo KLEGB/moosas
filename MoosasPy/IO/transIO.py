@@ -3,12 +3,15 @@ MoosasModel should be imported inside the function to avoid circular import.
 please use the general import func modelFromFile() instead of any private funcs.
 """
 from __future__ import annotations
+import os
+import uuid
 
 from ._geo import _readGeo, writeGeo , preClassified
 from ._graph import writeGraph
 from ._idf import writeIDF, readIDF
 from ._json import _readGeojson, writeJson, writeGeojson
 from ._obj import _readObj
+from ._stl import _readStl
 from ._rdf import writeRDF, loadRDF
 from ._xml import writeXml, loadXml
 from ..utils import path
@@ -103,10 +106,24 @@ def modelFromFile(inputPath: str, inputType=None):
     #     model.geometryList = _readXml(inputPath)
     elif inputPath[len(inputPath) - 4:len(inputPath)] == '.obj' or inputType == 'obj':
         model.geometryList = _readObj(inputPath)
+    elif inputPath[len(inputPath) - 4:len(inputPath)] == '.stl' or inputType == 'stl':
+        model.geometryList = _readStl(inputPath)
+        model = preClassified(model)
+        # STL is usually triangulated; run co-planar merge to remove redundant edges.
+        if len(model.geometryList) > 0:
+            from .preprocess import coPlanner
+
+            temp_geo_path = os.path.join(path.tempDir, f"stl_coplanner_{uuid.uuid4().hex}.geo")
+            try:
+                coPlanner(model, temp_geo_path)
+                model.geometryList = _readGeo(temp_geo_path)
+            finally:
+                if os.path.exists(temp_geo_path):
+                    os.remove(temp_geo_path)
     elif inputPath[len(inputPath) - 4:len(inputPath)] == 'json' or inputType == 'json':
         model.geometryList = _readGeojson(inputPath)
     else:
-        raise ImportError('***Error: Wrong file type(.geo,.xml,.obj,.json) Please check:', inputPath)
+        raise ImportError('***Error: Wrong file type(.geo,.xml,.obj,.stl,.json) Please check:', inputPath)
 
     return preClassified(model)
 
