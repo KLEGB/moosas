@@ -1,3 +1,7 @@
+--1.0.0
+# MoosasPy release
+- 1.0.0 all functions has ran through a robust test and were stable. Package is released.
+
 --0.9.0
 # rdf protocol update 05.13
 - 0.9.0.0 rdf using the new structure to be more feasible for BTO and IFC4.0x. The old rdf files is still compatible.

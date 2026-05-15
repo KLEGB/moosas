@@ -26,6 +26,8 @@ We kindly invite contributions to the python package MoosasPy for better perform
 - ***.\temp:*** Files will be clean here when start moosas+ ro import MoosasPy.
 """
 
+from ._version import __version__
+
 # subpackages
 from . import geometry
 from . import utils
