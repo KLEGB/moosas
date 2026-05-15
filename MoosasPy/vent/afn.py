@@ -572,19 +572,26 @@ def pathTopology(pathList: list[AfnPath], zoneList: list[AfnZone]) -> list[AfnPa
         and `toZone` are set to the corresponding zone indices from `zoneList`. Paths 
         with no connected spaces are excluded.
     """
-    zoneUid = [zone.element.id for zone in zoneList]
+    zoneUid = {zone.element.id: zone.prjIndex for zone in zoneList}
     invalidPath = []
 
     for i, p in enumerate(pathList):
         if len(p.element.space) == 0:
             invalidPath.append(i)
+            
         elif len(p.element.space) == 1:
             p.fromZone = -1
-            p.toZone = zoneUid.index(p.element.space[0])
+            if p.element.space[0] in zoneUid.keys():
+                p.toZone = zoneUid[p.element.space[0]]
+            else:
+                invalidPath.append(i)
 
         elif len(p.element.space) == 2:
-            p.fromZone = zoneUid.index(p.element.space[0])
-            p.toZone = zoneUid.index(p.element.space[1])
+            if p.element.space[0] in zoneUid.keys() and p.element.space[1] in zoneUid.keys():
+                p.fromZone = zoneUid[p.element.space[0]]
+                p.toZone = zoneUid[p.element.space[1]]
+            else:
+                invalidPath.append(i)
 
     return list(np.delete(pathList, invalidPath))
 

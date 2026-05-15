@@ -1,8 +1,11 @@
 from .analysis import getEnergyInput, ThermalSettings, energyAnalysis
 from ..geometry.geos import Vector, Ray
 from ..models import MoosasModel, MoosasCumSky
+from ..weather.dest import MoosasWeather
+from ..weather.cumsky import MoosasCumSky
 from ..rad import modelRadiation, writeRadGeo, rayTest
 from ..utils import np, path, os
+from ..utils.date import DateTime
 from numpy.linalg import LinAlgError
 from ..vent.afn import AfnNetwork, buildPrj, buildZoneInfoFile, AfnPath, AfnZone
 from ..vent.iteration import (
@@ -13,6 +16,8 @@ from ..vent.iteration import (
     ZoneResult,
 )
 from ..vent import iteration as vent_iteration
+import networkx as nx
+from copy import deepcopy
 
 
 def _linear_interpolate_nan_series(values):
@@ -47,7 +52,10 @@ def postprocess_zone_results_linear(zones: list[ZoneResult]) -> list[ZoneResult]
 
 
 class heatLoadModel(object):
-    __slots__ = ['model', 'zones', 'paths', 'networkDict', 'skySeries', 'pathRadIntensity', 'runtime']
+    __slots__ = [
+        'model', 'zones', 'paths', 'networkDict', 'skySeries', 'pathRadIntensity', 'runtime',
+        'schedulePath', '_sch_daily_map', '_sch_weekly_map', 'weather'
+    ]
     ENERGY_INDEX = ["space_height", "zone_area", "outside_area", "facade_area", "window_area", "roof_area",
                     "skylight_area", "floor_area",
                     "summer_solar", "winter_solar", "zone_wallU", "zone_winU", "zone_win_SHGC", "zone_c_temp",
@@ -59,12 +67,21 @@ class heatLoadModel(object):
                     ]
     AFN_INDEX = ['userName', 'temperature', 'prjIndex', 'heatLoad', 'volume', 'position_x', 'position_y', 'position_z',
                  'boundary']
+    LPG_OUTSIDE_NODE = "OUTSIDE"
+    LPG_ZONE_FIELDS = ("zone_wallU", "zone_winU", "zone_win_SHGC")
+    LPG_PATH_FIELDS = ("operable", "pathHeight", "pathWidth")
 
-    def __init__(self, model: MoosasModel, stationid='545110'):
+    def __init__(self, model: MoosasModel, stationid='545110',
+                 schedulePath=os.path.join(path.dataBaseDir, 'office.sch')):
         print("-----------------------\nPrepareing network...\n-----------------------")
         import time
         t0 = time.time()
         self.model = model
+        self.schedulePath = schedulePath
+        self._sch_daily_map = {}
+        self._sch_weekly_map = {}
+        self._parse_schedule_file()
+        self.weather = MoosasWeather(stationid)
         self.model.loadCumSky(stationid)
         modelRadiation(self.model, reflection=0)
         network = AfnNetwork(self.model)
@@ -105,6 +122,76 @@ class heatLoadModel(object):
         print(time.time() - t0)
         t0 = time.time()
 
+    def _parse_schedule_file(self):
+        self._sch_daily_map = {}
+        self._sch_weekly_map = {}
+        if self.schedulePath is None:
+            return
+        schedule_path = os.path.abspath(self.schedulePath)
+        if not os.path.isfile(schedule_path):
+            raise FileNotFoundError(f"Schedule file not found: {schedule_path}")
+        with open(schedule_path, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                text = line.strip()
+                if (not text) or text.startswith("!"):
+                    continue
+                parts = [p.strip() for p in text.split(",")]
+                if len(parts) < 3:
+                    continue
+                name = parts[0]
+                mode = parts[1].lower()
+                if mode == "daily":
+                    if len(parts) < 26:
+                        raise ValueError(f"Invalid daily schedule row '{name}', expected 24 hourly values.")
+                    try:
+                        self._sch_daily_map[name] = [float(v) for v in parts[2:26]]
+                    except Exception as e:
+                        raise ValueError(f"Invalid numeric value in daily schedule '{name}': {e}")
+                elif mode == "weekly":
+                    if len(parts) < 9:
+                        raise ValueError(f"Invalid weekly schedule row '{name}', expected 7 day references.")
+                    self._sch_weekly_map[name] = parts[2:9]
+
+    def _value_from_schedule(self, schedule_name, hoy):
+        if schedule_name in self._sch_weekly_map:
+            week_refs = self._sch_weekly_map[schedule_name]
+            dt = DateTime.from_hoy(float(hoy))
+            daily_name = week_refs[dt.weekday()]
+            if daily_name not in self._sch_daily_map:
+                raise ValueError(
+                    f"Weekly schedule '{schedule_name}' references missing daily schedule '{daily_name}'."
+                )
+            return self._sch_daily_map[daily_name][dt.hour]
+        if schedule_name in self._sch_daily_map:
+            dt = DateTime.from_hoy(float(hoy))
+            return self._sch_daily_map[schedule_name][dt.hour]
+        raise KeyError(schedule_name)
+
+    def _resolve_gain_value(self, raw_value, hoy, field_name, zone_name):
+        if raw_value is None:
+            return 0.0
+        if isinstance(raw_value, str) and raw_value.strip().lower() in ("", "none", "null", "nan"):
+            return 0.0
+        try:
+            return float(raw_value)
+        except Exception:
+            pass
+        if self.schedulePath is None:
+            raise ValueError(
+                f"Zone '{zone_name}' field '{field_name}' uses schedule name '{raw_value}' "
+                f"but schedulePath is None."
+            )
+        try:
+            # Heatload is treated as instantaneous power (W), so schedule-driven
+            # internal gains are aligned to a fixed baseline hour instead of
+            # accumulating/changing with hoy.
+            return float(self._value_from_schedule(str(raw_value), 0))
+        except KeyError:
+            raise ValueError(
+                f"Schedule '{raw_value}' for zone '{zone_name}' field '{field_name}' not found in "
+                f"'{os.path.abspath(self.schedulePath)}'."
+            )
+
     def updateHeatLoad(self, hoy, energyDict: dict = None):
         """
         Update per-zone sensible heat load for a given hour of year.
@@ -137,14 +224,20 @@ class heatLoadModel(object):
         prjDict = {}
         for zUserName, zValue in self.networkDict['zones'].items():
             zone_area = _safe_float(zValue.get("zone_area"))
-            heat = _safe_float(zValue.get('zone_ppsm')) * _safe_float(zValue.get('zone_popheat')) * zone_area
-            heat += _safe_float(zValue.get('zone_equipment')) * zone_area
-            heat += _safe_float(zValue.get('zone_lighting')) * zone_area
+            zone_ppsm = self._resolve_gain_value(zValue.get('zone_ppsm'), hoy, 'zone_ppsm', zUserName)
+            zone_equipment = self._resolve_gain_value(zValue.get('zone_equipment'), hoy, 'zone_equipment', zUserName)
+            zone_lighting = self._resolve_gain_value(zValue.get('zone_lighting'), hoy, 'zone_lighting', zUserName)
+            zone_popheat = _safe_float(zValue.get('zone_popheat'))
+            heat = zone_ppsm * zone_popheat * zone_area
+            heat += zone_equipment * zone_area
+            heat += zone_lighting * zone_area
             self.networkDict['zones'][zUserName]['heatLoad'] = heat
             idx = self.networkDict['zones'][zUserName]['prjIndex']
             prjDict[idx] = zUserName
             prjDict[str(idx)] = zUserName
+
         for ps in self.networkDict['paths'].values():
+            # Keep AFN heatload power baseline fixed at the initial hour.
             radHeat = self.pathRadIntensity[ps["userName"]][hoy] * float(ps['pathHeight']) * float(ps['pathWidth'])
             if ps["fromZone"] != "-1":
                 zUserName = prjDict.get(ps["fromZone"])
@@ -154,6 +247,7 @@ class heatLoadModel(object):
                 zUserName = prjDict.get(ps["toZone"])
                 if zUserName is not None:
                     self.networkDict['zones'][zUserName]['heatLoad'] += radHeat
+            
         return self.networkDict
 
     def buildNetwork(self, network):
@@ -177,7 +271,7 @@ class heatLoadModel(object):
         #     print(z.printHeatLoad())
         zoneDict = {z.userName: z.toDict() for z in network.zones}
         pathDict = {p.userName: p.toDict() for p in network.paths}
-        energyDict = getEnergyInput(self.model, requireRadiation=True)
+        energyDict = getEnergyInput(self.model, requireRadiation=True, schedulePath=self.schedulePath)
         for z in energyDict['zones']:
             for key in z.params.keys():
                 zName = z.params['zone_name']
@@ -232,6 +326,116 @@ class heatLoadModel(object):
         zones = [AfnZone(**zoneDict) for zoneDict in zones]
         return {"paths": paths, "zones": zones}
 
+    def networkDict_to_lpg(self, energyDict: dict = None):
+        """
+        Convert network dictionary to a zone-node/path-edge LPG.
+
+        Returns
+        -------
+        nx.MultiDiGraph
+            Zone nodes with selected zone attributes and directed path edges.
+        """
+        if energyDict is not None:
+            self.networkDict = energyDict
+        energyDict = self.networkDict
+
+        graph = nx.MultiDiGraph()
+        graph.add_node(self.LPG_OUTSIDE_NODE)
+
+        zones = energyDict.get("zones", {})
+        paths = energyDict.get("paths", {})
+
+        prj_to_node = {}
+        for zone_key, zone in zones.items():
+            node_id = zone.get("userName", zone_key)
+            prj_idx = str(zone.get("prjIndex"))
+            prj_to_node[prj_idx] = node_id
+            graph.add_node(
+                node_id,
+                zone_wallU=zone.get("zone_wallU"),
+                zone_winU=zone.get("zone_winU"),
+                zone_win_SHGC=zone.get("zone_win_SHGC"),
+            )
+
+        for path_key, path_value in paths.items():
+            from_zone = str(path_value.get("fromZone"))
+            to_zone = str(path_value.get("toZone"))
+            if from_zone == "-1":
+                u = self.LPG_OUTSIDE_NODE
+            else:
+                if from_zone not in prj_to_node:
+                    raise ValueError(
+                        f"Path '{path_key}' has fromZone='{from_zone}' but no matching zone.prjIndex."
+                    )
+                u = prj_to_node[from_zone]
+            if to_zone == "-1":
+                v = self.LPG_OUTSIDE_NODE
+            else:
+                if to_zone not in prj_to_node:
+                    raise ValueError(
+                        f"Path '{path_key}' has toZone='{to_zone}' but no matching zone.prjIndex."
+                    )
+                v = prj_to_node[to_zone]
+            edge_key = path_value.get("userName", path_key)
+            graph.add_edge(
+                u,
+                v,
+                key=edge_key,
+                operable=path_value.get("operable"),
+                pathHeight=path_value.get("pathHeight"),
+                pathWidth=path_value.get("pathWidth"),
+            )
+        return graph
+
+    def lpg_to_networkDict(self, graph: nx.MultiDiGraph, base_networkDict: dict = None):
+        """
+        Apply edited LPG attributes back into network dictionary.
+
+        Only whitelisted fields are written back.
+        """
+        if not isinstance(graph, nx.MultiDiGraph):
+            raise TypeError("graph must be an instance of nx.MultiDiGraph.")
+
+        if base_networkDict is None:
+            base_networkDict = self.networkDict
+        networkDict = deepcopy(base_networkDict)
+
+        zones = networkDict.get("zones", {})
+        paths = networkDict.get("paths", {})
+
+        zone_node_to_key = {}
+        for zone_key, zone_value in zones.items():
+            node_id = zone_value.get("userName", zone_key)
+            zone_node_to_key[node_id] = zone_key
+
+        path_id_to_key = {}
+        for path_key, path_value in paths.items():
+            path_id_to_key[path_key] = path_key
+            user_name = path_value.get("userName")
+            if user_name is not None:
+                path_id_to_key[user_name] = path_key
+
+        for node_id, node_attrs in graph.nodes(data=True):
+            if node_id == self.LPG_OUTSIDE_NODE:
+                continue
+            zone_key = zone_node_to_key.get(node_id)
+            if zone_key is None:
+                continue
+            for field in self.LPG_ZONE_FIELDS:
+                if field in node_attrs:
+                    zones[zone_key][field] = node_attrs[field]
+
+        for _, _, edge_key, edge_attrs in graph.edges(keys=True, data=True):
+            path_key = path_id_to_key.get(edge_key)
+            if path_key is None:
+                continue
+            for field in self.LPG_PATH_FIELDS:
+                if field in edge_attrs:
+                    paths[path_key][field] = edge_attrs[field]
+
+        self.networkDict = networkDict
+        return networkDict
+
     def energyTask(self, energyDict: dict = None):
         """
         Run one thermal-energy analysis task.
@@ -244,13 +448,203 @@ class heatLoadModel(object):
         Returns
         -------
         dict
-            Energy analysis result.
+            {
+              "zone_name": {
+                "zone_area": ...,
+                "heating": [...], "cooling": [...], "Lighting": [...],              # daily (365)
+                "heating_hourly": [...], "cooling_hourly": [...], "Lighting_hourly": [...]  # hourly (8760)
+              }
+            }
         """
         if energyDict:
             self.networkDict = energyDict
+
+        zoneIndexDict = {}
+        for z in self.networkDict['zones'].keys():
+            self.networkDict['zones'][z]['zone_summerrad'] = 0
+            self.networkDict['zones'][z]['zone_winterrad'] = 0
+            zoneIndexDict[self.networkDict['zones'][z]['prjIndex']] = z
+
+        for ps in self.networkDict['paths'].values():
+            summer_intensity = np.sum(self.pathRadIntensity[ps["userName"]][MoosasCumSky.SUMMER_START_HOY:MoosasCumSky.SUMMER_END_HOY])
+            winter_intensity = np.sum(self.pathRadIntensity[ps["userName"]][MoosasCumSky.WINTER_START_HOY:]) + \
+            np.sum(self.pathRadIntensity[ps["userName"]][:MoosasCumSky.WINTER_END_HOY])
+            summerradHeat = summer_intensity * float(ps['pathHeight']) * float(ps['pathWidth'])
+            winterradHeat = winter_intensity * float(ps['pathHeight']) * float(ps['pathWidth'])
+            if ps["fromZone"] != "-1":
+                zUserName = zoneIndexDict.get(ps["fromZone"])
+                if zUserName is not None:
+                    self.networkDict['zones'][zUserName]['zone_summerrad'] += summerradHeat
+                    self.networkDict['zones'][zUserName]['zone_winterrad'] += winterradHeat
+            if ps["toZone"] != "-1":
+                zUserName = zoneIndexDict.get(ps["toZone"])
+                if zUserName is not None:
+                    self.networkDict['zones'][zUserName]['zone_summerrad'] += summerradHeat
+                    self.networkDict['zones'][zUserName]['zone_winterrad'] += winterradHeat
+        
         energyDict = self.networkDict
         energyInput = self.reconstructEnergyInputs(energyDict)
-        return energyAnalysis(energyInput=energyInput)
+        energyInput['args'] = list(energyInput.get('args', []))
+        if '-d' not in energyInput['args']:
+            energyInput['args'] += ['-d', '1']
+        if '-z' not in energyInput['args']:
+            energyInput['args'] += ['-z', '1']
+        e_data = energyAnalysis(
+            energyInput=energyInput,
+            exportDaily=True,
+            exportHourly=True,
+            exportByZone=True,
+            schedulePath=self.schedulePath
+        )
+        return self._format_energy_result(energyInput, e_data)
+
+    @staticmethod
+    def _fit_series(values, size):
+        vals = list(values)[:size]
+        if len(vals) < size:
+            vals += [np.nan] * (size - len(vals))
+        return vals
+
+    def _format_energy_result(self, energyInput, e_data):
+        zone_days = e_data.get("zone_days", [])
+        zone_hours = e_data.get("zone_hours", [])
+        result = {}
+        for i, z in enumerate(energyInput["zones"]):
+            zone_name = z.params.get("zone_name", f"zone_{i}")
+            zone_area = float(z.params.get("zone_area", 0.0))
+            days = zone_days[i] if i < len(zone_days) else []
+            hours = zone_hours[i] if i < len(zone_hours) else []
+            heating = self._fit_series([float(d["heating"]) for d in days], 365)
+            cooling = self._fit_series([float(d["cooling"]) for d in days], 365)
+            lighting = self._fit_series([float(d["lighting"]) for d in days], 365)
+            heating_hourly = self._fit_series([float(h["heating"]) for h in hours], 8760)
+            cooling_hourly = self._fit_series([float(h["cooling"]) for h in hours], 8760)
+            lighting_hourly = self._fit_series([float(h["lighting"]) for h in hours], 8760)
+            result[zone_name] = {
+                "zone_area": zone_area,
+                "heating": heating,
+                "cooling": cooling,
+                "Lighting": lighting,
+                "heating_hourly": heating_hourly,
+                "cooling_hourly": cooling_hourly,
+                "Lighting_hourly": lighting_hourly
+            }
+        return result
+
+    @staticmethod
+    def _window_mean(arr, st, ed):
+        if st >= ed:
+            return 0.0
+        vals = np.array(arr[st:ed], dtype=float)
+        if vals.size == 0:
+            return 0.0
+        return float(np.mean(vals))
+
+    def coupledTask(self, energyDict: dict = None, timestep=1, iteration=1, mode="sequence",
+                    preheat=10, k=0.0, w=1, start_hoy=0, end_hoy=8759):
+        """
+        Coupled simulation between energy and comfort results.
+
+        Parameters
+        ----------
+        start_hoy : int, default 0
+            Inclusive start hour-of-year for coupling simulation.
+        end_hoy : int, default 8759
+            Inclusive end hour-of-year for coupling simulation.
+
+        Returns
+        -------
+        dict
+            {
+              "zone_name": {
+                "hoy": [...],
+                "zone_area": ...,
+                "heating": [...],
+                "cooling": [...],
+                "lighting": [...],
+                "total_energy": [...],
+                "total_energy_vent": [...],
+                "Temperature": [...],
+                "ACH": [...],
+                "Comfort": [...],
+                "delta_t": [...]
+              }
+            }
+        """
+        e_res = self.energyTask(energyDict=energyDict)
+        c_res = self.annualComfort(
+            energyDict=energyDict,
+            timestep=timestep,
+            iteration=iteration,
+            mode=mode,
+            preheat=preheat,
+            k=k,
+            w=w,
+            start_hoy=start_hoy,
+            end_hoy=end_hoy
+        )
+
+        step = int(timestep)
+        if step <= 0:
+            raise ValueError("timestep must be a positive integer.")
+        st_hoy = int(start_hoy)
+        ed_hoy = int(end_hoy)
+        if st_hoy < 0 or st_hoy > 8759:
+            raise ValueError("start_hoy must be in [0, 8759].")
+        if ed_hoy < 0 or ed_hoy > 8759:
+            raise ValueError("end_hoy must be in [0, 8759].")
+        if st_hoy > ed_hoy:
+            raise ValueError("start_hoy must be <= end_hoy.")
+        hoys = list(range(st_hoy, ed_hoy + 1, step))
+        period_end_exclusive = ed_hoy + 1
+        n = len(hoys)
+        zone_names = [zn for zn in c_res.keys() if zn in e_res]
+        result = {}
+        for zn in zone_names:
+            ez = e_res[zn]
+            cz = c_res[zn]
+            heating_s, cooling_s, lighting_s = [], [], []
+            total_energy_s, total_energy_vent_s = [], []
+            comfort_s = list(cz.get("Comfort", []))[:n]
+            ach_s = list(cz.get("ACH", []))[:n]
+            temp_s = list(cz.get("Temperature", []))[:n]
+            delta_s = list(cz.get("delta_t", []))[:n]
+            if len(comfort_s) < n:
+                comfort_s += [0] * (n - len(comfort_s))
+            if len(ach_s) < n:
+                ach_s += [np.nan] * (n - len(ach_s))
+            if len(temp_s) < n:
+                temp_s += [np.nan] * (n - len(temp_s))
+            if len(delta_s) < n:
+                delta_s += [np.nan] * (n - len(delta_s))
+            for i, hoy in enumerate(hoys):
+                st = int(hoy)
+                ed = min(8760, period_end_exclusive, st + step)
+                h = self._window_mean(ez.get("heating_hourly", []), st, ed)
+                c = self._window_mean(ez.get("cooling_hourly", []), st, ed)
+                l = self._window_mean(ez.get("Lighting_hourly", []), st, ed)
+                comfort = float(comfort_s[i])
+                total_energy = h + c + l
+                total_energy_vent = (h + c) * (1.0 - comfort) + l
+                heating_s.append(h)
+                cooling_s.append(c)
+                lighting_s.append(l)
+                total_energy_s.append(total_energy)
+                total_energy_vent_s.append(total_energy_vent)
+            result[zn] = {
+                "hoy": list(hoys),
+                "zone_area": float(cz.get("zone_area", ez.get("zone_area", 0.0))),
+                "heating": heating_s,
+                "cooling": cooling_s,
+                "lighting": lighting_s,
+                "total_energy": total_energy_s,
+                "total_energy_vent": total_energy_vent_s,
+                "Temperature": temp_s,
+                "ACH": ach_s,
+                "Comfort": comfort_s,
+                "delta_t": delta_s
+            }
+        return result
 
     def _sorted_zone_values(self):
         return sorted(self.networkDict['zones'].values(), key=lambda z: int(z['prjIndex']))
@@ -269,13 +663,16 @@ class heatLoadModel(object):
             ))
         return zones
 
-    def _normalize_outdoor_temperature(self, outdoorTemperature, hoys):
-        if isinstance(outdoorTemperature, (int, float)):
-            return [float(outdoorTemperature)] * len(hoys)
-        arr = np.array(outdoorTemperature).flatten().tolist()
-        if len(arr) != len(hoys):
-            raise ValueError("outdoorTemperature array length must equal number of hoys.")
-        return [float(x) for x in arr]
+    @staticmethod
+    def _moving_average(values, w):
+        vals = np.array(values, dtype=float)
+        n = len(vals)
+        out = []
+        for i in range(n):
+            st = max(0, i - w)
+            ed = min(n, i + w + 1)
+            out.append(float(np.mean(vals[st:ed])))
+        return out
 
     def _ensure_runtime_workspace(self, reset=False):
         """
@@ -440,8 +837,8 @@ class heatLoadModel(object):
 
         raise ValueError("mode must be one of ['onions', 'sequence', 'ping-pong'].")
 
-    def annualComfort(self, energyDict: dict = None, iteration=1, mode="onions", timestep=1,
-                      outdoorTemperature=25, preheat=10):
+    def annualComfort(self, energyDict: dict = None, iteration=1, mode="sequence", timestep=1,
+                      preheat=10, k=0.0, w=1, start_hoy=0, end_hoy=8759):
         """
         Run annual ventilation comfort simulation with selectable coupling strategy.
 
@@ -451,27 +848,40 @@ class heatLoadModel(object):
             Network dictionary override.
         iteration : int, default 1
             Per-hour coupling iterations (ignored in `sequence` mode).
-        mode : {"onions", "sequence", "ping-pong"}, default "onions"
+        mode : {"onions", "sequence", "ping-pong"}, default "sequence"
             Annual coupling strategy.
         timestep : int, default 1
-            Hour step size. Number of hoy samples is `len(range(0, 8760, timestep))`.
-        outdoorTemperature : float or array-like, default 25
-            Scalar outdoor temperature or a per-hoy array aligned with sampled hoys.
+            Hour step size. Number of hoy samples is
+            `len(range(start_hoy, end_hoy + 1, timestep))`.
         preheat : int, default 10
             Bootstrap ping-pong rounds at peak-load hour to generate initial project state.
+        k : float, default 0.0
+            Thermal inertia strength. Recommended range [0, 1].
+        w : int, default 1
+            Half-window size for moving-average outdoor temperature on sampled sequence.
 
         Returns
         -------
-        list[ZoneResult]
-            Annual zone results with sampled hourly `temperature` and `ACH` histories.
+        dict
+            {"zone_name": {"zone_area": ..., "ACH": [...], "Temperature": [...]} }
         """
         self._ensure_runtime_workspace(reset=True)
         if energyDict:
             self.networkDict = energyDict
         if int(timestep) <= 0:
             raise ValueError("timestep must be a positive integer.")
-        hoys = list(range(0, 8760, int(timestep)))
-        outdoor_series = self._normalize_outdoor_temperature(outdoorTemperature, hoys)
+        if int(w) < 0:
+            raise ValueError("w must be a non-negative integer.")
+        st_hoy = int(start_hoy)
+        ed_hoy = int(end_hoy)
+        if st_hoy < 0 or st_hoy > 8759:
+            raise ValueError("start_hoy must be in [0, 8759].")
+        if ed_hoy < 0 or ed_hoy > 8759:
+            raise ValueError("end_hoy must be in [0, 8759].")
+        if st_hoy > ed_hoy:
+            raise ValueError("start_hoy must be <= end_hoy.")
+        hoys = list(range(st_hoy, ed_hoy + 1, int(timestep)))
+        outdoor_series = [25.0] * len(hoys)
 
         preheated_prj = self._preheat(hoys=hoys, outdoor_series=outdoor_series, preheat=preheat, energyDict=energyDict)
 
@@ -534,4 +944,31 @@ class heatLoadModel(object):
                 for i in range(len(zResultHoy)):
                     zResult[i].temperature += [zResultHoy[i].temperature[-1]]
                     zResult[i].ACH += [zResultHoy[i].ACH[-1]]
-        return postprocess_zone_results_linear(zResult)
+        zResult = postprocess_zone_results_linear(zResult)
+        return self._format_comfort_result(zResult, hoys=hoys, k=float(k), w=int(w))
+
+    def _format_comfort_result(self, zResult, hoys, k, w):
+        weather_t = [float(self.weather.weatherData['temperature'][h]) for h in hoys]
+        avg_t = self._moving_average(weather_t, w=w)
+        indoor_ref_t = [(1.0 - k) * t + k * a for t, a in zip(weather_t, avg_t)]
+        result = {}
+        for z in zResult:
+            z_meta = self.networkDict['zones'].get(z.userName, {})
+            zone_name = z_meta.get("zone_name", z.userName)
+            zone_area = float(z_meta.get("zone_area", 0.0))
+            raw_temp = [float(v) for v in z.temperature]
+            delta_zt = [t - 25.0 for t in raw_temp]
+            z_t = [dz + ref_t for dz, ref_t in zip(delta_zt, indoor_ref_t)]
+            comfort = [
+                1 if (0.31 * out_t <= t_val < 0.31 * out_t + 20.3) else 0
+                for out_t, t_val in zip(weather_t, z_t)
+            ]
+            result[zone_name] = {
+                "zone_area": zone_area,
+                "hoys": int(8760.0/len(z.temperature)),
+                "ACH": [float(v) for v in z.ACH],
+                "delta_t": delta_zt,
+                "Temperature": z_t,
+                "Comfort": comfort
+            }
+        return result
