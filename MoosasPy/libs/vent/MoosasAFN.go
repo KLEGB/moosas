@@ -454,6 +454,8 @@ func generatePrj(prjBaseName string, info globalInfo, network airFlowNetwork) st
 		line := "   " + nr + "    "
 		if p.from == -1 {
 			line += "1  -1   " + _getZoneIndex(zones[p.to], network.zones)
+		} else if p.to == -1 {
+			line += "1  -1   " + _getZoneIndex(zones[p.from], network.zones)
 		} else {
 			line += "0   " + _getZoneIndex(zones[p.from], network.zones) + "   " + _getZoneIndex(zones[p.to], network.zones)
 		}
@@ -507,7 +509,9 @@ func splitPaths(networkInput airFlowNetwork) []airFlowNetwork {
 		if networkInput.paths[startPoint].from >= 0 {
 			zoneInNetwork[networkInput.paths[startPoint].from] = true
 		}
-		zoneInNetwork[networkInput.paths[startPoint].to] = true
+		if networkInput.paths[startPoint].to >= 0 {
+			zoneInNetwork[networkInput.paths[startPoint].to] = true
+		}
 
 		// Iterate until subPath is unchanged
 		for count := 0; count < len(subPath); {
@@ -515,10 +519,14 @@ func splitPaths(networkInput airFlowNetwork) []airFlowNetwork {
 			for i := 0; i < len(networkInput.paths); i++ {
 				if !used[i] {
 					// Test whether this flowPath is connected to a zone in zoneInNetwork
-					if zoneInNetwork[networkInput.paths[i].from] || zoneInNetwork[networkInput.paths[i].to] {
+					fromConnected := networkInput.paths[i].from >= 0 && zoneInNetwork[networkInput.paths[i].from]
+					toConnected := networkInput.paths[i].to >= 0 && zoneInNetwork[networkInput.paths[i].to]
+					if fromConnected || toConnected {
 						// Mark flowPath[i] as used
 						used[i] = true
-						zoneInNetwork[networkInput.paths[i].to] = true
+						if networkInput.paths[i].to >= 0 {
+							zoneInNetwork[networkInput.paths[i].to] = true
+						}
 						if networkInput.paths[i].from >= 0 {
 							zoneInNetwork[networkInput.paths[i].from] = true
 						}
@@ -537,8 +545,20 @@ func splitPaths(networkInput airFlowNetwork) []airFlowNetwork {
 			}
 		}
 		for i, _ := range subPath {
-			subPath[i].from = transform[subPath[i].from]
-			subPath[i].to = transform[subPath[i].to]
+			if subPath[i].from >= 0 {
+				if v, ok := transform[subPath[i].from]; ok {
+					subPath[i].from = v
+				} else {
+					subPath[i].from = -1
+				}
+			}
+			if subPath[i].to >= 0 {
+				if v, ok := transform[subPath[i].to]; ok {
+					subPath[i].to = v
+				} else {
+					subPath[i].to = -1
+				}
+			}
 		}
 
 		// New network
@@ -615,6 +635,10 @@ func outputResults(network airFlowNetwork, lfrFilePath string) string {
 	airVol := float64(0)
 	airVel := ""
 	airNetwork := make([][]float64, len(network.zones)+1)
+	outdoor := len(network.zones)
+	isValidZone := func(i int) bool {
+		return i >= 0 && i < len(network.zones)
+	}
 	for i, _ := range airNetwork {
 		airNetwork[i] = make([]float64, len(network.zones)+1)
 		for j, _ := range airNetwork[i] {
@@ -625,15 +649,24 @@ func outputResults(network airFlowNetwork, lfrFilePath string) string {
 	lfrFile, _ := os.ReadFile(lfrFilePath)
 	lfrData := strings.Split(string(lfrFile), "\r\n")
 	for i, p := range network.paths {
+		if i+1 >= len(lfrData) {
+			continue
+		}
 		lfrRow := _getLfrRow(strings.Split(lfrData[i+1], " "))
+		if len(lfrRow) < 3 || len(lfrRow[2]) == 0 {
+			continue
+		}
 		flow, _ := strconv.ParseFloat(lfrRow[2][:len(lfrRow[2])-1], 64)
-		if p.from == -1 {
+		if p.from == -1 && isValidZone(p.to) {
 			if flow > 0 {
 				airVol += flow / 1.205 * 3600
 			}
-			airNetwork[len(network.zones)][p.from] += flow / 1.205 * 3600
-			airNetwork[p.from][len(network.zones)] -= flow / 1.205 * 3600
-		} else {
+			airNetwork[outdoor][p.to] += flow / 1.205 * 3600
+			airNetwork[p.to][outdoor] -= flow / 1.205 * 3600
+		} else if p.to == -1 && isValidZone(p.from) {
+			airNetwork[p.from][outdoor] += flow / 1.205 * 3600
+			airNetwork[outdoor][p.from] -= flow / 1.205 * 3600
+		} else if isValidZone(p.from) && isValidZone(p.to) {
 			airVel += p.username + "," + network.zones[p.from].username + "," + network.zones[p.to].username + "," + fmt.Sprintf("%.2f", p.height*p.width) + "," + fmt.Sprintf("%.2f", flow/(1.205*p.height*p.width)) + "\n"
 			airNetwork[p.from][p.to] += flow / 1.205 * 3600
 			airNetwork[p.to][p.from] -= flow / 1.205 * 3600
@@ -644,7 +677,9 @@ func outputResults(network airFlowNetwork, lfrFilePath string) string {
 	resultStr += fmt.Sprintf("%.2f", airVol)
 	resultStr += "!Path AIR FLOW (AIR VELOCITY, m/s)\n"
 	resultStr += "!pathName,fromZone,toZone,Volume(m3),Velocity(m/s)\n"
-	resultStr += airVel[:len(airVel)-1]
+	if len(airVel) > 0 {
+		resultStr += airVel[:len(airVel)-1]
+	}
 	resultStr += "!ZONE AIR FLOW NETWORK (AIR CHANGE PER HOUR, ACH)\n"
 
 	resultStr += "!ZONE NAME,\t"

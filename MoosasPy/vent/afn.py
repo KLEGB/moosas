@@ -343,6 +343,13 @@ class AfnPath(object):
         """
         if self.fromZone is None or self.toZone is None:
             raise Exception('path topology have not been calculated')
+        # Internal Python pipeline uses 1-based zone prjIndex.
+        # MoosasAFN *.net parser indexes zones as 0-based array slots.
+        # Convert only at file-export boundary to keep both sides consistent.
+        from_zone = int(self.fromZone)
+        to_zone = int(self.toZone)
+        from_zone_out = -1 if from_zone == -1 else from_zone - 1
+        to_zone_out = -1 if to_zone == -1 else to_zone - 1
         pathStr = [self.userName]
         pathStr += ['p' + '%03d' % int(self.prjIndex)]
         pathStr += [str(float(self.pathHeight)*float(self.operable))]
@@ -350,8 +357,8 @@ class AfnPath(object):
         pathStr += [str(self.position_x)]
         pathStr += [str(self.position_y)]
         pathStr += [str(self.position_z)]
-        pathStr += [str(self.fromZone)]
-        pathStr += [str(self.toZone)]
+        pathStr += [str(from_zone_out)]
+        pathStr += [str(to_zone_out)]
         pathStr += [str(self.pressure)]
         pathStr += [str(self.winType)]
         return ','.join(pathStr)
@@ -677,6 +684,11 @@ def cleanseNetwork(pathList: list[AfnPath], zoneList: list[AfnZone]) -> (list[Af
     if zone_count == 0:
         return list(pathList), list(zoneList)
 
+    # Keep topology indices consistent with zone.prjIndex (1-based in AFN pipeline).
+    zone_ids = [int(z.prjIndex) for z in zoneList]
+    zone_id_set = set(zone_ids)
+    zone_by_id = {int(z.prjIndex): z for z in zoneList}
+
     def _is_variable_path(p: AfnPath, eps=1e-9):
         try:
             h = float(p.pathHeight)
@@ -692,8 +704,8 @@ def cleanseNetwork(pathList: list[AfnPath], zoneList: list[AfnZone]) -> (list[Af
     for i, p in enumerate(pathList):
         fz = int(p.fromZone)
         tz = int(p.toZone)
-        f_ok = (fz == -1) or (0 <= fz < zone_count)
-        t_ok = (tz == -1) or (0 <= tz < zone_count)
+        f_ok = (fz == -1) or (fz in zone_id_set)
+        t_ok = (tz == -1) or (tz in zone_id_set)
         if f_ok and t_ok:
             valid_index_paths.append(p)
         else:
@@ -703,8 +715,8 @@ def cleanseNetwork(pathList: list[AfnPath], zoneList: list[AfnZone]) -> (list[Af
 
     # BFS on variable flow topology from ambient (-1)
     topology = {-1: set()}
-    for zi in range(zone_count):
-        topology[zi] = set()
+    for zid in zone_ids:
+        topology[zid] = set()
 
     for p in valid_index_paths:
         if not _is_variable_path(p):
@@ -723,15 +735,16 @@ def cleanseNetwork(pathList: list[AfnPath], zoneList: list[AfnZone]) -> (list[Af
                 visited.add(nxt)
                 queue.append(nxt)
 
-    keep_zone_idx = sorted([z for z in visited if z >= 0])
-    remove_zone_idx = sorted(set(range(zone_count)).difference(keep_zone_idx))
+    keep_zone_ids = sorted([z for z in visited if z >= 0])
+    remove_zone_ids = sorted(set(zone_ids).difference(keep_zone_ids))
 
-    if remove_zone_idx:
+    if remove_zone_ids:
         print('******Warning: some zones do not linked to ambient by variable flow path.')
-        print(f'******Warning: those zone will be removed:{remove_zone_idx}')
+        print(f'******Warning: those zone will be removed:{remove_zone_ids}')
 
-    idx_map = {old: new for new, old in enumerate(keep_zone_idx)}
-    new_zones: list[AfnZone] = [zoneList[i] for i in keep_zone_idx]
+    # Reindex remaining zones to contiguous 1..N and map old zone prjIndex -> new prjIndex.
+    idx_map = {old: new for new, old in enumerate(keep_zone_ids, start=1)}
+    new_zones: list[AfnZone] = [zone_by_id[i] for i in keep_zone_ids]
     for i, z in enumerate(new_zones, start=1):
         z.prjIndex = i
 

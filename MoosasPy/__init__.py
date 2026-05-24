@@ -46,5 +46,9 @@ from .geometry import spaceGen
 
 # initialize temp directory
 from .utils import tools
-tools.path.clean(tools.path.tempDir)
+try:
+    tools.path.clean(tools.path.tempDir)
+except Exception:
+    # Temp cleanup should not block package import.
+    pass
 del tools

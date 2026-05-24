@@ -146,7 +146,9 @@ def callCmd(args, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, block=T
     # from app.core.logger import log_custom
     # log_custom(f'Call cmd: {command}', level='info')
     try:
-        print(f'Call:{command}')
+        # Keep shell command logging opt-in to avoid console flooding in batch runs.
+        if os.environ.get("MOOSAS_SHOW_CALL_CMD", "").strip().lower() in {"1", "true", "yes", "on"}:
+            print(f'Call:{command}')
         result = os.popen(command, **kwargs)
     except Exception as e:
         if not _raise:
