@@ -190,10 +190,9 @@ class heatLoadModel(object):
                 f"but schedulePath is None."
             )
         try:
-            # Heatload is treated as instantaneous power (W), so schedule-driven
-            # internal gains are aligned to a fixed baseline hour instead of
-            # accumulating/changing with hoy.
-            return float(self._value_from_schedule(str(raw_value), 0))
+            # Resolve schedule using current hour-of-year so gains follow
+            # hourly daily/weekly schedules instead of a fixed midnight value.
+            return float(self._value_from_schedule(str(raw_value), hoy))
         except KeyError:
             raise ValueError(
                 f"Schedule '{raw_value}' for zone '{zone_name}' field '{field_name}' not found in "
@@ -236,10 +235,15 @@ class heatLoadModel(object):
             zone_equipment = self._resolve_gain_value(zValue.get('zone_equipment'), hoy, 'zone_equipment', zUserName)
             zone_lighting = self._resolve_gain_value(zValue.get('zone_lighting'), hoy, 'zone_lighting', zUserName)
             zone_popheat = _safe_float(zValue.get('zone_popheat'))
-            heat = zone_ppsm * zone_popheat * zone_area
-            heat += zone_equipment * zone_area
-            heat += zone_lighting * zone_area
-            self.networkDict['zones'][zUserName]['heatLoad'] = heat
+            ppsm_heat = zone_ppsm * zone_popheat * zone_area
+            equipment_heat = zone_equipment * zone_area
+            lighting_heat = zone_lighting * zone_area
+            internal_heat = ppsm_heat + equipment_heat + lighting_heat
+            self.networkDict['zones'][zUserName]['zone_ppsm_heat'] = ppsm_heat
+            self.networkDict['zones'][zUserName]['zone_equipment_heat'] = equipment_heat
+            self.networkDict['zones'][zUserName]['zone_lighting_heat'] = lighting_heat
+            self.networkDict['zones'][zUserName]['zone_radHeat'] = 0.0
+            self.networkDict['zones'][zUserName]['heatLoad'] = internal_heat
             idx = self.networkDict['zones'][zUserName]['prjIndex']
             prjDict[idx] = zUserName
             prjDict[str(idx)] = zUserName
@@ -253,10 +257,12 @@ class heatLoadModel(object):
             if ps["fromZone"] != "-1":
                 zUserName = prjDict.get(ps["fromZone"])
                 if zUserName is not None:
+                    self.networkDict['zones'][zUserName]['zone_radHeat'] += radHeat
                     self.networkDict['zones'][zUserName]['heatLoad'] += radHeat
             elif ps["toZone"] != "-1":
                 zUserName = prjDict.get(ps["toZone"])
                 if zUserName is not None:
+                    self.networkDict['zones'][zUserName]['zone_radHeat'] += radHeat
                     self.networkDict['zones'][zUserName]['heatLoad'] += radHeat
             
         return self.networkDict
@@ -682,7 +688,7 @@ class heatLoadModel(object):
         return mech_energy
 
     def coupledTask(self, energyDict: dict = None, timestep=1, iteration=1, mode="sequence",
-                    preheat=10, k=0.0, w=1, start_hoy=0, end_hoy=8759):
+                    preheat=10, k=0.0, sigma=1, start_hoy=0, end_hoy=8759, **kwargs):
         """
         Coupled simulation between energy and comfort results.
 
@@ -713,6 +719,12 @@ class heatLoadModel(object):
             }
         """
         e_res = self.energyTask(energyDict=energyDict)
+        legacy_w = kwargs.pop("w", None)
+        if kwargs:
+            raise TypeError(f"Unexpected keyword arguments: {', '.join(kwargs.keys())}")
+        if legacy_w is not None:
+            sigma = legacy_w
+
         c_res = self.annualComfort(
             energyDict=energyDict,
             timestep=timestep,
@@ -720,7 +732,7 @@ class heatLoadModel(object):
             mode=mode,
             preheat=preheat,
             k=k,
-            w=w,
+            sigma=sigma,
             start_hoy=start_hoy,
             end_hoy=end_hoy
         )
@@ -809,15 +821,57 @@ class heatLoadModel(object):
         return zones
 
     @staticmethod
-    def _moving_average(values, w):
-        vals = np.array(values, dtype=float)
-        n = len(vals)
-        out = []
+    def _moving_average(values: np.ndarray, sigma: float) -> np.ndarray:
+        """
+        Gaussian weighted moving average for 1D signal.
+        Each point is computed as a weighted sum of neighboring points,
+        where weights follow a Gaussian distribution centered at the point.
+
+        Parameters
+        ----------
+        values : np.ndarray
+            Input 1D numeric array to be smoothed.
+        sigma : float
+            Standard deviation of the Gaussian kernel.
+            Larger values produce stronger smoothing.
+
+        Returns
+        -------
+        np.ndarray
+            Smoothed array with the same shape as input.
+
+        Notes
+        -----
+        - The effective window radius is set to 3 * sigma (covers 99.7% of Gaussian mass).
+        - Edge handling: truncates window at array boundaries.
+        - Fully vectorized implementation for high performance on large arrays.
+        """
+        values = np.asarray(values, dtype=np.float64)
+        n = len(values)
+        output = np.zeros_like(values)
+        
+        # Radius of the Gaussian window (3σ rule)
+        radius = int(np.ceil(3.0 * sigma))
+        if radius < 1:
+            return values.copy()
+
+        # Precompute indices for vectorized window operations
+        indices = np.arange(n)
         for i in range(n):
-            st = max(0, i - w)
-            ed = min(n, i + w + 1)
-            out.append(float(np.mean(vals[st:ed])))
-        return out
+            # Window start and end indices
+            start = max(0, i - radius)
+            end = min(n, i + radius + 1)
+            window_indices = indices[start:end]
+            
+            # Gaussian weights calculation
+            dist_sq = (window_indices - i) ** 2
+            weights = np.exp(-dist_sq / (2.0 * sigma ** 2))
+            weights /= weights.sum()  # Normalize to sum to 1
+            
+            # Compute weighted average
+            output[i] = np.sum(values[window_indices] * weights)
+
+        return output
 
     def _ensure_runtime_workspace(self, reset=False):
         """
@@ -986,7 +1040,7 @@ class heatLoadModel(object):
         raise ValueError("mode must be one of ['onions', 'sequence', 'ping-pong'].")
 
     def annualComfort(self, energyDict: dict = None, iteration=1, mode="sequence", timestep=1,
-                      preheat=10, k=0.0, w=1, start_hoy=0, end_hoy=8759):
+                      preheat=10, k=0.5, sigma=1, start_hoy=0, end_hoy=8759, **kwargs):
         """
         Run annual ventilation comfort simulation with selectable coupling strategy.
 
@@ -1003,10 +1057,10 @@ class heatLoadModel(object):
             `len(range(start_hoy, end_hoy + 1, timestep))`.
         preheat : int, default 10
             Bootstrap ping-pong rounds at peak-load hour to generate initial project state.
-        k : float, default 0.0
+        k : float, default 0.5
             Thermal inertia strength. Recommended range [0, 1].
-        w : int, default 1
-            Half-window size for moving-average outdoor temperature on sampled sequence.
+        sigma : float, default 1
+            Gaussian smoothing sigma for moving-average outdoor temperature on sampled sequence.
 
         Returns
         -------
@@ -1018,8 +1072,13 @@ class heatLoadModel(object):
             self.networkDict = energyDict
         if int(timestep) <= 0:
             raise ValueError("timestep must be a positive integer.")
-        if int(w) < 0:
-            raise ValueError("w must be a non-negative integer.")
+        legacy_w = kwargs.pop("w", None)
+        if kwargs:
+            raise TypeError(f"Unexpected keyword arguments: {', '.join(kwargs.keys())}")
+        if legacy_w is not None:
+            sigma = legacy_w
+        if float(sigma) < 0:
+            raise ValueError("sigma must be non-negative.")
         st_hoy = int(start_hoy)
         ed_hoy = int(end_hoy)
         if st_hoy < 0 or st_hoy > 8759:
@@ -1109,7 +1168,7 @@ class heatLoadModel(object):
             for zu in zone_users:
                 mech_hourly_by_user[zu].append(float(mech_this_h.get(zu, 0.0)))
         zResult = postprocess_zone_results_linear(zResult)
-        result = self._format_comfort_result(zResult, hoys=hoys, k=float(k), w=int(w))
+        result = self._format_comfort_result(zResult, hoys=hoys, k=float(k), sigma=float(sigma))
         for zone_key, z in self.networkDict.get("zones", {}).items():
             zone_user = str(z.get("userName", zone_key))
             zone_name = str(z.get("zone_name", zone_user))
@@ -1117,9 +1176,9 @@ class heatLoadModel(object):
                 result[zone_name]["MechanicalVent"] = mech_hourly_by_user.get(zone_user, [0.0] * len(hoys))
         return result
 
-    def _format_comfort_result(self, zResult, hoys, k, w):
+    def _format_comfort_result(self, zResult, hoys, k, sigma):
         weather_t = [float(self.weather.weatherData['temperature'][h]) for h in hoys]
-        avg_t = self._moving_average(weather_t, w=w)
+        avg_t = self._moving_average(weather_t, sigma=sigma)
         indoor_ref_t = [(1.0 - k) * t + k * a for t, a in zip(weather_t, avg_t)]
         result = {}
         for z in zResult:

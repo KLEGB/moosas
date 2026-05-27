@@ -1,3 +1,5 @@
+﻿from __future__ import annotations
+
 from ..models import MoosasModel, MoosasCumSky, MoosasElement
 from ..rad import faceRadiation,writeRadGeo
 from ..utils import np, os, path
@@ -112,3 +114,4 @@ def faceAnnualRad(faces: MoosasElement | list[MoosasElement], stationid="545110"
             generationSeries.append([area * np.sum(avgRad * cumValue[:, i]) / MoosasCumSky.FIX_RADIATION for i in range(8760)])
 
         return np.sum(generationSeries,axis=0)
+
