@@ -75,10 +75,6 @@ MoosasPy = [
 ]
 
 [tool.setuptools_scm]
-<<<<<<< Updated upstream
-=======
-# Match tags like: moosaspy-v1.0.1
->>>>>>> Stashed changes
 tag_regex = "^moosaspy-v(?P<version>\\d+\\.\\d+\\.\\d+)$"
 version_scheme = "no-guess-dev"
 local_scheme = "no-local-version"
