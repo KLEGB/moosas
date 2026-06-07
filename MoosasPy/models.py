@@ -6,6 +6,7 @@ we split the MoosasModel definition from geometry.element to avoid circular impo
 from __future__ import annotations
 
 import os.path
+import uuid
 
 import shapely
 import xml.etree.ElementTree as ET
@@ -66,6 +67,10 @@ class MoosasModel(MoosasContainer):
         self.weather: MoosasWeather | None = None
         self.__template = loadBuildingTemplate(os.path.join(path.dataBaseDir, 'building_template.csv'))
         self.idfZoneTemplate = {}
+        self.schedulePath = os.path.join(path.dataBaseDir, 'office.sch')
+        self.schedule = {}
+        self.scheduleByType = {}
+        self.loadSchedule(self.schedulePath)
     @property
     def buildingTemplate(self) -> dict:
         """
@@ -141,6 +146,121 @@ class MoosasModel(MoosasContainer):
             This function does not return any value.
         """
         self.__template[templateName] = templateDict
+
+    @staticmethod
+    def _schedule_type_from_path(schedulePath: str) -> str:
+        schedule_name = os.path.splitext(os.path.basename(str(schedulePath)))[0].upper()
+        return schedule_name
+
+    @staticmethod
+    def _schedule_role_from_name(scheduleName: str) -> str | None:
+        lower = str(scheduleName).lower()
+        if "occdens" in lower or "occupantdensity" in lower:
+            return "zone_ppsm"
+        if "equip" in lower or "equipmentheatgain" in lower:
+            return "zone_equipment"
+        if "light" in lower or "lightingheatgain" in lower:
+            return "zone_lighting"
+        return None
+
+    def _rebuildScheduleByType(self):
+        prefix_to_type = {
+            "OFF": "OFFICE",
+            "RES": "RESIDENTIAL",
+            "COM": "COMMERCIAL",
+            "SCH": "SCHOOL",
+            "HOT": "HOTEL",
+        }
+        rebuilt = {}
+        for scheduleName, scheduleValue in self.schedule.items():
+            if not isinstance(scheduleValue, dict):
+                continue
+            scheduleType = str(scheduleValue.get("type", "")).strip().title()
+            prefix = str(scheduleName).split("_", 1)[0].upper()
+            typeName = prefix_to_type.get(prefix, scheduleType.upper())
+            if not typeName:
+                continue
+            role = self._schedule_role_from_name(scheduleName)
+            if role is None:
+                continue
+            rebuilt.setdefault(typeName, {})[role] = scheduleName
+        self.scheduleByType = rebuilt
+
+    def getScheduleName(self, templateType: str, fieldName: str):
+        if templateType is None:
+            return None
+        return self.scheduleByType.get(str(templateType).upper(), {}).get(fieldName)
+
+    def loadSchedule(self, schedulePath: str = os.path.join(path.dataBaseDir, 'office.sch')):
+        """
+        Load a schedule library from a .sch file into the in-memory schedule dict.
+
+        The file format supports Daily and Weekly rows. Daily schedules keep 24
+        hourly values; Weekly schedules keep 7 daily schedule references.
+        """
+        if schedulePath is None:
+            schedulePath = os.path.join(path.dataBaseDir, 'office.sch')
+        schedulePath = os.path.abspath(schedulePath)
+        if not os.path.isfile(schedulePath):
+            raise FileNotFoundError(f"Schedule file not found: {schedulePath}")
+
+        loaded = {}
+        with open(schedulePath, "r", encoding="utf-8", errors="ignore") as f:
+            for line in f:
+                text = line.strip()
+                if (not text) or text.startswith("!"):
+                    continue
+                parts = [p.strip() for p in text.split(",")]
+                if len(parts) < 3:
+                    continue
+                name = parts[0]
+                mode = parts[1].strip().lower()
+                if mode == "daily":
+                    values = parts[2:26]
+                    if len(values) != 24:
+                        raise ValueError(f"Invalid daily schedule row '{name}', expected 24 hourly values.")
+                    loaded[name] = {"type": "Daily", "value": values}
+                elif mode == "weekly":
+                    values = parts[2:9]
+                    if len(values) != 7:
+                        raise ValueError(f"Invalid weekly schedule row '{name}', expected 7 day references.")
+                    loaded[name] = {"type": "Weekly", "value": values}
+
+        self.schedule.update(loaded)
+        self.schedulePath = schedulePath
+        self._rebuildScheduleByType()
+        return self.schedule
+
+    def writeSchedule(self, schedulePath: str = None):
+        """
+        Write the current schedule library to a .sch file.
+
+        If schedulePath is None, a unique temporary file is created under
+        MoosasPy/__temp__.
+        """
+        if schedulePath is None:
+            schedulePath = os.path.join(path.tempDir, f"schedule_{uuid.uuid4().hex}.sch")
+        schedulePath = os.path.abspath(schedulePath)
+        path.checkBuildDir(schedulePath)
+
+        daily_items = [(name, value) for name, value in self.schedule.items()
+                       if str(value.get("type", "")).lower() == "daily"]
+        weekly_items = [(name, value) for name, value in self.schedule.items()
+                        if str(value.get("type", "")).lower() == "weekly"]
+
+        with open(schedulePath, "w", encoding="utf-8") as f:
+            f.write("! Moosas schedule export\n")
+            for name, item in daily_items:
+                values = item.get("value", [])
+                if len(values) != 24:
+                    raise ValueError(f"Daily schedule '{name}' must have 24 values.")
+                f.write(f"{name},Daily,{','.join([str(v) for v in values])}\n")
+            for name, item in weekly_items:
+                values = item.get("value", [])
+                if len(values) != 7:
+                    raise ValueError(f"Weekly schedule '{name}' must have 7 values.")
+                f.write(f"{name},Weekly,{','.join([str(v) for v in values])}\n")
+        return schedulePath
     def loadWeatherData(self, stationIdOrPath: str = '545110') -> MoosasWeather:
         """
         Load weather data from the database or import an external EPW file.

@@ -13,7 +13,7 @@ SCH_EquipHeat_Weekend,Daily,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.
 SCH_LightHeat_Weekday,Daily,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.8,4.0,8.0,8.0,8.0,6.4,6.4,8.0,8.0,8.0,2.4,0.8,0.0,0.0,0.0,0.0,0.0
 SCH_LightHeat_Weekend,Daily,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4,0.4
 !
-OccupantDensity,Weekly,SCH_OccDens_Weekday,SCH_OccDens_Weekday,SCH_OccDens_Weekday,SCH_OccDens_Weekday,SCH_OccDens_Weekday,SCH_OccDens_Weekend,SCH_OccDens_Weekend
-OccupantHeatGain,Weekly,SCH_OccHeat_AllDay,SCH_OccHeat_AllDay,SCH_OccHeat_AllDay,SCH_OccHeat_AllDay,SCH_OccHeat_AllDay,SCH_OccHeat_AllDay,SCH_OccHeat_AllDay
-EquipmentHeatGain,Weekly,SCH_EquipHeat_Weekday,SCH_EquipHeat_Weekday,SCH_EquipHeat_Weekday,SCH_EquipHeat_Weekday,SCH_EquipHeat_Weekday,SCH_EquipHeat_Weekend,SCH_EquipHeat_Weekend
-LightingHeatGain,Weekly,SCH_LightHeat_Weekday,SCH_LightHeat_Weekday,SCH_LightHeat_Weekday,SCH_LightHeat_Weekday,SCH_LightHeat_Weekday,SCH_LightHeat_Weekend,SCH_LightHeat_Weekend
+SCH_OccDens_Weekly,Weekly,SCH_OccDens_Weekday,SCH_OccDens_Weekday,SCH_OccDens_Weekday,SCH_OccDens_Weekday,SCH_OccDens_Weekday,SCH_OccDens_Weekend,SCH_OccDens_Weekend
+SCH_OccHeat_Weekly,Weekly,SCH_OccHeat_AllDay,SCH_OccHeat_AllDay,SCH_OccHeat_AllDay,SCH_OccHeat_AllDay,SCH_OccHeat_AllDay,SCH_OccHeat_AllDay,SCH_OccHeat_AllDay
+SCH_EquipHeat_Weekly,Weekly,SCH_EquipHeat_Weekday,SCH_EquipHeat_Weekday,SCH_EquipHeat_Weekday,SCH_EquipHeat_Weekday,SCH_EquipHeat_Weekday,SCH_EquipHeat_Weekend,SCH_EquipHeat_Weekend
+SCH_LightHeat_Weekly,Weekly,SCH_LightHeat_Weekday,SCH_LightHeat_Weekday,SCH_LightHeat_Weekday,SCH_LightHeat_Weekday,SCH_LightHeat_Weekday,SCH_LightHeat_Weekend,SCH_LightHeat_Weekend

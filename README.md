@@ -12,7 +12,7 @@ This repository contains:
 
 ## Version
 
-Current Python package release target: `MoosasPy 1.0.0`.
+Current Python package release target: `MoosasPy 1.1.0`.
 
 ## Quick Start
 
@@ -40,7 +40,7 @@ Read:
 Current release workflow:
 
 1. Build and validate distributions (`python -m build`, `python -m twine check dist/*`).
-2. Push tag `moosaspy-v*` (for example `moosaspy-v1.0.0`).
+2. Push tag `moosaspy-v*` (for example `moosaspy-v1.1.0`).
 3. GitHub Actions workflow `.github/workflows/moosaspy-release.yml` uploads
    wheel/sdist to GitHub Release assets.
 

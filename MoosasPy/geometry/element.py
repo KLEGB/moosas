@@ -6,12 +6,14 @@ so actually all objects named model or attributes named parent are MoosasModel o
 """
 from __future__ import annotations
 
+import os
 import re
 
 from .geos import Projection, Vector, faceNormal, simplify, overlapArea, equals, selfIntersect, makeValid, bBox
 from ..encoding.convexify import triangulate2dFace
 from ..utils import generate_code, searchBy, mixItemListToObject, mixItemListToList, encodeParams, GeometryError
 from ..utils import shapely, np, ET
+from ..utils.tools import path
 from ..utils.constant import geom
 
 # 不做inch meter转换
@@ -994,6 +996,7 @@ class MoosasElement(object):
         ET.SubElement(geometry, "height").text = str((self.level + self.offset) / INCH_METER_MULTIPLIER)
         ET.SubElement(geometry, "normal").text = ' '.join(Vector(self.normal).array.astype(str))
         ET.SubElement(geometry, "external").text = str(self.isOuter)
+        ET.SubElement(geometry, "U_Value").text = str(self.U_Value)
         ET.SubElement(geometry, "parentSpace").text = str(spcList.astype(str))
         neighbor = ET.SubElement(geometry, "neighbor")
         for key in self.neighbor:
@@ -1178,7 +1181,7 @@ class MoosasSkylight(MoosasFace):
     '''
         一个特别简单的glazing类，只为与Moosasface区分开
         '''
-    __slots__ = ['parentFace']
+    __slots__ = ['parentFace','SHGC']
 
     def __init__(self, model: MoosasContainer, faceId: str | MoosasGeometry, level: float = None,
                  offset: float = None, glazingId=None,
@@ -1219,6 +1222,7 @@ class MoosasSkylight(MoosasFace):
         super(MoosasSkylight, self).__init__(model, faceId, level=level, offset=offset, glazingElement=glazingElement,
                                              space=space, glazingId=glazingId, uid=uid)
         self.parentFace: MoosasFace | None = None
+        self.SHGC: float | None = None
 
     @property
     def orientation(self):
@@ -1275,6 +1279,7 @@ class MoosasSkylight(MoosasFace):
         skylightXml = super(MoosasSkylight, self).to_xml(model, Element_tag, writeGeometry=writeGeometry)
         ET.SubElement(skylightXml, "parentFace").text = str(self.parentFace.Uid)
         ET.SubElement(skylightXml, "shadingid").text = ' '.join(np.array(self.shading).astype(str))
+        ET.SubElement(skylightXml, "SHGC").text = "" if self.SHGC is None else str(self.SHGC)
         return skylightXml
 
 
@@ -1744,7 +1749,7 @@ class MoosasGlazing(MoosasWall):
     parentFace: the Uid of parent MoosasWall element
     orientation: normal facing outside.
     """
-    __slots__ = ['parentFace']
+    __slots__ = ['parentFace','SHGC']
 
     def __init__(self, model: MoosasContainer, faceId: str | list[str] | np.ndarray[str], level: float = None,
                  offset: float = None, glazingId=None,
@@ -1785,6 +1790,7 @@ class MoosasGlazing(MoosasWall):
         super(MoosasGlazing, self).__init__(model, faceId, level=level, offset=offset, glazingElement=glazingElement,
                                             space=space, glazingId=glazingId, uid=uid)
         self.parentFace: MoosasWall | None = None
+        self.SHGC: float | None = None
 
         if self.offset < -0.2:
             new_level = model.levelList[model.levelList.index(self.level) - 1]
@@ -1873,6 +1879,7 @@ class MoosasGlazing(MoosasWall):
         glazingXml = super(MoosasGlazing, self).to_xml(model, Element_tag, writeGeometry=writeGeometry)
         ET.SubElement(glazingXml, "parentFace").text = self.parentFace.Uid
         ET.SubElement(glazingXml, "shadingid").text = ' '.join(np.array(self.shading).astype(str))
+        ET.SubElement(glazingXml, "SHGC").text = "" if self.SHGC is None else str(self.SHGC)
         return glazingXml
 
 
@@ -3062,6 +3069,12 @@ class MoosasSpace(object):
         self.settings['zone_template'] = buildingTemplateHint
         for key in template.keys():
             self.settings[key] = template[key]
+
+        templateType = str(template.get("type", "")).strip().upper()
+        if templateType and templateType not in getattr(self.parent, "scheduleByType", {}):
+            schedule_path = os.path.join(path.dataBaseDir, f"{templateType.lower()}.sch")
+            if os.path.isfile(schedule_path):
+                self.parent.loadSchedule(schedule_path)
         
         if 'zone_wallU' in self.settings:
             faceDict = self.getAllFaces(to_dict=True)
@@ -3069,6 +3082,7 @@ class MoosasSpace(object):
                 face.U_Value = self.settings['zone_wallU']
             for face in faceDict['MoosasGlazing']+faceDict['MoosasSkylight']:
                 face.U_Value = self.settings['zone_winU']
+                face.SHGC = self.settings['zone_win_SHGC']
 
 
     def add_neighbor(self, neighbor_id, element: MoosasElement):

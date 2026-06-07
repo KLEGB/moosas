@@ -30,8 +30,8 @@ python -m twine check dist/*
 Create a tag and push:
 
 ```bash
-git tag moosaspy-v1.0.0
-git push origin moosaspy-v1.0.0
+git tag -a moosaspy-v1.1.0 -m "MoosasPy 1.1.0"
+git push origin moosaspy-v1.1.0
 ```
 
 The workflow `.github/workflows/moosaspy-release.yml` will:
@@ -45,13 +45,13 @@ The workflow `.github/workflows/moosaspy-release.yml` will:
 Public repo:
 
 ```bash
-pip install "https://github.com/<OWNER>/<REPO>/releases/download/moosaspy-v1.0.0/moosaspy-1.0.0-py3-none-any.whl"
+pip install "https://github.com/<OWNER>/<REPO>/releases/download/moosaspy-v1.1.0/moosaspy-1.1.0-py3-none-any.whl"
 ```
 
 Private repo:
 
 ```bash
-pip install "https://<USERNAME>:<TOKEN>@github.com/<OWNER>/<REPO>/releases/download/moosaspy-v1.0.0/moosaspy-1.0.0-py3-none-any.whl"
+pip install "https://<USERNAME>:<TOKEN>@github.com/<OWNER>/<REPO>/releases/download/moosaspy-v1.1.0/moosaspy-1.1.0-py3-none-any.whl"
 ```
 
 Use a PAT with repository read permission.

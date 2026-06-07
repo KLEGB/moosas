@@ -74,6 +74,27 @@ def _interpolate_daily_to_hourly(daily_rows, t_out_hourly, zone_h_temp, zone_c_t
     return rows
 
 
+def _space_template_type(space):
+    template = str(space.settings.get("zone_template", "")).strip()
+    if not template:
+        return ""
+    return template.split("_")[-1].upper()
+
+
+def _resolve_schedule_ref(model: MoosasModel, template_type: str, field_name: str, current_value):
+    if isinstance(current_value, str):
+        text = current_value.strip()
+        try:
+            return float(text)
+        except Exception:
+            return text
+    if template_type:
+        schedule_name = model.getScheduleName(template_type, field_name) if hasattr(model, "getScheduleName") else None
+        if schedule_name:
+            return schedule_name
+    return current_value
+
+
 def energyAnalysis(model: MoosasModel = None,
                    core=buildingType.RESIDENTIAL,
                    requireRadiation=False,
@@ -155,6 +176,9 @@ def energyAnalysis(model: MoosasModel = None,
             exportByZone=exportByZone,
             schedulePath=schedulePath,
         )
+    elif isinstance(energyInput, dict) and energyInput.get("schedulePath"):
+        if "-sch" not in energyInput.get("args", []):
+            energyInput["args"] += ['-sch', f'"{os.path.abspath(energyInput["schedulePath"])}"']
 
     inputPath = os.path.abspath(inputPath)
     resultPath = os.path.abspath(resultPath)
@@ -477,6 +501,9 @@ def getEnergyInput(model: MoosasModel,
         """Return x if positive, otherwise 0."""
         return x if x > 0 else 0
 
+    if schedulePath is not None:
+        model.loadSchedule(schedulePath)
+
     # Perform radiation calculation if requested
     if requireRadiation:
         t2 = datetime.now()
@@ -494,6 +521,12 @@ def getEnergyInput(model: MoosasModel,
         summer_solar, winter_solar = 0.0, 0.0
         theZone = ThermalSettings(**(s.settings))
         theZone.id = s.id
+
+        template_type = _space_template_type(s)
+        for field_name in ("zone_ppsm", "zone_equipment", "zone_lighting"):
+            resolved = _resolve_schedule_ref(model, template_type, field_name, theZone.params.get(field_name))
+            if resolved is not None:
+                theZone.updateParams(**{field_name: resolved})
 
         total_volume += s.area * s.height
 
@@ -577,9 +610,9 @@ def getEnergyInput(model: MoosasModel,
     if exportByZone:
         args += ['-z', '1']
 
-    # Append schedule file path if provided
-    if schedulePath is not None:
-        abs_schedule_path = os.path.abspath(schedulePath)
-        args += ['-sch', f'"{abs_schedule_path}"']
+    schedule_out_path = None
+    if getattr(model, "schedule", None):
+        schedule_out_path = model.writeSchedule()
+        args += ['-sch', f'"{schedule_out_path}"']
 
-    return {'zones': zones, 'args': args}
+    return {'zones': zones, 'args': args, 'schedulePath': schedule_out_path}

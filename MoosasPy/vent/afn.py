@@ -111,14 +111,42 @@ class AfnZone(object):
             except Exception:
                 return default
 
+        def _resolve_setting(value, default=0.0):
+            numeric = _safe_float(value, None)
+            if numeric is not None:
+                return numeric
+            if not isinstance(value, str):
+                return default
+            schedule = getattr(getattr(self.element, "parent", None), "schedule", {}) or {}
+            schedule_item = schedule.get(value)
+            if not isinstance(schedule_item, dict):
+                return default
+            schedule_type = str(schedule_item.get("type", "")).strip().lower()
+            if schedule_type == "daily":
+                daily_values = [_safe_float(v, 0.0) for v in schedule_item.get("value", [])]
+                return sum(daily_values) / len(daily_values) if daily_values else default
+            if schedule_type == "weekly":
+                daily_values = []
+                for daily_name in schedule_item.get("value", []):
+                    daily_item = schedule.get(str(daily_name))
+                    if not isinstance(daily_item, dict):
+                        continue
+                    if str(daily_item.get("type", "")).strip().lower() != "daily":
+                        continue
+                    vals = [_safe_float(v, 0.0) for v in daily_item.get("value", [])]
+                    if vals:
+                        daily_values.append(sum(vals) / len(vals))
+                return sum(daily_values) / len(daily_values) if daily_values else default
+            return default
+
         heat = 0
-        heat += _safe_float(self.element.settings.get('zone_summerrad')) / (
-                MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY) * 1000 * _safe_float(
+        heat += _resolve_setting(self.element.settings.get('zone_summerrad')) / (
+                MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY) * 1000 * _resolve_setting(
             self.element.settings.get('zone_win_SHGC'))
-        heat += _safe_float(self.element.settings.get('zone_ppsm')) * _safe_float(
+        heat += _resolve_setting(self.element.settings.get('zone_ppsm')) * _resolve_setting(
             self.element.settings.get('zone_popheat')) * self.element.area
-        heat += _safe_float(self.element.settings.get('zone_equipment')) * self.element.area
-        heat += _safe_float(self.element.settings.get('zone_lighting')) * self.element.area
+        heat += _resolve_setting(self.element.settings.get('zone_equipment')) * self.element.area
+        heat += _resolve_setting(self.element.settings.get('zone_lighting')) * self.element.area
         return heat
 
     def printHeatLoad(self):
@@ -138,14 +166,57 @@ class AfnZone(object):
         None
             This function does not return any value. It prints the heat load details to stdout.
         """
-        print('\nzone total', self.calculateHeatLoad())
-        print('solar heat',
-              self.element.settings['zone_summerrad'] / (
-                          MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY) * 1000)
-        print('people', float(self.element.settings['zone_ppsm']) * float(
-            self.element.settings['zone_popheat']) * self.element.area)
-        print('equipment', float(self.element.settings['zone_equipment']) * self.element.area)
-        print('lighting', float(self.element.settings['zone_lighting']) * self.element.area)
+        def _safe_float(value, default=0.0):
+            if value is None:
+                return default
+            if isinstance(value, str) and value.strip().lower() in ("", "none", "null", "nan"):
+                return default
+            try:
+                return float(value)
+            except Exception:
+                return default
+
+        def _resolve_setting(value, default=0.0):
+            numeric = _safe_float(value, None)
+            if numeric is not None:
+                return numeric
+            if not isinstance(value, str):
+                return default
+            schedule = getattr(getattr(self.element, "parent", None), "schedule", {}) or {}
+            schedule_item = schedule.get(value)
+            if not isinstance(schedule_item, dict):
+                return default
+            schedule_type = str(schedule_item.get("type", "")).strip().lower()
+            if schedule_type == "daily":
+                vals = [_safe_float(v, 0.0) for v in schedule_item.get("value", [])]
+                return sum(vals) / len(vals) if vals else default
+            if schedule_type == "weekly":
+                vals = []
+                for daily_name in schedule_item.get("value", []):
+                    daily_item = schedule.get(str(daily_name))
+                    if not isinstance(daily_item, dict):
+                        continue
+                    if str(daily_item.get("type", "")).strip().lower() != "daily":
+                        continue
+                    daily_vals = [_safe_float(v, 0.0) for v in daily_item.get("value", [])]
+                    if daily_vals:
+                        vals.append(sum(daily_vals) / len(daily_vals))
+                return sum(vals) / len(vals) if vals else default
+            return default
+
+        solar = _resolve_setting(self.element.settings.get('zone_summerrad')) / (
+            MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY
+        ) * 1000 * _resolve_setting(self.element.settings.get('zone_win_SHGC'))
+        people = _resolve_setting(self.element.settings.get('zone_ppsm')) * _resolve_setting(
+            self.element.settings.get('zone_popheat')
+        ) * self.element.area
+        equipment = _resolve_setting(self.element.settings.get('zone_equipment')) * self.element.area
+        lighting = _resolve_setting(self.element.settings.get('zone_lighting')) * self.element.area
+        print('\nzone total', solar + people + equipment + lighting)
+        print('solar heat', solar)
+        print('people', people)
+        print('equipment', equipment)
+        print('lighting', lighting)
         print('area', self.element.area)
 
     def dump(self):

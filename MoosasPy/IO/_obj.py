@@ -1,149 +1,188 @@
+from __future__ import annotations
+
 import os
-from ..utils import np, shapely, ET, json,GeometryError
-from ..utils import to_dictionary, path, parseFile, mixItemListToList
-from ..utils.constant import geom
+
 from ..geometry.element import MoosasGeometry
+from ..utils import np, shapely, path, GeometryError
+from ..utils.constant import geom
 
-def _readObj(file_path) -> list[MoosasGeometry]:
-    """
-    Reads an OBJ file and its associated MTL file to construct a list of MoosasGeometry objects.
-    
-    Parameters
-    ----------
-    file_path : str
-        Path to the input .obj file. The corresponding .mtl file is expected to be referenced 
-        within the OBJ file and located in the same directory.
-    
-    Returns
-    -------
-    list[MoosasGeometry]
-        A list of MoosasGeometry instances constructed from the geometry, material properties,
-        and face data parsed from the OBJ and MTL files. Each MoosasGeometry object contains
-        polygonal face data, identifier, normal vector, and category based on material transparency.
-    """
-    obj_file, mtl_file = [], []
-    material_lab = {}
-    """
-    *.obj file structure: The null line separates a block
-        The first block is the file header
-        The second block is the MTL file name
-        The third block starts with the body of the text, corresponding to the following line markup:
-        g mesh name
-        v vertices
-        vt vertices material coordinates
-        vn vertices normal vectors
-        f face, each representing a vertices: v/vt/vn number
-        Each block defines a face, which can be merged directly without blank lines
-
-    *.mtl file structure: The null line separates a block
-        The first block is the file header
-        The format of subsequent blocks is as follows
-        newmtl material_name
-        Ka 0.000000 0.000000 0.000000
-        Kd 0.800000 0.921569 0.956863
-        Ks 0.330000 0.330000 0.330000
-        d 0.500000
-        map_Kd test/material_map.jpg
-    """
-    with open(file_path) as f:
-        line = f.readline()
-        block = []
-        while line:
-            block.append(line)
-            if not line.strip('\n'):
-                obj_file.append(block)
-                block = []
-            line = f.readline()
-
-    mtl_filename = obj_file[1][0].strip('\n').split(' ')[1]
-    mtl_path = os.path.join(os.path.dirname(file_path), mtl_filename)
-
-    with open(mtl_path) as f:
-        line = f.readline()
-        block = []
-        while line:
-            block.append(line)
-            if not line.strip('\n'):
-                mtl_file.append(block)
-                block = []
-            line = f.readline()
-    # print (mtl_file)
-    for block in mtl_file[1:]:
-        material_name = block[0].strip('\n').split(' ')[1]
-        mat = {block[i].strip('\n').split(' ')[0]: block[i].strip('\n').split(' ')[1:] for i in range(1, len(block)) if
-               block[i].strip('\n')}
-        material_lab[material_name] = mat
-
-    obj_file = [line for block in obj_file[3:] for line in block]
-    v, vn, obj_faces = [], [], []
-    # vt=[] #暂不需要读取材质坐标
-    material_this = ''
-
-    for line in obj_file:
-        line = line.strip('\n').split(' ')
-        if line[0] == 'usemtl': material_this = line[1]
-        if line[0] == 'v': v.append(np.array(line[1:4]).astype(float))
-        # if line[0] == 'vt' : vt.append(line[1:])
-        if line[0] == 'vn': vn.append(np.array(line[1:4]).astype(float))
-        if line[0] == 'f':
-            f = {
-                'material': material_this,
-                'vertices': [],
-                # 'vertices_texture': [],
-                'normal': []
-            }
-            for node in line[1:]:
-                if node == '': continue
-                node = node.split('/')
-                v_ver = int(node[0]) - 1
-                if v_ver < 0: v_ver += 1
-                f['vertices'].append(v[v_ver])
-                f['normal'].append(vn[int(node[2]) - 1])
-
-            f['normal'] = np.array([np.round(np.mean(nor_d), 3) for nor_d in np.array(f['normal']).T]).astype(float)
-            obj_faces.append(f)
-    # print('obj face number:',len(obj_faces))
-    cat, idd, normal, faces = [], [], [], []
-    for i in range(len(obj_faces)):
-        idd.append(i)
-        normal.append(shapely.points(obj_faces[i]['normal']))
-        pts = obj_faces[i]['vertices']
-        pts.append(pts[0])
-        faces.append(shapely.polygons(pts))
-        cat.append(0)
-        if 'd' in material_lab[obj_faces[i]['material']].keys():
-            if float(material_lab[obj_faces[i]['material']]['d'][0]) < 1.0:
-                cat.pop()
-                cat.append(1)
-    faces = _roundPolygons(faces,geom.POINT_PRECISION)
-    return [MoosasGeometry(f, i, n, c) for f, i, n, c in zip(faces, idd, normal, cat)]
 
 def _roundPolygons(polygons: np.ndarray[shapely.Geometry], precision: float) -> np.ndarray:
     """
-    round the coordinates of polygons according to precision.
-    graping the next near coordinates (x,y,z) to the past if their distance is less than precision.
-
-        Args:
-            polygons(np.ndarray[shapely.Geometry]): polygons in np.ndarray format
-            precision(float): round precision, usually would be geom.POINT_PRECISION
-
-        Returns:
-            np.ndarray rounded polygons
+    Round polygon coordinates according to precision and rebuild polygons.
     """
-    coordinates,coorLengthIndex = [],[0]
+    coordinates, coorLengthIndex = [], [0]
     for p in polygons:
         coor = shapely.get_coordinates(p, include_z=True)
-        coordinates+= list(coor)
-        coorLengthIndex += [coorLengthIndex[-1]+len(coor)]
+        coordinates += list(coor)
+        coorLengthIndex += [coorLengthIndex[-1] + len(coor)]
     coordinates = np.array(coordinates)
     for dim in range(3):
-        xIndex = np.argsort(coordinates[:,dim].flatten())
+        xIndex = np.argsort(coordinates[:, dim].flatten())
         xReindex = np.argsort(xIndex)
         coordinates = coordinates[xIndex]
-        for i in range(1,len(xIndex)-1):
-            if np.abs(coordinates[i][dim] - coordinates[i+1][dim])<precision:
+        for i in range(1, len(xIndex) - 1):
+            if np.abs(coordinates[i][dim] - coordinates[i + 1][dim]) < precision:
                 coordinates[i + 1][dim] = coordinates[i][dim]
         coordinates = coordinates[xReindex]
     coordinates = geom.round(coordinates, precision)
-    coordinates = [coordinates[idxS:idxE] for idxS,idxE in zip(coorLengthIndex[:-1],coorLengthIndex[1:])]
+    coordinates = [coordinates[idxS:idxE] for idxS, idxE in zip(coorLengthIndex[:-1], coorLengthIndex[1:])]
     return np.array([shapely.polygons(coors) for coors in coordinates])
+
+
+def _readObj(file_path) -> list[MoosasGeometry]:
+    """
+    Read a Wavefront OBJ file into a list of MoosasGeometry objects.
+
+    The reader accepts OBJ files with or without MTL references. When no
+    material library exists, all faces default to opaque (category 0).
+    """
+    vertices: list[np.ndarray] = []
+    normals: list[np.ndarray] = []
+    obj_faces = []
+    material_lab = {}
+    current_material = ""
+
+    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split()
+            if not parts:
+                continue
+            tag = parts[0].lower()
+            if tag == "mtllib" and len(parts) > 1:
+                mtl_path = os.path.join(os.path.dirname(file_path), parts[1])
+                if os.path.isfile(mtl_path):
+                    with open(mtl_path, "r", encoding="utf-8", errors="ignore") as mtl:
+                        material_name = None
+                        material_block = {}
+                        for mline in mtl:
+                            mline = mline.strip()
+                            if not mline or mline.startswith("#"):
+                                continue
+                            mparts = mline.split()
+                            if not mparts:
+                                continue
+                            if mparts[0].lower() == "newmtl" and len(mparts) > 1:
+                                if material_name is not None:
+                                    material_lab[material_name] = material_block
+                                material_name = mparts[1]
+                                material_block = {}
+                            else:
+                                material_block[mparts[0]] = mparts[1:]
+                        if material_name is not None:
+                            material_lab[material_name] = material_block
+            elif tag == "usemtl" and len(parts) > 1:
+                current_material = parts[1]
+            elif tag == "v" and len(parts) >= 4:
+                vertices.append(np.array(parts[1:4], dtype=float))
+            elif tag == "vn" and len(parts) >= 4:
+                normals.append(np.array(parts[1:4], dtype=float))
+            elif tag == "f" and len(parts) >= 4:
+                face_vertices = []
+                face_normals = []
+                for node in parts[1:]:
+                    if not node:
+                        continue
+                    node_parts = node.split("/")
+                    v_idx = int(node_parts[0])
+                    if v_idx < 0:
+                        v_idx = len(vertices) + v_idx + 1
+                    face_vertices.append(vertices[v_idx - 1])
+                    if len(node_parts) >= 3 and node_parts[2] != "":
+                        n_idx = int(node_parts[2])
+                        if n_idx < 0:
+                            n_idx = len(normals) + n_idx + 1
+                        if 0 <= n_idx - 1 < len(normals):
+                            face_normals.append(normals[n_idx - 1])
+
+                if len(face_vertices) < 3:
+                    continue
+                if face_normals:
+                    normal = np.array([np.round(np.mean(nor_d), 3) for nor_d in np.array(face_normals).T]).astype(float)
+                else:
+                    normal = np.array([0.0, 0.0, 1.0], dtype=float)
+                material_info = material_lab.get(current_material, {})
+                cat = 0
+                if "d" in material_info and len(material_info["d"]) > 0:
+                    try:
+                        if float(material_info["d"][0]) < 1.0:
+                            cat = 1
+                    except Exception:
+                        pass
+                obj_faces.append({
+                    "vertices": face_vertices,
+                    "normal": normal,
+                    "category": cat,
+                })
+
+    faces = [shapely.polygons(vertices) for vertices in [item["vertices"] for item in obj_faces]]
+    return [
+        MoosasGeometry(f, i, shapely.points(item["normal"]), item["category"])
+        for i, (f, item) in enumerate(zip(faces, obj_faces))
+    ]
+
+
+def _iter_obj_polygons(geo: MoosasGeometry):
+    rings = shapely.get_rings(geo.face)
+    if len(rings) == 0:
+        return
+    coords = shapely.get_coordinates(rings[0], include_z=True)
+    if len(coords) >= 4:
+        yield coords[:-1]
+
+
+def writeObj(file_path, model=None, geoList=None, mask=None) -> str:
+    """
+    Write a Moosas geometry model to a Wavefront OBJ file without MTL.
+    """
+    path.checkBuildDir(file_path)
+    if geoList is None:
+        geoList = []
+    if mask and model:
+        geoList = model.findFace(mask)
+    elif model:
+        geoList = list(model.geometryList)
+
+    vertices = []
+    faces = []
+    vertex_index = {}
+
+    def _vertex_key(point):
+        point = np.asarray(point, dtype=float)
+        return tuple(np.round(point, 6))
+
+    def _get_vertex_id(point):
+        key = _vertex_key(point)
+        if key not in vertex_index:
+            vertex_index[key] = len(vertices) + 1
+            vertices.append(np.asarray(point, dtype=float))
+        return vertex_index[key]
+
+    for geo in geoList:
+        for polygon in _iter_obj_polygons(geo):
+            face_ids = [_get_vertex_id(poi) for poi in polygon]
+            if len(face_ids) >= 3:
+                faces.append((geo, face_ids))
+
+    lines = ["# Moosas OBJ export"]
+    for v in vertices:
+        lines.append(f"v {v[0]} {v[1]} {v[2]}")
+
+    normal_offset = 0
+    for idx, (geo, face_ids) in enumerate(faces):
+        normal_coords = shapely.get_coordinates(geo.normal, include_z=True)
+        normal = np.asarray(normal_coords[0], dtype=float) if len(normal_coords) > 0 else np.array([0.0, 0.0, 1.0], dtype=float)
+        normal_index = normal_offset + 1
+        lines.append(f"vn {normal[0]} {normal[1]} {normal[2]}")
+        lines.append(f"o face_{idx}_{geo.faceId}")
+        lines.append("s off")
+        lines.append("usemtl default")
+        lines.append("f " + " ".join([f"{vid}//{normal_index}" for vid in face_ids]))
+        normal_offset += 1
+
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    return "\n".join(lines)

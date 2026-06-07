@@ -16,7 +16,7 @@ RES_EquipHeat_Weekend,Daily,0.86,0.64,0.64,0.64,0.64,0.86,1.72,2.58,3.01,2.79,2.
 RES_LightHeat_Weekday,Daily,0.25,0.25,0.25,0.25,0.25,0.5,1.5,1.0,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.25,0.5,1.5,3.0,4.0,3.5,2.5,1.0,0.5
 RES_LightHeat_Weekend,Daily,0.25,0.25,0.25,0.25,0.25,0.25,0.75,1.5,2.0,1.75,1.5,1.25,1.25,1.25,1.25,1.25,1.5,2.0,3.0,4.0,3.5,2.75,1.5,0.5
 !
-OccupantDensity,Weekly,RES_OccDens_Weekday,RES_OccDens_Weekday,RES_OccDens_Weekday,RES_OccDens_Weekday,RES_OccDens_Weekday,RES_OccDens_Weekend,RES_OccDens_Weekend
-OccupantHeatGain,Weekly,RES_OccHeat_AllDay,RES_OccHeat_AllDay,RES_OccHeat_AllDay,RES_OccHeat_AllDay,RES_OccHeat_AllDay,RES_OccHeat_AllDay,RES_OccHeat_AllDay
-EquipmentHeatGain,Weekly,RES_EquipHeat_Weekday,RES_EquipHeat_Weekday,RES_EquipHeat_Weekday,RES_EquipHeat_Weekday,RES_EquipHeat_Weekday,RES_EquipHeat_Weekend,RES_EquipHeat_Weekend
-LightingHeatGain,Weekly,RES_LightHeat_Weekday,RES_LightHeat_Weekday,RES_LightHeat_Weekday,RES_LightHeat_Weekday,RES_LightHeat_Weekday,RES_LightHeat_Weekend,RES_LightHeat_Weekend
+RES_OccDens_Weekly,Weekly,RES_OccDens_Weekday,RES_OccDens_Weekday,RES_OccDens_Weekday,RES_OccDens_Weekday,RES_OccDens_Weekday,RES_OccDens_Weekend,RES_OccDens_Weekend
+RES_OccHeat_Weekly,Weekly,RES_OccHeat_AllDay,RES_OccHeat_AllDay,RES_OccHeat_AllDay,RES_OccHeat_AllDay,RES_OccHeat_AllDay,RES_OccHeat_AllDay,RES_OccHeat_AllDay
+RES_EquipHeat_Weekly,Weekly,RES_EquipHeat_Weekday,RES_EquipHeat_Weekday,RES_EquipHeat_Weekday,RES_EquipHeat_Weekday,RES_EquipHeat_Weekday,RES_EquipHeat_Weekend,RES_EquipHeat_Weekend
+RES_LightHeat_Weekly,Weekly,RES_LightHeat_Weekday,RES_LightHeat_Weekday,RES_LightHeat_Weekday,RES_LightHeat_Weekday,RES_LightHeat_Weekday,RES_LightHeat_Weekend,RES_LightHeat_Weekend

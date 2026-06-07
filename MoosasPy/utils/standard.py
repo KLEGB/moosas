@@ -55,6 +55,8 @@ def loadBuildingTemplate(templateFile)->dict:
                 _key = '_'.join([arr[i] for i in _key_tab])
                 _value = [arr[i] for i in _value_tab]
                 _template = {_name[i]: _value[i] for i in range(len(_value))}
+                for i in _key_tab:
+                    _template[title[i]] = arr[i]
                 template[_key] = _template
 
     except:

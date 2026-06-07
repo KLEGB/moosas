@@ -21,13 +21,13 @@ Use Python `>=3.10`.
 Public repository:
 
 ```bash
-pip install "https://github.com/<OWNER>/<REPO>/releases/download/moosaspy-v1.0.0/moosaspy-1.0.0-py3-none-any.whl"
+pip install "https://github.com/<OWNER>/<REPO>/releases/download/moosaspy-v1.1.0/moosaspy-1.1.0-py3-none-any.whl"
 ```
 
 Private repository:
 
 ```bash
-pip install "https://<USERNAME>:<TOKEN>@github.com/<OWNER>/<REPO>/releases/download/moosaspy-v1.0.0/moosaspy-1.0.0-py3-none-any.whl"
+pip install "https://<USERNAME>:<TOKEN>@github.com/<OWNER>/<REPO>/releases/download/moosaspy-v1.1.0/moosaspy-1.1.0-py3-none-any.whl"
 ```
 
 ### Option B: install by package name
@@ -45,18 +45,23 @@ python -m build
 python -m twine check dist/*
 ```
 
-Ensure versions match before tagging:
+Package version is resolved from git tag automatically (`setuptools_scm`).
+Tag format must be:
 
-```bash
-python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])"
-python -c "import pathlib;ns={};exec(pathlib.Path('MoosasPy/_version.py').read_text(),ns);print(ns['__version__'])"
+```text
+moosaspy-vMAJOR.MINOR.PATCH
 ```
 
-Create and push release tag:
+For example:
 
 ```bash
-git tag -a moosaspy-v1.0.0 -m "MoosasPy 1.0.0"
-git push origin moosaspy-v1.0.0
+<<<<<<< Updated upstream
+git tag -a moosaspy-v1.1.0 -m "MoosasPy 1.1.0"
+git push origin moosaspy-v1.1.0
+=======
+git tag -a moosaspy-v1.0.1 -m "MoosasPy 1.0.1"
+git push origin moosaspy-v1.0.1
+>>>>>>> Stashed changes
 ```
 
 The workflow `.github/workflows/moosaspy-release.yml` will build distributions

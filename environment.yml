@@ -1,0 +1,10 @@
+name: moosas
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.10,<3.13
+  - pip
+  - ifcopenshell
+  - pip:
+      - -r requirements.txt

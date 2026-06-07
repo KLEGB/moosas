@@ -81,6 +81,8 @@ class heatLoadModel(object):
         self.schedulePath = schedulePath
         self._sch_daily_map = {}
         self._sch_weekly_map = {}
+        if self.schedulePath is not None:
+            self.model.loadSchedule(self.schedulePath)
         self._parse_schedule_file()
         self.weather = MoosasWeather(stationid)
         self.model.loadCumSky(stationid)
@@ -133,32 +135,17 @@ class heatLoadModel(object):
     def _parse_schedule_file(self):
         self._sch_daily_map = {}
         self._sch_weekly_map = {}
-        if self.schedulePath is None:
-            return
-        schedule_path = os.path.abspath(self.schedulePath)
-        if not os.path.isfile(schedule_path):
-            raise FileNotFoundError(f"Schedule file not found: {schedule_path}")
-        with open(schedule_path, "r", encoding="utf-8", errors="ignore") as f:
-            for line in f:
-                text = line.strip()
-                if (not text) or text.startswith("!"):
-                    continue
-                parts = [p.strip() for p in text.split(",")]
-                if len(parts) < 3:
-                    continue
-                name = parts[0]
-                mode = parts[1].lower()
-                if mode == "daily":
-                    if len(parts) < 26:
-                        raise ValueError(f"Invalid daily schedule row '{name}', expected 24 hourly values.")
-                    try:
-                        self._sch_daily_map[name] = [float(v) for v in parts[2:26]]
-                    except Exception as e:
-                        raise ValueError(f"Invalid numeric value in daily schedule '{name}': {e}")
-                elif mode == "weekly":
-                    if len(parts) < 9:
-                        raise ValueError(f"Invalid weekly schedule row '{name}', expected 7 day references.")
-                    self._sch_weekly_map[name] = parts[2:9]
+        for name, item in getattr(self.model, "schedule", {}).items():
+            if not isinstance(item, dict):
+                continue
+            mode = str(item.get("type", "")).strip().lower()
+            if mode == "daily":
+                try:
+                    self._sch_daily_map[name] = [float(v) for v in item.get("value", [])]
+                except Exception as e:
+                    raise ValueError(f"Invalid numeric value in daily schedule '{name}': {e}")
+            elif mode == "weekly":
+                self._sch_weekly_map[name] = [str(v) for v in item.get("value", [])]
 
     def _value_from_schedule(self, schedule_name, hoy):
         if schedule_name in self._sch_weekly_map:
@@ -184,11 +171,6 @@ class heatLoadModel(object):
             return float(raw_value)
         except Exception:
             pass
-        if self.schedulePath is None:
-            raise ValueError(
-                f"Zone '{zone_name}' field '{field_name}' uses schedule name '{raw_value}' "
-                f"but schedulePath is None."
-            )
         try:
             # Resolve schedule using current hour-of-year so gains follow
             # hourly daily/weekly schedules instead of a fixed midnight value.
@@ -196,7 +178,7 @@ class heatLoadModel(object):
         except KeyError:
             raise ValueError(
                 f"Schedule '{raw_value}' for zone '{zone_name}' field '{field_name}' not found in "
-                f"'{os.path.abspath(self.schedulePath)}'."
+                f"loaded schedule library."
             )
 
     def updateHeatLoad(self, hoy, energyDict: dict = None):
@@ -688,15 +670,16 @@ class heatLoadModel(object):
         return mech_energy
 
     def coupledTask(self, energyDict: dict = None, timestep=1, iteration=1, mode="sequence",
-                    preheat=10, k=0.0, sigma=1, start_hoy=0, end_hoy=8759, **kwargs):
+                    preheat=10, k=0.8, sigma=3.8, start_hoy=5088, end_hoy=5112,
+                    earse_conditioned=False, **kwargs):
         """
         Coupled simulation between energy and comfort results.
 
         Parameters
         ----------
-        start_hoy : int, default 0
+        start_hoy : int, default 5088
             Inclusive start hour-of-year for coupling simulation.
-        end_hoy : int, default 8759
+        end_hoy : int, default 5112
             Inclusive end hour-of-year for coupling simulation.
 
         Returns
@@ -734,7 +717,8 @@ class heatLoadModel(object):
             k=k,
             sigma=sigma,
             start_hoy=start_hoy,
-            end_hoy=end_hoy
+            end_hoy=end_hoy,
+            earse_conditioned=earse_conditioned
         )
 
         step = int(timestep)
@@ -1039,8 +1023,105 @@ class heatLoadModel(object):
 
         raise ValueError("mode must be one of ['onions', 'sequence', 'ping-pong'].")
 
+    @staticmethod
+    def _is_variable_flow_path_dict(path_obj: dict, eps=1e-9) -> bool:
+        try:
+            h = float(path_obj.get("pathHeight", 0.0))
+            w = float(path_obj.get("pathWidth", 0.0))
+            op_raw = path_obj.get("operable", 1.0)
+            op = 1.0 if op_raw is None else float(op_raw)
+            return (h > eps) and (w > eps) and (op > eps)
+        except Exception:
+            return False
+
+    def _remove_non_ambient_connected_from_dict(self, energyDict: dict) -> dict:
+        zones = dict(energyDict.get("zones", {}))
+        paths = dict(energyDict.get("paths", {}))
+        if len(zones) == 0:
+            energyDict["zones"] = zones
+            energyDict["paths"] = {}
+            return energyDict
+
+        zone_prj_set = {str(z.get("prjIndex")) for z in zones.values()}
+        topology = {"-1": set()}
+        for zone_prj in zone_prj_set:
+            topology[zone_prj] = set()
+
+        for p in paths.values():
+            from_zone = str(p.get("fromZone", ""))
+            to_zone = str(p.get("toZone", ""))
+            from_ok = (from_zone == "-1") or (from_zone in zone_prj_set)
+            to_ok = (to_zone == "-1") or (to_zone in zone_prj_set)
+            if (not from_ok) or (not to_ok):
+                continue
+            if not self._is_variable_flow_path_dict(p):
+                continue
+            topology.setdefault(from_zone, set()).add(to_zone)
+            topology.setdefault(to_zone, set()).add(from_zone)
+
+        visited = {"-1"}
+        queue = ["-1"]
+        while len(queue) > 0:
+            current = queue.pop(0)
+            for nxt in topology.get(current, set()):
+                if nxt not in visited:
+                    visited.add(nxt)
+                    queue.append(nxt)
+        keep_zone_prj = {p for p in visited if p != "-1"}
+
+        zones = {
+            zone_key: z
+            for zone_key, z in zones.items()
+            if str(z.get("prjIndex")) in keep_zone_prj
+        }
+        valid_prj = {str(z.get("prjIndex")) for z in zones.values()}
+        filtered_paths = {}
+        for path_key, p in paths.items():
+            from_zone = str(p.get("fromZone", ""))
+            to_zone = str(p.get("toZone", ""))
+            from_ok = (from_zone == "-1") or (from_zone in valid_prj)
+            to_ok = (to_zone == "-1") or (to_zone in valid_prj)
+            if from_ok and to_ok:
+                filtered_paths[path_key] = p
+
+        energyDict["zones"] = zones
+        energyDict["paths"] = filtered_paths
+        return energyDict
+
+    def _build_erase_conditioned_energy_dict(self, baseEnergyDict: dict, discomfort_zone_users: set[str]) -> dict:
+        filtered = deepcopy(baseEnergyDict)
+        zones = dict(filtered.get("zones", {}))
+        paths = dict(filtered.get("paths", {}))
+
+        remove_zone_prj = set()
+        kept_zones = {}
+        for zone_key, z in zones.items():
+            zone_user = str(z.get("userName", zone_key))
+            if zone_user in discomfort_zone_users:
+                remove_zone_prj.add(str(z.get("prjIndex")))
+                continue
+            kept_zones[zone_key] = z
+        zones = kept_zones
+
+        valid_prj = {str(z.get("prjIndex")) for z in zones.values()}
+        kept_paths = {}
+        for path_key, p in paths.items():
+            from_zone = str(p.get("fromZone", ""))
+            to_zone = str(p.get("toZone", ""))
+            if (from_zone in remove_zone_prj) or (to_zone in remove_zone_prj):
+                continue
+            from_ok = (from_zone == "-1") or (from_zone in valid_prj)
+            to_ok = (to_zone == "-1") or (to_zone in valid_prj)
+            if from_ok and to_ok:
+                kept_paths[path_key] = p
+
+        filtered["zones"] = zones
+        filtered["paths"] = kept_paths
+        return self._remove_non_ambient_connected_from_dict(filtered)
+
     def annualComfort(self, energyDict: dict = None, iteration=1, mode="sequence", timestep=1,
-                      preheat=10, k=0.5, sigma=1, start_hoy=0, end_hoy=8759, **kwargs):
+                      preheat=10, k=0.5, sigma=1, start_hoy=0, end_hoy=8759,
+                      earse_conditioned=False, **kwargs):
         """
         Run annual ventilation comfort simulation with selectable coupling strategy.
 
@@ -1088,6 +1169,9 @@ class heatLoadModel(object):
         if st_hoy > ed_hoy:
             raise ValueError("start_hoy must be <= end_hoy.")
         hoys = list(range(st_hoy, ed_hoy + 1, int(timestep)))
+        weather_t = [float(self.weather.weatherData['temperature'][h]) for h in hoys]
+        avg_t = self._moving_average(weather_t, sigma=float(sigma))
+        indoor_ref_t = [(1.0 - float(k)) * t + float(k) * a for t, a in zip(weather_t, avg_t)]
         outdoor_series = [25.0] * len(hoys)
 
         preheated_prj = self._preheat(hoys=hoys, outdoor_series=outdoor_series, preheat=preheat, energyDict=energyDict)
@@ -1103,12 +1187,40 @@ class heatLoadModel(object):
         else:
             raise ValueError("mode must be one of ['onions', 'sequence', 'ping-pong'].")
 
-        zResult = None
-        zone_users = [str(z.get("userName", k)) for k, z in self.networkDict.get("zones", {}).items()]
+        base_network_for_hours = deepcopy(self.networkDict)
+        zone_users = [str(z.get("userName", k)) for k, z in base_network_for_hours.get("zones", {}).items()]
+        user_to_zone_name = {
+            str(z.get("userName", k)): str(z.get("zone_name", z.get("userName", k)))
+            for k, z in base_network_for_hours.get("zones", {}).items()
+        }
+        user_to_zone_area = {
+            str(z.get("userName", k)): float(z.get("zone_area", 0.0))
+            for k, z in base_network_for_hours.get("zones", {}).items()
+        }
+        temp_hourly_by_user = {zu: [] for zu in zone_users}
+        ach_hourly_by_user = {zu: [] for zu in zone_users}
         mech_hourly_by_user = {zu: [] for zu in zone_users}
+
+        def _extract_hour_result(zones_result):
+            out_temp = {zu: np.nan for zu in zone_users}
+            out_ach = {zu: np.nan for zu in zone_users}
+            if not zones_result:
+                return out_temp, out_ach
+            for zr in zones_result:
+                zone_user = str(getattr(zr, "userName", ""))
+                if zone_user not in out_temp:
+                    continue
+                if len(getattr(zr, "temperature", [])) > 0:
+                    out_temp[zone_user] = float(zr.temperature[-1])
+                if len(getattr(zr, "ACH", [])) > 0:
+                    out_ach[zone_user] = float(zr.ACH[-1])
+            return out_temp, out_ach
+
         for hi, hoy in enumerate(hoys):
             print("--------------------Hoy:", hoy)
             self.runtime['outdoor_temperature'] = outdoor_series[hi]
+            hour_temp = {zu: np.nan for zu in zone_users}
+            hour_ach = {zu: np.nan for zu in zone_users}
             try:
                 zResultHoy = self.ventilationTask(
                     hoy=hoy,
@@ -1119,85 +1231,103 @@ class heatLoadModel(object):
             except LinAlgError as e:
                 if "Singular matrix" not in str(e):
                     raise
-                if zResult is None:
-                    self.updateHeatLoad(hoy, energyDict=energyDict)
-                    zResult = self._zone_result_template()
-                for i in range(len(zResult)):
-                    zResult[i].temperature += [np.nan]
-                    zResult[i].ACH += [np.nan]
-                for zu in zone_users:
-                    mech_hourly_by_user[zu].append(0.0)
                 print(f"Warning: Singular matrix at hoy={hoy}, filled NaN for this timestep.")
-                continue
             except Exception as e:
-                if zResult is None:
-                    self.updateHeatLoad(hoy, energyDict=energyDict)
-                    zResult = self._zone_result_template()
-                for i in range(len(zResult)):
-                    zResult[i].temperature += [np.nan]
-                    zResult[i].ACH += [np.nan]
-                for zu in zone_users:
-                    mech_hourly_by_user[zu].append(0.0)
                 print(f"Warning: Exception at hoy={hoy} ({type(e).__name__}: {e}), filled NaN for this timestep.")
-                continue
-            if (not zResultHoy) or len(zResultHoy[0].temperature) == 0 or len(zResultHoy[0].ACH) == 0:
-                if zResult is None:
-                    self.updateHeatLoad(hoy, energyDict=energyDict)
-                    zResult = self._zone_result_template()
-                for i in range(len(zResult)):
-                    zResult[i].temperature += [np.nan]
-                    zResult[i].ACH += [np.nan]
-                for zu in zone_users:
-                    mech_hourly_by_user[zu].append(0.0)
-                print(f"Warning: Empty result at hoy={hoy}, filled NaN for this timestep.")
-                continue
-            if zResult is None:
-                zResult = zResultHoy
-                for i in range(len(zResult)):
-                    zResult[i].temperature = [zResult[i].temperature[-1]]
-                    zResult[i].ACH = [zResult[i].ACH[-1]]
             else:
-                for i in range(len(zResultHoy)):
-                    zResult[i].temperature += [zResultHoy[i].temperature[-1]]
-                    zResult[i].ACH += [zResultHoy[i].ACH[-1]]
+                if (not zResultHoy) or len(getattr(zResultHoy[0], "temperature", [])) == 0 or len(getattr(zResultHoy[0], "ACH", [])) == 0:
+                    print(f"Warning: Empty result at hoy={hoy}, filled NaN for this timestep.")
+                else:
+                    hour_temp, hour_ach = _extract_hour_result(zResultHoy)
+
+            comfort_now = {}
+            out_t = float(weather_t[hi])
+            ref_t = float(indoor_ref_t[hi])
+            discomfort_users = set()
+            for zu in zone_users:
+                t_raw = float(hour_temp[zu]) if np.isfinite(hour_temp[zu]) else np.nan
+                if not np.isfinite(t_raw):
+                    comfort_now[zu] = 0
+                    discomfort_users.add(zu)
+                    continue
+                t_eval = (t_raw - 25.0) + ref_t
+                is_comfort = (0.31 * out_t <= t_eval < 0.31 * out_t + 20.3)
+                comfort_now[zu] = 1 if is_comfort else 0
+                if not is_comfort:
+                    discomfort_users.add(zu)
+
+            if bool(earse_conditioned) and (len(discomfort_users) > 0):
+                filtered_energy = self._build_erase_conditioned_energy_dict(
+                    baseEnergyDict=base_network_for_hours,
+                    discomfort_zone_users=discomfort_users
+                )
+                try:
+                    zResultSecond = self.ventilationTask(
+                        hoy=hoy,
+                        energyDict=filtered_energy,
+                        iteration=iteration,
+                        mode="onions"
+                    )
+                    second_temp, second_ach = _extract_hour_result(zResultSecond)
+                    kept_users = {
+                        str(z.get("userName", k))
+                        for k, z in filtered_energy.get("zones", {}).items()
+                    }
+                    for zu in kept_users:
+                        if zu in hour_temp and np.isfinite(second_temp.get(zu, np.nan)):
+                            hour_temp[zu] = float(second_temp[zu])
+                        if zu in hour_ach and np.isfinite(second_ach.get(zu, np.nan)):
+                            hour_ach[zu] = float(second_ach[zu])
+                except LinAlgError as e:
+                    if "Singular matrix" not in str(e):
+                        raise
+                    print(f"Warning: erase-conditioned singular matrix at hoy={hoy}, keep first-pass results.")
+                except Exception as e:
+                    print(f"Warning: erase-conditioned exception at hoy={hoy} ({type(e).__name__}: {e}), keep first-pass results.")
+
             mech_this_h = self._mechanical_energy_kwh_m2_by_zone(
                 prj_file=self.runtime.get('last_prj_file'),
                 hoy=hoy,
                 specific_power=0.27
             )
             for zu in zone_users:
+                temp_hourly_by_user[zu].append(float(hour_temp[zu]) if np.isfinite(hour_temp[zu]) else np.nan)
+                ach_hourly_by_user[zu].append(float(hour_ach[zu]) if np.isfinite(hour_ach[zu]) else np.nan)
                 mech_hourly_by_user[zu].append(float(mech_this_h.get(zu, 0.0)))
-        zResult = postprocess_zone_results_linear(zResult)
-        result = self._format_comfort_result(zResult, hoys=hoys, k=float(k), sigma=float(sigma))
-        for zone_key, z in self.networkDict.get("zones", {}).items():
-            zone_user = str(z.get("userName", zone_key))
-            zone_name = str(z.get("zone_name", zone_user))
-            if zone_name in result:
-                result[zone_name]["MechanicalVent"] = mech_hourly_by_user.get(zone_user, [0.0] * len(hoys))
-        return result
 
-    def _format_comfort_result(self, zResult, hoys, k, sigma):
-        weather_t = [float(self.weather.weatherData['temperature'][h]) for h in hoys]
-        avg_t = self._moving_average(weather_t, sigma=sigma)
-        indoor_ref_t = [(1.0 - k) * t + k * a for t, a in zip(weather_t, avg_t)]
         result = {}
-        for z in zResult:
-            z_meta = self.networkDict['zones'].get(z.userName, {})
-            zone_name = z_meta.get("zone_name", z.userName)
-            zone_area = float(z_meta.get("zone_area", 0.0))
-            raw_temp = [float(v) for v in z.temperature]
-            delta_zt = [t - 25.0 for t in raw_temp]
-            z_t = [dz + ref_t for dz, ref_t in zip(delta_zt, indoor_ref_t)]
-            comfort = [
-                1 if (0.31 * out_t <= t_val < 0.31 * out_t + 20.3) else 0
-                for out_t, t_val in zip(weather_t, z_t)
+        for zu in zone_users:
+            zone_name = user_to_zone_name.get(zu, zu)
+            zone_area = float(user_to_zone_area.get(zu, 0.0))
+            raw_temp = _linear_interpolate_nan_series(temp_hourly_by_user.get(zu, []))
+            raw_ach = _linear_interpolate_nan_series(ach_hourly_by_user.get(zu, []))
+            if len(raw_temp) < len(hoys):
+                raw_temp += [np.nan] * (len(hoys) - len(raw_temp))
+            if len(raw_ach) < len(hoys):
+                raw_ach += [np.nan] * (len(hoys) - len(raw_ach))
+
+            delta_zt = [float(t) - 25.0 if np.isfinite(t) else np.nan for t in raw_temp]
+            z_t = [
+                (float(dz) + float(ref_t)) if np.isfinite(dz) else np.nan
+                for dz, ref_t in zip(delta_zt, indoor_ref_t)
             ]
+            comfort = []
+            for out_t, t_val in zip(weather_t, z_t):
+                if not np.isfinite(t_val):
+                    comfort.append(0)
+                else:
+                    comfort.append(1 if (0.31 * out_t <= t_val < 0.31 * out_t + 20.3) else 0)
+
+            mech = list(mech_hourly_by_user.get(zu, []))
+            if len(mech) < len(hoys):
+                mech += [0.0] * (len(hoys) - len(mech))
             result[zone_name] = {
                 "zone_area": zone_area,
-                "hoys": int(8760.0/len(z.temperature)),
-                "ACH": [float(v) for v in z.ACH],
-                "delta_t": delta_zt,
-                "Temperature": z_t,
-                "Comfort": comfort
+                "hoys": int(8760.0 / len(hoys)) if len(hoys) > 0 else 0,
+                "ACH": [float(v) if np.isfinite(v) else np.nan for v in raw_ach],
+                "delta_t": [float(v) if np.isfinite(v) else np.nan for v in delta_zt],
+                "Temperature": [float(v) if np.isfinite(v) else np.nan for v in z_t],
+                "Comfort": comfort,
+                "MechanicalVent": [float(v) for v in mech[:len(hoys)]],
             }
         return result

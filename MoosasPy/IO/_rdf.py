@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
+import re
 from rdflib import Graph, Namespace, Literal, URIRef
 from rdflib.namespace import RDF, RDFS, GEO, BRICK, WGS
 
@@ -34,6 +36,87 @@ def _first_or_none(val):
             return None
         return list(val)[0]
     return val
+
+
+def _space_template_type(space) -> str:
+    template = ""
+    if hasattr(space, "settings") and isinstance(space.settings, dict):
+        template = str(space.settings.get("zone_template", "")).strip()
+    if not template:
+        return ""
+    return template.split("_")[-1].upper()
+
+
+def _schedule_value_unit(schedule_name: str) -> str:
+    lower = str(schedule_name).lower()
+    if "occdens" in lower or "occupantdensity" in lower:
+        return "person/m2"
+    if "occheat" in lower or "occupantheat" in lower:
+        return "W/person"
+    if "equip" in lower or "lighting" in lower:
+        return "W/m2"
+    return "1"
+
+
+def _interface_surface_type(name: str) -> str:
+    lower = str(name).lower()
+    if lower in ("exteriorwall", "interiorwall", "roof", "interiorfloor", "shade",
+                 "undergroundwall", "undergroundslab", "ceiling", "airwall",
+                 "raisedfloor", "slabongrade", "freestandingcolumn", "embeddedcolumn"):
+        return str(name)
+    return "ExteriorWall"
+
+
+def _opening_type_from_glazing(glazing) -> str:
+    # Category 2 is used by the geometry layer for air boundaries.
+    if getattr(glazing, "category", 0) == 2:
+        return "AirWindow"
+    return "OperableWindow"
+
+
+def _is_numeric_text(value) -> bool:
+    try:
+        float(str(value))
+        return True
+    except Exception:
+        return False
+
+
+def _literal_to_python(value):
+    if value is None:
+        return None
+    if isinstance(value, Literal):
+        value = value.toPython()
+    if isinstance(value, URIRef):
+        text = str(value).strip()
+        text = text.rsplit("#", 1)[-1]
+        text = text.rsplit("/", 1)[-1]
+        return text
+    if isinstance(value, str):
+        text = value.strip()
+        if text == "":
+            return ""
+        if _is_numeric_text(text):
+            num = float(text)
+            return int(num) if num.is_integer() else num
+        return text
+    return value
+
+
+def _decode_space_setting_value(value):
+    value = _literal_to_python(value)
+    if isinstance(value, str):
+        text = value.strip()
+        if ("://" in text or text.startswith("file:")) and "/" in text:
+            tail = text.rsplit("#", 1)[-1]
+            tail = tail.rsplit("/", 1)[-1]
+            if tail:
+                return tail
+        if _is_numeric_text(text):
+            num = float(text)
+            return int(num) if num.is_integer() else num
+        return text
+    return value
 
 
 def encodeURI(hint):
@@ -105,6 +188,7 @@ class MoosasGraph(Graph):
         self.geo = GEO
         self.brick = BRICK
         self.wgs = WGS
+        self.model = model
 
         self.bind("idf", self.idf)
         self.bind("moosas", self.moosas)
@@ -116,10 +200,10 @@ class MoosasGraph(Graph):
         self.bind("brick", BRICK)
         self.bind("wgs", WGS)
         self.bind("ifc", self.ifc)
-        # bld = URIRef("Building" + generate_code(4))
-        # self.add((URIRef("Site"), self.rdf.type, self.bot.Site))
-        # self.add((URIRef("Site"), self.bot.hasBuilding, bld))
-        # self.add((bld, self.rdf.type, self.bot.Building))
+        bld = URIRef("Building" + generate_code(4))
+        self.add((URIRef("Site"), self.rdf.type, self.bot.Site))
+        self.add((URIRef("Site"), self.bot.hasBuilding, bld))
+        self.add((bld, self.rdf.type, self.bot.Building))
         if model:
             model.autoDescribe()
             self.encodeModel(model, dumpUseless, ExportIFC)
@@ -165,6 +249,8 @@ class MoosasGraph(Graph):
             This function does not return any value.
         """
         self.buildOntology(model)
+        self.encodeScheduleOntology()
+        self.encodeSchedule(model)
         self.encodeStorey(model)
         if model.weather:
             self.encodeWeather(model)
@@ -197,6 +283,87 @@ class MoosasGraph(Graph):
                 self.encodeElement(face, "AirSkylight", uidSet, ExportIFC)
             else:
                 self.encodeElement(face, "Skylight", uidSet, ExportIFC)
+
+    def encodeScheduleOntology(self):
+        self.add((self.pgd.Schedule, self.rdf.type, self.rdfs.Class))
+        self.add((self.pgd.DailySchedule, self.rdf.type, self.rdfs.Class))
+        self.add((self.pgd.WeeklySchedule, self.rdf.type, self.rdfs.Class))
+        self.add((self.pgd.GbxmlSurfaceType, self.rdf.type, self.rdfs.Class))
+        self.add((self.pgd.openingType, self.rdf.type, self.rdfs.Class))
+        self.add((self.pgd.DailySchedule, self.rdfs.subClassOf, self.pgd.Schedule))
+        self.add((self.pgd.WeeklySchedule, self.rdfs.subClassOf, self.pgd.Schedule))
+        for predicate in [
+            self.pgd.scheduleName,
+            self.pgd.timeStepHours,
+            self.pgd.valueCount,
+            self.pgd.valueUnit,
+            self.pgd.valueMode,
+            self.pgd.hourlyValuesJson,
+            self.pgd.surfaceType,
+            self.pgd.mondaySchedule,
+            self.pgd.tuesdaySchedule,
+            self.pgd.wednesdaySchedule,
+            self.pgd.thursdaySchedule,
+            self.pgd.fridaySchedule,
+            self.pgd.saturdaySchedule,
+            self.pgd.sundaySchedule,
+        ]:
+            self.add((predicate, self.rdf.type, self.rdf.Property))
+
+        for enum_name in [
+            "ExteriorWall",
+            "InteriorWall",
+            "Roof",
+            "InteriorFloor",
+            "Shade",
+            "UndergroundWall",
+            "UndergroundSlab",
+            "Ceiling",
+            "AirWall",
+            "RaisedFloor",
+            "SlabOnGrade",
+            "FreestandingColumn",
+            "EmbeddedColumn",
+            "OperableWindow",
+            "AirWindow",
+        ]:
+            enum_uri = getattr(self.pgd, enum_name)
+            self.add((enum_uri, self.rdf.type, self.pgd.GbxmlSurfaceType if enum_name not in ("OperableWindow", "AirWindow") else self.pgd.openingType))
+
+    def encodeSchedule(self, model: MoosasModel):
+        schedule_map = getattr(model, "schedule", {}) or {}
+        for scheduleName, scheduleItem in schedule_map.items():
+            if not isinstance(scheduleItem, dict):
+                continue
+            scheduleType = str(scheduleItem.get("type", "")).strip().lower()
+            value = scheduleItem.get("value", [])
+            scheduleUri = URIRef(str(scheduleName))
+            if scheduleType == "daily":
+                values = [float(v) if _is_numeric_text(v) else v for v in value]
+                self.add((scheduleUri, self.rdf.type, self.pgd.DailySchedule))
+                self.add((scheduleUri, self.pgd.scheduleName, Literal(str(scheduleName))))
+                self.add((scheduleUri, self.pgd.timeStepHours, Literal(1)))
+                self.add((scheduleUri, self.pgd.valueCount, Literal(len(values))))
+                self.add((scheduleUri, self.pgd.valueUnit, Literal(_schedule_value_unit(scheduleName))))
+                self.add((scheduleUri, self.pgd.valueMode, self.pgd.AbsoluteValue))
+                self.add((scheduleUri, self.pgd.hourlyValuesJson, Literal(json.dumps(values))))
+            elif scheduleType == "weekly":
+                values = [str(v) for v in value]
+                if len(values) != 7:
+                    continue
+                self.add((scheduleUri, self.rdf.type, self.pgd.WeeklySchedule))
+                self.add((scheduleUri, self.pgd.scheduleName, Literal(str(scheduleName))))
+                day_props = [
+                    self.pgd.mondaySchedule,
+                    self.pgd.tuesdaySchedule,
+                    self.pgd.wednesdaySchedule,
+                    self.pgd.thursdaySchedule,
+                    self.pgd.fridaySchedule,
+                    self.pgd.saturdaySchedule,
+                    self.pgd.sundaySchedule,
+                ]
+                for prop, daily_name in zip(day_props, values):
+                    self.add((scheduleUri, prop, URIRef(str(daily_name))))
 
     def buildOntology(self, model: MoosasModel):
         """
@@ -233,6 +400,8 @@ class MoosasGraph(Graph):
         # face Element
         self.add((self.moosas.Uid, self.rdfs.subPropertyOf, self.bot.Element))
         self.add((self.moosas.Offset, self.rdfs.subPropertyOf, self.bot.Element))
+        self.add((self.moosas.U_Value, self.rdfs.subPropertyOf, self.bot.Element))
+        self.add((self.moosas.SHGC, self.rdfs.subPropertyOf, self.bot.Element))
         self.add((self.moosas.hasNeighborElement, self.rdfs.subClassOf, self.bot.hasSubElement))
         # self.add((self.moosas.hasNeighborElement, self.rdfs.range, self.bot.Element))
         self.add((self.pgd.hasSurfaceType, self.rdfs.range, self.moosas.surfaceType))
@@ -459,7 +628,8 @@ class MoosasGraph(Graph):
         self.add((URIRef(f"element_{Element.Uid}"), self.rdfs.comment, Literal(Element.description)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.Uid, Literal(Element.Uid)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.Offset, Literal(Element.offset)))
-        # self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasSurfaceType, self.moosas.term(typeName)))
+        self.add((URIRef(f"element_{Element.Uid}"), self.moosas.U_Value, Literal(Element.U_Value)))
+        self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasSurfaceType, self.moosas.term(typeName)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.hasLevel, URIRef(f"Level_{Element.level}")))
         self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasArea_m2, Literal(Element.area)))
         self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasNormalVectorX_m, Literal(Element.normal[0])))
@@ -483,6 +653,10 @@ class MoosasGraph(Graph):
                 self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasAirFlow, URIRef(f"Space_{Element.space[0]}")))
                 self.add(
                     (URIRef(f"element_{Element.Uid}"), self.pgd.hasAirFlow, URIRef(f"Space_{Element.space[1]}")))
+        if typeName in ("Glazing", "Skylight"):
+            shgc = getattr(Element, "SHGC", None)
+            if shgc is not None:
+                self.add((URIRef(f"element_{Element.Uid}"), self.moosas.SHGC, Literal(shgc)))
 
         # ifc related objects
         if ExportIFC:
@@ -601,10 +775,30 @@ class MoosasGraph(Graph):
         self.add((URIRef(f"Space_{space.id}"), self.rdfs.comment, Literal(space.description)))
         self.add((URIRef(f"Space_{space.id}"), self.moosas.Uid, Literal(space.id)))
 
+        def _add_interface(interface_name: str, linked_element_uri: str, surface_type_uri, opaque_surface_uri=None):
+            interface_uri = URIRef(interface_name)
+            self.add((interface_uri, self.rdf.type, self.bot.Interface))
+            self.add((interface_uri, self.pgd.surfaceType, URIRef(str(surface_type_uri))))
+            if opaque_surface_uri is not None:
+                self.add((interface_uri, self.pgd.hasSurfaceType, URIRef(str(opaque_surface_uri))))
+            self.add((interface_uri, self.bot.interfaceOf, URIRef(f"Space_{space.id}")))
+            self.add((interface_uri, self.bot.interfaceOf, URIRef(linked_element_uri)))
+
         # storage space settings
+        templateType = _space_template_type(space)
         for key in space.settings:
             self.add((URIRef(f"Space_{space.id}"), self.moosas.hasSetting, Literal(key)))
-            self.add((URIRef(f"Space_{space.id}"), Literal(key), Literal(space.settings[key])))
+            value = space.settings[key]
+            scheduleName = None
+            if key in ("zone_ppsm", "zone_equipment", "zone_lighting"):
+                if self.model is not None:
+                    scheduleName = self.model.getScheduleName(templateType, key)
+                if isinstance(value, str) and not _is_numeric_text(value):
+                    scheduleName = value
+            if scheduleName:
+                self.add((URIRef(f"Space_{space.id}"), Literal(key), URIRef(str(scheduleName))))
+            else:
+                self.add((URIRef(f"Space_{space.id}"), Literal(key), Literal(value)))
 
         self.add((URIRef(f"Space_{space.id}"), self.pgd.hasFloorArea_m2, Literal(space.area)))
         self.add((URIRef(f"Space_{space.id}"), self.pgd.hasVolume_m3, Literal(space.area * space.height)))
@@ -617,11 +811,13 @@ class MoosasGraph(Graph):
             for faces in mixItemListToList(space.ceiling.face):
                 # self.add((URIRef(f"ceil_{space.ceiling.Uid}"), self.bot.hasSubElement, URIRef(f"element_{faces.Uid}")))
                 self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"element_{faces.Uid}")))
-                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.rdf.type, self.bot.Interface))
-                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.pgd.hasSurfaceType, self.moosas.Ceiling))
-                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.bot.interfaceOf, URIRef(f"Space_{space.id}")))
-                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.bot.interfaceOf, URIRef(f"element_{faces.Uid}")))
+                ceiling_surface = self.pgd.Roof if faces.isOuter else self.pgd.Ceiling
+                _add_interface(f"{space.id}_{faces.Uid}", f"element_{faces.Uid}", ceiling_surface, self.moosas.Ceiling)
                 ifcElement.append(faces)
+                for gls in mixItemListToList(faces.glazingElement):
+                    self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"element_{gls.Uid}")))
+                    opening_surface = self.pgd.AirWindow if getattr(gls, "category", 0) == 2 else self.pgd.OperableWindow
+                    _add_interface(f"{space.id}_{gls.Uid}", f"element_{gls.Uid}", opening_surface)
 
         if space.floor:
             # self.add((URIRef(f"floor_{space.floor.Uid}"), self.rdf.type, self.moosas.TopoElement))
@@ -630,11 +826,16 @@ class MoosasGraph(Graph):
             for faces in mixItemListToList(space.floor.face):
                 # self.add((URIRef(f"floor_{space.floor.Uid}"), self.bot.hasSubElement, URIRef(f"element_{faces.Uid}")))
                 self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"element_{faces.Uid}")))
-                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.rdf.type, self.bot.Interface))
-                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.pgd.hasSurfaceType, self.moosas.Floor))
-                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.bot.interfaceOf, URIRef(f"Space_{space.id}")))
-                self.add((URIRef(f"{space.id}_{faces.Uid}"), self.bot.interfaceOf, URIRef(f"element_{faces.Uid}")))
+                if faces.isOuter:
+                    floor_surface = self.pgd.SlabOnGrade if float(faces.level) <= min(space.parent.levelList) else self.pgd.UndergroundSlab
+                else:
+                    floor_surface = self.pgd.InteriorFloor
+                _add_interface(f"{space.id}_{faces.Uid}", f"element_{faces.Uid}", floor_surface, self.moosas.Floor)
                 ifcElement.append(faces)
+                for gls in mixItemListToList(faces.glazingElement):
+                    self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"element_{gls.Uid}")))
+                    opening_surface = self.pgd.AirWindow if getattr(gls, "category", 0) == 2 else self.pgd.OperableWindow
+                    _add_interface(f"{space.id}_{gls.Uid}", f"element_{gls.Uid}", opening_surface)
 
         if space.edge:
             # self.add((URIRef(f"edge_{space.edge.Uid}"), self.rdf.type, self.moosas.TopoElement))
@@ -644,13 +845,15 @@ class MoosasGraph(Graph):
             for lp,wall in enumerate(mixItemListToList(space.edge.wall)):
                 # self.add((URIRef(f"edge_{space.edge.Uid}"), self.bot.hasSubElement, URIRef(f"element_{wall.Uid}")))
                 self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"element_{wall.Uid}")))
-                self.add((URIRef(f"{space.id}_{wall.Uid}"), self.rdf.type, self.bot.Interface))
                 self.add((URIRef(f"{space.id}_{wall.Uid}"), self.moosas.subElementOrder, Literal(lp)))
-                self.add((URIRef(f"{space.id}_{wall.Uid}"), self.pgd.hasSurfaceType, self.moosas.Edge))
-                self.add((URIRef(f"{space.id}_{wall.Uid}"), self.bot.interfaceOf, URIRef(f"Space_{space.id}")))
-                self.add((URIRef(f"{space.id}_{wall.Uid}"), self.bot.interfaceOf, URIRef(f"element_{wall.Uid}")))
+                edge_surface = self.pgd.ExteriorWall if wall.isOuter else self.pgd.InteriorWall
+                _add_interface(f"{space.id}_{wall.Uid}", f"element_{wall.Uid}", edge_surface, self.moosas.Edge)
                 loop.append(wall.Uid)
                 ifcElement.append(wall)
+                for gls in mixItemListToList(wall.glazingElement):
+                    self.add((URIRef(f"Space_{space.id}"), self.bot.adjacentElement, URIRef(f"element_{gls.Uid}")))
+                    opening_surface = self.pgd.AirWindow if getattr(gls, "category", 0) == 2 else self.pgd.OperableWindow
+                    _add_interface(f"{space.id}_{gls.Uid}", f"element_{gls.Uid}", opening_surface)
             # self.add((URIRef(f"edge_{space.edge.Uid}"), self.moosas.subElementOrder, Literal(','.join(loop))))
         for void in space.void:
             self.add((URIRef(f"Space_{space.id}"), self.bot.containsZone, URIRef(f"Space_{void.id}")))
@@ -721,17 +924,8 @@ class MoosasGraph(Graph):
         Uid = str(self.getObject(elementUri, self.moosas.Uid))
         surfaceTypeRaw = _first_or_none(self.getObject(elementUri, self.pgd.hasSurfaceType))
         surfaceType = URIRef(str(surfaceTypeRaw)) if surfaceTypeRaw is not None else None
-
-        # Fallback for newer RDF where element has no explicit hasSurfaceType.
         if surfaceType is None:
-            if Uid.startswith("face_"):
-                surfaceType = self.moosas.Face
-            elif Uid.startswith("wall_"):
-                surfaceType = self.moosas.Wall
-            elif Uid.startswith("gls_"):
-                surfaceType = self.moosas.Glazing
-            elif Uid.startswith("sky_"):
-                surfaceType = self.moosas.Skylight
+            return None
 
         if surfaceType == self.moosas.Face:
             element = searchBy('Uid', Uid, model.faceList, earlyEnd=True, asObject=True)
@@ -744,7 +938,21 @@ class MoosasGraph(Graph):
         else:
             return None
         if len(element) > 0:
-            return element[0]
+            element = element[0]
+            u_value = _first_or_none(self.getObject(elementUri, self.moosas.U_Value))
+            if u_value is not None:
+                try:
+                    element.U_Value = float(_literal_to_python(u_value))
+                except Exception:
+                    pass
+            if isinstance(element, (MoosasGlazing, MoosasSkylight)):
+                shgc = _first_or_none(self.getObject(elementUri, self.moosas.SHGC))
+                if shgc is not None:
+                    try:
+                        element.SHGC = float(_literal_to_python(shgc))
+                    except Exception:
+                        pass
+            return element
 
         offset = float(self.getObject(elementUri, self.moosas.Offset))
         level = self.getObject(elementUri, self.moosas.hasLevel)
@@ -761,6 +969,21 @@ class MoosasGraph(Graph):
             element = MoosasSkylight(model, geoId, level=level, uid=Uid, offset=offset)
         else:
             element = None
+        if element is None:
+            return None
+        u_value = _first_or_none(self.getObject(elementUri, self.moosas.U_Value))
+        if u_value is not None:
+            try:
+                element.U_Value = float(_literal_to_python(u_value))
+            except Exception:
+                pass
+        if isinstance(element, (MoosasGlazing, MoosasSkylight)):
+            shgc = _first_or_none(self.getObject(elementUri, self.moosas.SHGC))
+            if shgc is not None:
+                try:
+                    element.SHGC = float(_literal_to_python(shgc))
+                except Exception:
+                    pass
         return element
 
     def isClass(self, _from: str, _class: URIRef) -> bool:
@@ -898,6 +1121,58 @@ class MoosasGraph(Graph):
         return encodeURI(name)
 
 
+def _import_schedule_nodes(rdfGraph: MoosasGraph, model: MoosasModel):
+    model.schedule = {}
+    model.schedulePath = None
+    schedule_nodes = set()
+    for cls in (rdfGraph.pgd.DailySchedule, rdfGraph.pgd.WeeklySchedule):
+        for node in rdfGraph.getSubject(rdfGraph.rdf.type, cls):
+            schedule_nodes.add(URIRef(str(node)))
+
+    for scheduleUri in schedule_nodes:
+        schedule_name = rdfGraph.getObject(scheduleUri, rdfGraph.pgd.scheduleName)
+        if schedule_name is None:
+            schedule_name = decodeURI(scheduleUri)
+        schedule_name = str(schedule_name)
+        schedule_type = _first_or_none(rdfGraph.getObject(scheduleUri, rdfGraph.rdf.type))
+        schedule_type = str(schedule_type).rsplit("#", 1)[-1].replace("Schedule", "")
+        if schedule_type.lower() == "daily":
+            values = rdfGraph.getObject(scheduleUri, rdfGraph.pgd.hourlyValuesJson)
+            values = _literal_to_python(values)
+            if isinstance(values, str):
+                values = json.loads(values)
+            model.schedule[schedule_name] = {
+                "type": "Daily",
+                "value": [float(v) if _is_numeric_text(v) else v for v in list(values or [])],
+            }
+        elif schedule_type.lower() == "weekly":
+            day_props = [
+                rdfGraph.pgd.mondaySchedule,
+                rdfGraph.pgd.tuesdaySchedule,
+                rdfGraph.pgd.wednesdaySchedule,
+                rdfGraph.pgd.thursdaySchedule,
+                rdfGraph.pgd.fridaySchedule,
+                rdfGraph.pgd.saturdaySchedule,
+                rdfGraph.pgd.sundaySchedule,
+            ]
+            values = []
+            for prop in day_props:
+                day_value = _first_or_none(rdfGraph.getObject(scheduleUri, prop))
+                values.append(_decode_space_setting_value(day_value) if day_value is not None else "")
+            model.schedule[schedule_name] = {
+                "type": "Weekly",
+                "value": values,
+            }
+    model._rebuildScheduleByType()
+
+
+def _decode_space_settings(rdfGraph: MoosasGraph, spaceUri, spc: MoosasSpace):
+    spcSettings = mixItemListToList(rdfGraph.getObject(spaceUri, rdfGraph.moosas.hasSetting))
+    for key in spcSettings:
+        raw_value = _first_or_none(rdfGraph.getObject(spaceUri, Literal(key)))
+        spc.settings[str(key)] = _decode_space_setting_value(raw_value)
+
+
 def writeRDF(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseless=True, ExportIFC=False):
     """
     Serialize a MoosasModel to an RDF file in the specified format.
@@ -943,6 +1218,7 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     """
     rdfGraph: MoosasGraph = MoosasGraph.load(input_path, fileFormat=fileFormat)
     model = MoosasModel()
+    _import_schedule_nodes(rdfGraph, model)
 
     print(f'\rLOADING: searching Objects', end='')
     geoList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.moosas.Geometry)
@@ -959,29 +1235,6 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     skyList = rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.Skylight)
     skyList = mixItemListToList(skyList)
     skyList = np.append(skyList, rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.AirSkylight))
-
-    # Fallback for RDF variants where element has no hasSurfaceType and type is encoded in moosas:Uid.
-    allElements = mixItemListToList(rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.bot.Element))
-    faceTmp, wallTmp, glsTmp, skyTmp = [], [], [], []
-    for eleUri in allElements:
-        eleUri = URIRef(str(eleUri))
-        uid = str(rdfGraph.getObject(eleUri, rdfGraph.moosas.Uid))
-        if uid.startswith("face_"):
-            faceTmp.append(eleUri)
-        elif uid.startswith("wall_"):
-            wallTmp.append(eleUri)
-        elif uid.startswith("gls_"):
-            glsTmp.append(eleUri)
-        elif uid.startswith("sky_"):
-            skyTmp.append(eleUri)
-
-    typedCount = len(moFaceList) + len(moWallList) + len(glsList) + len(skyList)
-    uidCount = len(faceTmp) + len(wallTmp) + len(glsTmp) + len(skyTmp)
-    if uidCount > typedCount:
-        moFaceList = faceTmp
-        moWallList = wallTmp
-        glsList = glsTmp
-        skyList = skyTmp
     pgList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.moosas.Program)
     pgList = mixItemListToList(pgList)
     spList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.bot.Space)
@@ -1095,41 +1348,16 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
                 order = int(float(orderVal)) if orderVal is not None else 0
                 topology["Edge"].append((order, element))
 
-        # Legacy fallback: Space -> TopoElement -> hasSubElement
-        if len(interfaceList) == 0:
-            topoElements = mixItemListToList(rdfGraph.getObject(spaceUri, rdfGraph.bot.adjacentElement))
-            for topoElement in topoElements:
-                topoElement = URIRef(str(topoElement))
-                subElement = mixItemListToList(rdfGraph.getObject(topoElement, rdfGraph.bot.hasSubElement))
-                subElement = [rdfGraph.decodeElement(URIRef(subE), model) for subE in subElement]
-                subElement = [subE for subE in subElement if subE]
-                subElementMap = {subE.Uid: subE for subE in subElement}
-                topoElementType = _first_or_none(rdfGraph.getObject(topoElement, rdfGraph.pgd.hasSurfaceType))
-
-                if topoElementType is not None and URIRef(str(topoElementType)) == rdfGraph.moosas.Edge:
-                    loopRaw = _first_or_none(rdfGraph.getObject(topoElement, rdfGraph.moosas.subElementOrder))
-                    loop = str(loopRaw).split(',') if loopRaw is not None else []
-                    topology["Edge"].extend([(idx, subElementMap[w]) for idx, w in enumerate(loop) if w in subElementMap])
-                elif topoElementType is not None and URIRef(str(topoElementType)) == rdfGraph.moosas.Floor:
-                    topology["Floor"].extend(list(subElementMap.values()))
-                elif topoElementType is not None and URIRef(str(topoElementType)) == rdfGraph.moosas.Ceiling:
-                    topology["Ceiling"].extend(list(subElementMap.values()))
-
         floorTopo = MoosasFloor(topology["Floor"]) if len(topology["Floor"]) > 0 else None
         ceilTopo = MoosasFloor(topology["Ceiling"]) if len(topology["Ceiling"]) > 0 else None
-        edgeTopo = None
-        if len(topology["Edge"]) > 0:
-            edgeElements = [ele for _, ele in sorted(topology["Edge"], key=lambda x: x[0])]
-            edgeTopo = MoosasEdge(edgeElements)
+        edgeElements = [ele for _, ele in sorted(topology["Edge"], key=lambda x: x[0])]
+        if len(edgeElements) == 0 and floorTopo is None and ceilTopo is None:
+            print(f'\rLOADING: space {i + 1}/{len(spList)} skipped empty topology', end='')
+            continue
+        edgeTopo = MoosasEdge(edgeElements)
 
         spc = MoosasSpace(_floor=floorTopo, _ceiling=ceilTopo, _edge=edgeTopo)
-
-        # restore space settings
-        spcSettings = mixItemListToList(rdfGraph.getObject(spaceUri, rdfGraph.moosas.hasSetting))
-
-        for key in spcSettings:
-            setting = rdfGraph.getObject(spaceUri, Literal(key))
-            spc.settings[str(key)] = str(setting)
+        _decode_space_settings(rdfGraph, spaceUri, spc)
 
         if spc.is_void():
             model.voidList.append(spc)

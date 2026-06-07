@@ -7,6 +7,15 @@ from ..models import *
 from ..utils import ET
 
 
+def _xml_float_or_none(value):
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def writeXml(file_path, model: MoosasModel, writeGeometry=False) -> ET.ElementTree:
     """Get a xml file describe the space topology.
         we have 3 different level of data:
@@ -103,51 +112,89 @@ def loadXml(filePath, geoPath):
 
     # construct MoosasFaceList
     for i, element in enumerate(root['face']):
+        faceInfo = element
         Uid = str(element['Uid'])
-        if searchBy('Uid', Uid, model.faceList, earlyEnd=True, asObject=True):
+        u_value = _xml_float_or_none(faceInfo.get('U_Value'))
+        existing = searchBy('Uid', Uid, model.faceList, earlyEnd=True, asObject=True)
+        if existing:
+            if u_value is not None:
+                existing[0].U_Value = u_value
             continue
         offset = float(element['offset'])
         level = float(element['level'])
         geoId = mixItemListToObject(element['faceId'].split(' '))
         element = MoosasFace(model, geoId, level=level, uid=Uid, offset=offset)
+        if u_value is not None:
+            element.U_Value = u_value
         model.faceList.append(element)
         print(f'\rLOADING: Faces {i + 1}/{len(root["face"])}', end='')
     print()
     # construct MoosasWallList
     for i, element in enumerate(root['wall']):
+        wallInfo = element
         Uid = str(element['Uid'])
-        if searchBy('Uid', Uid, model.wallList, earlyEnd=True, asObject=True):
+        u_value = _xml_float_or_none(wallInfo.get('U_Value'))
+        existing = searchBy('Uid', Uid, model.wallList, earlyEnd=True, asObject=True)
+        if existing:
+            if u_value is not None:
+                existing[0].U_Value = u_value
             continue
         offset = float(element['offset'])
         level = float(element['level'])
         geoId = mixItemListToObject(element['faceId'].split(' '))
         element = MoosasWall(model, geoId, level=level, uid=Uid, offset=offset)
+        if u_value is not None:
+            element.U_Value = u_value
         model.wallList.append(element)
         print(f'\rLOADING: Faces {i + 1}/{len(root["wall"])}', end='')
     print()
     # construct MoosasGlazingList
     if "glazing" in root:
         for i, element in enumerate(root['glazing']):
+            glazingInfo = element
             Uid = str(element['Uid'])
-            if searchBy('Uid', Uid, model.glazingList, earlyEnd=True, asObject=True):
+            u_value = _xml_float_or_none(glazingInfo.get('U_Value'))
+            shgc = _xml_float_or_none(glazingInfo.get('SHGC'))
+            existing = searchBy('Uid', Uid, model.glazingList, earlyEnd=True, asObject=True)
+            if existing:
+                if u_value is not None:
+                    existing[0].U_Value = u_value
+                if shgc is not None:
+                    existing[0].SHGC = shgc
                 continue
             offset = float(element['offset'])
             level = float(element['level'])
             geoId = mixItemListToObject(element['faceId'].split(' '))
             element = MoosasGlazing(model, geoId, level=level, uid=Uid, offset=offset)
+            if u_value is not None:
+                element.U_Value = u_value
+            if shgc is not None:
+                element.SHGC = shgc
             model.glazingList.append(element)
             print(f'\rLOADING: Faces {i + 1}/{len(root["glazing"])}', end='')
         print()
     # construct MoosasSkylightList
     if "skylight" in root:
         for i, element in enumerate(root['skylight']):
+            skylightInfo = element
             Uid = str(element['Uid'])
-            if searchBy('Uid', Uid, model.skylightList, earlyEnd=True, asObject=True):
+            u_value = _xml_float_or_none(skylightInfo.get('U_Value'))
+            shgc = _xml_float_or_none(skylightInfo.get('SHGC'))
+            existing = searchBy('Uid', Uid, model.skylightList, earlyEnd=True, asObject=True)
+            if existing:
+                if u_value is not None:
+                    existing[0].U_Value = u_value
+                if shgc is not None:
+                    existing[0].SHGC = shgc
                 continue
             offset = float(element['offset'])
             level = float(element['level'])
             geoId = mixItemListToObject(element['faceId'].split(' '))
             element = MoosasSkylight(model, geoId, level=level, uid=Uid, offset=offset)
+            if u_value is not None:
+                element.U_Value = u_value
+            if shgc is not None:
+                element.SHGC = shgc
             model.skylightList.append(element)
             print(f'\rLOADING: Faces {i + 1}/{len(root["skylight"])}', end='')
         print()
