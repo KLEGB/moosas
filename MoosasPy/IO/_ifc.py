@@ -27,6 +27,10 @@ try:
     import ifcopenshell
     import ifcopenshell.api
     import ifcopenshell.guid
+    try:
+        import ifcopenshell.geom
+    except Exception:  # pragma: no cover - geometry backend may be unavailable in lean installs
+        ifcopenshell.geom = None
 except Exception:  # pragma: no cover - import guard for environments without IFC deps
     ifcopenshell = None
 
@@ -229,6 +233,303 @@ def _get_pset(product: Any, name: str = PSET_IFC) -> dict[str, Any]:
     return pset if isinstance(pset, dict) else {}
 
 
+def _ifc_product_key(product: Any) -> str:
+    guid = str(getattr(product, "GlobalId", "") or "").strip()
+    if guid:
+        return guid
+    name = str(getattr(product, "Name", "") or "").strip()
+    if name:
+        return re.sub(r"[^A-Za-z0-9_]+", "_", name)
+    return f"ifc_{getattr(product, 'id', lambda: uuid.uuid4().hex)()}"
+
+
+def _ifc_category(product: Any, pset: dict[str, Any] | None = None) -> int:
+    cls = str(getattr(product, "is_a", lambda: "")() or "").lower()
+    predefined = str(getattr(product, "PredefinedType", "") or "").lower()
+    pset = pset or {}
+    if "window" in cls or "glazing" in cls:
+        return 5
+    if "skylight" in cls:
+        return 6
+    if "wall" in cls:
+        return 3
+    if "roof" in cls:
+        return 4
+    if "slab" in cls or "floor" in cls or "ceiling" in cls:
+        return 4
+    if "door" in cls:
+        return 5
+    if "covering" in cls:
+        if "roof" in predefined:
+            return 4
+        return 0
+    cat = pset.get("Category")
+    try:
+        return int(float(cat))
+    except Exception:
+        return 0
+
+
+def _ifc_material_name(product: Any) -> str:
+    try:
+        from ifcopenshell.util.element import get_material
+
+        material = get_material(product)
+    except Exception:
+        material = None
+    if material is None:
+        return ""
+    visited: set[int] = set()
+    names: list[str] = []
+
+    def _push_name(obj: Any) -> None:
+        if obj is None:
+            return
+        key = id(obj)
+        if key in visited:
+            return
+        visited.add(key)
+        name = str(getattr(obj, "Name", "") or "").strip()
+        if name:
+            names.append(name)
+
+    _push_name(material)
+    for attr in ("MaterialLayers", "Materials", "MaterialConstituents"):
+        items = getattr(material, attr, None)
+        if items is None:
+            continue
+        try:
+            for item in items:
+                _push_name(item)
+        except Exception:
+            pass
+    if not names:
+        return ""
+    return " / ".join(dict.fromkeys(names))
+
+
+def _geometry_from_wkt(wkt_text: str):
+    from shapely import from_wkt as shapely_from_wkt
+
+    geom = shapely_from_wkt(wkt_text)
+    try:
+        if getattr(geom, "has_z", False) is False:
+            from shapely import force_3d
+
+            geom = force_3d(geom, z=0.0)
+    except Exception:
+        pass
+    return geom
+
+
+def _polygon_parts(geom: Any) -> list[Any]:
+    try:
+        geom_type = str(getattr(geom, "geom_type", ""))
+        if geom_type.lower() == "polygon":
+            return [geom]
+        if geom_type.lower() in {"multipolygon", "geometrycollection"}:
+            parts = []
+            try:
+                for part in geom.geoms:
+                    parts.extend(_polygon_parts(part))
+            except Exception:
+                pass
+            return parts
+    except Exception:
+        pass
+    return [geom]
+
+
+def _triangle_to_polygon(points):
+    from shapely import polygons as shapely_polygons
+
+    return shapely_polygons(points)
+
+
+def _ifc_product_geometries(product: Any, pset: dict[str, Any] | None = None) -> list[tuple[Any, dict[str, Any]]]:
+    pset = pset or {}
+    product_key = str(pset.get("Uid") or _ifc_product_key(product))
+    category = _ifc_category(product, pset)
+    records: list[tuple[Any, dict[str, Any]]] = []
+    wkt_text = str(pset.get("WKT") or "").strip()
+    if wkt_text:
+        try:
+            geom = _geometry_from_wkt(wkt_text)
+            for idx, part in enumerate(_polygon_parts(geom)):
+                try:
+                    part_key = product_key if idx == 0 else f"{product_key}__{idx}"
+                    records.append((part, {
+                        "face_id": part_key,
+                        "source_id": product_key,
+                        "source_class": str(getattr(product, "is_a", lambda: "")() or ""),
+                        "category": category,
+                        "material": _ifc_material_name(product),
+                        "pset": pset,
+                    }))
+                except Exception:
+                    continue
+            if records:
+                return records
+        except Exception:
+            pass
+
+    if ifcopenshell is None or getattr(ifcopenshell, "geom", None) is None:
+        return records
+
+    try:
+        settings = ifcopenshell.geom.settings()
+        try:
+            settings.set(settings.USE_WORLD_COORDS, True)
+        except Exception:
+            pass
+        try:
+            settings.set(settings.DISABLE_OPENING_SUBTRACTIONS, True)
+        except Exception:
+            pass
+        shape = ifcopenshell.geom.create_shape(settings, product)
+        geometry = shape.geometry
+        verts = np.array(getattr(geometry, "verts", []), dtype=float).reshape((-1, 3))
+        faces = np.array(getattr(geometry, "faces", []), dtype=int)
+        if len(verts) == 0 or len(faces) == 0:
+            return records
+        if len(faces) % 3 == 0:
+            faces = faces.reshape((-1, 3))
+        else:
+            faces = faces.reshape((-1, 4))[:, 1:4]
+        for idx, tri in enumerate(faces):
+            pts = verts[np.array(tri, dtype=int)]
+            if len(pts) < 3:
+                continue
+            try:
+                poly = _triangle_to_polygon(np.vstack([pts, pts[0]]))
+                part_key = product_key if idx == 0 else f"{product_key}__tri{idx}"
+                records.append((poly, {
+                    "face_id": part_key,
+                    "source_id": product_key,
+                    "source_class": str(getattr(product, "is_a", lambda: "")() or ""),
+                    "category": category,
+                    "material": _ifc_material_name(product),
+                    "pset": pset,
+                }))
+            except Exception:
+                continue
+    except Exception:
+        return records
+
+    return records
+
+
+def _ifc_space_meta(space: Any) -> dict[str, Any]:
+    pset = _get_pset(space, PSET_IFC)
+    return {
+        "name": str(getattr(space, "Name", "") or ""),
+        "global_id": str(getattr(space, "GlobalId", "") or ""),
+        "pset": pset,
+    }
+
+
+def _backfill_ifc_metadata(model, metadata_by_face: dict[str, dict[str, Any]], space_meta: list[dict[str, Any]]) -> None:
+    from ..utils.tools import mixItemListToList
+
+    if space_meta:
+        try:
+            model.ifcSpaceMeta = space_meta
+        except Exception:
+            pass
+
+    for element in getattr(model, "getAllFaces", lambda dumpUseless=False: [])(False):
+        if element is None:
+            continue
+        face_ids = mixItemListToList(getattr(element, "faceId", []))
+        merged: dict[str, Any] = {}
+        for face_id in face_ids:
+            meta = metadata_by_face.get(str(face_id))
+            if meta is None:
+                continue
+            merged.update(meta)
+        if not merged:
+            continue
+
+        u_value = _maybe_float(merged.get("U_Value") if "U_Value" in merged else merged.get("u_value"))
+        if u_value is not None and hasattr(element, "U_Value"):
+            try:
+                element.U_Value = u_value
+            except Exception:
+                pass
+
+        shgc = _maybe_float(merged.get("SHGC") if "SHGC" in merged else merged.get("shgc"))
+        if shgc is not None and hasattr(element, "SHGC"):
+            try:
+                element.SHGC = shgc
+            except Exception:
+                pass
+
+        material = str(merged.get("material") or "").strip()
+        if material:
+            try:
+                current = str(getattr(element, "description", "") or "")
+                if material not in current:
+                    suffix = f" IFC material: {material}."
+                    element.description = (current + suffix).strip()
+            except Exception:
+                pass
+
+
+def _restore_ifc_spaces_from_psets(ifc, product_psets: dict[int, dict[str, Any]], model, element_by_uid: dict[str, Any]) -> int:
+    from ..geometry.element import MoosasFloor, MoosasEdge, MoosasSpace
+
+    restored = 0
+    existing_ids = {str(space.id) for space in getattr(model, "spaceList", [])}
+    existing_ids.update(str(space.id) for space in getattr(model, "voidList", []))
+    for product in ifc.by_type("IfcProduct"):
+        pset = product_psets.get(product.id())
+        if not pset:
+            continue
+        moosas_type = str(pset.get("MoosasType") or "").strip()
+        if moosas_type not in {"MoosasSpace", "MoosasVoidSpace", "Space"}:
+            continue
+        space_id = str(pset.get("SpaceId") or getattr(product, "Name", "") or getattr(product, "GlobalId", "") or "").strip()
+        if not space_id or space_id in existing_ids:
+            continue
+        floor_ids = [str(v) for v in (_maybe_json_load(pset.get("FloorUids"), []) or [])]
+        ceiling_ids = [str(v) for v in (_maybe_json_load(pset.get("CeilingUids"), []) or [])]
+        wall_ids = [str(v) for v in (_maybe_json_load(pset.get("WallUids"), []) or [])]
+        internal_mass_ids = [str(v) for v in (_maybe_json_load(pset.get("InternalMassUids"), []) or [])]
+        void_ids = [str(v) for v in (_maybe_json_load(pset.get("VoidSpaceIds"), []) or [])]
+        settings = _maybe_json_load(pset.get("SpaceSettings"), {})
+
+        floor = MoosasFloor([element_by_uid[v] for v in floor_ids if v in element_by_uid]) if floor_ids else None
+        ceiling = MoosasFloor([element_by_uid[v] for v in ceiling_ids if v in element_by_uid]) if ceiling_ids else None
+        walls = [element_by_uid[v] for v in wall_ids if v in element_by_uid]
+        if not walls:
+            continue
+        edge = MoosasEdge(walls)
+        space = MoosasSpace(floor, edge, ceiling)
+        if isinstance(settings, dict):
+            space.settings.update(settings)
+        space.settings["zone_name"] = space_id
+        try:
+            space._MoosasSpace__id = space_id
+        except Exception:
+            pass
+        for internal_uid in internal_mass_ids:
+            if internal_uid in element_by_uid:
+                try:
+                    space.addInternalMass(element_by_uid[internal_uid])
+                except Exception:
+                    pass
+        model.spaceList.append(space)
+        existing_ids.add(space_id)
+        for void_id in void_ids:
+            if hasattr(model, "spaceIdDict") and void_id in model.spaceIdDict:
+                try:
+                    space.add_void(model.spaceIdDict[void_id])
+                except Exception:
+                    pass
+        restored += 1
+    return restored
+
+
 def writeIfc(model, ifc_path: str | Path, project_name: str = "Moosas IFC Project") -> dict[str, Any]:
     require_ifc()
     model_file, project, _body_context = setup_ifc_model(project_name)
@@ -257,7 +558,12 @@ def writeIfc(model, ifc_path: str | Path, project_name: str = "Moosas IFC Projec
     default_storey = storeys[round(levels[0], 6)]
 
     spaces = []
-    for space in getattr(model, "spaceList", []) or []:
+    seen_space_ids: set[str] = set()
+    for space in list(getattr(model, "spaceList", []) or []) + list(getattr(model, "voidList", []) or []):
+        space_key = str(getattr(space, "id", "") or "")
+        if space_key in seen_space_ids:
+            continue
+        seen_space_ids.add(space_key)
         space_level = float(getattr(getattr(space, "floor", None), "level", 0.0) or 0.0)
         storey = storeys.get(round(space_level, 6), default_storey)
         is_void = False
@@ -372,7 +678,7 @@ def writeIfc(model, ifc_path: str | Path, project_name: str = "Moosas IFC Projec
     }
 
 
-def loadIfc(ifc_path: str | Path) -> Any:
+def _legacy_loadIfc_direct(ifc_path: str | Path) -> Any:
     require_ifc()
     from ..models import MoosasModel
     from ..geometry.element import (
@@ -562,6 +868,145 @@ def loadIfc(ifc_path: str | Path) -> Any:
             except Exception:
                 pass
 
+    return model
+
+
+def _loadIfc_via_geo_bridge(ifc_path: str | Path, ifc: Any | None = None, has_ifc_space: bool | None = None) -> Any:
+    require_ifc()
+    from ..transformation import transform
+    from ._geo import writeGeo
+
+    if ifc is None:
+        ifc = ifcopenshell.open(str(ifc_path))
+    if has_ifc_space is None:
+        has_ifc_space = len(ifc.by_type("IfcSpace")) > 0
+
+    space_meta = [_ifc_space_meta(space) for space in ifc.by_type("IfcSpace")]
+
+    product_psets: dict[int, dict[str, Any]] = {}
+    metadata_by_face: dict[str, dict[str, Any]] = {}
+    for product in ifc.by_type("IfcProduct"):
+        if product.is_a("IfcProject") or product.is_a("IfcSite") or product.is_a("IfcBuilding") or product.is_a("IfcBuildingStorey"):
+            continue
+        if product.is_a("IfcSpace") or product.is_a("IfcOpeningElement"):
+            continue
+        pset = _get_pset(product, PSET_IFC)
+        if pset:
+            product_psets[product.id()] = pset
+        product_records = _ifc_product_geometries(product, pset)
+        for geom, meta in product_records:
+            face_id = str(meta.get("face_id") or "")
+            if not face_id:
+                continue
+            metadata_by_face[face_id] = meta
+
+    # Build a temporary MoosasModel-shaped geometry library and serialize it
+    # to GEO first. The downstream transformation pipeline keeps geo ids, so
+    # we can later backfill IFC metadata onto the transformed model.
+    from ..geometry.element import MoosasGeometry
+    from ..geometry.geos import faceNormal
+
+    geo_list: list[MoosasGeometry] = []
+    for product in ifc.by_type("IfcProduct"):
+        if product.is_a("IfcProject") or product.is_a("IfcSite") or product.is_a("IfcBuilding") or product.is_a("IfcBuildingStorey"):
+            continue
+        if product.is_a("IfcSpace") or product.is_a("IfcOpeningElement"):
+            continue
+        pset = _get_pset(product, PSET_IFC)
+        for geom, meta in _ifc_product_geometries(product, pset):
+            face_id = str(meta.get("face_id") or "")
+            if not face_id:
+                continue
+            try:
+                if str(getattr(geom, "geom_type", "")).lower() != "polygon":
+                    continue
+                normal = faceNormal(geom)
+                category = int(meta.get("category") or 0)
+                geo_list.append(MoosasGeometry(geom, face_id, normal, category, [], errors="ignore"))
+            except Exception:
+                continue
+
+    temp_geo = Path(path.tempDir) / f"ifc_{uuid.uuid4().hex}.geo"
+    try:
+        if geo_list:
+            writeGeo(str(temp_geo), geoList=geo_list)
+            model = transform(
+                str(temp_geo),
+                input_type="geo",
+                solve_duplicated=True,
+                solve_redundant=True,
+                solve_overlap=True,
+                triangulate_faces=True,
+                break_wall_vertical=True,
+                break_wall_horizontal=True,
+                attach_shading=False,
+                divided_zones=False,
+                standardize=False,
+            )
+            if model is None:
+                raise ValueError("IFC to GEO transform produced an empty model.")
+        else:
+            raise ValueError("No geometry could be extracted from IFC.")
+    except Exception:
+        if temp_geo.exists():
+            temp_geo.unlink(missing_ok=True)
+        return _legacy_loadIfc_direct(ifc_path)
+    finally:
+        if temp_geo.exists():
+            temp_geo.unlink(missing_ok=True)
+
+    if model is None:
+        return _legacy_loadIfc_direct(ifc_path)
+
+    _backfill_ifc_metadata(model, metadata_by_face, space_meta)
+    from ..utils.tools import mixItemListToList
+
+    element_by_uid = {}
+    for element in getattr(model, "getAllFaces", lambda dumpUseless=False: [])(False):
+        if element is None:
+            continue
+        uid = str(getattr(element, "Uid", "") or "").strip()
+        if uid:
+            element_by_uid[uid] = element
+        for fid in mixItemListToList(getattr(element, "faceId", [])):
+            fid = str(fid).strip()
+            if fid:
+                element_by_uid.setdefault(fid, element)
+    _restore_ifc_spaces_from_psets(ifc, product_psets, model, element_by_uid)
+    try:
+        model.ifcHasSpaces = has_ifc_space
+        model.ifcLoadMode = "space" if has_ifc_space else "geometry"
+    except Exception:
+        pass
+    return model
+
+
+def loadIfc(ifc_path: str | Path) -> Any:
+    require_ifc()
+    ifc = ifcopenshell.open(str(ifc_path))
+    has_ifc_space = len(ifc.by_type("IfcSpace")) > 0
+
+    if has_ifc_space:
+        try:
+            model = _legacy_loadIfc_direct(ifc_path)
+            try:
+                model.ifcHasSpaces = True
+                model.ifcLoadMode = "space"
+            except Exception:
+                pass
+            return model
+        except Exception:
+            return _loadIfc_via_geo_bridge(ifc_path, ifc=ifc, has_ifc_space=has_ifc_space)
+
+    try:
+        model = _loadIfc_via_geo_bridge(ifc_path, ifc=ifc, has_ifc_space=has_ifc_space)
+    except Exception:
+        model = _legacy_loadIfc_direct(ifc_path)
+    try:
+        model.ifcHasSpaces = False
+        model.ifcLoadMode = "geometry"
+    except Exception:
+        pass
     return model
 
 

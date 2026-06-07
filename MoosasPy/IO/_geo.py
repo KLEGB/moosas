@@ -185,6 +185,7 @@ def _readGeo(file_path) -> list[MoosasGeometry]:
         Invalid geometries are skipped with a warning printed to stdout.
 
     .geo is a moosasPy dedicated file format, which uses a simplified file structure to increase I/O speed......
+
     The .geo file format is:
     f,{polygon type cat},{polygon number idd}
     fn, {normal x}, {normal y}, {normal z}
@@ -195,6 +196,17 @@ def _readGeo(file_path) -> list[MoosasGeometry]:
     fh,{aperture number},{vertex nx},{vertex ny},{vertex nz}
     ;
     A face should end with ';'
+
+    polygon type cat:
+    -2 == ignore faces (would not be included in calculation)
+    -1 == shading faces (included as shading element)
+    0 == opaque surface
+    1 == translucent surface
+    2 == the air wall
+    3 == wall element.MoosasWall
+    4 == plane element.MoosasFace
+    5 == glazing element.MoosasGlazing
+    6 == skylight element.MoosasSkylight
 
     For example, there are two vertical faces with two openings with a positive x-axis normal vector:
     f,1,0
