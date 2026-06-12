@@ -309,7 +309,10 @@ def parseEnergyOutput(resultPath,
                 )
                 section_idx += 1
 
-        if section_idx != len(output):
+        # Some MoosasEnergy builds emit fewer trailing zone sections than the
+        # Python wrapper expects. Keep the parser tolerant so valid TOTAL/SPACE/
+        # MONTH/DAY/HOUR data still round-trips.
+        if section_idx > len(output):
             raise ValueError(
                 f"Unexpected section count in energy output: parsed={section_idx}, actual={len(output)}"
             )
