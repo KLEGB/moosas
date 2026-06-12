@@ -1,7 +1,8 @@
 --1.1.0
 # packaging and release workflow update 06.07
 - 1.1.0 release workflow has been aligned with tag-based versioning and GitHub Release asset publishing.
-- 1.1.0 ifc and gbxml were support by the iterated transforming module
+- 1.1.1 ifc and gbxml were support by the iterated transforming module
+- 1.1.2 Energy module bug fix
 
 --1.0.0
 # MoosasPy release
