@@ -525,6 +525,8 @@ class heatLoadModel(object):
         energyInput['args'] = list(energyInput.get('args', []))
         if '-d' not in energyInput['args']:
             energyInput['args'] += ['-d', '1']
+        if '-r' not in energyInput['args']:
+            energyInput['args'] += ['-r', '1']
         if '-z' not in energyInput['args']:
             energyInput['args'] += ['-z', '1']
         e_data = energyAnalysis(

@@ -108,8 +108,8 @@ type MoosasEnergy struct {
 	Latitude              float64
 	Altitude              float64
 	ShapeCoefficient      float64
-	AverageEnvelopeK      float64        // 公共建筑：平均传热系数
-	WeekendLoadCorrection float64        // 公共建筑：周末负荷修正系数
+	AverageEnvelopeK      float64 // 公共建筑：平均传热系数
+	WeekendLoadCorrection float64 // 公共建筑：周末负荷修正系数
 	Spaces                []MoosasSpace
 }
 
@@ -483,37 +483,37 @@ func runSimulation(config SimulationConfig) {
 		}
 
 		// 字段 0~12：几何和热工参数（固定数值）
-		storyHeight, _        := strconv.ParseFloat(fields[0], 64)
-		floorArea, _          := strconv.ParseFloat(fields[1], 64)
-		perimeterZoneArea, _  := strconv.ParseFloat(fields[2], 64)
-		exteriorWallArea, _   := strconv.ParseFloat(fields[3], 64)
+		storyHeight, _ := strconv.ParseFloat(fields[0], 64)
+		floorArea, _ := strconv.ParseFloat(fields[1], 64)
+		perimeterZoneArea, _ := strconv.ParseFloat(fields[2], 64)
+		exteriorWallArea, _ := strconv.ParseFloat(fields[3], 64)
 		exteriorWindowArea, _ := strconv.ParseFloat(fields[4], 64)
-		roofArea, _           := strconv.ParseFloat(fields[5], 64)
-		skylightArea, _       := strconv.ParseFloat(fields[6], 64)
-		groundFloorArea, _    := strconv.ParseFloat(fields[7], 64)
-		summerSolarGain, _    := strconv.ParseFloat(fields[8], 64)
-		winterSolarGain, _    := strconv.ParseFloat(fields[9], 64)
-		wallUValue, _         := strconv.ParseFloat(fields[10], 64)
-		windowUValue, _       := strconv.ParseFloat(fields[11], 64)
-		windowSHGC, _         := strconv.ParseFloat(fields[12], 64)
+		roofArea, _ := strconv.ParseFloat(fields[5], 64)
+		skylightArea, _ := strconv.ParseFloat(fields[6], 64)
+		groundFloorArea, _ := strconv.ParseFloat(fields[7], 64)
+		summerSolarGain, _ := strconv.ParseFloat(fields[8], 64)
+		winterSolarGain, _ := strconv.ParseFloat(fields[9], 64)
+		wallUValue, _ := strconv.ParseFloat(fields[10], 64)
+		windowUValue, _ := strconv.ParseFloat(fields[11], 64)
+		windowSHGC, _ := strconv.ParseFloat(fields[12], 64)
 
 		// 字段 13~15：可作息化参数（温度/湿度设定）
-		coolingSetpointTemp     := parseSchedulableParam(fields[13], "CoolingSetpointTemp", scheduleLib)
+		coolingSetpointTemp := parseSchedulableParam(fields[13], "CoolingSetpointTemp", scheduleLib)
 		coolingSetpointHumidity := parseSchedulableParam(fields[14], "CoolingSetpointHumidity", scheduleLib)
-		heatingSetpointTemp     := parseSchedulableParam(fields[15], "HeatingSetpointTemp", scheduleLib)
+		heatingSetpointTemp := parseSchedulableParam(fields[15], "HeatingSetpointTemp", scheduleLib)
 
 		// 字段 16~19：固定数值
-		coolingEER, _          := strconv.ParseFloat(fields[16], 64)
-		heatingEER, _          := strconv.ParseFloat(fields[17], 64)
-		occupancyStartHour, _  := strconv.Atoi(fields[18])
-		occupancyEndHour, _    := strconv.Atoi(fields[19])
+		coolingEER, _ := strconv.ParseFloat(fields[16], 64)
+		heatingEER, _ := strconv.ParseFloat(fields[17], 64)
+		occupancyStartHour, _ := strconv.Atoi(fields[18])
+		occupancyEndHour, _ := strconv.Atoi(fields[19])
 
 		// 字段 20~24：可作息化参数（人员/设备/灯光）
-		occupantDensity   := parseSchedulableParam(fields[20], "OccupantDensity", scheduleLib)
+		occupantDensity := parseSchedulableParam(fields[20], "OccupantDensity", scheduleLib)
 		freshAirPerPerson := parseSchedulableParam(fields[21], "FreshAirPerPerson", scheduleLib)
-		occupantHeatGain  := parseSchedulableParam(fields[22], "OccupantHeatGain", scheduleLib)
+		occupantHeatGain := parseSchedulableParam(fields[22], "OccupantHeatGain", scheduleLib)
 		equipmentHeatGain := parseSchedulableParam(fields[23], "EquipmentHeatGain", scheduleLib)
-		lightingHeatGain  := parseSchedulableParam(fields[24], "LightingHeatGain", scheduleLib)
+		lightingHeatGain := parseSchedulableParam(fields[24], "LightingHeatGain", scheduleLib)
 
 		// 字段 25~26：固定数值
 		infiltrationACH, _ := strconv.ParseFloat(fields[25], 64)
@@ -580,14 +580,14 @@ func runSimulation(config SimulationConfig) {
 	if config.ExportDaily == 1 {
 		outputText += ";\n!DAY RESULT:\n!Cooling,Heating,Lighting\n"
 		for _, dayResult := range globalEnergyResult.ByDay {
-			outputText += formatEnergyItem(dayResult, totalBuildingArea)
+			outputText += formatEnergyItemWithPrecision(dayResult, totalBuildingArea, 4)
 		}
 	}
 
 	if config.ExportHourly == 1 {
 		outputText += ";\n!HOUR RESULT:\n!Cooling,Heating,Lighting\n"
 		for _, hourResult := range globalEnergyResult.ByHour {
-			outputText += formatEnergyItem(hourResult, totalBuildingArea)
+			outputText += formatEnergyItemWithPrecision(hourResult, totalBuildingArea, 5)
 		}
 	}
 
@@ -604,7 +604,7 @@ func runSimulation(config SimulationConfig) {
 		outputText += ";\n!ZONE DAY RESULT:\n!SpaceIndex,Cooling,Heating,Lighting\n"
 		for spaceIdx, spaceDayResults := range globalEnergyResult.BySpaceDay {
 			for _, dayResult := range spaceDayResults {
-				outputText += formatEnergyItemWithZone(spaceIdx, dayResult, buildingModel.Spaces[spaceIdx].FloorArea)
+				outputText += formatEnergyItemWithZonePrecision(spaceIdx, dayResult, buildingModel.Spaces[spaceIdx].FloorArea, 4)
 			}
 		}
 	}
@@ -613,7 +613,7 @@ func runSimulation(config SimulationConfig) {
 		outputText += ";\n!ZONE HOUR RESULT:\n!SpaceIndex,Cooling,Heating,Lighting\n"
 		for spaceIdx, spaceHourResults := range globalEnergyResult.BySpaceHour {
 			for _, hourResult := range spaceHourResults {
-				outputText += formatEnergyItemWithZone(spaceIdx, hourResult, buildingModel.Spaces[spaceIdx].FloorArea)
+				outputText += formatEnergyItemWithZonePrecision(spaceIdx, hourResult, buildingModel.Spaces[spaceIdx].FloorArea, 5)
 			}
 		}
 	}
@@ -694,10 +694,10 @@ func (buildingModel MoosasEnergy) AnalysisResidential(exportDaily, exportHourly,
 				// 获取该小时的可作息化参数值
 				currentCoolingSetpointTemp := space.CoolingSetpointTemp.getValueAtHour(absHourIdx)
 				currentHeatingSetpointTemp := space.HeatingSetpointTemp.getValueAtHour(absHourIdx)
-				currentOccupantDensity     := space.OccupantDensity.getValueAtHour(absHourIdx)
-				currentOccupantHeatGain    := space.OccupantHeatGain.getValueAtHour(absHourIdx)
-				currentEquipmentHeatGain   := space.EquipmentHeatGain.getValueAtHour(absHourIdx)
-				currentLightingHeatGain    := space.LightingHeatGain.getValueAtHour(absHourIdx)
+				currentOccupantDensity := space.OccupantDensity.getValueAtHour(absHourIdx)
+				currentOccupantHeatGain := space.OccupantHeatGain.getValueAtHour(absHourIdx)
+				currentEquipmentHeatGain := space.EquipmentHeatGain.getValueAtHour(absHourIdx)
+				currentLightingHeatGain := space.LightingHeatGain.getValueAtHour(absHourIdx)
 
 				// 照明能耗：使用居住建筑硬编码作息 × 灯光散热强度
 				lightingEnergy := currentLightingHeatGain * residentialLightingSchedule[hourIdx] * space.FloorArea
@@ -712,7 +712,7 @@ func (buildingModel MoosasEnergy) AnalysisResidential(exportDaily, exportHourly,
 					deltaT := globalWeather.HourlyDryBulbTemp[absHourIdx] - currentCoolingSetpointTemp
 					deltaG := globalWeather.HourlyGroundTemp[absHourIdx] - currentCoolingSetpointTemp
 					envelopeLoad := calcEnvelopeHeatTransferLoadResidential(space, deltaT+summerTemperatureCorrection, deltaG)
-					heatDissipation := (currentOccupantDensity*currentOccupantHeatGain + currentEquipmentHeatGain*residentialEquipmentSchedule[hourIdx]) * space.FloorArea + lightingEnergy
+					heatDissipation := (currentOccupantDensity*currentOccupantHeatGain+currentEquipmentHeatGain*residentialEquipmentSchedule[hourIdx])*space.FloorArea + lightingEnergy
 
 					coolingLoad := float64(0)
 					if space.PerimeterZoneArea > 0 {
@@ -732,7 +732,7 @@ func (buildingModel MoosasEnergy) AnalysisResidential(exportDaily, exportHourly,
 					deltaT := currentHeatingSetpointTemp - globalWeather.HourlyDryBulbTemp[absHourIdx]
 					deltaG := currentHeatingSetpointTemp - globalWeather.HourlyGroundTemp[absHourIdx]
 					envelopeLoad := calcEnvelopeHeatTransferLoadResidential(space, deltaT-winterTemperatureCorrection, deltaG)
-					heatDissipation := (currentOccupantDensity*currentOccupantHeatGain + currentEquipmentHeatGain*residentialEquipmentSchedule[hourIdx]) * space.FloorArea + lightingEnergy
+					heatDissipation := (currentOccupantDensity*currentOccupantHeatGain+currentEquipmentHeatGain*residentialEquipmentSchedule[hourIdx])*space.FloorArea + lightingEnergy
 
 					heatingLoad := float64(0)
 					if space.PerimeterZoneArea > 0 {
@@ -872,14 +872,14 @@ func (buildingModel MoosasEnergy) AnalysisPublic(exportDaily, exportHourly, expo
 				absHourIdx := dayIdx*24 + hourIdx
 
 				// 获取该小时 8 个可作息化参数的实际数值
-				currentCoolingSetpointTemp     := space.CoolingSetpointTemp.getValueAtHour(absHourIdx)
+				currentCoolingSetpointTemp := space.CoolingSetpointTemp.getValueAtHour(absHourIdx)
 				currentCoolingSetpointHumidity := space.CoolingSetpointHumidity.getValueAtHour(absHourIdx)
-				currentHeatingSetpointTemp     := space.HeatingSetpointTemp.getValueAtHour(absHourIdx)
-				currentOccupantDensity         := space.OccupantDensity.getValueAtHour(absHourIdx)
-				currentFreshAirPerPerson       := space.FreshAirPerPerson.getValueAtHour(absHourIdx)
-				currentOccupantHeatGain        := space.OccupantHeatGain.getValueAtHour(absHourIdx)
-				currentEquipmentHeatGain       := space.EquipmentHeatGain.getValueAtHour(absHourIdx)
-				currentLightingHeatGain        := space.LightingHeatGain.getValueAtHour(absHourIdx)
+				currentHeatingSetpointTemp := space.HeatingSetpointTemp.getValueAtHour(absHourIdx)
+				currentOccupantDensity := space.OccupantDensity.getValueAtHour(absHourIdx)
+				currentFreshAirPerPerson := space.FreshAirPerPerson.getValueAtHour(absHourIdx)
+				currentOccupantHeatGain := space.OccupantHeatGain.getValueAtHour(absHourIdx)
+				currentEquipmentHeatGain := space.EquipmentHeatGain.getValueAtHour(absHourIdx)
+				currentLightingHeatGain := space.LightingHeatGain.getValueAtHour(absHourIdx)
 
 				// 计算该小时的照明能耗（太阳辐射采光模型）
 				interiorZoneArea := space.FloorArea - space.PerimeterZoneArea
@@ -1275,15 +1275,23 @@ func signOf(x float64) float64 {
 // ═════════════════════════════════════════════════════════════
 
 func formatEnergyItem(item EnergyItem, buildingArea float64) string {
-	coolingEnergyPerArea := strconv.FormatFloat(item.CoolingEnergy/buildingArea/1000, 'f', 2, 64)
-	heatingEnergyPerArea := strconv.FormatFloat(item.HeatingEnergy/buildingArea/1000, 'f', 2, 64)
-	lightingEnergyPerArea := strconv.FormatFloat(item.LightingEnergy/buildingArea/1000, 'f', 2, 64)
-	return coolingEnergyPerArea + "," + heatingEnergyPerArea + "," + lightingEnergyPerArea + "\n"
+	return formatEnergyItemWithPrecision(item, buildingArea, 2)
 }
 
 func formatEnergyItemWithZone(spaceIdx int, item EnergyItem, buildingArea float64) string {
-	coolingEnergyPerArea := strconv.FormatFloat(item.CoolingEnergy/buildingArea/1000, 'f', 2, 64)
-	heatingEnergyPerArea := strconv.FormatFloat(item.HeatingEnergy/buildingArea/1000, 'f', 2, 64)
-	lightingEnergyPerArea := strconv.FormatFloat(item.LightingEnergy/buildingArea/1000, 'f', 2, 64)
+	return formatEnergyItemWithZonePrecision(spaceIdx, item, buildingArea, 2)
+}
+
+func formatEnergyItemWithPrecision(item EnergyItem, buildingArea float64, precision int) string {
+	coolingEnergyPerArea := strconv.FormatFloat(item.CoolingEnergy/buildingArea/1000, 'f', precision, 64)
+	heatingEnergyPerArea := strconv.FormatFloat(item.HeatingEnergy/buildingArea/1000, 'f', precision, 64)
+	lightingEnergyPerArea := strconv.FormatFloat(item.LightingEnergy/buildingArea/1000, 'f', precision, 64)
+	return coolingEnergyPerArea + "," + heatingEnergyPerArea + "," + lightingEnergyPerArea + "\n"
+}
+
+func formatEnergyItemWithZonePrecision(spaceIdx int, item EnergyItem, buildingArea float64, precision int) string {
+	coolingEnergyPerArea := strconv.FormatFloat(item.CoolingEnergy/buildingArea/1000, 'f', precision, 64)
+	heatingEnergyPerArea := strconv.FormatFloat(item.HeatingEnergy/buildingArea/1000, 'f', precision, 64)
+	lightingEnergyPerArea := strconv.FormatFloat(item.LightingEnergy/buildingArea/1000, 'f', precision, 64)
 	return strconv.Itoa(spaceIdx) + "," + coolingEnergyPerArea + "," + heatingEnergyPerArea + "," + lightingEnergyPerArea + "\n"
 }
