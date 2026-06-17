@@ -501,6 +501,8 @@ class MoosasElement(object):
         proj = Projection(origin=np.mean(shapely.get_coordinates(self.face, include_z=True), axis=0), unitZ=self.normal)
         UVFaces = [proj.toUV(g) for g in self.face]
         mergedUVFace = shapely.force_3d(shapely.union_all(shapely.force_2d(UVFaces)), z=0)
+        if shapely.is_empty(mergedUVFace):
+            return shapely.GeometryCollection()
         return proj.toWorld(mergedUVFace)
 
     @property

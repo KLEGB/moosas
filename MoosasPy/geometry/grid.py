@@ -56,8 +56,15 @@ class MoosasGrid(MoosasElement):
         Polygons will be squares and will be trim on the edge.
         """
         # Create projection for the face
-        self.proj = Projection.fromPolygon(self.face)
-        self.UVFace = self.proj.toUV(self.face)
+        face_geometry = self.face
+        if isinstance(face_geometry, np.ndarray):
+            face_parts = [geo for geo in face_geometry if shapely.get_dimensions(geo) == 2]
+            if len(face_parts) == 0:
+                raise ValueError(f"No valid polygon face found for grid generation: {self.faceId}")
+            # Use the dominant polygon to avoid costly unions on fragmented faces.
+            face_geometry = max(face_parts, key=shapely.area)
+        self.proj = Projection.fromPolygon(face_geometry)
+        self.UVFace = self.proj.toUV(face_geometry)
         bbox = shapely.bounds(self.UVFace)
         if grid_size is None:
             grid_size = max(bbox[2]- bbox[2],bbox[3]- bbox[1])/5

@@ -26,10 +26,11 @@ def coPlanner(inputFile: str, outputFile: str):
 
     return: None
     """
-    from .models import MoosasModel, MoosasElement, MoosasGeometry
-    from .IO import modelFromFile, writeGeo
-    from .geometry.cleanse import _coPlannerCleanse
-    from .utils import shapely
+    from ..models import MoosasModel, MoosasElement, MoosasGeometry
+    from .transIO import modelFromFile
+    from ._geo import writeGeo
+    from ..geometry.cleanse import _coPlannerCleanse
+    from ..utils import shapely
     if isinstance(inputFile, MoosasModel):
         model = inputFile
     else:
@@ -51,7 +52,7 @@ def coPlanner(inputFile: str, outputFile: str):
                 face.append(rings[0])
                 holes.append([])
         for f, h in zip(face, holes):
-            geometryList.append(MoosasGeometry(f, element.faceId, element.normal, element.category, h))
+            geometryList.append(MoosasGeometry(f, f"coPlanner_{len(geometryList)}", element.normal, element.category, h))
     print(f"{len(elementList)} reduce to {len(geometryList)}. Writing...")
     writeGeo(outputFile, geoList=geometryList)
 
@@ -81,11 +82,12 @@ def overlap(inputFile: str, outputFile: str):
 
     return: None
     """
-    from .models import MoosasModel, MoosasElement, MoosasGeometry
-    from .IO import modelFromFile, writeGeo
-    from .geometry.cleanse import _groupByNormal, Projection
-    from .utils import shapely, np
-    from .utils.constant import geom
+    from ..models import MoosasModel, MoosasElement, MoosasGeometry
+    from .transIO import modelFromFile
+    from ._geo import writeGeo
+    from ..geometry.cleanse import _groupByNormal, Projection
+    from ..utils import shapely, np
+    from ..utils.constant import geom
     if isinstance(inputFile, MoosasModel):
         model = inputFile
     else:
@@ -98,10 +100,20 @@ def overlap(inputFile: str, outputFile: str):
         # project faces to 2d, and group them with the height and faces' category
         proj = Projection(origin=[0, 0, 0], unitZ=elements[0].normal)
         faces = [proj.toUV(ele.face) for ele in elements]
-        faceZ = np.array([shapely.get_coordinates(f, include_z=True)[0] for f in faces])[:,2].flatten()
+        faceZ = np.array([shapely.get_coordinates(f, include_z=True)[0] for f in faces])[:, 2].flatten()
+        # Some upstream geometry loaders may yield object/string Z values.
+        # Keep array length aligned with elements and mark invalid values as NaN.
+        def _coerce_z(value):
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return np.nan
+
+        faceZ = np.array([_coerce_z(z) for z in faceZ], dtype=float)
         faceZ = np.round(faceZ, 2)
-        for h in np.unique(faceZ):
-            subElements = elements[faceZ == h]
+        valid_heights = np.unique(faceZ[~np.isnan(faceZ)])
+        for h in valid_heights:
+            subElements = elements[np.isclose(faceZ, h, equal_nan=False)]
             if len(subElements) > 0:
                 subProj = Projection(origin=[0, 0, 0], unitZ=subElements[0].normal)
                 subElementsFaces = [shapely.force_2d(subProj.toUV(ele.face)) for ele in subElements]

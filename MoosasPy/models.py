@@ -628,18 +628,18 @@ class MoosasModel(MoosasContainer):
             geoIdSet = set([])
             for f in self.getAllFaces():
                 geoIdSet = geoIdSet.union(mixItemListToList(f.faceId))
-            validGeo = np.array(self.geometryList)[list(geoIdSet)]
+            validGeo = self.findFace(list(geoIdSet))
         features = [
             {
                 "type": "Feature",
                 "properties": {
-                    "normal": shapely.get_coordinates(geo.normal, include_z=True),
+                    "normal": shapely.get_coordinates(geo.normal, include_z=True).tolist(),
                     "id": geo.faceId,
                     "is_glazing": geo.category
                 },
                 "geometries": {
                     "type": "Polygon",
-                    "coordinates": shapely.get_coordinates(geo.face, include_z=True)
+                    "coordinates": shapely.get_coordinates(geo.face, include_z=True).tolist()
                 }
             }
             for geo in validGeo

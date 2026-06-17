@@ -167,7 +167,9 @@ def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky: Moos
         position = sky.position
     rays = []
     fixMatrix = []
-    allCells = [c for row in grid.gridCell for c in row]
+    allCells = [c for row in grid.gridCell for c in row if c.valid]
+    if len(allCells) == 0:
+        return np.zeros(len(position))
     for c in allCells:
         thisRays = [Ray(c.origin, pos,value=1.0) for pos in position]
         rays += thisRays

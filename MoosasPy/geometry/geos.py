@@ -302,7 +302,7 @@ class Vector(object):
     @staticmethod
     def parallel(vec1, vec2, tolerance=None):
         """test if two vector is parallel, based on their dot value"""
-        if not tolerance:
+        if tolerance is None:
             tolerance = Vector.ANGLE_TOLERANCE
         vec1 = Vector(vec1)
         vec2 = Vector(vec2)
@@ -834,9 +834,19 @@ class Projection(Ray):
         """
         Converts geometry from world coordinates to a specified plane, obtaining UV coordinates on that plane
         """
-        if shapely.get_dimensions(worldGeometry) == -1:
+        dims = shapely.get_dimensions(worldGeometry)
+        if isinstance(dims, np.ndarray):
+            flat_geometries = np.array(worldGeometry, dtype=object).flatten().tolist()
+            valid_geometries = [geo for geo in flat_geometries if shapely.get_dimensions(geo) != -1]
+            if len(valid_geometries) == 0:
+                raise Exception(f'invalid geometry: {worldGeometry}')
+            # Keep compatibility with callers expecting a single geometry in projection.
+            worldGeometry = valid_geometries[0]
+            dims = shapely.get_dimensions(worldGeometry)
+
+        if dims == -1:
             raise Exception(f'invalid geometry: {worldGeometry}')
-        if shapely.get_dimensions(worldGeometry) == 2:
+        if dims == 2:
             rings = [[self.toUV(ring) for ring in shapely.get_rings(part)] for part in shapely.get_parts(worldGeometry)]
             parts = []
             for ring in rings:
@@ -856,9 +866,9 @@ class Projection(Ray):
         if not (Vector.parallel(self.axisZ, np.array([0, 0, 1])) and Vector.parallel(self.axisX, np.array([1, 0, 0]))):
             coor_new = [np.asmatrix(coor) * self.rotateMatrix for coor in coor_new]
         coor_new = np.array([np.array(coor).flatten() for coor in coor_new])
-        if shapely.get_dimensions(worldGeometry) == 0:
+        if dims == 0:
             return shapely.points(coor_new[0])
-        if shapely.get_dimensions(worldGeometry) == 1:
+        if dims == 1:
             if shapely.points(coor_new[0]) == shapely.points(coor_new[-1]):
                 return shapely.linearrings(coor_new)
             else:
@@ -888,8 +898,13 @@ class Projection(Ray):
             raise Exception(f'invalid geometry: {UVGeometry}')
         if shapely.get_dimensions(UVGeometry) == 2:
             rings = [self.toWorld(ring) for ring in shapely.get_rings(UVGeometry)]
+            if len(rings) == 0:
+                return shapely.GeometryCollection()
             if len(rings) > 1:
-                return shapely.polygons(rings[0], rings[1:])
+                return shapely.polygons(
+                    shapely.get_coordinates(rings[0], include_z=True),
+                    [shapely.get_coordinates(ring, include_z=True) for ring in rings[1:]]
+                )
             else:
                 return shapely.polygons(shapely.get_coordinates(rings[0], include_z=True))
         UVGeometry = shapely.force_3d(UVGeometry, z=0)

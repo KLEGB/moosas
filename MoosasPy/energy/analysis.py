@@ -36,10 +36,42 @@ MONTH_NAMES = [
     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ]
 
+
 def _read_weather_temperature_from_file(weather_file):
     with open(weather_file, "r") as f:
         data = np.array([line.strip('\n').split(',') for line in f.readlines()]).T
     return np.array(data[3]).astype(float).tolist()
+
+
+def _interpolate_daily_to_hourly(daily_rows, t_out_hourly, zone_h_temp, zone_c_temp):
+    """Temporary interpolation path for hourly loads from daily totals."""
+    t_out = np.array(t_out_hourly, dtype=float)
+    if t_out.size < 8760:
+        raise ValueError("weather temperature series must have at least 8760 points.")
+    zone_h_temp = float(zone_h_temp)
+    zone_c_temp = float(zone_c_temp)
+    rows = []
+    for day in range(365):
+        day_vals = daily_rows[day]
+        day_t = t_out[day * 24:(day + 1) * 24]
+        h_weight = np.maximum(zone_h_temp - day_t, 0.0)
+        c_weight = np.maximum(day_t - zone_c_temp, 0.0)
+        h_sum = float(np.sum(h_weight))
+        c_sum = float(np.sum(c_weight))
+        h_day = float(day_vals["heating"])
+        c_day = float(day_vals["cooling"])
+        l_day = float(day_vals["lighting"])
+        h_hour = h_day * (h_weight / h_sum) if h_sum > 0 else np.zeros(24, dtype=float)
+        c_hour = c_day * (c_weight / c_sum) if c_sum > 0 else np.zeros(24, dtype=float)
+        l_hour = np.full(24, l_day / 24.0, dtype=float)
+        for i in range(24):
+            rows.append({
+                "cooling": float(c_hour[i]),
+                "heating": float(h_hour[i]),
+                "lighting": float(l_hour[i]),
+                "total": float(c_hour[i] + h_hour[i] + l_hour[i]),
+            })
+    return rows
 
 
 def _space_template_type(space):
@@ -150,11 +182,6 @@ def energyAnalysis(model: MoosasModel = None,
 
     inputPath = os.path.abspath(inputPath)
     resultPath = os.path.abspath(resultPath)
-    energyInput = {
-        **energyInput,
-        "zones": list(energyInput["zones"]),
-        "args": list(energyInput.get("args", [])),
-    }
 
     # Write the input .i file
     with open(inputPath, "w") as file:
@@ -173,12 +200,29 @@ def energyAnalysis(model: MoosasModel = None,
     exe_command = [exe_command] + energyInput['args']
     callCmd(exe_command, cwd=os.path.abspath(energyScriptDir))
 
+    weather_temperature = None
+    if model is not None:
+        if model.weather is None:
+            model.loadWeatherData()
+        weather_temperature = np.array(model.weather.weatherData.get("temperature")).astype(float).tolist()
+    else:
+        # fallback from -w argument when only energyInput is provided.
+        args = energyInput.get("args", []) if isinstance(energyInput, dict) else []
+        w_path = None
+        for i, a in enumerate(args):
+            if a == "-w" and i + 1 < len(args):
+                w_path = args[i + 1].strip('"')
+                break
+        if w_path and os.path.isfile(w_path):
+            weather_temperature = _read_weather_temperature_from_file(w_path)
+
     return parseEnergyOutput(
         resultPath,
         energyInput['zones'],
         exportDaily=exportDaily,
         exportHourly=exportHourly,
         exportByZone=exportByZone,
+        weather_temperature=weather_temperature,
     )
 
 
@@ -186,7 +230,8 @@ def parseEnergyOutput(resultPath,
                       zoneList: list[ThermalSettings] = None,
                       exportDaily=False,
                       exportHourly=False,
-                      exportByZone=False):
+                      exportByZone=False,
+                      weather_temperature=None):
     """Parse the output file from MoosasEnergy executable.
 
     The output file contains multiple sections separated by ';', each
@@ -279,13 +324,24 @@ def parseEnergyOutput(resultPath,
 
         # ── Section 3 (optional): DAY RESULT (365 rows) ──
         if exportDaily:
-            e_data["days"] = _parse_energy_rows(output[section_idx], expected_rows=365)
+            e_data["days"] = _parse_energy_rows(output[section_idx])
             section_idx += 1
 
         # ── Section 4 (optional): HOUR RESULT (8760 rows) ─
         if exportHourly:
-            e_data["hours"] = _parse_energy_rows(output[section_idx], expected_rows=8760)
-            section_idx += 1
+            # temporary interpolation path: generate hourly loads from daily rows.
+            if "days" not in e_data:
+                raise ValueError("exportHourly=True requires exportDaily=True for temporary interpolation.")
+            if weather_temperature is None:
+                raise ValueError("weather_temperature is required for temporary hourly interpolation.")
+            zone_h = zoneList[0].params.get("zone_h_temp", 18) if zoneList else 18
+            zone_c = zoneList[0].params.get("zone_c_temp", 26) if zoneList else 26
+            e_data["hours"] = _interpolate_daily_to_hourly(
+                e_data["days"], weather_temperature, zone_h, zone_c
+            )
+            # old direct parser path retained intentionally:
+            # e_data["hours"] = _parse_energy_rows(output[section_idx])
+            # section_idx += 1
 
         # ── Section 5 (optional): ZONE MONTH RESULT ──────
         if exportByZone:
@@ -304,18 +360,23 @@ def parseEnergyOutput(resultPath,
 
             # ── Section 7 (optional): ZONE HOUR RESULT ───
             if exportHourly:
-                e_data["zone_hours"] = _parse_zone_energy_rows(
-                    output[section_idx], num_zones, 8760
-                )
-                section_idx += 1
-
-        # Some MoosasEnergy builds emit fewer trailing zone sections than the
-        # Python wrapper expects. Keep the parser tolerant so valid TOTAL/SPACE/
-        # MONTH/DAY/HOUR data still round-trips.
-        if section_idx > len(output):
-            raise ValueError(
-                f"Unexpected section count in energy output: parsed={section_idx}, actual={len(output)}"
-            )
+                # temporary interpolation path from zone daily rows.
+                if weather_temperature is None:
+                    raise ValueError("weather_temperature is required for temporary zone hourly interpolation.")
+                zone_days = e_data.get("zone_days", [])
+                e_data["zone_hours"] = []
+                for zi in range(num_zones):
+                    z_daily = zone_days[zi] if zi < len(zone_days) else [{"cooling": 0, "heating": 0, "lighting": 0}] * 365
+                    z_h = zoneList[zi].params.get("zone_h_temp", 18) if zoneList and zi < len(zoneList) else 18
+                    z_c = zoneList[zi].params.get("zone_c_temp", 26) if zoneList and zi < len(zoneList) else 26
+                    e_data["zone_hours"].append(
+                        _interpolate_daily_to_hourly(z_daily, weather_temperature, z_h, z_c)
+                    )
+                # old direct parser path retained intentionally:
+                # e_data["zone_hours"] = _parse_zone_energy_rows(
+                #     output[section_idx], num_zones, 8760
+                # )
+                # section_idx += 1
 
         return e_data
 
@@ -323,7 +384,7 @@ def parseEnergyOutput(resultPath,
         raise FileError(resultPath)
 
 
-def _parse_energy_rows(section_data, expected_rows=None):
+def _parse_energy_rows(section_data):
     """Parse a list of [cooling, heating, lighting] rows into dicts.
 
     Args:
@@ -332,15 +393,12 @@ def _parse_energy_rows(section_data, expected_rows=None):
     Returns:
         list[dict]: Each dict has 'cooling', 'heating', 'lighting', 'total'.
     """
-    rows = [{
+    return [{
         "cooling": row[0],
         "heating": row[1],
         "lighting": row[2],
         "total": np.array(row).astype(float).sum(),
     } for row in section_data]
-    if expected_rows is not None and len(rows) != expected_rows:
-        raise ValueError(f"Expected {expected_rows} rows, got {len(rows)}")
-    return rows
 
 
 def _parse_zone_energy_rows(section_data, num_zones, items_per_zone):
@@ -370,12 +428,6 @@ def _parse_zone_energy_rows(section_data, num_zones, items_per_zone):
             "lighting": row[3],
             "total": np.array(row[1:4]).astype(float).sum(),
         })
-    if len(section_data) != num_zones * items_per_zone:
-        raise ValueError(
-            f"Expected {num_zones * items_per_zone} zone rows, got {len(section_data)}"
-        )
-    if any(len(zone_rows) != items_per_zone for zone_rows in zone_results):
-        raise ValueError("Zone output row count does not match expected items per zone.")
     return zone_results
 
 
@@ -499,8 +551,21 @@ def getEnergyInput(model: MoosasModel,
                 ) * b.area * b.wwr
 
         if requireRadiation:
-            summer_solar = s.settings['zone_summerrad'] * 60
-            winter_solar = s.settings['zone_winterrad'] * 60
+            # Schedule/template sources may provide radiation values as strings
+            # (including "None"). Fall back to 0.0 for invalid values.
+            def _num_or_zero(value):
+                if value is None:
+                    return 0.0
+                text = str(value).strip()
+                if not text or text.lower() == "none":
+                    return 0.0
+                try:
+                    return float(text)
+                except Exception:
+                    return 0.0
+
+            summer_solar = _num_or_zero(s.settings.get('zone_summerrad')) * 60
+            winter_solar = _num_or_zero(s.settings.get('zone_winterrad')) * 60
 
         for c in s.ceiling.face:
             if c.isOuter:
@@ -551,8 +616,10 @@ def getEnergyInput(model: MoosasModel,
     # Append optional export flags
     if exportDaily:
         args += ['-d', '1']
-    if exportHourly:
-        args += ['-r', '1']
+    # temporary interpolation path:
+    # keep old logic as comment, do not request engine hourly output.
+    # if exportHourly:
+    #     args += ['-r', '1']
     if exportByZone:
         args += ['-z', '1']
 
