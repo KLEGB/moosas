@@ -43,6 +43,7 @@ from .rad import positionRadiation
 from .sunhour import positionSunHour
 from . import daylightFactor
 from .geometry import spaceGen
+from .weather import includeEpw
 
 # initialize temp directory
 from .utils import tools

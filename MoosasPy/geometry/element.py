@@ -1183,12 +1183,12 @@ class MoosasSkylight(MoosasFace):
     '''
         一个特别简单的glazing类，只为与Moosasface区分开
         '''
-    __slots__ = ['parentFace','SHGC']
+    __slots__ = ['parentFace','SHGC','operable']
 
     def __init__(self, model: MoosasContainer, faceId: str | MoosasGeometry, level: float = None,
                  offset: float = None, glazingId=None,
                  glazingElement: MoosasElement | list[MoosasElement] | np.ndarray[MoosasElement] = None, space=None,
-                 uid=None):
+                 uid=None, operable: float = 0.5):
         """
         Initialize a MoosasSkylight object.
         
@@ -1225,7 +1225,7 @@ class MoosasSkylight(MoosasFace):
                                              space=space, glazingId=glazingId, uid=uid)
         self.parentFace: MoosasFace | None = None
         self.SHGC: float | None = None
-
+        self.operable: float = operable
     @property
     def orientation(self):
         """
@@ -1751,11 +1751,12 @@ class MoosasGlazing(MoosasWall):
     parentFace: the Uid of parent MoosasWall element
     orientation: normal facing outside.
     """
-    __slots__ = ['parentFace','SHGC']
+    __slots__ = ['parentFace','SHGC','operable']
 
     def __init__(self, model: MoosasContainer, faceId: str | list[str] | np.ndarray[str], level: float = None,
                  offset: float = None, glazingId=None,
                  glazingElement: MoosasElement | list[MoosasElement] | np.ndarray[MoosasElement] = None, space=None,
+                 operable=0.5,
                  uid=None):
         """
         Initialize a MoosasGlazing object with geometric and structural properties.
@@ -1793,7 +1794,7 @@ class MoosasGlazing(MoosasWall):
                                             space=space, glazingId=glazingId, uid=uid)
         self.parentFace: MoosasWall | None = None
         self.SHGC: float | None = None
-
+        self.operable: float = operable
         if self.offset < -0.2:
             new_level = model.levelList[model.levelList.index(self.level) - 1]
             # print('\nMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!!',new_level)
@@ -2612,10 +2613,10 @@ class MoosasSpace(object):
     it can be a void if floor or ceiling is None or area of floor/ceiling < area of edge
 
     """
-    __slots__ = ['floor', 'edge', 'ceiling', '__void', '__id', '__neighbor', 'internalMass', 'settings','description']
+    __slots__ = ['floor', 'edge', 'ceiling', '__void', '__id','__uniqueId', '__neighbor', 'internalMass', 'settings','description']
 
     def __init__(self, _floor: MoosasFloor | None, _edge: MoosasEdge, _ceiling: MoosasFloor | None,
-                 void: list[MoosasSpace] = None):
+                 void: list[MoosasSpace] = None, Uid: str = None):
         """
         Initialize a new instance with floor, edge, ceiling, and optional void spaces.
         
@@ -2642,8 +2643,8 @@ class MoosasSpace(object):
         self.__neighbor = {}
         self.internalMass: list[MoosasElement] = _edge.internalMass
         self.__void: list[MoosasSpace] = [] if void is None else void
-        self.__id: str = ''
-
+        self.__id: str = '' if Uid is None else Uid
+        self.__uniqueId: bool = False if Uid is None else True
         self.regenerateId()
 
         # Thermal Settings
@@ -2656,8 +2657,8 @@ class MoosasSpace(object):
             "zone_template": None,
             "idf_template": None
         }
-
         self.applySettings('climatezone3_GB/T51350-2019_RESIDENTIAL')
+
 
     @classmethod
     def fromDict(cls, spaceDict, model: MoosasContainer):
@@ -2680,6 +2681,7 @@ class MoosasSpace(object):
         edge = _getElement('edge', dictionary=spaceDict)[0]
         ceiling = _getElement('ceiling', dictionary=spaceDict, strict=False)[0]
         floor = _getElement('floor', dictionary=spaceDict, strict=False)[0]
+        Uid = _getElement('id', dictionary=spaceDict, strict=False)[0]
 
         internalMass = _getElement('internalMass', dictionary=spaceDict, strict=False)
         void = _getElement('void', dictionary=spaceDict, strict=False)
@@ -2690,7 +2692,11 @@ class MoosasSpace(object):
             edge = MoosasEdge.fromDict(edge, model)
         if floor:
             floor = MoosasFloor.fromDict(ceiling, model)
-        space = cls(floor, edge, ceiling)
+        
+        if Uid:
+            space = cls(floor, edge, ceiling, Uid=Uid)
+        else:
+            space = cls(floor, edge, ceiling)
 
         if internalMass[0]:
             for _intWall in internalMass:
@@ -2905,11 +2911,12 @@ class MoosasSpace(object):
             str: self.id
         """
         originalId = self.id
-        walls = self.getAllFaces(to_dict=True)['MoosasWall']
-        params = [self.area, self.height * 10, self.level * 10, len(walls)]
-        params += list([np.sum([w.wwr * 100 for w in walls])])
-        params += list(self.edge.getWeightCenter() * 10)
-        self.__id = encodeParams(*params)
+        if not self.__uniqueId:
+            walls = self.getAllFaces(to_dict=True)['MoosasWall']
+            params = [self.area, self.height * 10, self.level * 10, len(walls)]
+            params += list([np.sum([w.wwr * 100 for w in walls])])
+            params += list(self.edge.getWeightCenter() * 10)
+            self.__id = encodeParams(*params)
         # Record self.id to all MoosasGeometries
         for moface in self.getAllFaces(to_dict=False):
             if originalId != "" and originalId in moface.space:
@@ -3054,6 +3061,7 @@ class MoosasSpace(object):
             This function does not return any value. It updates `self.settings` 
             with the zone template and other settings from the matched template.
         """
+
         if not isinstance(buildingTemplateHint, dict):
             if not isinstance(buildingTemplateHint, str):
                 raise Exception(f'Key Error: template key error {buildingTemplateHint}')
@@ -3069,8 +3077,6 @@ class MoosasSpace(object):
             buildingTemplateHint = list(self.parent.buildingTemplate.values()).index(template)
             buildingTemplateHint = list(self.parent.buildingTemplate.keys())[buildingTemplateHint]
         self.settings['zone_template'] = buildingTemplateHint
-        for key in template.keys():
-            self.settings[key] = template[key]
 
         templateType = str(template.get("type", "")).strip().upper()
         if templateType and templateType not in getattr(self.parent, "scheduleByType", {}):
@@ -3078,6 +3084,14 @@ class MoosasSpace(object):
             if os.path.isfile(schedule_path):
                 self.parent.loadSchedule(schedule_path)
         
+
+        for key in template.keys():
+            self.settings[key] = template[key]
+            if key in ("zone_ppsm", "zone_equipment", "zone_lighting"):
+                scheduleName= self.parent.getScheduleName(templateType, key)
+                self.settings[key] = scheduleName
+    
+
         if 'zone_wallU' in self.settings:
             faceDict = self.getAllFaces(to_dict=True)
             for face in faceDict['MoosasWall']+faceDict['MoosasFloor']+faceDict['MoosasCeiling']:
@@ -3606,7 +3620,6 @@ class MoosasContainer(object):
                         item.setCategory(refs[key])
                     elif key == 'MoosasWall':
                         res += 1
-        print(res)
 
     def removeSpace(self, space: str | MoosasSpace):
         """

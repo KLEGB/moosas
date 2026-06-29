@@ -724,7 +724,7 @@ func _getUnusedIndex(used []bool) int {
 }
 func _getZoneIndex(to zone, zoneList []zone) string {
 	for i, z := range zoneList {
-		if z.row == to.row && z.col == to.col {
+		if z.row == to.row && z.col == to.col && z.hei == to.hei {
 			return strconv.Itoa(i + 1)
 		}
 	}

@@ -329,7 +329,7 @@ class AfnPath(object):
         thePath['position_z'] = pos[2]
         thePath["pathHeight"] = None
         thePath["pathWidth"] = None
-        thePath["operable"]=1.0
+        thePath["operable"]=moGeometry.operable
         thePath["element"] = moGeometry
         thePath = cls(**thePath)
         thePath._width
@@ -421,10 +421,21 @@ class AfnPath(object):
         to_zone = int(self.toZone)
         from_zone_out = -1 if from_zone == -1 else from_zone - 1
         to_zone_out = -1 if to_zone == -1 else to_zone - 1
+        operable_value = self.operable
+        try:
+            operable_multiplier = float(operable_value)
+        except (TypeError, ValueError):
+            operable_text = str(operable_value).strip().lower()
+            if operable_text in {"true", "yes", "y", "open"}:
+                operable_multiplier = 1.0
+            elif operable_text in {"false", "no", "n", "closed", ""}:
+                operable_multiplier = 0.0
+            else:
+                raise ValueError(f"Unsupported operable value: {self.operable!r}")
         pathStr = [self.userName]
         pathStr += ['p' + '%03d' % int(self.prjIndex)]
-        pathStr += [str(float(self.pathHeight)*float(self.operable))]
-        pathStr += [str(float(self.pathWidth)*float(self.operable))]
+        pathStr += [str(float(self.pathHeight) * operable_multiplier)]
+        pathStr += [str(float(self.pathWidth) * operable_multiplier)]
         pathStr += [str(self.position_x)]
         pathStr += [str(self.position_y)]
         pathStr += [str(self.position_z)]
@@ -730,6 +741,81 @@ def buildNetworkFile(model=None, pathList: list[AfnPath] = None, zoneList: list[
     return networkFilePath
 
 
+def ambient_connectivity_report(pathList: list[AfnPath], zoneList: list[AfnZone]) -> dict:
+    """
+    Audit whether zones are connected to ambient through variable flow paths.
+
+    Returns
+    -------
+    dict
+        Connectivity report with direct/reachable/unreachable zone ids and names.
+    """
+    zone_ids = [int(z.prjIndex) for z in zoneList]
+    zone_id_set = set(zone_ids)
+    zone_by_id = {int(z.prjIndex): z for z in zoneList}
+
+    def _is_variable_path(p: AfnPath, eps=1e-9):
+        try:
+            h = float(p.pathHeight)
+            w = float(p.pathWidth)
+            return h > eps and w > eps
+        except Exception:
+            return False
+
+    valid_index_paths: list[AfnPath] = []
+    dropped_invalid_index = []
+    for i, p in enumerate(pathList):
+        fz = int(p.fromZone)
+        tz = int(p.toZone)
+        f_ok = (fz == -1) or (fz in zone_id_set)
+        t_ok = (tz == -1) or (tz in zone_id_set)
+        if f_ok and t_ok:
+            valid_index_paths.append(p)
+        else:
+            dropped_invalid_index.append(i)
+
+    topology = {-1: set()}
+    for zid in zone_ids:
+        topology[zid] = set()
+
+    direct_ambient_zone_ids = set()
+    for p in valid_index_paths:
+        if not _is_variable_path(p):
+            continue
+        fz = int(p.fromZone)
+        tz = int(p.toZone)
+        topology[fz].add(tz)
+        topology[tz].add(fz)
+        if fz == -1 and tz >= 0:
+            direct_ambient_zone_ids.add(tz)
+        elif tz == -1 and fz >= 0:
+            direct_ambient_zone_ids.add(fz)
+
+    visited = {-1}
+    queue = [-1]
+    while queue:
+        cur = queue.pop(0)
+        for nxt in topology.get(cur, ()):
+            if nxt not in visited:
+                visited.add(nxt)
+                queue.append(nxt)
+
+    reachable_zone_ids = sorted([z for z in visited if z >= 0])
+    unreachable_zone_ids = sorted(set(zone_ids).difference(reachable_zone_ids))
+    return {
+        "zone_ids": zone_ids,
+        "topology": topology,
+        "dropped_invalid_path_indices": dropped_invalid_index,
+        "direct_ambient_zone_ids": sorted(direct_ambient_zone_ids),
+        "direct_ambient_zone_names": [zone_by_id[zid].userName for zid in sorted(direct_ambient_zone_ids)],
+        "reachable_zone_ids": reachable_zone_ids,
+        "reachable_zone_names": [zone_by_id[zid].userName for zid in reachable_zone_ids],
+        "unreachable_zone_ids": unreachable_zone_ids,
+        "unreachable_zone_names": [zone_by_id[zid].userName for zid in unreachable_zone_ids],
+        "all_connected_to_ambient": len(unreachable_zone_ids) == 0,
+    }
+
+
 def cleanseNetwork(pathList: list[AfnPath], zoneList: list[AfnZone]) -> (list[AfnPath], list[AfnZone]):
     """
     Clean the zones that are not linked to the ambient and remove associated paths.
@@ -755,59 +841,23 @@ def cleanseNetwork(pathList: list[AfnPath], zoneList: list[AfnZone]) -> (list[Af
     if zone_count == 0:
         return list(pathList), list(zoneList)
 
-    # Keep topology indices consistent with zone.prjIndex (1-based in AFN pipeline).
-    zone_ids = [int(z.prjIndex) for z in zoneList]
-    zone_id_set = set(zone_ids)
+    report = ambient_connectivity_report(pathList=pathList, zoneList=zoneList)
+    zone_ids = report["zone_ids"]
     zone_by_id = {int(z.prjIndex): z for z in zoneList}
-
-    def _is_variable_path(p: AfnPath, eps=1e-9):
-        try:
-            h = float(p.pathHeight)
-            w = float(p.pathWidth)
-            op = float(p.operable) if p.operable is not None else 1.0
-            return h > eps and w > eps and op > eps
-        except Exception:
-            return False
-
-    # keep only paths with valid endpoint indices first
+    keep_zone_ids = report["reachable_zone_ids"]
+    remove_zone_ids = report["unreachable_zone_ids"]
+    dropped_invalid_index = report["dropped_invalid_path_indices"]
+    zone_id_set = set(zone_ids)
     valid_index_paths: list[AfnPath] = []
-    dropped_invalid_index = []
-    for i, p in enumerate(pathList):
+    for p in pathList:
         fz = int(p.fromZone)
         tz = int(p.toZone)
         f_ok = (fz == -1) or (fz in zone_id_set)
         t_ok = (tz == -1) or (tz in zone_id_set)
         if f_ok and t_ok:
             valid_index_paths.append(p)
-        else:
-            dropped_invalid_index.append(i)
     if dropped_invalid_index:
         print(f'******Warning: drop paths with invalid zone index: {dropped_invalid_index}')
-
-    # BFS on variable flow topology from ambient (-1)
-    topology = {-1: set()}
-    for zid in zone_ids:
-        topology[zid] = set()
-
-    for p in valid_index_paths:
-        if not _is_variable_path(p):
-            continue
-        fz = int(p.fromZone)
-        tz = int(p.toZone)
-        topology[fz].add(tz)
-        topology[tz].add(fz)
-
-    visited = {-1}
-    queue = [-1]
-    while queue:
-        cur = queue.pop(0)
-        for nxt in topology.get(cur, ()):
-            if nxt not in visited:
-                visited.add(nxt)
-                queue.append(nxt)
-
-    keep_zone_ids = sorted([z for z in visited if z >= 0])
-    remove_zone_ids = sorted(set(zone_ids).difference(keep_zone_ids))
 
     if remove_zone_ids:
         print('******Warning: some zones do not linked to ambient by variable flow path.')

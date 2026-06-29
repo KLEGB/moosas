@@ -124,8 +124,8 @@ type MoosasSpace struct {
 	RoofArea                float64          // 屋顶面积 (m²)
 	SkylightArea            float64          // 天窗面积 (m²)
 	GroundFloorArea         float64          // 接地楼板面积 (m²)
-	SeasonalSummerSolarGain float64          // 夏季辐射得热总量 (Wh)
-	SeasonalWinterSolarGain float64          // 冬季辐射得热总量 (Wh)
+	SeasonalSummerSolarGain SchedulableParam // 夏季辐射得热总量 (Wh) 或逐时辐射得热 (Wh)
+	SeasonalWinterSolarGain SchedulableParam // 冬季辐射得热总量 (Wh) 或逐时辐射得热 (Wh)
 	WallUValue              float64          // 外墙传热系数 (W/(m²·K))
 	WindowUValue            float64          // 外窗传热系数 (W/(m²·K))
 	WindowSHGC              float64          // 外窗太阳得热系数
@@ -344,6 +344,41 @@ func parseSchedulableParam(fieldValue, fieldName string, scheduleLib ScheduleLib
 	return SchedulableParam{IsSchedule: true, ScheduleFactors: &sch.HourlyFactors}
 }
 
+func seasonAwareHourlySolarGain(param SchedulableParam, absHourIdx int, inSeason bool) float64 {
+	if !inSeason {
+		return 0.0
+	}
+	if param.IsSchedule {
+		return param.getValueAtHour(absHourIdx)
+	}
+	return 0.0
+}
+
+func seasonAwareDailySolarGain(param SchedulableParam, dayIdx int, inSeason bool) float64 {
+	if !inSeason {
+		return 0.0
+	}
+	if param.IsSchedule {
+		daySum := 0.0
+		baseHour := dayIdx * 24
+		for hourIdx := 0; hourIdx < 24; hourIdx++ {
+			daySum += param.getValueAtHour(baseHour + hourIdx)
+		}
+		return daySum
+	}
+	return 0.0
+}
+
+func adjustedSeasonalSolarGain(param SchedulableParam, correction float64, seasonDays int) float64 {
+	if param.IsSchedule {
+		return 0.0
+	}
+	if seasonDays <= 0 {
+		return 0.0
+	}
+	return param.FixedValue * correction / float64(seasonDays)
+}
+
 // ═════════════════════════════════════════════════════════════
 // 命令行入口
 // ═════════════════════════════════════════════════════════════
@@ -491,8 +526,8 @@ func runSimulation(config SimulationConfig) {
 		roofArea, _ := strconv.ParseFloat(fields[5], 64)
 		skylightArea, _ := strconv.ParseFloat(fields[6], 64)
 		groundFloorArea, _ := strconv.ParseFloat(fields[7], 64)
-		summerSolarGain, _ := strconv.ParseFloat(fields[8], 64)
-		winterSolarGain, _ := strconv.ParseFloat(fields[9], 64)
+		summerSolarGain := parseSchedulableParam(fields[8], "SummerSolarGain", scheduleLib)
+		winterSolarGain := parseSchedulableParam(fields[9], "WinterSolarGain", scheduleLib)
 		wallUValue, _ := strconv.ParseFloat(fields[10], 64)
 		windowUValue, _ := strconv.ParseFloat(fields[11], 64)
 		windowSHGC, _ := strconv.ParseFloat(fields[12], 64)
@@ -681,11 +716,12 @@ func (buildingModel MoosasEnergy) AnalysisResidential(exportDaily, exportHourly,
 	for spaceIdx := 0; spaceIdx < numSpaces; spaceIdx++ {
 		space := buildingModel.Spaces[spaceIdx]
 
-		// 将季节总辐射折算为日均辐射
-		coolingSeasonDays := float64(globalWeather.CoolingSeasonEnd - globalWeather.CoolingSeasonStart + 1)
-		heatingSeasonDays := float64(365 - globalWeather.HeatingSeasonStart + globalWeather.HeatingSeasonEnd + 1)
-		space.SeasonalSummerSolarGain = space.SeasonalSummerSolarGain * summerRadiationCorrection / coolingSeasonDays
-		space.SeasonalWinterSolarGain = space.SeasonalWinterSolarGain * winterRadiationCorrection / heatingSeasonDays
+		// Fixed-value solar input keeps the legacy semantics:
+		// seasonal total (Wh) -> climate correction -> average daily gain.
+		coolingSeasonDays := globalWeather.CoolingSeasonEnd - globalWeather.CoolingSeasonStart + 1
+		heatingSeasonDays := 365 - globalWeather.HeatingSeasonStart + globalWeather.HeatingSeasonEnd + 1
+		adjustedSummerSolarGain := adjustedSeasonalSolarGain(space.SeasonalSummerSolarGain, summerRadiationCorrection, coolingSeasonDays)
+		adjustedWinterSolarGain := adjustedSeasonalSolarGain(space.SeasonalWinterSolarGain, winterRadiationCorrection, heatingSeasonDays)
 
 		for dayIdx := 0; dayIdx < 365; dayIdx++ {
 			for hourIdx := 0; hourIdx < 24; hourIdx++ {
@@ -751,21 +787,45 @@ func (buildingModel MoosasEnergy) AnalysisResidential(exportDaily, exportHourly,
 
 			// 日结束后：叠加辐射得热修正并除以能效比
 			if dayIdx >= globalWeather.CoolingSeasonStart && dayIdx <= globalWeather.CoolingSeasonEnd {
-				dailyLoadCache[spaceIdx][dayIdx][0] = clampToPositive(dailyLoadCache[spaceIdx][dayIdx][0]+space.SeasonalSummerSolarGain*space.WindowSHGC) / space.CoolingEER
+				summerDailySolarGain := adjustedSummerSolarGain
+				if space.SeasonalSummerSolarGain.IsSchedule {
+					summerDailySolarGain = seasonAwareDailySolarGain(space.SeasonalSummerSolarGain, dayIdx, true)
+				}
+				dailyLoadCache[spaceIdx][dayIdx][0] = clampToPositive(dailyLoadCache[spaceIdx][dayIdx][0]+summerDailySolarGain*space.WindowSHGC) / space.CoolingEER
 				if needHourlyCache {
-					numWorkHours := 24 // 居住建筑全天运行
-					solarGainPerHour := space.SeasonalSummerSolarGain * space.WindowSHGC / float64(numWorkHours)
-					for hourIdx := 0; hourIdx < 24; hourIdx++ {
-						hourlyLoadCache[spaceIdx][dayIdx][hourIdx][0] = clampToPositive(hourlyLoadCache[spaceIdx][dayIdx][hourIdx][0]+solarGainPerHour) / space.CoolingEER
+					if space.SeasonalSummerSolarGain.IsSchedule {
+						for hourIdx := 0; hourIdx < 24; hourIdx++ {
+							absHourIdx := dayIdx*24 + hourIdx
+							hourlySolarGain := seasonAwareHourlySolarGain(space.SeasonalSummerSolarGain, absHourIdx, true) * space.WindowSHGC
+							hourlyLoadCache[spaceIdx][dayIdx][hourIdx][0] = clampToPositive(hourlyLoadCache[spaceIdx][dayIdx][hourIdx][0]+hourlySolarGain) / space.CoolingEER
+						}
+					} else {
+						numWorkHours := 24 // 居住建筑全天运行
+						solarGainPerHour := summerDailySolarGain * space.WindowSHGC / float64(numWorkHours)
+						for hourIdx := 0; hourIdx < 24; hourIdx++ {
+							hourlyLoadCache[spaceIdx][dayIdx][hourIdx][0] = clampToPositive(hourlyLoadCache[spaceIdx][dayIdx][hourIdx][0]+solarGainPerHour) / space.CoolingEER
+						}
 					}
 				}
 			} else if dayIdx >= globalWeather.HeatingSeasonStart || dayIdx <= globalWeather.HeatingSeasonEnd {
-				dailyLoadCache[spaceIdx][dayIdx][1] = clampToPositive(dailyLoadCache[spaceIdx][dayIdx][1]-space.SeasonalWinterSolarGain*space.WindowSHGC) / space.HeatingEER
+				winterDailySolarGain := adjustedWinterSolarGain
+				if space.SeasonalWinterSolarGain.IsSchedule {
+					winterDailySolarGain = seasonAwareDailySolarGain(space.SeasonalWinterSolarGain, dayIdx, true)
+				}
+				dailyLoadCache[spaceIdx][dayIdx][1] = clampToPositive(dailyLoadCache[spaceIdx][dayIdx][1]-winterDailySolarGain*space.WindowSHGC) / space.HeatingEER
 				if needHourlyCache {
-					numWorkHours := 24
-					solarGainPerHour := space.SeasonalWinterSolarGain * space.WindowSHGC / float64(numWorkHours)
-					for hourIdx := 0; hourIdx < 24; hourIdx++ {
-						hourlyLoadCache[spaceIdx][dayIdx][hourIdx][1] = clampToPositive(hourlyLoadCache[spaceIdx][dayIdx][hourIdx][1]-solarGainPerHour) / space.HeatingEER
+					if space.SeasonalWinterSolarGain.IsSchedule {
+						for hourIdx := 0; hourIdx < 24; hourIdx++ {
+							absHourIdx := dayIdx*24 + hourIdx
+							hourlySolarGain := seasonAwareHourlySolarGain(space.SeasonalWinterSolarGain, absHourIdx, true) * space.WindowSHGC
+							hourlyLoadCache[spaceIdx][dayIdx][hourIdx][1] = clampToPositive(hourlyLoadCache[spaceIdx][dayIdx][hourIdx][1]-hourlySolarGain) / space.HeatingEER
+						}
+					} else {
+						numWorkHours := 24
+						solarGainPerHour := winterDailySolarGain * space.WindowSHGC / float64(numWorkHours)
+						for hourIdx := 0; hourIdx < 24; hourIdx++ {
+							hourlyLoadCache[spaceIdx][dayIdx][hourIdx][1] = clampToPositive(hourlyLoadCache[spaceIdx][dayIdx][hourIdx][1]-solarGainPerHour) / space.HeatingEER
+						}
 					}
 				}
 			}
@@ -849,11 +909,12 @@ func (buildingModel MoosasEnergy) AnalysisPublic(exportDaily, exportHourly, expo
 	for spaceIdx := 0; spaceIdx < numSpaces; spaceIdx++ {
 		space := buildingModel.Spaces[spaceIdx]
 
-		// 将季节总辐射折算为日均辐射
-		space.SeasonalSummerSolarGain = space.SeasonalSummerSolarGain * summerRadiationCorrection /
-			float64(globalWeather.CoolingSeasonEnd-globalWeather.CoolingSeasonStart+1)
-		space.SeasonalWinterSolarGain = space.SeasonalWinterSolarGain * winterRadiationCorrection /
-			float64(365-globalWeather.HeatingSeasonStart+globalWeather.HeatingSeasonEnd+1)
+		// Fixed-value solar input keeps the legacy semantics:
+		// seasonal total (Wh) -> climate correction -> average daily gain.
+		coolingSeasonDays := globalWeather.CoolingSeasonEnd - globalWeather.CoolingSeasonStart + 1
+		heatingSeasonDays := 365 - globalWeather.HeatingSeasonStart + globalWeather.HeatingSeasonEnd + 1
+		adjustedSummerSolarGain := adjustedSeasonalSolarGain(space.SeasonalSummerSolarGain, summerRadiationCorrection, coolingSeasonDays)
+		adjustedWinterSolarGain := adjustedSeasonalSolarGain(space.SeasonalWinterSolarGain, winterRadiationCorrection, heatingSeasonDays)
 
 		// 计算窗墙比
 		glazingRatio := float64(0)
@@ -944,33 +1005,63 @@ func (buildingModel MoosasEnergy) AnalysisPublic(exportDaily, exportHourly, expo
 
 			// 日结束后：叠加辐射得热修正并除以能效比
 			if dayIdx >= globalWeather.CoolingSeasonStart && dayIdx <= globalWeather.CoolingSeasonEnd {
-				dailyLoadCache[spaceIdx][dayIdx][0] = clampToPositive(dailyLoadCache[spaceIdx][dayIdx][0]+space.SeasonalSummerSolarGain*space.WindowSHGC) / space.CoolingEER
+				summerDailySolarGain := adjustedSummerSolarGain
+				if space.SeasonalSummerSolarGain.IsSchedule {
+					summerDailySolarGain = seasonAwareDailySolarGain(space.SeasonalSummerSolarGain, dayIdx, true)
+				}
+				dailyLoadCache[spaceIdx][dayIdx][0] = clampToPositive(dailyLoadCache[spaceIdx][dayIdx][0]+summerDailySolarGain*space.WindowSHGC) / space.CoolingEER
 				if needHourlyCache {
-					numWorkHours := space.OccupancyEndHour - space.OccupancyStartHour
-					if numWorkHours <= 0 {
-						numWorkHours = 1
-					}
-					solarGainPerWorkHour := space.SeasonalSummerSolarGain * space.WindowSHGC / float64(numWorkHours)
-					for hourIdx := space.OccupancyStartHour - 1; hourIdx <= space.OccupancyEndHour-2; hourIdx++ {
-						if hourIdx < 0 {
-							hourIdx = 0
+					if space.SeasonalSummerSolarGain.IsSchedule {
+						for hourIdx := space.OccupancyStartHour - 1; hourIdx <= space.OccupancyEndHour-2; hourIdx++ {
+							if hourIdx < 0 {
+								hourIdx = 0
+							}
+							absHourIdx := dayIdx*24 + hourIdx
+							hourlySolarGain := seasonAwareHourlySolarGain(space.SeasonalSummerSolarGain, absHourIdx, true) * space.WindowSHGC
+							hourlyLoadCache[spaceIdx][dayIdx][hourIdx][0] = clampToPositive(hourlyLoadCache[spaceIdx][dayIdx][hourIdx][0]+hourlySolarGain) / space.CoolingEER
 						}
-						hourlyLoadCache[spaceIdx][dayIdx][hourIdx][0] = clampToPositive(hourlyLoadCache[spaceIdx][dayIdx][hourIdx][0]+solarGainPerWorkHour) / space.CoolingEER
+					} else {
+						numWorkHours := space.OccupancyEndHour - space.OccupancyStartHour
+						if numWorkHours <= 0 {
+							numWorkHours = 1
+						}
+						solarGainPerWorkHour := summerDailySolarGain * space.WindowSHGC / float64(numWorkHours)
+						for hourIdx := space.OccupancyStartHour - 1; hourIdx <= space.OccupancyEndHour-2; hourIdx++ {
+							if hourIdx < 0 {
+								hourIdx = 0
+							}
+							hourlyLoadCache[spaceIdx][dayIdx][hourIdx][0] = clampToPositive(hourlyLoadCache[spaceIdx][dayIdx][hourIdx][0]+solarGainPerWorkHour) / space.CoolingEER
+						}
 					}
 				}
 			} else if dayIdx >= globalWeather.HeatingSeasonStart || dayIdx <= globalWeather.HeatingSeasonEnd {
-				dailyLoadCache[spaceIdx][dayIdx][1] = clampToPositive(dailyLoadCache[spaceIdx][dayIdx][1]-space.SeasonalWinterSolarGain*space.WindowSHGC) / space.HeatingEER
+				winterDailySolarGain := adjustedWinterSolarGain
+				if space.SeasonalWinterSolarGain.IsSchedule {
+					winterDailySolarGain = seasonAwareDailySolarGain(space.SeasonalWinterSolarGain, dayIdx, true)
+				}
+				dailyLoadCache[spaceIdx][dayIdx][1] = clampToPositive(dailyLoadCache[spaceIdx][dayIdx][1]-winterDailySolarGain*space.WindowSHGC) / space.HeatingEER
 				if needHourlyCache {
-					numWorkHours := space.OccupancyEndHour - space.OccupancyStartHour
-					if numWorkHours <= 0 {
-						numWorkHours = 1
-					}
-					solarGainPerWorkHour := space.SeasonalWinterSolarGain * space.WindowSHGC / float64(numWorkHours)
-					for hourIdx := space.OccupancyStartHour - 1; hourIdx <= space.OccupancyEndHour-2; hourIdx++ {
-						if hourIdx < 0 {
-							hourIdx = 0
+					if space.SeasonalWinterSolarGain.IsSchedule {
+						for hourIdx := space.OccupancyStartHour - 1; hourIdx <= space.OccupancyEndHour-2; hourIdx++ {
+							if hourIdx < 0 {
+								hourIdx = 0
+							}
+							absHourIdx := dayIdx*24 + hourIdx
+							hourlySolarGain := seasonAwareHourlySolarGain(space.SeasonalWinterSolarGain, absHourIdx, true) * space.WindowSHGC
+							hourlyLoadCache[spaceIdx][dayIdx][hourIdx][1] = clampToPositive(hourlyLoadCache[spaceIdx][dayIdx][hourIdx][1]-hourlySolarGain) / space.HeatingEER
 						}
-						hourlyLoadCache[spaceIdx][dayIdx][hourIdx][1] = clampToPositive(hourlyLoadCache[spaceIdx][dayIdx][hourIdx][1]-solarGainPerWorkHour) / space.HeatingEER
+					} else {
+						numWorkHours := space.OccupancyEndHour - space.OccupancyStartHour
+						if numWorkHours <= 0 {
+							numWorkHours = 1
+						}
+						solarGainPerWorkHour := winterDailySolarGain * space.WindowSHGC / float64(numWorkHours)
+						for hourIdx := space.OccupancyStartHour - 1; hourIdx <= space.OccupancyEndHour-2; hourIdx++ {
+							if hourIdx < 0 {
+								hourIdx = 0
+							}
+							hourlyLoadCache[spaceIdx][dayIdx][hourIdx][1] = clampToPositive(hourlyLoadCache[spaceIdx][dayIdx][hourIdx][1]-solarGainPerWorkHour) / space.HeatingEER
+						}
 					}
 				}
 			}

@@ -216,7 +216,8 @@ def loadXml(filePath, geoPath):
                      in element['topology']['edge']['wall']]
             topology["Edge"] = MoosasEdge(walls)
         if topology["Edge"] is not None:
-            spc = MoosasSpace(_floor=topology["Floor"], _ceiling=topology["ceiling"], _edge=topology["Edge"])
+            Uid = str(element.get('id', None))
+            spc = MoosasSpace(_floor=topology["Floor"], _ceiling=topology["ceiling"], _edge=topology["Edge"], Uid=Uid)
 
             for key in element['setting']:
                 try:

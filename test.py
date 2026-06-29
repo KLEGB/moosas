@@ -2,7 +2,7 @@ import shapely, os
 import numpy as np
 import sys, re, time
 from datetime import datetime
-from MoosasPy import transform,saveModel,loadModel
+from MoosasPy import transform,saveModel,loadModel,includeEpw
 
 
 
@@ -10,18 +10,20 @@ from MoosasPy import transform,saveModel,loadModel
 # owl.serialize('zoneTemplatebase.rdf')
 # sg = IO._idf.extractZoneTemplate(owl)
 # sg.serialize('zoneTemplate.rdf')
-
+# includeEpw(r"//166.111.40.8/home/2026_MoosasAFN/N-building/climate_data/epw543990.epw",city="Beijing-Haidian")
 # stdout = sys.stdout
-# model = transform(r'E:\PycharmProjects\MoosasAFN\selection0.geo',
+# model = transform(r'\\166.111.40.8\home\2026_MoosasAFN\NBuilding-2018.geo',
 #                   triangulate_faces=False,
 #                   solve_duplicated=True,solve_overlap=True, divided_zones=False,break_wall_vertical=True, break_wall_horizontal=True, solve_redundant=True,
 #                   attach_shading=False, standardize=True)
-# saveModel(model,r'.\temp.rdf')
-from MoosasPy.weather import includeEpw
-print(11111111111111111111)
-sid = includeEpw(r'C:\Users\Lenovo\Downloads\CHN_AH_Hefei.583210_TMYx.epw')
-print(sid)
-# model=loadModel('temp.rdf')
+model = loadModel(r'test\NBuilding.rdf')
+# for spc in model.spaceList:
+#     spc.applySettings("climatezone2_GB55015-2021_OFFICE")
+
+saveModel(model,r'test\NBuilding.rdf')
+saveModel(model,r'test\NBuilding_out.geo')
+saveModel(model,r'test\NBuilding.xml')
+
 # # for spc in model.spaceList:
 # #     print(spc.settings)
 # from MoosasPy.energy import energyAnalysis

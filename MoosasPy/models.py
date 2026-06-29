@@ -97,9 +97,9 @@ class MoosasModel(MoosasContainer):
             - "zone_work_end": Working schedule end time
             - "zone_ppsm": Population per square meter
             - "zone_pfav": Ventilation rate per person (ACH)
-            - "zone_popheat": Heat generation per person (W)
-            - "zone_equipment": Equipment heat generation (W)
-            - "zone_lighting": Lighting heat generation (W)
+            - "zone_popheat": Heat generation per person (W/pp)
+            - "zone_equipment": Equipment heat generation (W/m2)
+            - "zone_lighting": Lighting heat generation (W/m2)
             - "zone_infiltration": Infiltration air change coefficient (ACH)
             - "zone_nightACH": Nighttime air change coefficient (ACH)
         """
@@ -119,9 +119,9 @@ class MoosasModel(MoosasContainer):
                         "zone_work_end"=>         working schedule end time
                         "zone_ppsm"=>             population per m2
                         "zone_pfav"=>             ventilation (ACH) per person
-                        "zone_popheat"=>          heat generation (W) per person
-                        "zone_equipment"=>        equipment heat generation (W)
-                        "zone_lighting"=>         lighting heat generation (W)
+                        "zone_popheat"=>          heat generation (W/pp) per person
+                        "zone_equipment"=>        equipment heat generation (W/m2)
+                        "zone_lighting"=>         lighting heat generation (W/m2)
                         "zone_infiltration"=>     infiltration air change coefficient (ACH)
                         "zone_nightACH"=>         air change coefficient in nighttime (ACH)
                     }

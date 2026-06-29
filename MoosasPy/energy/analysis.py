@@ -12,6 +12,7 @@ MoosasEnergy Go executable, which supports both residential and
 public building types via the -t parameter.
 """
 from ..utils.support import os
+import subprocess
 from datetime import datetime
 from ..utils import path, callCmd, parseFile, FileError
 from ..utils.constant import buildingType, dateSetting
@@ -178,7 +179,7 @@ def energyAnalysis(model: MoosasModel = None,
         )
     elif isinstance(energyInput, dict) and energyInput.get("schedulePath"):
         if "-sch" not in energyInput.get("args", []):
-            energyInput["args"] += ['-sch', f'"{os.path.abspath(energyInput["schedulePath"])}"']
+            energyInput["args"] += ['-sch', os.path.abspath(energyInput["schedulePath"])]
 
     inputPath = os.path.abspath(inputPath)
     resultPath = os.path.abspath(resultPath)
@@ -190,15 +191,20 @@ def energyAnalysis(model: MoosasModel = None,
         file.write('\n'.join(lines))
 
     # Append output path and input path to the command-line arguments
-    energyInput['args'] += ['-o', f'"{resultPath}"'] + [f'"{inputPath}"']
+    energyInput['args'] += ['-o', resultPath, inputPath]
 
     # Use the unified MoosasEnergy executable
-    exe_command = os.path.abspath(
-        os.path.join(energyScriptDir, f"MoosasEnergy{energyExeSuffix}")
+    exe_command = [
+        os.path.abspath(os.path.join(energyScriptDir, f"MoosasEnergy{energyExeSuffix}"))
+    ] + list(energyInput['args'])
+    subprocess.run(
+        exe_command,
+        cwd=os.path.abspath(energyScriptDir),
+        check=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
     )
-    exe_command = f'"{exe_command}"'
-    exe_command = [exe_command] + energyInput['args']
-    callCmd(exe_command, cwd=os.path.abspath(energyScriptDir))
 
     weather_temperature = None
     if model is not None:
@@ -329,19 +335,8 @@ def parseEnergyOutput(resultPath,
 
         # ── Section 4 (optional): HOUR RESULT (8760 rows) ─
         if exportHourly:
-            # temporary interpolation path: generate hourly loads from daily rows.
-            if "days" not in e_data:
-                raise ValueError("exportHourly=True requires exportDaily=True for temporary interpolation.")
-            if weather_temperature is None:
-                raise ValueError("weather_temperature is required for temporary hourly interpolation.")
-            zone_h = zoneList[0].params.get("zone_h_temp", 18) if zoneList else 18
-            zone_c = zoneList[0].params.get("zone_c_temp", 26) if zoneList else 26
-            e_data["hours"] = _interpolate_daily_to_hourly(
-                e_data["days"], weather_temperature, zone_h, zone_c
-            )
-            # old direct parser path retained intentionally:
-            # e_data["hours"] = _parse_energy_rows(output[section_idx])
-            # section_idx += 1
+            e_data["hours"] = _parse_energy_rows(output[section_idx])
+            section_idx += 1
 
         # ── Section 5 (optional): ZONE MONTH RESULT ──────
         if exportByZone:
@@ -360,23 +355,10 @@ def parseEnergyOutput(resultPath,
 
             # ── Section 7 (optional): ZONE HOUR RESULT ───
             if exportHourly:
-                # temporary interpolation path from zone daily rows.
-                if weather_temperature is None:
-                    raise ValueError("weather_temperature is required for temporary zone hourly interpolation.")
-                zone_days = e_data.get("zone_days", [])
-                e_data["zone_hours"] = []
-                for zi in range(num_zones):
-                    z_daily = zone_days[zi] if zi < len(zone_days) else [{"cooling": 0, "heating": 0, "lighting": 0}] * 365
-                    z_h = zoneList[zi].params.get("zone_h_temp", 18) if zoneList and zi < len(zoneList) else 18
-                    z_c = zoneList[zi].params.get("zone_c_temp", 26) if zoneList and zi < len(zoneList) else 26
-                    e_data["zone_hours"].append(
-                        _interpolate_daily_to_hourly(z_daily, weather_temperature, z_h, z_c)
-                    )
-                # old direct parser path retained intentionally:
-                # e_data["zone_hours"] = _parse_zone_energy_rows(
-                #     output[section_idx], num_zones, 8760
-                # )
-                # section_idx += 1
+                e_data["zone_hours"] = _parse_zone_energy_rows(
+                    output[section_idx], num_zones, 8760
+                )
+                section_idx += 1
 
         return e_data
 
@@ -606,7 +588,7 @@ def getEnergyInput(model: MoosasModel,
     building_type_int = 0 if core == buildingType.RESIDENTIAL else 1
 
     args = [
-        '-w', f'"{weather.weatherFile}"',
+        '-w', weather.weatherFile,
         '-t', str(building_type_int),
         '-l', str(round(float(weather.location.latitude), 2)),
         '-a', str(round(float(weather.location.altitude), 2)),
@@ -626,6 +608,6 @@ def getEnergyInput(model: MoosasModel,
     schedule_out_path = None
     if getattr(model, "schedule", None):
         schedule_out_path = model.writeSchedule()
-        args += ['-sch', f'"{schedule_out_path}"']
+        args += ['-sch', schedule_out_path]
 
     return {'zones': zones, 'args': args, 'schedulePath': schedule_out_path}
