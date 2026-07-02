@@ -14,6 +14,7 @@ public building types via the -t parameter.
 from ..utils.support import os
 import subprocess
 from datetime import datetime
+import re
 from ..utils import path, callCmd, parseFile, FileError
 from ..utils.constant import buildingType, dateSetting
 from ..rad import modelRadiation
@@ -25,6 +26,11 @@ from ..models import *
 # A quick radiation estimation based on measured data (Beijing cumSky)
 SUMMER_RADIATION = [280100, 175200, 213200, 116300, 280100]
 WINTER_RADIATION = [150800, 355200, 123600, 51500, 150800]
+
+# Legacy season boundaries copied from the historic MoosasModel defaults.
+SUMMER_SOLAR_SEASON_DAYS = 123
+WINTER_SOLAR_SEASON_DAYS = 120
+SOLAR_ACTIVE_HOURS = tuple(range(8, 18))
 
 # Directory paths for the energy module
 energyScriptDir = os.path.join(path.libDir, "energy")
@@ -96,6 +102,86 @@ def _resolve_schedule_ref(model: MoosasModel, template_type: str, field_name: st
     return current_value
 
 
+def _normalize_radiation_mode(require_radiation) -> int:
+    if isinstance(require_radiation, bool):
+        return 1 if require_radiation else 0
+    if require_radiation is None:
+        return 0
+    if isinstance(require_radiation, str):
+        text = require_radiation.strip().lower()
+        if text in {"true", "yes", "on"}:
+            return 1
+        if text in {"false", "no", "off", ""}:
+            return 0
+        try:
+            require_radiation = int(text)
+        except Exception as exc:
+            raise ValueError(f"Invalid requireRadiation value: {require_radiation!r}") from exc
+    try:
+        mode = int(require_radiation)
+    except Exception as exc:
+        raise ValueError(f"Invalid requireRadiation value: {require_radiation!r}") from exc
+    if mode not in (0, 1, 2):
+        raise ValueError(f"requireRadiation must be 0, 1, or 2; got {require_radiation!r}")
+    return mode
+
+
+def _num_or_zero(value):
+    if value is None:
+        return 0.0
+    text = str(value).strip()
+    if not text or text.lower() == "none":
+        return 0.0
+    try:
+        return float(text)
+    except Exception:
+        return 0.0
+
+
+def _solar_season_day_count(season: str) -> int:
+    season = str(season).strip().lower()
+    if season == "summer":
+        return SUMMER_SOLAR_SEASON_DAYS
+    if season == "winter":
+        return WINTER_SOLAR_SEASON_DAYS
+    raise ValueError(f"Unsupported solar season: {season!r}")
+
+
+def _solar_typical_daily_profile(season_total: float, season: str) -> list[float]:
+    season_total = float(season_total)
+    season_days = _solar_season_day_count(season)
+    daily_total = season_total / season_days if season_days > 0 else 0.0
+    values = [0.0] * 24
+    if daily_total == 0.0:
+        return values
+    weights = np.sin(np.linspace(0.0, np.pi, len(SOLAR_ACTIVE_HOURS)))
+    weight_sum = float(np.sum(weights))
+    if weight_sum <= 0:
+        return values
+    scaled = daily_total * weights / weight_sum
+    for hour, value in zip(SOLAR_ACTIVE_HOURS, scaled.tolist()):
+        values[hour] = float(value)
+    active_sum = sum(values[hour] for hour in SOLAR_ACTIVE_HOURS)
+    values[SOLAR_ACTIVE_HOURS[-1]] += daily_total - active_sum
+    return values
+
+
+def _solar_schedule_name(space_id, space_index: int, season: str, suffix: str) -> str:
+    safe_space_id = re.sub(r"[^0-9A-Za-z_]+", "_", str(space_id))
+    safe_season = str(season).strip().upper()
+    safe_suffix = str(suffix).strip().upper()
+    return f"RAD_{safe_space_id}_{space_index:03d}_{safe_season}_{safe_suffix}"
+
+
+def _write_typical_solar_schedule(model: MoosasModel, space, space_index: int, season: str, season_total: float):
+    daily_name = _solar_schedule_name(space.id, space_index, season, "DAILY")
+    weekly_name = _solar_schedule_name(space.id, space_index, season, "WEEKLY")
+    daily_values = _solar_typical_daily_profile(season_total, season)
+    model.schedule[daily_name] = {"type": "Daily", "value": daily_values}
+    model.schedule[weekly_name] = {"type": "Weekly", "value": [daily_name] * 7}
+    return weekly_name
+
+
 def energyAnalysis(model: MoosasModel = None,
                    core=buildingType.RESIDENTIAL,
                    requireRadiation=False,
@@ -117,9 +203,9 @@ def energyAnalysis(model: MoosasModel = None,
         core: Building type selector. Use buildingType.RESIDENTIAL for
             residential buildings (type=0), or any other buildingType value
             for public buildings (type=1~6). (default: buildingType.RESIDENTIAL)
-        requireRadiation (bool): True to perform accurate radiation calculation
-            using MoosasRad. If False, solar heat is estimated based on
-            Beijing's cumSky. (default: False)
+        requireRadiation (bool | int): 0/False keeps the fast geometric
+            estimate, 1/True uses MoosasRad-derived seasonal radiation totals,
+            and 2 writes schedule-driven solar gains for both seasons. (default: False)
         exportDaily (bool): If True, include daily (365-row) results in output.
             (default: False)
         exportHourly (bool): If True, include hourly (8760-row) results in
@@ -431,8 +517,9 @@ def getEnergyInput(model: MoosasModel,
         core: Building type selector. Use buildingType.RESIDENTIAL for
             residential buildings, or any other buildingType value for public
             buildings. (default: buildingType.RESIDENTIAL)
-        requireRadiation (bool): If True, enables accurate radiation
-            calculation using MoosasRad. (default: False)
+        requireRadiation (bool | int): 0/False keeps the fast geometric
+            estimate, 1/True uses MoosasRad-derived seasonal radiation totals,
+            and 2 writes schedule-driven solar gains for both seasons. (default: False)
         exportDaily (bool): If True, adds '-d 1' to command-line args.
             (default: False)
         exportHourly (bool): If True, adds '-r 1' to command-line args.
@@ -486,10 +573,14 @@ def getEnergyInput(model: MoosasModel,
     if schedulePath is not None:
         model.loadSchedule(schedulePath)
 
+    radiation_mode = _normalize_radiation_mode(requireRadiation)
+
     # Perform radiation calculation if requested
-    if requireRadiation:
+    if radiation_mode in (1, 2):
         t2 = datetime.now()
-        if model.spaceList[0].settings['zone_summerrad'] is None:
+        if not hasattr(model, "cumSky") or getattr(model, "cumSky", None) is None:
+            model.loadCumSky()
+        if any(s.settings.get('zone_summerrad') is None or s.settings.get('zone_winterrad') is None for s in model.spaceList):
             modelRadiation(model, reflection=0)
         t3 = datetime.now()
         print(f"Radiation calculation time: {t3 - t2}")
@@ -532,22 +623,24 @@ def getEnergyInput(model: MoosasModel,
                        - WINTER_RADIATION[o // 90])
                 ) * b.area * b.wwr
 
-        if requireRadiation:
-            # Schedule/template sources may provide radiation values as strings
-            # (including "None"). Fall back to 0.0 for invalid values.
-            def _num_or_zero(value):
-                if value is None:
-                    return 0.0
-                text = str(value).strip()
-                if not text or text.lower() == "none":
-                    return 0.0
-                try:
-                    return float(text)
-                except Exception:
-                    return 0.0
-
+        if radiation_mode == 1:
             summer_solar = _num_or_zero(s.settings.get('zone_summerrad')) * 60
             winter_solar = _num_or_zero(s.settings.get('zone_winterrad')) * 60
+        elif radiation_mode == 2:
+            summer_total = _num_or_zero(s.settings.get('zone_summerrad'))
+            winter_total = _num_or_zero(s.settings.get('zone_winterrad'))
+            if summer_total == 0.0 and winter_total == 0.0:
+                modelRadiation(model, reflection=0)
+                summer_total = _num_or_zero(s.settings.get('zone_summerrad'))
+                winter_total = _num_or_zero(s.settings.get('zone_winterrad'))
+            summer_schedule = _write_typical_solar_schedule(model, s, i, "summer", summer_total * 60)
+            winter_schedule = _write_typical_solar_schedule(model, s, i, "winter", winter_total * 60)
+            s.settings['summer_solar'] = summer_schedule
+            s.settings['winter_solar'] = winter_schedule
+            theZone.updateParams(**{
+                'summer_solar': summer_schedule,
+                'winter_solar': winter_schedule,
+            })
 
         for c in s.ceiling.face:
             if c.isOuter:
@@ -569,9 +662,14 @@ def getEnergyInput(model: MoosasModel,
             'roof_area': round(roof_area, 2),
             'skylight_area': round(skylight_area, 2),
             'floor_area': round(floor_area, 2),
-            'summer_solar': round(summer_solar, 2),
-            'winter_solar': round(winter_solar, 2),
         }
+
+        if radiation_mode == 2:
+            addSettings['summer_solar'] = s.settings['summer_solar']
+            addSettings['winter_solar'] = s.settings['winter_solar']
+        else:
+            addSettings['summer_solar'] = round(summer_solar, 2)
+            addSettings['winter_solar'] = round(winter_solar, 2)
 
         theZone.updateParams(**addSettings)
         zones.append(theZone)

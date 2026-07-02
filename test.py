@@ -10,19 +10,19 @@ from MoosasPy import transform,saveModel,loadModel,includeEpw
 # owl.serialize('zoneTemplatebase.rdf')
 # sg = IO._idf.extractZoneTemplate(owl)
 # sg.serialize('zoneTemplate.rdf')
-# includeEpw(r"//166.111.40.8/home/2026_MoosasAFN/N-building/climate_data/epw543990.epw",city="Beijing-Haidian")
+includeEpw(r"C:\EnergyPlusV22-2-0\WeatherData\CHN_Guangdong.Guangzhou.592870_CSWD.epw",city="Guangzhou")
 # stdout = sys.stdout
 # model = transform(r'\\166.111.40.8\home\2026_MoosasAFN\NBuilding-2018.geo',
 #                   triangulate_faces=False,
 #                   solve_duplicated=True,solve_overlap=True, divided_zones=False,break_wall_vertical=True, break_wall_horizontal=True, solve_redundant=True,
 #                   attach_shading=False, standardize=True)
-model = loadModel(r'test\NBuilding.rdf')
+# model = loadModel(r'test\NBuilding.rdf')
 # for spc in model.spaceList:
 #     spc.applySettings("climatezone2_GB55015-2021_OFFICE")
 
-saveModel(model,r'test\NBuilding.rdf')
-saveModel(model,r'test\NBuilding_out.geo')
-saveModel(model,r'test\NBuilding.xml')
+# saveModel(model,r'test\NBuilding.rdf')
+# saveModel(model,r'test\NBuilding_out.geo')
+# saveModel(model,r'test\NBuilding.xml')
 
 # # for spc in model.spaceList:
 # #     print(spc.settings)

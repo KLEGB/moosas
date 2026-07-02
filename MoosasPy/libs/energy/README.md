@@ -13,7 +13,7 @@ The current implementation is defined by:
 `MoosasEnergy` is a command-line engine that:
 
 1. reads one building input file (`.i`);
-2. optionally reads one schedule file (`.csv`);
+2. optionally reads one schedule file (`.sch` / CSV-like text);
 3. reads one weather file (`.csv`, DeST-style);
 4. writes one result file (`.o`).
 
@@ -119,8 +119,8 @@ The field order below matches the actual order written by `MoosasPy.energy.analy
 | `5` | `RoofArea` | Exterior roof area | m2 |
 | `6` | `SkylightArea` | Skylight area | m2 |
 | `7` | `GroundFloorArea` | Ground-contact floor area | m2 |
-| `8` | `SummerSolarGain` | Seasonal summer solar gain | Wh |
-| `9` | `WinterSolarGain` | Seasonal winter solar gain | Wh |
+| `8` | `SummerSolarGain` | Summer solar input | seasonal total in Wh, or schedule name |
+| `9` | `WinterSolarGain` | Winter solar input | seasonal total in Wh, or schedule name |
 | `10` | `WallUValue` | U-value for wall, roof, and ground floor conduction in this model | W/(m2*K) |
 | `11` | `WindowUValue` | U-value for windows and skylights | W/(m2*K) |
 | `12` | `WindowSHGC` | Solar heat gain coefficient of windows/skylights | 0 to 1 in normal use |
@@ -149,13 +149,15 @@ The field order below matches the actual order written by `MoosasPy.energy.analy
 
 ### Fields That Accept a Schedule Name
 
-These 8 fields may be either:
+These 10 fields may be either:
 
 - a numeric literal, or
 - a schedule name resolved through `-sch`
 
 | Field index | Field name |
 | --- | --- |
+| `8` | `SummerSolarGain` |
+| `9` | `WinterSolarGain` |
 | `13` | `CoolingSetpointTemp` |
 | `14` | `CoolingSetpointHumidity` |
 | `15` | `HeatingSetpointTemp` |
@@ -166,6 +168,32 @@ These 8 fields may be either:
 | `24` | `LightingHeatGain` |
 
 If one of these fields is not numeric and no schedule file is loaded, the program exits with an error.
+
+### Solar Input Semantics
+
+Fields `8` and `9` support two different input modes:
+
+- numeric input: keep the legacy behavior
+- schedule input: use explicit hourly solar gains from `-sch`
+
+#### Numeric solar input
+
+- `SummerSolarGain` and `WinterSolarGain` are interpreted as seasonal totals in `Wh`.
+- The engine keeps the original residential/public seasonal averaging logic.
+- This is backward-compatible with old `.i` files.
+
+#### Schedule solar input
+
+- `SummerSolarGain` and `WinterSolarGain` are interpreted as schedule names.
+- The referenced schedule values must be absolute hourly solar gains in `Wh`.
+- These values are not normalized weights.
+- When a solar schedule is used, it replaces the old equal-split seasonal fallback for that season.
+- `WindowSHGC` is still applied inside the engine at the normal solar-gain injection step.
+
+Practical meaning:
+
+- if field `8` is a schedule name, each expanded hourly value is the summer-season solar gain for that hour in `Wh`
+- if field `9` is a schedule name, each expanded hourly value is the winter-season solar gain for that hour in `Wh`
 
 ## Schedule File Format (`-sch`)
 
@@ -205,6 +233,51 @@ ScheduleName,Weekly,MondayDaily,TuesdayDaily,WednesdayDaily,ThursdayDaily,Friday
 - The engine expands schedules to a full 8760-hour array internally.
 - In the weekly expansion logic, day `0` of the year is treated as Monday.
 - Schedule values are not limited to `0..1`; any valid float is accepted.
+
+### Solar Schedule Rules
+
+For `SummerSolarGain` and `WinterSolarGain`, the schedule values mean:
+
+- unit: `Wh`
+- meaning: absolute solar gain for that hour
+- not allowed interpretation: normalized profile multiplier
+
+Recommended patterns:
+
+- `Daily + Weekly` if you want one typical day repeated by weekday
+- `Hourly` if you want a full 8760-hour solar sequence
+
+Example solar schedules:
+
+```csv
+RAD_SpaceA_SUMMER_DAILY,Daily,0,0,0,0,0,0,0,0,120,260,380,470,520,470,380,260,120,40,0,0,0,0,0,0
+RAD_SpaceA_SUMMER_WEEKLY,Weekly,RAD_SpaceA_SUMMER_DAILY,RAD_SpaceA_SUMMER_DAILY,RAD_SpaceA_SUMMER_DAILY,RAD_SpaceA_SUMMER_DAILY,RAD_SpaceA_SUMMER_DAILY,RAD_SpaceA_SUMMER_DAILY,RAD_SpaceA_SUMMER_DAILY
+RAD_SpaceA_WINTER_DAILY,Daily,0,0,0,0,0,0,0,0,80,150,220,280,310,280,220,150,80,20,0,0,0,0,0,0
+RAD_SpaceA_WINTER_WEEKLY,Weekly,RAD_SpaceA_WINTER_DAILY,RAD_SpaceA_WINTER_DAILY,RAD_SpaceA_WINTER_DAILY,RAD_SpaceA_WINTER_DAILY,RAD_SpaceA_WINTER_DAILY,RAD_SpaceA_WINTER_DAILY,RAD_SpaceA_WINTER_DAILY
+```
+
+Matching `.i` row fragment:
+
+```csv
+...,RAD_SpaceA_SUMMER_WEEKLY,RAD_SpaceA_WINTER_WEEKLY,...
+```
+
+### MoosasPy Generation Note
+
+When calling through `MoosasPy.energy.analysis.energyAnalysis()`:
+
+- `requireRadiation=False` or `0`: keep the fast geometric estimate
+- `requireRadiation=True` or `1`: write numeric seasonal solar totals into fields `8` and `9`
+- `requireRadiation=2`: generate summer/winter solar schedules in `model.schedule`, write them to `-sch`, and place the generated weekly schedule names into fields `8` and `9`
+
+In mode `2`, `MoosasPy` currently builds a simplified typical-day profile:
+
+- first divide the seasonal total by the built-in season day count
+- then distribute the daily total across hours `8` to `17`
+- the daytime distribution follows a sine curve from `0` to `pi`
+- all other hours are `0`
+
+This is an approximation used to provide schedule-driven solar input without requiring a full maintained hourly radiation model.
 
 ## Output File Format (`.o`)
 

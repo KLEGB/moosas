@@ -43,6 +43,8 @@ def _first_or_none(val):
 
 def _schedule_value_unit(schedule_name: str) -> str:
     lower = str(schedule_name).lower()
+    if "rad" in lower or "solar" in lower:
+        return "Wh"
     if "occdens" in lower or "occupantdensity" in lower:
         return "person/m2"
     if "occheat" in lower or "occupantheat" in lower:
