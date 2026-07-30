@@ -180,13 +180,18 @@ def createWindowSurface(idf: IDF, element: MoosasElement, parentElement: MoosasE
         return []
 
     # split the face into 4 coordinates
-    for idx, triFace in enumerate(triangulate2dFace(face)):
+    triFaces, _ = triangulate2dFace(face)
+    for idx, triFace in enumerate(triFaces):
 
         # offset the window considering the splitter
         triFace = offset(triFace, -0.1)
+        if triFace is None or shapely.is_empty(triFace):
+            continue
 
         # project the face to its parent
         triFace = projectTo(triFace, parentElement.representation())
+        if triFace is None or shapely.is_empty(triFace):
+            continue
 
         kwargs = {'Name': parentElement.space[0] + '-' + parentElement.Uid + '-' + element.Uid + '-' + str(idx),
                   "Building_Surface_Name": parentElement.space[0] + '-' + parentElement.Uid,

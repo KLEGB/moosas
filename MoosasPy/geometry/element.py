@@ -405,7 +405,7 @@ class MoosasElement(object):
 
     """
     __slots__ = ['__geometries', 'level', 'offset', 'Uid','U_Value', '__glazingElement', 'parent', 'neighbor', 'isOuter', 'space',
-                 'shading','description']
+                 'shading','description', 'idfObjectUris']
 
     def __init__(self, model: MoosasContainer,
                  faceId: str | list[str] | np.ndarray[str] | MoosasGeometry | list[MoosasGeometry] | np.ndarray[
@@ -454,6 +454,7 @@ class MoosasElement(object):
         self.isOuter: bool = True
         self.neighbor = {}
         self.description = ""
+        self.idfObjectUris = []
 
         # get the geometry(s)
         faceId = mixItemListToList(faceId)
@@ -2613,7 +2614,8 @@ class MoosasSpace(object):
     it can be a void if floor or ceiling is None or area of floor/ceiling < area of edge
 
     """
-    __slots__ = ['floor', 'edge', 'ceiling', '__void', '__id','__uniqueId', '__neighbor', 'internalMass', 'settings','description']
+    __slots__ = ['floor', 'edge', 'ceiling', '__void', '__id','__uniqueId', '__neighbor', 'internalMass', 'settings',
+                 'description', 'idfObjectUris']
 
     def __init__(self, _floor: MoosasFloor | None, _edge: MoosasEdge, _ceiling: MoosasFloor | None,
                  void: list[MoosasSpace] = None, Uid: str = None):
@@ -2639,6 +2641,7 @@ class MoosasSpace(object):
         self.edge: MoosasEdge = _edge
         self.ceiling: MoosasFloor | None = _ceiling
         self.description = ""
+        self.idfObjectUris = []
 
         self.__neighbor = {}
         self.internalMass: list[MoosasElement] = _edge.internalMass

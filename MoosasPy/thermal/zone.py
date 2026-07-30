@@ -11,6 +11,7 @@ from ..utils import path
 
 class ZoneTemplate():
     __slots__ = ("idf", "zoneObject", "objectList", "constructionList", "scheduleList")
+    FALLBACK_ZONE_HEIGHT = 3.5
 
     def __init__(self, idf, zoneObject, objectList, constructionList, scheduleList):
         self.idf = idf
@@ -45,6 +46,58 @@ class ZoneTemplate():
         if not isinstance(self.zoneObject, MoosasSettings):
             return True
         return ('Floor_Area' not in self.zoneObject.params) and ('Volume' not in self.zoneObject.params)
+
+    @staticmethod
+    def _as_positive_float(value):
+        try:
+            numeric = float(value)
+        except (TypeError, ValueError):
+            return None
+        return numeric if numeric > 0 else None
+
+    def _infer_zone_geometry(self):
+        zone_name = str(self.zoneObject.params.get("Name", "")).strip()
+        if zone_name == "":
+            return None, None, None
+
+        area = None
+        volume = self._as_positive_float(self.zoneObject.params.get("Volume"))
+        height = self._as_positive_float(self.zoneObject.params.get("Ceiling_Height"))
+
+        z_values = []
+        for surface in self.idf.idfobjects['BuildingSurface:Detailed']:
+            try:
+                if str(surface['Zone_Name']).strip() != zone_name:
+                    continue
+            except Exception:
+                continue
+
+            for idx in range(1, 256):
+                x_field = f'Vertex_{idx}_Xcoordinate'
+                z_field = f'Vertex_{idx}_Zcoordinate'
+                if x_field not in surface.objls or z_field not in surface.objls:
+                    break
+                z_val = surface[z_field]
+                if z_val == '':
+                    break
+                try:
+                    z_values.append(float(z_val))
+                except (TypeError, ValueError):
+                    continue
+
+        if height is None and len(z_values) >= 2:
+            inferred_height = max(z_values) - min(z_values)
+            if inferred_height > 0:
+                height = inferred_height
+
+        if area is not None and volume is not None and height is None:
+            height = volume / area
+        elif area is not None and height is not None and volume is None:
+            volume = area * height
+        elif volume is not None and height is not None and area is None:
+            area = volume / height
+
+        return area, volume, height
 
     @classmethod
     def fromIDF(cls, idf: IDF, zoneName: str = ""):
@@ -372,13 +425,9 @@ class ZoneTemplate():
                 self.objectList[objHint].updateParams(**{field: schName})
 
         # get zone property
-        zoneTemplateArea, zoneTemplateVolume, zoneTemplateHeight = None, None, None
-        if "Floor_Area" in self.zoneObject.params:
-            zoneTemplateArea = self.zoneObject.params["Floor_Area"]
-        if "Volume" in self.zoneObject.params:
-            zoneTemplateVolume = self.zoneObject.params["Volume"]
-        if "Ceiling_Height" in self.zoneObject.params:
-            zoneTemplateHeight = self.zoneObject.params["Ceiling_Height"]
+        zoneTemplateArea = self._as_positive_float(self.zoneObject.params.get("Floor_Area"))
+        zoneTemplateVolume = self._as_positive_float(self.zoneObject.params.get("Volume"))
+        zoneTemplateHeight = self._as_positive_float(self.zoneObject.params.get("Ceiling_Height"))
         if zoneTemplateArea and zoneTemplateVolume:
             zoneTemplateHeight = zoneTemplateVolume / zoneTemplateArea
         elif zoneTemplateArea and zoneTemplateHeight:
@@ -386,7 +435,16 @@ class ZoneTemplate():
         elif zoneTemplateVolume and zoneTemplateHeight:
             zoneTemplateArea = zoneTemplateVolume / zoneTemplateHeight
         else:
-            raise ValueError("idf does not contain valid zone-specific settings: height/area/volume")
+            zoneTemplateArea, zoneTemplateVolume, zoneTemplateHeight = self._infer_zone_geometry()
+            if zoneTemplateVolume and not zoneTemplateArea:
+                zoneTemplateHeight = self.FALLBACK_ZONE_HEIGHT
+                zoneTemplateArea = zoneTemplateVolume / zoneTemplateHeight
+                print(
+                    f"******Warning: fallback zone geometry activated for '{zone.id}'; "
+                    f"using height={zoneTemplateHeight}m to infer floor area from template volume"
+                )
+            if not (zoneTemplateArea and zoneTemplateVolume and zoneTemplateHeight):
+                raise ValueError("idf does not contain valid zone-specific settings: height/area/volume")
 
         zoneOutGlazingArea = (sum([gls.area for wall in zone.edge.wall if wall.isOuter for gls in
                                    wall.glazingElement]) + sum(

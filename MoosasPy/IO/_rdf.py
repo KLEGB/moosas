@@ -791,8 +791,10 @@ class MoosasGraph(Graph):
 
         # storage space settings
         for key in space.settings:
-            self.add((URIRef(f"Space_{space.id}"), self.moosas.hasSetting, Literal(key)))
             value = space.settings[key]
+            if hasattr(value, "applyToIDF"):
+                continue
+            self.add((URIRef(f"Space_{space.id}"), self.moosas.hasSetting, Literal(key)))
 
             if _is_numeric_text(value):
                 self.add((URIRef(f"Space_{space.id}"), Literal(key), Literal(value)))
@@ -1213,6 +1215,11 @@ def writeRDF(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseless
         The generated MoosasGraph object that was serialized to the file.
     """
     g = MoosasGraph(model, dumpUseless, ExportIFC)
+    idf_graph = getattr(model, "idfGraph", None)
+    if idf_graph is not None and len(idf_graph) > 0:
+        from .alignment import merge_moosas_and_idf_graphs
+
+        g = merge_moosas_and_idf_graphs(g, idf_graph)
     g.serialize(out_path, format=fileFormat)
     return g
 
@@ -1234,6 +1241,9 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
         A constructed MoosasModel instance populated with data from the RDF file.
     """
     rdfGraph: MoosasGraph = MoosasGraph.load(input_path, fileFormat=fileFormat)
+    from .alignment import extract_idf_graph, attach_idf_graph
+
+    idf_graph = extract_idf_graph(rdfGraph)
     model = MoosasModel()
     _import_schedule_nodes(rdfGraph, model)
 
@@ -1390,4 +1400,7 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
         print(f'\rLOADING: space {i + 1}/{len(spList)}', end='')
     print()
 
+    attach_idf_graph(model, idf_graph)
+    if idf_graph is not None:
+        model.idfGraphSource = input_path
     return model

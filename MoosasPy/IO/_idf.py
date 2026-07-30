@@ -159,7 +159,7 @@ def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zon
     return zTemplate
 
 
-def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, iddFile=None, zoneNameToSpaceDict=None):
+def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None, iddFile=None, zoneNameToSpaceDict=None):
     """
     Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
 
@@ -366,6 +366,44 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, iddFile=
 
     idf.save(outputPath)
     print()
+
+
+def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, iddFile=None, zoneNameToSpaceDict=None):
+    """Write IDF using the parallel IDF RDF graph when available.
+
+    First-time writes keep the existing stable IDF generation path, then read the
+    generated IDF back into ``model.idfGraph`` for future field-level edits.
+    """
+    from .alignment import IDFtoOWL, OWLtoIDF, default_idd_path, default_template_idf_path, idf, link_idf_graph_to_moosas
+
+    resolved_idd = default_idd_path(iddFile)
+    resolved_template = default_template_idf_path(idfTemplatePath)
+    idf_graph = getattr(model, "idfGraph", None)
+
+    has_idf_objects = False
+    if idf_graph is not None:
+        has_idf_objects = (
+            len(list(idf_graph.subjects(RDF.type, idf.idfObject))) > 0
+            or len(list(idf_graph.subjects(RDF.type, idf.idfUniqueObject))) > 0
+            or len(list(idf_graph.subjects(RDF.type, encodeURI("OUTPUT:VARIABLE")))) > 0
+        )
+
+    if has_idf_objects:
+        OWLtoIDF(idf_graph, outputPath, template_idf_path=resolved_template, idd_path=resolved_idd)
+        return
+
+    _writeIDF_default(
+        model,
+        outputPath,
+        idfTemplatePath=resolved_template,
+        iddFile=resolved_idd,
+        zoneNameToSpaceDict=zoneNameToSpaceDict,
+    )
+    generated_graph = IDFtoOWL(outputPath, idd_path=resolved_idd)
+    linked_graph, uri_map = link_idf_graph_to_moosas(generated_graph, model)
+    model.idfGraph = linked_graph
+    model.idfGraphSource = outputPath
+    model.idfUriMap = uri_map
 
 
 def find_closest_field(field_list: list, target_field: str) -> str:
