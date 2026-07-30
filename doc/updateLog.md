@@ -4,6 +4,7 @@
 - 1.1.1 ifc and gbxml were support by the iterated transforming module
 - 1.1.2 Energy module bug fix
 - 1.1.3 Backend fixing, a stable version
+- 1.1.4 idf template height interpretation method
 
 --1.0.0
 # MoosasPy release
