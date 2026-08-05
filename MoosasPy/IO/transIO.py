@@ -253,9 +253,11 @@ def saveModel(model, out_path: str, save_type: str = None, **kwargs):
         **kwargs
             Format-specific extra parameters.
 
-            - `idf`: `idfTemplate`, `idd_file`, `zoneNameToSpaceDict`, `dumpUseless`.
-            - `gbxml`, `ifc`, `rdf`, `xml`, `geo`, `obj`, `graph`, `spc`,
-              `geojson`, `json`: no additional parameters are required.
+                        - `idf`: `idfTemplate`, `idd_file`, `zoneNameToSpaceDict`, `dumpUseless`.
+                        - `graph`: `clean_isolated`, `clean_airwall`,
+                            `outer_layer_edge_embedding`.
+                        - `gbxml`, `ifc`, `rdf`, `xml`, `geo`, `obj`, `spc`, `geojson`,
+                            `json`: no additional parameters are required.
 
             Backward-compatible aliases are accepted for IDF:
             `idfTemplate`, `iddFile`, `zoneNameToSpaceDict`, `dumpUseless`.
@@ -277,6 +279,11 @@ def saveModel(model, out_path: str, save_type: str = None, **kwargs):
         dump_useless = kwargs.pop("dump_useless", True)
     else:
         dump_useless = bool(dump_useless)
+    clean_isolated = bool(kwargs.pop("clean_isolated", True))
+    clean_airwall = bool(kwargs.pop("clean_airwall", True))
+    outer_layer_edge_embedding = bool(
+        kwargs.pop("outer_layer_edge_embedding", True)
+    )
     if kwargs:
         pass
     if save_type.lower() == 'idf':
@@ -312,7 +319,13 @@ def saveModel(model, out_path: str, save_type: str = None, **kwargs):
         geo_path = os.path.splitext(out_path)[0] + '.geo'
         writeGeo(geo_path, model)
     elif save_type.lower() == 'graph':
-        writeGraph(out_path, model)
+        writeGraph(
+            out_path,
+            model,
+            clean_isolated=clean_isolated,
+            clean_airwall=clean_airwall,
+            outer_layer_edge_embedding=outer_layer_edge_embedding,
+        )
     elif save_type.lower() == 'json':
         writeJson(out_path, model)
 

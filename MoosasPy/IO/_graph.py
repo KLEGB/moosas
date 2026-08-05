@@ -256,6 +256,9 @@ class MoosasGraph:
             for glazing_uid in _split_tokens(element.findtext("glazingId")):
                 if glazing_uid in self.graph:
                     self.graph.add_edge(uid, glazing_uid, adj="glazing")
+            for shading_uid in _split_tokens(element.findtext("shadingId")):
+                if shading_uid in self.graph:
+                    self.graph.add_edge(uid, shading_uid, adj="shading")
 
         for space in root.findall("space"):
             sid = space.findtext("id")
@@ -364,10 +367,11 @@ class MoosasGraph:
                     continue
 
                 neighbor_data = self.graph.nodes[neighbor]
-                if (
-                    neighbor_data.get("node_type") == "face"
-                    and neighbor_data.get("face_params", {}).get("t") == "airwall"
-                ):
+                if neighbor_data.get("node_type") != "face":
+                    continue
+
+                neighbor_face_type = neighbor_data.get("face_params", {}).get("t")
+                if neighbor_face_type in ("airwall", "floor"):
                     continue
 
                 for next_neighbor in list(self.graph.neighbors(neighbor)):
