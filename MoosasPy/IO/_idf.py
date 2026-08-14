@@ -150,9 +150,9 @@ def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zon
         targetSpaces = [model.spaceIdDict[spId] for spId in spaceIds]
     else:
         targetSpaces = list(model.spaceList)
-
+        
     for si, space in enumerate(targetSpaces):
-        print(f"\rIDF: overwriting zonal settings: {si + 1}/{len(targetSpaces)}", end='')
+        print(f"\rIDF: overwriting zonal settings: {si + 1}/{len(targetSpaces)}=>{space.id}", end='')
         space.settings['idf_template'] = zTemplate.appliedToZone(space)
         if space.is_open():
             print(f'\n******Warring: EnergyPlus do not support void space: {space.id}')

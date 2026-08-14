@@ -27,18 +27,64 @@ python -m twine check dist/*
 
 ## 2. Publish to GitHub Releases
 
-Create a tag and push:
+MoosasPy versions are driven by Git tags. The accepted tag format is:
 
-```bash
-git tag -a moosaspy-v1.1.0 -m "MoosasPy 1.1.0"
-git push origin moosaspy-v1.1.0
+```text
+moosaspy-vX.Y.Z
 ```
+
+This is configured in `pyproject.toml` through `setuptools_scm.tag_regex`.
+
+Use the release helper from the repository root:
+
+```powershell
+.\scripts\release_moosaspy.ps1 1.2.0
+```
+
+or:
+
+```powershell
+.\scripts\release_moosaspy.ps1 moosaspy-v1.2.0
+```
+
+The script will:
+
+- validate and normalize the version tag
+- refuse to tag a dirty working tree unless `-AllowDirty` is passed
+- fetch tags from `origin`
+- delete an existing local tag with the same name
+- delete an existing remote tag with the same name
+- delete an existing GitHub Release with the same tag when `GH_TOKEN` or
+  `GITHUB_TOKEN` is available
+- create a new annotated tag at the current `HEAD`
+- push the tag to GitHub
 
 The workflow `.github/workflows/moosaspy-release.yml` will:
 
 - build `dist/*.whl` and `dist/*.tar.gz`
 - create a GitHub Release
 - upload built files as release assets
+
+### Re-publish the same version
+
+To overwrite an existing version, run the same command again after moving `HEAD`
+to the commit that should be released:
+
+```powershell
+$env:GH_TOKEN = "<github-token-with-contents-write>"
+.\scripts\release_moosaspy.ps1 1.2.0
+```
+
+The token is only needed for deleting the existing GitHub Release before the
+workflow uploads new assets. Without it, the script can still replace the Git
+tag, but an old Release with assets of the same names may cause the GitHub
+Actions upload step to fail.
+
+For a preview without changing tags or releases:
+
+```powershell
+.\scripts\release_moosaspy.ps1 1.2.0 -DryRun
+```
 
 ## 3. Install with pip
 

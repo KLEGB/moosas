@@ -6,6 +6,8 @@ __temp__/
 temp/
 test/
 workplace/
+test.py
+scripts/
 
 # C extensions
 *.so

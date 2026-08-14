@@ -3432,7 +3432,7 @@ class MoosasContainer(object):
         Returns:
             dict: {spaceId:MoosasSpace}
         """
-        return {space.id: space for space in self.spaceList + self.voidList}
+        return {space.id: space for space in self.spaceList}
 
     def fromDict(self, spaceDict: dict) -> MoosasSpace:
         """construct a space from a dictionary

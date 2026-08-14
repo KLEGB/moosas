@@ -1,3 +1,7 @@
+--1.2.0
+# transformation update 08.14
+--1.2.0 update the attach shading module to identify the shading elements.
+
 --1.1.0
 # packaging and release workflow update 06.07
 - 1.1.0 release workflow has been aligned with tag-based versioning and GitHub Release asset publishing.

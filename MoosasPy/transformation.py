@@ -1285,6 +1285,7 @@ def spaceTopology(model: MoosasModel, break_wall_vertical=True) -> MoosasModel:
         The model for further transformation or analysis.
     """
 
+
     model.faceList = list(model.faceList)
     if break_wall_vertical:
         """join void into spaces"""
@@ -1347,6 +1348,7 @@ def spaceTopology(model: MoosasModel, break_wall_vertical=True) -> MoosasModel:
                     model.spaceIdDict[element.space[0]].add_neighbor(space.id, element)
 
     print()
+
     return model
 
 
@@ -1410,7 +1412,6 @@ def _attach_shading(model: MoosasModel) -> MoosasModel:
         MoosasModel
             The model for further transformation or analysis.
     """
-    raise NotImplementedError("the attach shading method need improve before implementing")
 
     check_shading = np.array(model.wall_remain + model.face_remain)
     mask = [True] * len(check_shading)
