@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 import os
@@ -779,6 +779,9 @@ class MoosasGraph(Graph):
         self.add((URIRef(f"Space_{space.id}"), self.rdf.type, self.bot.Space))
         self.add((URIRef(f"Space_{space.id}"), self.rdfs.comment, Literal(space.description)))
         self.add((URIRef(f"Space_{space.id}"), self.moosas.Uid, Literal(space.id)))
+        # Semantic type must be restored before ``is_void`` validates inclined roofs.
+        self.add((URIRef(f"Space_{space.id}"), self.moosas.spaceType,
+                  Literal(getattr(space, "space_type", "room"))))
 
         def _add_interface(interface_name: str, linked_element_uri: str, surface_type_uri, opaque_surface_uri=None):
             interface_uri = URIRef(interface_name)
@@ -1192,6 +1195,13 @@ def _decode_space_settings(rdfGraph: MoosasGraph, spaceUri, spc: MoosasSpace):
         spc.settings[str(key)] = _decode_space_setting_value(raw_value)
 
 
+def _decode_space_type(rdfGraph: MoosasGraph, spaceUri) -> str:
+    """Read an optional semantic type; old RDF files default to a normal room."""
+    raw_value = _first_or_none(rdfGraph.getObject(spaceUri, rdfGraph.moosas.spaceType))
+    value = _literal_to_python(raw_value)
+    return str(value).strip().lower() if value is not None else "room"
+
+
 def writeRDF(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseless=True, ExportIFC=False):
     """
     Serialize a MoosasModel to an RDF file in the specified format.
@@ -1390,7 +1400,13 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
             continue
         edgeTopo = MoosasEdge(edgeElements)
 
-        spc = MoosasSpace(_floor=floorTopo, _ceiling=ceilTopo, _edge=edgeTopo, Uid=Uid)
+        spc = MoosasSpace(
+            _floor=floorTopo,
+            _ceiling=ceilTopo,
+            _edge=edgeTopo,
+            Uid=Uid,
+            space_type=_decode_space_type(rdfGraph, spaceUri),
+        )
         _decode_space_settings(rdfGraph, spaceUri, spc)
 
         if spc.is_void():
@@ -1404,3 +1420,4 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     if idf_graph is not None:
         model.idfGraphSource = input_path
     return model
+
