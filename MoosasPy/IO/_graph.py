@@ -350,44 +350,49 @@ class MoosasGraph:
                 self.graph.remove_node(node)
 
     def clean_airwall_nodes(self):
-        airwalls = [
-            node_id
-            for node_id, data in self.graph.nodes(data=True)
-            if data.get("node_type") == "face"
-            and data.get("face_params", {}).get("t") == "airwall"
-        ]
+        """Collapse only a coincident glazing/airwall proxy pair.
 
-        for airwall in airwalls:
-            if airwall not in self.graph:
+        A transformed model represents an air wall as a glazing face (``gls_*``)
+        coincident with a wall face (``wall_*``), connected by ``adj='glazing'``.
+        Only that wall proxy may be removed. Other walls merely adjacent to an
+        air wall are real building envelope/interior walls and must remain.
+        """
+        def is_face(node):
+            return self.graph.nodes[node].get("node_type") == "face"
+
+        def is_airwall(node):
+            return is_face(node) and self.graph.nodes[node].get("face_params", {}).get("t") == "airwall"
+
+        def same_geometry(first, second, tolerance=1e-6):
+            first_vertices = self.graph.nodes[first].get("face_params", {}).get("v")
+            second_vertices = self.graph.nodes[second].get("face_params", {}).get("v")
+            if first_vertices is None or second_vertices is None:
+                return False
+            try:
+                first_array = np.asarray(first_vertices, dtype=float).reshape(-1, 3)
+                second_array = np.asarray(second_vertices, dtype=float).reshape(-1, 3)
+            except (TypeError, ValueError):
+                return False
+            if first_array.shape != second_array.shape:
+                return False
+            return all(np.min(np.linalg.norm(second_array - point, axis=1)) <= tolerance for point in first_array)
+
+        for glazing in list(self.graph.nodes):
+            if glazing not in self.graph or not str(glazing).lower().startswith(("gls_", "glazing_")) or not is_airwall(glazing):
                 continue
-
-            neighbors = list(self.graph.neighbors(airwall))
-            for neighbor in neighbors:
-                if neighbor == airwall:
+            for wall_proxy in list(self.graph.neighbors(glazing)):
+                if wall_proxy not in self.graph or not str(wall_proxy).lower().startswith("wall_") or not is_airwall(wall_proxy):
                     continue
-
-                neighbor_data = self.graph.nodes[neighbor]
-                if neighbor_data.get("node_type") != "face":
+                pair_edge = self.graph.get_edge_data(glazing, wall_proxy) or {}
+                if pair_edge.get("adj") != "glazing" or not same_geometry(glazing, wall_proxy):
                     continue
-
-                neighbor_face_type = neighbor_data.get("face_params", {}).get("t")
-                if neighbor_face_type in ("airwall", "floor"):
-                    continue
-
-                for next_neighbor in list(self.graph.neighbors(neighbor)):
-                    if next_neighbor in (airwall, neighbor):
+                for wall_neighbor in list(self.graph.neighbors(wall_proxy)):
+                    if wall_neighbor == glazing:
                         continue
-
-                    edge_data = dict(self.graph.get_edge_data(neighbor, next_neighbor) or {})
-                    if not self.graph.has_edge(airwall, next_neighbor):
-                        self.graph.add_edge(airwall, next_neighbor, **edge_data)
-
-                if self.graph.has_edge(airwall, neighbor):
-                    self.graph.remove_edge(airwall, neighbor)
-
-                if neighbor in self.graph:
-                    self.graph.remove_node(neighbor)
-
+                    edge_data = self.graph.get_edge_data(wall_proxy, wall_neighbor)
+                    if edge_data is not None and not self.graph.has_edge(glazing, wall_neighbor):
+                        self.graph.add_edge(glazing, wall_neighbor, **edge_data)
+                self.graph.remove_node(wall_proxy)
     def embed_outer_layer_edges(self, max_layers: int = 3):
         for node, data in self.graph.nodes(data=True):
             if data.get("node_type") == "face":
