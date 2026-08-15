@@ -1,4 +1,4 @@
-"""Element definition in moosas+
+﻿"""Element definition in moosas+
 
 we split the MoosasModel definition from geometry.element to avoid circular import.
 however, we still need some method in MoosasModel,
@@ -16,7 +16,7 @@ from ..utils import shapely, np, ET
 from ..utils.tools import path
 from ..utils.constant import geom
 
-# 不做inch meter转换
+# 涓嶅仛inch meter杞崲
 INCH_METER_MULTIPLIER = 1
 INCH_METER_MULTIPLIER_SQR = 1
 
@@ -1182,7 +1182,7 @@ class MoosasFace(MoosasElement):
 
 class MoosasSkylight(MoosasFace):
     '''
-        一个特别简单的glazing类，只为与Moosasface区分开
+        涓€涓壒鍒畝鍗曠殑glazing绫伙紝鍙负涓嶮oosasface鍖哄垎寮€
         '''
     __slots__ = ['parentFace','SHGC','operable']
 
@@ -2150,7 +2150,7 @@ class MoosasEdge:
         self.__botBound = []
         self.__topBound = []
         self.Uid = generate_code(4)
-        # 创造底面/顶面投影多边形
+        # 鍒涢€犲簳闈?椤堕潰鎶曞奖澶氳竟褰?
         if len(self.wall) < 3:
             raise GeometryError(walls, "A boundary requires at least 3 walls.")
         self.prepareBoundary()
@@ -2443,7 +2443,7 @@ class MoosasEdge:
             True if the polygon is oriented counter-clockwise, False otherwise.
         """
         # Improved method for shapely.is_ccw()
-        # accepts both convex & non-convex polygons，but maintains lower efficiency
+        # accepts both convex & non-convex polygons锛宐ut maintains lower efficiency
         poilist = shapely.get_coordinates(self.__botBound)
         veclist = [poilist[i] - poilist[i - 1] for i in range(1, len(poilist))]
         crosslist = [np.cross(veclist[i], veclist[i - 1]) for i in range(len(veclist))]
@@ -2615,10 +2615,10 @@ class MoosasSpace(object):
 
     """
     __slots__ = ['floor', 'edge', 'ceiling', '__void', '__id','__uniqueId', '__neighbor', 'internalMass', 'settings',
-                 'description', 'idfObjectUris']
+                 'description', 'idfObjectUris', 'space_type']
 
     def __init__(self, _floor: MoosasFloor | None, _edge: MoosasEdge, _ceiling: MoosasFloor | None,
-                 void: list[MoosasSpace] = None, Uid: str = None):
+                 void: list[MoosasSpace] = None, Uid: str = None, space_type: str = "room"):
         """
         Initialize a new instance with floor, edge, ceiling, and optional void spaces.
         
@@ -2642,6 +2642,7 @@ class MoosasSpace(object):
         self.ceiling: MoosasFloor | None = _ceiling
         self.description = ""
         self.idfObjectUris = []
+        self.space_type = space_type
 
         self.__neighbor = {}
         self.internalMass: list[MoosasElement] = _edge.internalMass
@@ -2685,6 +2686,7 @@ class MoosasSpace(object):
         ceiling = _getElement('ceiling', dictionary=spaceDict, strict=False)[0]
         floor = _getElement('floor', dictionary=spaceDict, strict=False)[0]
         Uid = _getElement('id', dictionary=spaceDict, strict=False)[0]
+        space_type = _getElement('space_type', dictionary=spaceDict, strict=False)[0]
 
         internalMass = _getElement('internalMass', dictionary=spaceDict, strict=False)
         void = _getElement('void', dictionary=spaceDict, strict=False)
@@ -2697,9 +2699,9 @@ class MoosasSpace(object):
             floor = MoosasFloor.fromDict(ceiling, model)
         
         if Uid:
-            space = cls(floor, edge, ceiling, Uid=Uid)
+            space = cls(floor, edge, ceiling, Uid=Uid, space_type=space_type or "room")
         else:
-            space = cls(floor, edge, ceiling)
+            space = cls(floor, edge, ceiling, space_type=space_type or "room")
 
         if internalMass[0]:
             for _intWall in internalMass:
@@ -2993,6 +2995,10 @@ class MoosasSpace(object):
         """
         if not self.floor or not self.ceiling:
             return True
+        # Inclined roof faces do not cover the footprint in XY projection. An attic
+        # is validated by its existing floor, eave walls and roof topology instead.
+        if self.space_type == "attic":
+            return False
         if self.floor.area < self.area - geom.AREA_PRECISION:
             return True
         if self.ceiling.area < self.area - geom.AREA_PRECISION:
@@ -3314,6 +3320,7 @@ class MoosasSpace(object):
             model = self.parent
         root = ET.Element(xml_tag)
         ET.SubElement(root, "id").text = self.id
+        ET.SubElement(root, "space_type").text = self.space_type
         ET.SubElement(root, "area").text = str(self.area)
         if self.ceiling and self.floor:
             height = (self.edge.toplevel - self.edge.level) / INCH_METER_MULTIPLIER

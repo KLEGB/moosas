@@ -1,4 +1,4 @@
-"""Main func of Moosas Geometry Transformation
+﻿"""Main func of Moosas Geometry Transformation
 Licence: Key Laboratory of Eco Planning & Green Building, Ministry of Education, Tsinghua University.
 More information of this function:
 https://doi.org/10.1007/s12273-023-1081-6
@@ -16,7 +16,7 @@ from .IO import modelFromFile, saveModel, loadModel
 from .encoding.convexify import MoosasConvexify
 from .geometry.cleanse import *
 from .geometry.contour import packing_edges, outerBoundary
-from .geometry.element import MoosasGeometry
+from .geometry.element import MoosasEdge, MoosasFace, MoosasFloor, MoosasGeometry, MoosasSpace
 from .geometry.geos import *
 from .geometry.spaceGen import CCRSpaceGeneration
 from .models import MoosasModel
@@ -434,6 +434,7 @@ def structured(model: MoosasModel,
     if solve_overlap:
         model = solveIntersectionHorizontal(model)
     model = _packing_model(model, solve_overlap)
+    model = _pack_attic_spaces(model)
     t5 = time.time()
 
     """2nd level space boundaries topology"""
@@ -632,7 +633,7 @@ def _classification(model: MoosasModel, triangulate_faces=True, break_wall_verti
         if geo.faceId in ClearId: continue
         print(f'\rLOADING: Filtering vertical faces {i + 1}/{len(model.geoId)}', end='')
         if np.abs(Vector.dot(geo.normal, shapely.points([0, 0, 1]))) < geom.HORIZONTAL_ANGLE_THRESHOLD:
-            # this is the vertical face！
+            # this is the vertical face锛?
             if geo.category != 0:
                 # print(' glazing',end='')
                 model.glazingList.append(
@@ -921,6 +922,107 @@ def _break_vertical_faces(model: MoosasModel, faceId) -> MoosasModel:
                     pass
         return model
 
+
+def _order_connected_walls(walls: list) -> list | None:
+    """Order walls into one closed 2D ring without changing their geometry."""
+    if len(walls) < 3:
+        return None
+    remaining = list(walls)
+    ordered = [remaining.pop(0)]
+    current_end = shapely.get_coordinates(ordered[0].force_2d())[-1]
+    tolerance = 2 * geom.POINT_PRECISION
+    while remaining:
+        for index, candidate in enumerate(remaining):
+            coordinates = shapely.get_coordinates(candidate.force_2d())
+            if np.linalg.norm(coordinates[0] - current_end) <= tolerance:
+                current_end = coordinates[-1]
+                ordered.append(remaining.pop(index))
+                break
+            if np.linalg.norm(coordinates[-1] - current_end) <= tolerance:
+                current_end = coordinates[0]
+                ordered.append(remaining.pop(index))
+                break
+        else:
+            return None
+    first_coordinates = shapely.get_coordinates(ordered[0].force_2d())
+    if np.linalg.norm(current_end - first_coordinates[0]) > tolerance and np.linalg.norm(current_end - first_coordinates[-1]) > tolerance:
+        return None
+    return ordered
+
+
+def _pack_attic_spaces(model: MoosasModel) -> MoosasModel:
+    """Create normal spaces closed by existing inclined roof faces and eave walls."""
+    inclined_faces = [
+        face for face in model.faceList
+        if geom.HORIZONTAL_ANGLE_THRESHOLD <= abs(np.asarray(face.normal, dtype=float)[2]) < 0.99
+    ]
+    remaining = list(inclined_faces)
+    roof_components = []
+    while remaining:
+        component = [remaining.pop(0)]
+        changed = True
+        while changed:
+            changed = False
+            component_edges = {edge for face in component for edge in face.getEdgeStr()}
+            for face in list(remaining):
+                if component_edges.intersection(face.getEdgeStr()):
+                    component.append(face)
+                    remaining.remove(face)
+                    changed = True
+        roof_components.append(component)
+
+    added = []
+    used_walls = set()
+    for roof_faces in roof_components:
+        roof_edges = {edge for face in roof_faces for edge in face.getEdgeStr()}
+        eave_walls = [wall for wall in model.wallList if wall not in used_walls and roof_edges.intersection(wall.getEdgeStr())]
+        ordered_walls = _order_connected_walls(eave_walls)
+        if ordered_walls is None:
+            continue
+        try:
+            attic_edge = MoosasEdge(ordered_walls)
+        except GeometryError:
+            continue
+
+        base_faces = []
+        for face in model.faceList:
+            if abs(np.asarray(face.normal, dtype=float)[2]) < 0.99 or abs(face.level - attic_edge.level) > geom.LEVEL_MAX_OFFSET:
+                continue
+            try:
+                if overlapArea(face.force_2d(), attic_edge.force_2d()) > geom.AREA_PRECISION:
+                    base_faces.append(face)
+            except GeometryError:
+                continue
+        if not base_faces:
+            continue
+        unique_base_faces = []
+        covered = None
+        for face in sorted(base_faces, key=lambda item: item.Uid):
+            footprint = face.force_2d()
+            uncovered = footprint if covered is None else shapely.difference(footprint, covered)
+            if shapely.area(uncovered) > geom.AREA_PRECISION:
+                unique_base_faces.append(face)
+                covered = footprint if covered is None else shapely.union_all([covered, footprint])
+        try:
+            attic_floor = MoosasFloor(unique_base_faces)
+            attic_ceiling = MoosasFloor(roof_faces)
+            attic = MoosasSpace(attic_floor, attic_edge, attic_ceiling, space_type="attic")
+        except GeometryError:
+            continue
+        if attic.is_void():
+            continue
+        model.floorList.append(attic_floor)
+        model.ceilingList.append(attic_ceiling)
+        model.spaceList.append(attic)
+        used_walls.update(ordered_walls)
+        added.extend(roof_faces)
+
+    if added:
+        added_set = set(added)
+        model.face_remain = [face for face in model.face_remain if face not in added_set]
+        model.shadingList = np.array([face for face in model.shadingList if face not in added_set])
+        print(f'PACKING: Build attic spaces: {len(added_set)} roof faces attached')
+    return model
 
 def _packing_model(model: MoosasModel, solve_overlap) -> MoosasModel:
     """
@@ -1466,7 +1568,7 @@ def _attach_shading(model: MoosasModel) -> MoosasModel:
     """
         attach shading elements to glazings.
         if the elements locate in the space, they will be treated as internal mass.
-        if the elements locate outside, they will be allocated to the closed windows。
+        if the elements locate outside, they will be allocated to the closed windows銆?
 
         Parameters
         ----------
@@ -1578,6 +1680,10 @@ def _standardize(model: MoosasModel) -> MoosasModel:
     moFaces = model.getAllFaces()
     for idx, element in enumerate(moFaces):
         try:
+            # MoosasFace.representation() flattens to its average elevation.
+            # Keep existing inclined roof/skylight geometry intact.
+            if isinstance(element, MoosasFace) and abs(np.asarray(element.normal, dtype=float)[2]) < 0.99:
+                continue
             geo = element.representation()
             cat = mixItemListToList(element.category)[0] if isinstance(element, MoosasSkylight) or isinstance(element,
                                                                                                               MoosasGlazing) else 0

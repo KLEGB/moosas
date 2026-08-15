@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import json
 
@@ -22,6 +22,7 @@ SPACE_PARAM_TEMPLATE = {
     "s": None,
     "r": None,
     "l": 0,
+    "space_type": "room",
 }
 
 
@@ -231,10 +232,12 @@ class MoosasGraph:
             if not sid:
                 continue
             is_void = space.findtext("is_void") == "True"
+            space_params = SPACE_PARAM_TEMPLATE.copy()
+            space_params["space_type"] = space.findtext("space_type") or "room"
             self.graph.add_node(
                 sid,
                 node_type="void" if is_void else "space",
-                space_params=SPACE_PARAM_TEMPLATE.copy(),
+                space_params=space_params,
             )
 
         for element in face_like_elements:
@@ -303,6 +306,8 @@ class MoosasGraph:
 
                 obb = create_obb(combined_vertices, face_normal)
                 current_type = node["face_params"].get("t")
+                if current_type == "floor" and abs(face_normal[2]) < 0.99:
+                    current_type = "roof"
                 node["face_params"].update(
                     {
                         "t": _node_type_from_categories(
