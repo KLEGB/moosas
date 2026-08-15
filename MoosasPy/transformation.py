@@ -5,6 +5,7 @@ https://doi.org/10.1007/s12273-023-1081-6
 """
 from __future__ import annotations
 
+import os
 import os.path
 import sys
 import time
@@ -12,13 +13,67 @@ import time
 import shapely
 
 from .IO import modelFromFile, saveModel, loadModel
+from .encoding.convexify import MoosasConvexify
 from .geometry.cleanse import *
 from .geometry.contour import packing_edges, outerBoundary
+from .geometry.element import MoosasGeometry
 from .geometry.geos import *
 from .geometry.spaceGen import CCRSpaceGeneration
 from .models import MoosasModel
+from .utils import mixItemListToList
 from .utils.constant import geom
-from .utils.tools import searchBy
+from .utils.tools import searchBy, path
+
+
+def _convexify_cleaned_model(model: MoosasModel) -> MoosasModel:
+    """Run the BuildingConvex-aligned convex split on a cleaned Moosas model."""
+    geometry_by_id = {geometry.faceId: geometry for geometry in model.geometryList}
+    source_geometry = []
+    for element in model.getAllFaces():
+        for face_id in mixItemListToList(element.faceId):
+            geometry = geometry_by_id.get(face_id)
+            if geometry is not None and geometry not in source_geometry:
+                source_geometry.append(geometry)
+
+    cat = [geometry.category for geometry in source_geometry]
+    idd = [geometry.faceId for geometry in source_geometry]
+    normal = [Vector(geometry.normal).array for geometry in source_geometry]
+    faces = [shapely.get_coordinates(shapely.get_rings(geometry.face)[0], include_z=True)[:-1]
+             for geometry in source_geometry]
+    holes = [
+        [shapely.get_coordinates(ring, include_z=True)[:-1]
+         for ring in shapely.get_rings(geometry.face)[1:]]
+        for geometry in source_geometry
+    ]
+
+    convex_cat, convex_idd, convex_normal, convex_faces, _ = MoosasConvexify.convexify_faces(
+        cat,
+        idd,
+        normal,
+        faces,
+        holes,
+    )
+
+    convex_model = MoosasModel()
+    convex_model.geometryList = [
+        MoosasGeometry(
+            shapely.polygons(face),
+            str(face_id),
+            Vector(face_normal),
+            int(category),
+            [],
+            errors='raise',
+        )
+        for category, face_id, face_normal, face in zip(
+            convex_cat,
+            convex_idd,
+            convex_normal,
+            convex_faces,
+        )
+    ]
+    convex_model.geoId = [geometry.faceId for geometry in convex_model.geometryList]
+    convex_model.newIndex = len(convex_model.geometryList)
+    return convex_model
 
 
 def transform(input_path: str, input_type: str = None,
@@ -85,7 +140,8 @@ def transform(input_path: str, input_type: str = None,
         Attach unused faces as shading/thermal mass (default: False).
 
     divided_zones : bool, optional
-        Split complex zones into ≤4-edge polygons (default: False).
+        Enable the convexified Moosas geometry flow before final space
+        generation (default: False).
 
     standardize : bool, optional
         Simplify output geometry representations (default: False).
@@ -196,7 +252,8 @@ def structured(model: MoosasModel,
         Attach unused faces as shading/thermal mass (default: False).
 
     divided_zones : bool, optional
-        Split complex zones into ≤4-edge polygons (default: False).
+        Enable the convexified Moosas geometry flow before final space
+        generation (default: False).
 
     standardize : bool, optional
         Simplify output geometry representations (default: False).
@@ -214,26 +271,28 @@ def structured(model: MoosasModel,
     if model is None:  # zero len space will cause several errors
         return
 
-    t1 = time.time()
+    did_convexify = False
+    while True:
+        t1 = time.time()
 
-    model = _classification(model, triangulate_faces, break_wall_vertical)
+        model = _classification(model, triangulate_faces, break_wall_vertical)
 
-    model.faceList = np.array(model.faceList)
-    model.wallList = np.array(model.wallList)
-    model.glazingList = np.array(model.glazingList)
+        model.faceList = np.array(model.faceList)
+        model.wallList = np.array(model.wallList)
+        model.glazingList = np.array(model.glazingList)
 
-    """solve redundant coincident edge for faces that have the same factor"""
-    if solve_redundant:
-        model = cleanseCoplannerLine(model)
+        """solve redundant coincident edge for faces that have the same factor"""
+        if solve_redundant:
+            model = cleanseCoplannerLine(model)
 
-    """***We must solve invalid walls.***"""
-    model = cleanseInvalidWall(model)
-    model = cleanseInvalidFace(model)
-    """match glazing"""
-    model = _glazingToFace(model)
-    t2 = time.time()
+        """***We must solve invalid walls.***"""
+        model = cleanseInvalidWall(model)
+        model = cleanseInvalidFace(model)
+        """match glazing"""
+        model = _glazingToFace(model)
+        t2 = time.time()
 
-    '''
+        '''
         Deduplication processing: Since the horizontal side has no effect on the recognition result, 
         only the result based on force2d() on the vertical side is deduplicated
 
@@ -253,31 +312,38 @@ def structured(model: MoosasModel,
             the length is zero/the bottom or top surface has only one point
             4.2 Invoke the rewrite overlaps algorithm to find adjacent faces
             4.3 Call dissolve to delete the polygon regardless of whether it is successful or not
-    '''
-    originalWall = [len(searchBy('level', bld_level, model.wallList)) for bld_level in model.levelList]
+        '''
+        originalWall = [len(searchBy('level', bld_level, model.wallList)) for bld_level in model.levelList]
 
-    """solve redundant coincident edge again after include curtains"""
-    if solve_redundant:
-        model = cleanseCoplannerLine(model)
+        """solve redundant coincident edge again after include curtains"""
+        if solve_redundant:
+            model = cleanseCoplannerLine(model)
 
-    """solve duplicated walls that the 2d projections are the same."""
-    if solve_duplicated:
-        model = cleanseDuplicatedWall(model)
+        """solve duplicated walls that the 2d projections are the same."""
+        if solve_duplicated:
+            model = cleanseDuplicatedWall(model)
 
-    """***We must solve invalid walls.***"""
-    model = cleanseInvalidWall(model)
-    model = cleanseInvalidFace(model)
-
-    """solve contained walls that the 2d projections are overlapped by others."""
-    if solve_overlap:
-        model = cleanseOverlapWall(model)
-        model = cleanseOverlapFace(model)
-
-    """solve the intersection of walls on 2d space"""
-    if break_wall_horizontal:
-        model = solveIntersectionVertical(model)
+        """***We must solve invalid walls.***"""
         model = cleanseInvalidWall(model)
-    t3 = time.time()
+        model = cleanseInvalidFace(model)
+
+        """solve contained walls that the 2d projections are overlapped by others."""
+        if solve_overlap:
+            model = cleanseOverlapWall(model)
+            model = cleanseOverlapFace(model)
+
+        """solve the intersection of walls on 2d space"""
+        if break_wall_horizontal:
+            model = solveIntersectionVertical(model)
+            model = cleanseInvalidWall(model)
+        t3 = time.time()
+
+        if divided_zones and not did_convexify:
+            model = _convexify_cleaned_model(model)
+            did_convexify = True
+            continue
+
+        break
 
     """Floor identification of closed areas: // This is the hatch algorithm of AutoCAD, and the effect is average 
     when there are too many chaotic lines, so it is necessary to add the impurity removal process 
