@@ -182,13 +182,7 @@ def cum_sky(location, weatherFile):
         with rows corresponding to sky patches and columns to hourly timesteps.
     """
     mtx_file = os.path.join(temp_dic, location.stationId + '.mtx')
-    # command=' '.join([gendaymtx_exe,'-D',sun_position,'-A -m 1 -c 1 1 1 -n -O1 ',weatherFile,'>',mtx_file])
-    # command = ' '.join([gendaymtx_exe, '-A -m 1 -D -n -O1 ', weatherFile, '>', mtx_file])
-    # command = ' '.join([gendaymtx_exe, '-m 1 -D -n -O1 ', weatherFile, '>', mtx_file])
-    # print(command)
-
-    # os.popen(command)
-    callCmd([gendaymtx_exe, '-m 1 -D -n -O1 ', weatherFile, '>', mtx_file])
+    callCmd([gendaymtx_exe, '-m 1 -n -O1', weatherFile, '>', mtx_file])
     mtx = []
     # 读取matrix文件
     wait(mtx_file)

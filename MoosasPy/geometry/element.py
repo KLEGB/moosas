@@ -3091,7 +3091,7 @@ class MoosasSpace(object):
 
         templateType = str(template.get("type", "")).strip().upper()
         if templateType and templateType not in getattr(self.parent, "scheduleByType", {}):
-            schedule_path = os.path.join(path.dataBaseDir, f"{templateType.lower()}.sch")
+            schedule_path = os.path.join(path.dataBaseDir, 'schedule', f"{templateType.lower()}.sch")
             if os.path.isfile(schedule_path):
                 self.parent.loadSchedule(schedule_path)
         

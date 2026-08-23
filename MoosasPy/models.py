@@ -67,7 +67,7 @@ class MoosasModel(MoosasContainer):
         self.weather: MoosasWeather | None = None
         self.__template = loadBuildingTemplate(os.path.join(path.dataBaseDir, 'building_template.csv'))
         self.idfZoneTemplate = {}
-        self.schedulePath = os.path.join(path.dataBaseDir, 'office.sch')
+        self.schedulePath = os.path.join(path.dataBaseDir, 'schedule', 'office.sch')
         self.schedule = {}
         self.scheduleByType = {}
         self.loadSchedule(self.schedulePath)
@@ -191,7 +191,7 @@ class MoosasModel(MoosasContainer):
             return None
         return self.scheduleByType.get(str(templateType).upper(), {}).get(fieldName)
 
-    def loadSchedule(self, schedulePath: str = os.path.join(path.dataBaseDir, 'office.sch')):
+    def loadSchedule(self, schedulePath: str = os.path.join(path.dataBaseDir, 'schedule', 'office.sch')):
         """
         Load a schedule library from a .sch file into the in-memory schedule dict.
 
@@ -199,7 +199,7 @@ class MoosasModel(MoosasContainer):
         hourly values; Weekly schedules keep 7 daily schedule references.
         """
         if schedulePath is None:
-            schedulePath = os.path.join(path.dataBaseDir, 'office.sch')
+            schedulePath = os.path.join(path.dataBaseDir, 'schedule', 'office.sch')
         schedulePath = os.path.abspath(schedulePath)
         if not os.path.isfile(schedulePath):
             raise FileNotFoundError(f"Schedule file not found: {schedulePath}")

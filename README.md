@@ -10,7 +10,7 @@ This repository contains:
 
 ## Version
 
-Current Python package release target: `MoosasPy 1.1.0`.
+Current Python package release target: `MoosasPy v1.2.2`.
 
 ## Quick Start
 
@@ -44,9 +44,7 @@ Current release workflow:
 
 ## Documentation
 
-- User manual PDF: `MoosasPy/doc/Users Manual.pdf`
 - Transformation and module docs: `MoosasPy/doc/document.md`
-
 
 ## Contact
 
@@ -55,3 +53,4 @@ Developed by Research team directed by **Prof. Borong Lin** from Key Laboratory 
 linbr@tsinghua.edu.cn  
 **If you have any technical problems, Please reach to:**  
 junx026@gmail.com
+liyihui23@mails.tsinghua.edu.cn
