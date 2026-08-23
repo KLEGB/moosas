@@ -1,4 +1,4 @@
-"""
+﻿"""
     Corresponding with MoosasAFN.exe
     More information can be found by sending MoosasAFN.exe -h in command line
 """
@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import os
 
-from ..geometry.element import *
-from ..geometry.geos import Vector
+from ..transformation.geometry.element import *
+from ..transformation.geometry.geos import Vector
 from ..rad import modelRadiation
 from ..utils.constant import geom
 from ..utils.tools import path, generate_code, callCmd, parseFile
@@ -91,8 +91,8 @@ class AfnZone(object):
                 - 'zone_summerrad' (float): Summer radiation value for the zone.
                 - 'zone_ppsm' (float): People per square meter in the zone.
                 - 'zone_popheat' (float): Heat gain per person (W/person).
-                - 'zone_equipment' (float): Equipment power density (W/m²).
-                - 'zone_lighting' (float): Lighting power density (W/m²).
+                - 'zone_equipment' (float): Equipment power density (W/m虏).
+                - 'zone_lighting' (float): Lighting power density (W/m虏).
             - self.area (float): Floor area of the zone in square meters.
         
         Returns
@@ -231,7 +231,7 @@ class AfnZone(object):
             - prjIndex (int): Project index used to generate zone ID.
             - heatLoad (float): Total heat load in Watts (W).
             - temperature (float): Initial zone temperature in Celsius (C).
-            - volume (float): Zone volume in cubic meters (m³).
+            - volume (float): Zone volume in cubic meters (m鲁).
             - position (object): Object with x, y, z attributes representing position in meters (m).
             - edge (shapely geometry): Geometry representing the zone boundary; must have `force_2d()` method and coordinates accessible via `shapely.get_coordinates()`.
         
@@ -502,7 +502,7 @@ class AfnNetwork:
         speed : float, optional
             The speed of the object relative to the wind. If not provided, defaults to None.
         airDensity : float, default=1.205
-            The density of air in kg/m³. Default corresponds to standard conditions at sea level.
+            The density of air in kg/m鲁. Default corresponds to standard conditions at sea level.
         alpha : float, default=0.22
             A coefficient representing the aerodynamic properties of the object.
         
@@ -571,7 +571,7 @@ def applyWindPressure(pathList: list[AfnPath], windVector: Vector, speed: float 
     speed : float, optional
         Wind speed in m/s. If None, the magnitude of `windVector` is used as the wind speed.
     airDensity : float, default=1.205
-        Air density in kg/m³, used in pressure calculation.
+        Air density in kg/m鲁, used in pressure calculation.
     alpha : float, default=0.22
         Empirical exponent related to altitude effects on wind pressure.
     
@@ -918,7 +918,7 @@ def buildPrj(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone]
     windVector : Vector, optional
         Wind vector defining direction and speed for simulation.
     airDensity : float, default 1.205
-        Air density in kg/m³.
+        Air density in kg/m鲁.
     alpha : float, default 0.22
         Power law exponent for airflow modeling.
     simulate : bool, default False

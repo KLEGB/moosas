@@ -1,1 +1,0 @@
-from .geometry import plot_object

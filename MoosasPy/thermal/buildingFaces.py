@@ -1,4 +1,4 @@
-from ..geometry.element import MoosasElement
+﻿from ..transformation.geometry.element import MoosasElement
 from ..utils import shapely,GeometryError
 from .settings import MoosasSettings, FaceDefault, WindowDefault
 from eppy.modeleditor import IDF

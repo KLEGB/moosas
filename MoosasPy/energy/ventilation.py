@@ -1,5 +1,5 @@
-from .analysis import getEnergyInput, ThermalSettings, energyAnalysis
-from ..geometry.geos import Vector, Ray
+﻿from .analysis import getEnergyInput, ThermalSettings, energyAnalysis
+from ..transformation.geometry.geos import Vector, Ray
 from ..models import MoosasModel, MoosasCumSky
 from ..weather.dest import MoosasWeather
 from ..weather.cumsky import MoosasCumSky
@@ -935,7 +935,7 @@ class heatLoadModel(object):
         n = len(values)
         output = np.zeros_like(values)
         
-        # Radius of the Gaussian window (3σ rule)
+        # Radius of the Gaussian window (3蟽 rule)
         radius = int(np.ceil(3.0 * sigma))
         if radius < 1:
             return values.copy()

@@ -1,11 +1,11 @@
-import re
+﻿import re
 import os
 
 from eppy.modeleditor import IDF
 
 from .construction import Construction
 from .settings import *
-from ..geometry.element import MoosasSpace
+from ..transformation.geometry.element import MoosasSpace
 from ..utils import path
 
 

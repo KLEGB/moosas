@@ -1,6 +1,6 @@
-from ..utils import shapely
+﻿from ..utils import shapely
 from datetime import datetime
-from ..geometry import Projection
+from ..transformation.geometry import Projection
 
 
 def _meshToRadObject(geos, material, id):
@@ -111,7 +111,7 @@ def _getSky(date: datetime, skyType, lat, lon, diff=10000):
     lon : float or str
         Longitude of the location in degrees, used in the sky generation command.
     diff : float, optional
-        Diffuse solar irradiance value (in W/m²). Used only if skyType is "-c". Default is 10000.
+        Diffuse solar irradiance value (in W/m虏). Used only if skyType is "-c". Default is 10000.
     
     Returns
     -------

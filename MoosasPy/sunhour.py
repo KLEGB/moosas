@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 from datetime import datetime
 
 from .rad import rayTest, writeRadGeo
 from .weather.directsky import MoosasDirectSky
-from .geometry.geos import Vector, Ray
+from .transformation.geometry.geos import Vector, Ray
 from .utils.date import DateTime
 from .utils import np,Iterable
 from .weather.dest import Location

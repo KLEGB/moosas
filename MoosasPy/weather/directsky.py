@@ -1,4 +1,4 @@
-"""
+﻿"""
     Define DirectSun position from lat and lon
     The sun position object define consider leap your, timezone and solartime.
     This class have learnt from ladybug for direct sun calculation.
@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 from ..utils.date import DateTime
-from ..geometry.geos import Vector
+from ..transformation.geometry.geos import Vector
 from ..utils.constant import dateSetting
 import numpy as np
 

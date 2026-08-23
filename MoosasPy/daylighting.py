@@ -1,6 +1,6 @@
-from .rad import _meshToRadObject, _materialLib, _getSky
+﻿from .rad import _meshToRadObject, _materialLib, _getSky
 from .models import MoosasModel
-from .geometry import MoosasElement, MoosasGrid, Vector, MoosasSpace,Projection
+from .transformation.geometry import MoosasElement, MoosasGrid, Vector, MoosasSpace,Projection
 from .utils import np, shapely, path, callCmd, os,mixItemListToList
 from datetime import datetime
 
@@ -114,7 +114,7 @@ def modelToRad(model: MoosasModel, date: datetime, skyType, lat, lon, diff=10000
     lon : float or int
         Longitude of the site in degrees, used for solar position calculation.
     diff : int, optional
-        Diffuse solar irradiance value (in W/m²). Default is 10000.
+        Diffuse solar irradiance value (in W/m虏). Default is 10000.
     radPath : str, optional
         File path where the generated .rad file will be saved. Default is a path within `path.libDir`.
     
@@ -200,7 +200,7 @@ def spaceToRad(space: MoosasSpace, date: datetime, skyType, lat, lon, diff=10000
     lon : float or int
         Longitude of the location, used in sky calculation.
     diff : int, optional
-        Diffuse solar radiation value (in Wh/m²), default is 10000.
+        Diffuse solar radiation value (in Wh/m虏), default is 10000.
     radPath : str, optional
         File path where the Radiance script will be saved. Defaults to a path in `path.libDir`.
     

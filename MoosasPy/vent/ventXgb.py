@@ -1,12 +1,12 @@
-import numpy as np
+﻿import numpy as np
 import os
 import shapely
 
 from ..utils import Iterable
 from ..utils.tools import path
-from ..geometry.element import MoosasGlazing
+from ..transformation.geometry.element import MoosasGlazing
 
-from ..geometry.geos import Vector
+from ..transformation.geometry.geos import Vector
 
 
 def _modelBoundBox(model) -> np.ndarray:

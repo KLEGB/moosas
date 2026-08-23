@@ -1,4 +1,4 @@
-"""Connection to most of the functions in moosas+.
+﻿"""Connection to most of the functions in moosas+.
 It records the space data we need in the analysis.
 
 we split the MoosasModel definition from geometry.element to avoid circular import
@@ -16,8 +16,8 @@ from .weather.dest import MoosasWeather
 from .weather.cumsky import loadCumSky, MoosasCumSky
 from .weather.include import includeEpw
 
-from .geometry.element import *
-from .geometry.geos import faceNormal
+from .transformation.geometry.element import *
+from .transformation.geometry.geos import faceNormal
 
 """you can apply the inch to meter translation here"""
 # from .utils.constant import geom
@@ -333,56 +333,6 @@ class MoosasModel(MoosasContainer):
         self.cumSky['summerCumSky'] = m_cumSky[1]
         self.cumSky['winterCumSky'] = m_cumSky[2]
         return self.cumSky
-
-    def plotPlan(self, level_index: int, show=True) -> None:
-        """
-        Plot the plan view for a specified level index.
-        
-        Parameters
-        ----------
-        level_index : int
-            The index of the level to plot, corresponding to an entry in self.levelList.
-        show : bool, optional
-            Whether to display the figure immediately. Default is True.
-        
-        Returns
-        -------
-        None
-        """
-        """plot the plan view for defined level index in self.levelList
-        since the pythonDist folder does not contain matplotlib package,
-        we need to import the package inside this method
-
-        The black lines in the figure shows the wall in the plan;
-        the blue lines mean apertures or windows or walls;
-        toe gry lines mean apertures or skylight on the floor;
-        and the dot blue lines means skylight or aperture on the ceilings.
-
-        Args:
-            level_index (int): the index of the level to plot
-            show (bool, optional): whether to show the figure
-        """
-        from .visual import plot_object
-        spaces: list[MoosasSpace] = np.array(self.spaceList)[
-            searchBy('level', self.levelList[level_index], self.spaceList)]
-        walls = []
-        floors = []
-        ceilings = []
-        gls = []
-        skylight = []
-        aperture = []
-        for s in spaces:
-            walls += s.getAllFaces(to_dict=True)['MoosasWall']
-            floors += s.floor.face
-            ceilings += s.ceiling.face
-        for w in walls:
-            gls += w.glazingElement
-        for f in floors:
-            aperture += f.glazingElement
-        for f in ceilings:
-            skylight += f.glazingElement
-        plot_object(walls, gls, aperture, skylight, colors=['black', 'blue', 'grey', 'blue'], lineSize=[1, 3, 1, 1],
-                    lineType=['-', '-', '-', '--'], show=show)
 
     def autoDescribe(self):
         """automatically generate description for each space and element in the model, based on their geometry and settings.
