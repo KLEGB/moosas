@@ -5,7 +5,6 @@ __pycache__/
 __temp__/
 temp/
 workplace/
-scripts/
 
 # C extensions
 *.so
