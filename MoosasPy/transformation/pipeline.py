@@ -22,9 +22,33 @@ from .geometry.element import MoosasEdge, MoosasFace, MoosasFloor, MoosasGeometr
 from .geometry.geos import *
 from .geometry.spaceGen import CCRSpaceGeneration
 from ..models import MoosasModel
+from ..model_resources import configure_model_resources
 from ..utils import mixItemListToList
 from ..utils.constant import geom
 from ..utils.tools import searchBy, path
+
+
+def complete_topology(model: MoosasModel) -> MoosasModel:
+    """Attach glazing and rebuild topology for a model loaded by an I/O adapter."""
+    attached_glazing = sum(
+        len(getattr(element, "glazingElement", []))
+        for elements in (getattr(model, "wallList", []), getattr(model, "faceList", []))
+        for element in elements
+    )
+    glazing_count = len(getattr(model, "glazingList", [])) + len(getattr(model, "skylightList", []))
+    if glazing_count and attached_glazing == 0:
+        model = _glazingToFace(model)
+    model = spaceTopology(model, True)
+    return faceTopology(model)
+
+
+def load_model(file_path: str, save_type: str | None = None, **kwargs) -> MoosasModel:
+    """Load a model through an I/O adapter, then configure and complete it."""
+    from .io import load_model as load_model_file
+
+    model = load_model_file(file_path, save_type, **kwargs)
+    configure_model_resources(model)
+    return complete_topology(model)
 
 
 def _convexify_cleaned_model(model: MoosasModel) -> MoosasModel:
@@ -188,6 +212,7 @@ def transform(input_path: str, input_type: str = None,
     # load model from file
     print('LOADING: ', end='')
     model = modelFromFile(input_path, input_type)
+    configure_model_resources(model)
     print('import face number:', len(model.geoId))
 
     if model is None:  # zero len space will cause serve errors

@@ -156,29 +156,6 @@ def loadModel(file_path: str, save_type: str = None, **kwargs):
     else:
         model = loadRDF(file_path, fileFormat=formatHint)
 
-    if formatHint == 'ifc':
-        print("-" * 20)
-        model.summary()
-        print("-" * 20)
-        return model
-
-    # Delayed import avoids circular dependency at module import time.
-    from ..pipeline import _glazingToFace, spaceTopology, faceTopology
-
-    attached_glazing = 0
-    if hasattr(model, "wallList"):
-        attached_glazing += sum(len(getattr(w, "glazingElement", [])) for w in model.wallList)
-    if hasattr(model, "faceList"):
-        attached_glazing += sum(len(getattr(f, "glazingElement", [])) for f in model.faceList)
-
-    if (len(getattr(model, "glazingList", [])) + len(getattr(model, "skylightList", [])) > 0) and attached_glazing == 0:
-        model = _glazingToFace(model)
-
-    model = spaceTopology(model, True)
-    model = faceTopology(model)
-    print("-" * 20)
-    model.summary()
-    print("-" * 20)
     return model
 
 

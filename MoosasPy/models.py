@@ -5,16 +5,8 @@ we split the MoosasModel definition from geometry.element to avoid circular impo
 """
 from __future__ import annotations
 
-import os.path
-import uuid
-
 import shapely
 import xml.etree.ElementTree as ET
-from .utils.standard import loadBuildingTemplate
-from .utils.tools import path
-from .simulation.weather.data import MoosasWeather
-from .simulation.weather.cumsky import loadCumSky, MoosasCumSky
-from .simulation.weather.epw import includeEpw
 
 from .transformation.geometry.element import *
 from .transformation.geometry.geos import faceNormal
@@ -28,23 +20,9 @@ INCH_METER_MULTIPLIER_SQR = 1
 
 
 class MoosasModel(MoosasContainer):
-    """Define all the global variables needed for Moosas+.
+    """Domain state for a building geometry and its analysis configuration.
 
-    This class does not have slots for the sake of flexible attributes.
-
-    Attributes:
-        weather (MoosasWeather): MoosasWeather in this model, default is None.
-        builtData (Object): Data used to construct space manually.
-
-    Properties:
-        buildingTemplate (dict): A dictionary to show all building templates in the database.
-
-    Methods:
-        loadWeatherData(self, stationId: str = '545110') -> MoosasWeather: Load the weather data to self.weather.
-        loadCumSky(self, stationId: str = '545110') -> dict: Load a cumulative sky model to self.cumSky.
-        plotPlan(self, level_index: int) -> None: Plot the building plan on the given index of building level.
-        buildXml(self) -> ET.Element: Build an XML tree file of all spaces.
-        buildGeojson(self) -> dict: Build a GeoJSON file of all geometries.
+    Resource loading is deliberately handled by ``MoosasPy.model_resources``.
     """
 
     def __init__(self):
@@ -64,275 +42,13 @@ class MoosasModel(MoosasContainer):
         """initialize the MoosasModel with default list, and apply type to these list"""
         super(MoosasModel, self).__init__()
 
-        self.weather: MoosasWeather | None = None
-        self.__template = loadBuildingTemplate(os.path.join(path.dataBaseDir, 'building_template.csv'))
+        self.weather = None
+        self.cumSky = None
+        self.buildingTemplate = {}
         self.idfZoneTemplate = {}
-        self.schedulePath = os.path.join(path.dataBaseDir, 'schedule', 'office.sch')
+        self.schedulePath = None
         self.schedule = {}
         self.scheduleByType = {}
-        self.loadSchedule(self.schedulePath)
-    @property
-    def buildingTemplate(self) -> dict:
-        """
-        Get a dictionary containing all building template data from the database.
-        
-        Parameters
-        ----------
-        self : object
-            The instance of the class containing the template data.
-        
-        Returns
-        -------
-        dict
-            A dictionary with string keys representing template parameters and corresponding
-            values for each parameter. The dictionary includes:
-            - "zone_wallU": Exterior wall U-value
-            - "zone_winU": Exterior window U-value
-            - "zone_win_SHGC": Exterior window Solar Heat Gain Coefficient
-            - "zone_c_temp": Cooling set point temperature
-            - "zone_h_temp": Heating set point temperature
-            - "zone_collingEER": Cooling COP (Coefficient of Performance)
-            - "zone_HeatingEER": Heating COP
-            - "zone_work_start": Working schedule start time
-            - "zone_work_end": Working schedule end time
-            - "zone_ppsm": Population per square meter
-            - "zone_pfav": Ventilation rate per person (ACH)
-            - "zone_popheat": Heat generation per person (W/pp)
-            - "zone_equipment": Equipment heat generation (W/m2)
-            - "zone_lighting": Lighting heat generation (W/m2)
-            - "zone_infiltration": Infiltration air change coefficient (ACH)
-            - "zone_nightACH": Nighttime air change coefficient (ACH)
-        """
-        """get a dictionary showing all template in the database
-
-        Returns:
-            dict: {Hint:templateData}
-            templateData = {
-                        "zone_wallU"=>            exterior wall u value
-                        "zone_winU"=>             exterior window u value
-                        "zone_win_SHGC"=>         exterior window SHGC
-                        "zone_c_temp"=>           cooling set point
-                        "zone_h_temp"=>           heating set point
-                        "zone_collingEER"=>       cooling COP
-                        "zone_HeatingEER"=>       heating COP
-                        "zone_work_start"=>       working schedule start time
-                        "zone_work_end"=>         working schedule end time
-                        "zone_ppsm"=>             population per m2
-                        "zone_pfav"=>             ventilation (ACH) per person
-                        "zone_popheat"=>          heat generation (W/pp) per person
-                        "zone_equipment"=>        equipment heat generation (W/m2)
-                        "zone_lighting"=>         lighting heat generation (W/m2)
-                        "zone_infiltration"=>     infiltration air change coefficient (ACH)
-                        "zone_nightACH"=>         air change coefficient in nighttime (ACH)
-                    }
-
-        """
-        return self.__template
-
-    def includeTemplate(self, templateName: str,templateDict:dict):
-        """
-        Include a template in the internal template dictionary.
-        
-        Parameters
-        ----------
-        templateName : str
-            The name of the template to be added.
-        templateDict : dict
-            The dictionary containing the template data.
-        
-        Returns
-        -------
-        None
-            This function does not return any value.
-        """
-        self.__template[templateName] = templateDict
-
-    @staticmethod
-    def _schedule_type_from_path(schedulePath: str) -> str:
-        schedule_name = os.path.splitext(os.path.basename(str(schedulePath)))[0].upper()
-        return schedule_name
-
-    @staticmethod
-    def _schedule_role_from_name(scheduleName: str) -> str | None:
-        lower = str(scheduleName).lower()
-        if "occdens" in lower or "occupantdensity" in lower:
-            return "zone_ppsm"
-        if "equip" in lower or "equipmentheatgain" in lower:
-            return "zone_equipment"
-        if "light" in lower or "lightingheatgain" in lower:
-            return "zone_lighting"
-        return None
-
-    def _rebuildScheduleByType(self):
-        prefix_to_type = {
-            "OFF": "OFFICE",
-            "RES": "RESIDENTIAL",
-            "COM": "COMMERCIAL",
-            "SCH": "SCHOOL",
-            "HOT": "HOTEL",
-        }
-        rebuilt = {}
-        for scheduleName, scheduleValue in self.schedule.items():
-            if not isinstance(scheduleValue, dict):
-                continue
-            scheduleType = str(scheduleValue.get("type", "")).strip().title()
-            prefix = str(scheduleName).split("_", 1)[0].upper()
-            typeName = prefix_to_type.get(prefix, scheduleType.upper())
-            if not typeName:
-                continue
-            role = self._schedule_role_from_name(scheduleName)
-            if role is None:
-                continue
-            rebuilt.setdefault(typeName, {})[role] = scheduleName
-        self.scheduleByType = rebuilt
-
-    def getScheduleName(self, templateType: str, fieldName: str):
-        if templateType is None:
-            return None
-        return self.scheduleByType.get(str(templateType).upper(), {}).get(fieldName)
-
-    def loadSchedule(self, schedulePath: str = os.path.join(path.dataBaseDir, 'schedule', 'office.sch')):
-        """
-        Load a schedule library from a .sch file into the in-memory schedule dict.
-
-        The file format supports Daily and Weekly rows. Daily schedules keep 24
-        hourly values; Weekly schedules keep 7 daily schedule references.
-        """
-        if schedulePath is None:
-            schedulePath = os.path.join(path.dataBaseDir, 'schedule', 'office.sch')
-        schedulePath = os.path.abspath(schedulePath)
-        if not os.path.isfile(schedulePath):
-            raise FileNotFoundError(f"Schedule file not found: {schedulePath}")
-
-        loaded = {}
-        with open(schedulePath, "r", encoding="utf-8", errors="ignore") as f:
-            for line in f:
-                text = line.strip()
-                if (not text) or text.startswith("!"):
-                    continue
-                parts = [p.strip() for p in text.split(",")]
-                if len(parts) < 3:
-                    continue
-                name = parts[0]
-                mode = parts[1].strip().lower()
-                if mode == "daily":
-                    values = parts[2:26]
-                    if len(values) != 24:
-                        raise ValueError(f"Invalid daily schedule row '{name}', expected 24 hourly values.")
-                    loaded[name] = {"type": "Daily", "value": values}
-                elif mode == "weekly":
-                    values = parts[2:9]
-                    if len(values) != 7:
-                        raise ValueError(f"Invalid weekly schedule row '{name}', expected 7 day references.")
-                    loaded[name] = {"type": "Weekly", "value": values}
-
-        self.schedule.update(loaded)
-        self.schedulePath = schedulePath
-        self._rebuildScheduleByType()
-        return self.schedule
-
-    def writeSchedule(self, schedulePath: str = None):
-        """
-        Write the current schedule library to a .sch file.
-
-        If schedulePath is None, a unique temporary file is created under
-        MoosasPy/__temp__.
-        """
-        if schedulePath is None:
-            schedulePath = os.path.join(path.tempDir, f"schedule_{uuid.uuid4().hex}.sch")
-        schedulePath = os.path.abspath(schedulePath)
-        path.checkBuildDir(schedulePath)
-
-        daily_items = [(name, value) for name, value in self.schedule.items()
-                       if str(value.get("type", "")).lower() == "daily"]
-        weekly_items = [(name, value) for name, value in self.schedule.items()
-                        if str(value.get("type", "")).lower() == "weekly"]
-
-        with open(schedulePath, "w", encoding="utf-8") as f:
-            f.write("! Moosas schedule export\n")
-            for name, item in daily_items:
-                values = item.get("value", [])
-                if len(values) != 24:
-                    raise ValueError(f"Daily schedule '{name}' must have 24 values.")
-                f.write(f"{name},Daily,{','.join([str(v) for v in values])}\n")
-            for name, item in weekly_items:
-                values = item.get("value", [])
-                if len(values) != 7:
-                    raise ValueError(f"Weekly schedule '{name}' must have 7 values.")
-                f.write(f"{name},Weekly,{','.join([str(v) for v in values])}\n")
-        return schedulePath
-    def loadWeatherData(self, stationIdOrPath: str = '545110') -> MoosasWeather:
-        """
-        Load weather data from the database or import an external EPW file.
-        
-        Parameters
-        ----------
-        stationIdOrPath : str, optional
-            The ID of the weather station or the file path to an EPW file. If a valid file path is provided, 
-            the EPW file will be imported using `includeEpw`. Default is '545110'.
-        
-        Returns
-        -------
-        MoosasWeather
-            An instance of MoosasWeather containing the loaded weather data.
-        """
-        """load weather data from the database,
-        or import an external epw file using weather.epw.includeEpw method
-
-        Args:
-            stationIdOrPath(str): the id of the station in epw file, or the path of the epw file
-
-        Returns:
-            MoosasWeather: loaded weather data
-        """
-        if os.path.isfile(stationIdOrPath):
-            stationIdOrPath = includeEpw(stationIdOrPath)
-        self.weather = MoosasWeather(stationIdOrPath)
-        return self.weather
-
-    def loadCumSky(self, stationIdOrPath: str = '545110') -> dict:
-        """
-        Load cumulative sky data for a given station or EPW file.
-        
-        Parameters
-        ----------
-        stationIdOrPath : str, optional
-            The ID of the weather station or the file path to an EPW file. If a valid file path is provided, 
-            the EPW file will be imported and processed. Default is '545110'.
-        
-        Returns
-        -------
-        dict
-            A dictionary containing the loaded cumulative sky data with the following keys:
-            - 'annualCumSky': annual cumulative sky dome (numpy array or similar structure)
-            - 'summerCumSky': summer period cumulative sky dome
-            - 'winterCumSky': winter period cumulative sky dome
-        """
-        """load cumSky data from the database,
-                or import an external epw file using weather.epw.includeEpw method
-
-        Args:
-            stationIdOrPath(str): the id of the station in epw file, or the path of the epw file
-
-        Returns:
-            dict: loaded cumSky data, including:
-            {   annualCumSky: annual cumulative sky dom,
-                summerCumSky: summer cumulative sky dom,
-                winterCumSky: winter cumulative sky dom,
-                }
-        """
-        if os.path.isfile(stationIdOrPath):
-            stationIdOrPath = includeEpw(stationIdOrPath)
-        self.cumSky = {}
-        m_cumSky = loadCumSky(
-            stationIdOrPath,
-            [0, MoosasCumSky.SUMMER_START_HOY, MoosasCumSky.SUMMER_END_HOY],
-            [8760, MoosasCumSky.WINTER_START_HOY, MoosasCumSky.WINTER_END_HOY],
-        )
-        self.cumSky['annualCumSky'] = m_cumSky[0]
-        self.cumSky['summerCumSky'] = m_cumSky[1]
-        self.cumSky['winterCumSky'] = m_cumSky[2]
-        return self.cumSky
 
     def autoDescribe(self):
         """automatically generate description for each space and element in the model, based on their geometry and settings.

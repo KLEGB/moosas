@@ -864,7 +864,9 @@ def _legacy_loadIfc_direct(ifc_path: str | Path) -> Any:
         weather_station = str(project_pset.get("WeatherStationId") or "").strip()
         if weather_station:
             try:
-                model.loadWeatherData(weather_station)
+                from ...model_resources import load_weather
+
+                load_weather(model, weather_station)
             except Exception:
                 pass
 

@@ -9,6 +9,7 @@ from ...transformation.geometry.geos import Ray, Vector
 from ...utils import np, os, Iterable
 from ...utils import path
 from ...utils.constant import rad
+from ...model_resources import load_cumulative_sky
 from ..runner import Runner
 from ..weather import MoosasCumSky
 
@@ -106,8 +107,8 @@ def spaceRadiation(space: MoosasSpace, reflection=1) -> dict:
     settings = space.settings
     model = space.parent
     geo_path = writeRadGeo(model)
-    if 'cumSky' not in model.__dir__():
-        model.loadCumSky()
+    if model.cumSky is None:
+        load_cumulative_sky(model)
     moFaces = space.getAllFaces(to_dict=False)
     rays = []
     windowArea = []

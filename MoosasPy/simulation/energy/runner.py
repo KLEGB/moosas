@@ -25,7 +25,9 @@ from ..runner import Runner
 
 from ...transformation.io.idf.model import ThermalSettings
 
-from ...models import *
+from ...model_resources import get_schedule_name, load_cumulative_sky, load_schedule, load_weather
+from ...models import MoosasModel
+from ...utils import np, shapely
 
 # A quick radiation estimation based on measured data (Beijing cumSky)
 SUMMER_RADIATION = [280100, 175200, 213200, 116300, 280100]
@@ -99,7 +101,7 @@ def _resolve_schedule_ref(model: MoosasModel, template_type: str, field_name: st
         except Exception:
             return text
     if template_type:
-        schedule_name = model.getScheduleName(template_type, field_name) if hasattr(model, "getScheduleName") else None
+        schedule_name = get_schedule_name(model, template_type, field_name)
         if schedule_name:
             return schedule_name
     return current_value
@@ -284,7 +286,7 @@ class EnergyRunner(Runner):
     def _weather_temperature(self, arguments):
         if self.model is not None:
             if self.model.weather is None:
-                self.model.loadWeatherData()
+                load_weather(self.model)
             return np.array(self.model.weather.weatherData.get("temperature")).astype(float).tolist()
         for index, argument in enumerate(arguments):
             if argument == "-w" and index + 1 < len(arguments):
@@ -638,15 +640,15 @@ def getEnergyInput(model: MoosasModel,
         return x if x > 0 else 0
 
     if schedulePath is not None:
-        model.loadSchedule(schedulePath)
+        load_schedule(model, schedulePath)
 
     radiation_mode = _normalize_radiation_mode(requireRadiation)
 
     # Perform radiation calculation if requested
     if radiation_mode in (1, 2):
         t2 = datetime.now()
-        if not hasattr(model, "cumSky") or getattr(model, "cumSky", None) is None:
-            model.loadCumSky()
+        if model.cumSky is None:
+            load_cumulative_sky(model)
         if any(s.settings.get('zone_summerrad') is None or s.settings.get('zone_winterrad') is None for s in model.spaceList):
             modelRadiation(model, reflection=0)
         t3 = datetime.now()
@@ -743,7 +745,7 @@ def getEnergyInput(model: MoosasModel,
 
     # Load weather data if not already loaded
     if model.weather is None:
-        model.loadWeatherData()
+        load_weather(model)
     weather = model.weather
 
     # ── Build command-line arguments ──────────────────────
@@ -772,7 +774,9 @@ def getEnergyInput(model: MoosasModel,
 
     schedule_out_path = None
     if getattr(model, "schedule", None):
-        schedule_out_path = model.writeSchedule()
+        from ...model_resources import write_schedule
+
+        schedule_out_path = write_schedule(model)
         args += ['-sch', schedule_out_path]
 
     return {'zones': zones, 'args': args, 'schedulePath': schedule_out_path}

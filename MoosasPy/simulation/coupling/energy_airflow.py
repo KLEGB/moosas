@@ -2,7 +2,8 @@
 
 from ..energy.runner import getEnergyInput, ThermalSettings, energyAnalysis
 from ...transformation.geometry.geos import Vector, Ray
-from ...models import MoosasModel, MoosasCumSky
+from ...models import MoosasModel
+from ...model_resources import get_schedule_name, load_cumulative_sky, load_schedule, load_weather, write_schedule
 from ..weather.data import MoosasWeather
 from ..weather.cumsky import MoosasCumSky
 from ..radiation import modelRadiation, writeRadGeo, rayTest
@@ -86,22 +87,19 @@ class EnergyAirflowCoupler(object):
         self._sch_weekly_map = {}
         self._sch_loaded_names = set()
         if self.schedulePath is not None:
-            self.model.loadSchedule(self.schedulePath)
+            load_schedule(self.model, self.schedulePath)
         elif getattr(self.model, "schedule", None):
-            # Keep ventilation schedule sourcing inside MoosasModel. When RDF
-            # already loaded schedule nodes, export a temporary .sch from the
-            # in-memory schedule library instead of relying on an external file.
-            self.schedulePath = self.model.writeSchedule()
+            self.schedulePath = write_schedule(self.model)
         self._parse_schedule_file()
         if self.model.weather is None:
-            self.model.loadWeatherData(stationid or '545110')
+            load_weather(self.model, stationid or '545110')
         self.weather = self.model.weather
         stationid = str(
             getattr(getattr(self.weather, "location", None), "stationId", "")
             or stationid
             or '545110'
         )
-        self.model.loadCumSky(stationid)
+        load_cumulative_sky(self.model, stationid)
         modelRadiation(self.model, reflection=0)
         network = AfnNetwork(self.model)
         self.zones = network.zones
@@ -334,22 +332,21 @@ class EnergyAirflowCoupler(object):
                 return text
 
         template_type = self._energy_zone_template_type(zone_dict)
-        if template_type and hasattr(self.model, "getScheduleName"):
-            schedule_name = self.model.getScheduleName(template_type, field_name)
+        if template_type:
+            schedule_name = get_schedule_name(self.model, template_type, field_name)
             if schedule_name in active_schedule_names or (not active_schedule_names and schedule_name in schedule_lib):
                 return schedule_name
         candidate_pool = active_schedule_names if active_schedule_names else set(schedule_lib.keys())
-        if hasattr(self.model, "_schedule_role_from_name"):
-            candidates = [
-                name for name in candidate_pool
-                if self.model._schedule_role_from_name(name) == field_name
-            ]
-            for preferred_token in ("weekly", "allday"):
-                for name in sorted(candidates):
-                    if preferred_token in name.lower():
-                        return name
-            if candidates:
-                return sorted(candidates)[0]
+        candidates = [
+            name for name in candidate_pool
+            if _schedule_role_from_name(name) == field_name
+        ]
+        for preferred_token in ("weekly", "allday"):
+            for name in sorted(candidates):
+                if preferred_token in name.lower():
+                    return name
+        if candidates:
+            return sorted(candidates)[0]
         for schedule_map in getattr(self.model, "scheduleByType", {}).values():
             if not isinstance(schedule_map, dict):
                 continue

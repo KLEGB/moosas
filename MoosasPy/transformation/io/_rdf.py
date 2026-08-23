@@ -7,6 +7,7 @@ from rdflib import Graph, Namespace, Literal, URIRef
 from rdflib.namespace import RDF, RDFS, GEO, BRICK, WGS
 
 from ...models import *
+from ...model_resources import load_weather, rebuild_schedule_index
 from ...utils import np, shapely, mixItemListToList, mixItemListToObject, searchBy, generate_code, path
 from ...utils.constant import geom
 
@@ -1185,7 +1186,7 @@ def _import_schedule_nodes(rdfGraph: MoosasGraph, model: MoosasModel):
                 "type": "Weekly",
                 "value": values,
             }
-    model._rebuildScheduleByType()
+    rebuild_schedule_index(model)
 
 
 def _decode_space_settings(rdfGraph: MoosasGraph, spaceUri, spc: MoosasSpace):
@@ -1286,10 +1287,10 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     if isinstance(weather, str):
         weatherPath = rdfGraph.getObject(URIRef(str(weather)), rdfGraph.pgd.fileStoreAt)
         if isinstance(weatherPath, str) and str(weatherPath).endswith('epw'):
-            model.loadWeatherData(str(weatherPath))
+            load_weather(model, str(weatherPath))
         else:
             stationId = rdfGraph.getObject(URIRef(str(weather)), rdfGraph.pgd.stationId)
-            model.loadWeatherData(str(stationId))
+            load_weather(model, str(stationId))
 
     print()
 

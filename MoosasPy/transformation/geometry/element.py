@@ -15,6 +15,7 @@ from ...utils import generate_code, searchBy, mixItemListToObject, mixItemListTo
 from ...utils import shapely, np, ET
 from ...utils.tools import path
 from ...utils.constant import geom
+from ...model_resources import get_schedule_name, load_schedule
 
 # 涓嶅仛inch meter杞崲
 INCH_METER_MULTIPLIER = 1
@@ -3093,13 +3094,13 @@ class MoosasSpace(object):
         if templateType and templateType not in getattr(self.parent, "scheduleByType", {}):
             schedule_path = os.path.join(path.dataBaseDir, 'schedule', f"{templateType.lower()}.sch")
             if os.path.isfile(schedule_path):
-                self.parent.loadSchedule(schedule_path)
+                load_schedule(self.parent, schedule_path)
         
 
         for key in template.keys():
             self.settings[key] = template[key]
             if key in ("zone_ppsm", "zone_equipment", "zone_lighting"):
-                scheduleName= self.parent.getScheduleName(templateType, key)
+                scheduleName = get_schedule_name(self.parent, templateType, key)
                 self.settings[key] = scheduleName
     
 
