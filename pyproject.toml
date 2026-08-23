@@ -11,6 +11,7 @@ requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [
   { name = "Jun Xiao" },
+  { anme = "Yihui Li" },
   { name = "Hongzhong Chen" }
 ]
 keywords = ["building", "simulation", "geometry", "energy", "moosas"]
@@ -42,9 +43,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/UmikoXiao/moosas"
-Repository = "https://github.com/UmikoXiao/moosas"
-Issues = "https://github.com/UmikoXiao/moosas/issues"
+Homepage = "https://github.com/KLEGB/moosas"
+Repository = "https://github.com/KLEGB/moosas"
+Issues = "https://github.com/KLEGB/moosas/issues"
 
 [tool.setuptools]
 include-package-data = true
@@ -58,7 +59,6 @@ include = ["MoosasPy", "MoosasPy.*"]
 MoosasPy = [
   "data/**/*",
   "db/**/*",
-  "doc/**/*",
   "libs/**/*",
   "utils/_.pth",
 ]
