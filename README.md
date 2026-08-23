@@ -7,8 +7,6 @@ This repository contains:
 
 - `MoosasPy`: core Python package for geometry transformation, I/O, weather,
   energy, radiation, and ventilation workflows.
-- `MoosasPy/src`: SketchUp plugin Ruby scripts.
-- `setup`: bundled runtime assets used by the desktop/plugin workflow.
 
 ## Version
 
@@ -43,14 +41,6 @@ Current release workflow:
 2. Push tag `moosaspy-v*` (for example `moosaspy-v1.1.0`).
 3. GitHub Actions workflow `.github/workflows/moosaspy-release.yml` uploads
    wheel/sdist to GitHub Release assets.
-
-## SketchUp Plugin Notes
-
-SketchUp plugin source is under `src`.
-
-If you need plugin packaging/deployment, use the repository scripts (for
-example `toSketchUp.py`) and follow local environment assumptions documented in
-project docs.
 
 ## Documentation
 

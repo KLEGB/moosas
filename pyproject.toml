@@ -60,7 +60,6 @@ MoosasPy = [
   "db/**/*",
   "doc/**/*",
   "libs/**/*",
-  "src/**/*",
   "utils/_.pth",
 ]
 

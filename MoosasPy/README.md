@@ -18,16 +18,10 @@ Use Python `>=3.10`.
 
 ### Option A: install from GitHub Release asset (current default flow)
 
-Public repository:
+Repository release asset:
 
 ```bash
-pip install "https://github.com/<OWNER>/<REPO>/releases/download/moosaspy-v1.1.0/moosaspy-1.1.0-py3-none-any.whl"
-```
-
-Private repository:
-
-```bash
-pip install "https://<USERNAME>:<TOKEN>@github.com/<OWNER>/<REPO>/releases/download/moosaspy-v1.1.0/moosaspy-1.1.0-py3-none-any.whl"
+pip install "https://github.com/KLEGB/moosas/releases/download/moosaspy-v1.1.0/moosaspy-1.1.0-py3-none-any.whl"
 ```
 
 ### Option B: install by package name
@@ -55,13 +49,8 @@ moosaspy-vMAJOR.MINOR.PATCH
 For example:
 
 ```bash
-<<<<<<< Updated upstream
 git tag -a moosaspy-v1.1.0 -m "MoosasPy 1.1.0"
 git push origin moosaspy-v1.1.0
-=======
-git tag -a moosaspy-v1.0.1 -m "MoosasPy 1.0.1"
-git push origin moosaspy-v1.0.1
->>>>>>> Stashed changes
 ```
 
 The workflow `.github/workflows/moosaspy-release.yml` will build distributions

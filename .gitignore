@@ -120,9 +120,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-python/
-moosas.rbz
-moosas.zip
 temp.zip
 
 # Spyder project settings
