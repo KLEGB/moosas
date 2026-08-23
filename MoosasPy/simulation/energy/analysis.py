@@ -13,12 +13,14 @@ public building types via the -t parameter.
 """
 from ...utils.support import os
 from contextlib import nullcontext
+from dataclasses import dataclass
 from datetime import datetime
 import re
 import tempfile
 from ...utils import path, parseFile, FileError
 from ...utils.constant import buildingType, dateSetting
 from ..rad import modelRadiation
+from ..contracts import SimulationResult
 from ..runner import Runner
 
 from ..thermal.settings import ThermalSettings
@@ -183,6 +185,115 @@ def _write_typical_solar_schedule(model: MoosasModel, space, space_index: int, s
     return weekly_name
 
 
+@dataclass(frozen=True)
+class EnergyResult(SimulationResult):
+    """Structured output from an isolated MoosasEnergy run."""
+
+    data: dict | None = None
+
+    def as_legacy(self) -> dict:
+        """Return the dictionary payload historically produced by ``energyAnalysis``."""
+        return self.data or {}
+
+
+class EnergyRunner(Runner):
+    """Prepare inputs, run MoosasEnergy, and return structured energy results."""
+
+    def __init__(
+        self,
+        model: MoosasModel | None = None,
+        core=buildingType.RESIDENTIAL,
+        require_radiation=False,
+        export_daily=False,
+        export_hourly=False,
+        export_by_zone=False,
+        schedule_path=None,
+        energy_input=None,
+        input_path=None,
+        result_path=None,
+        work_dir=None,
+        timeout_seconds=300.0,
+    ):
+        super().__init__(timeout_seconds=timeout_seconds)
+        self.model = model
+        self.core = core
+        self.require_radiation = require_radiation
+        self.export_daily = export_daily
+        self.export_hourly = export_hourly
+        self.export_by_zone = export_by_zone
+        self.schedule_path = schedule_path
+        self.energy_input = energy_input
+        self.input_path = input_path
+        self.result_path = result_path
+        self.work_dir = work_dir
+
+    def run(self) -> EnergyResult:
+        """Execute MoosasEnergy and return the parsed result with diagnostics."""
+        energy_input = self.energy_input
+        if not energy_input:
+            energy_input = getEnergyInput(
+                self.model,
+                core=self.core,
+                requireRadiation=self.require_radiation,
+                exportDaily=self.export_daily,
+                exportHourly=self.export_hourly,
+                exportByZone=self.export_by_zone,
+                schedulePath=self.schedule_path,
+            )
+        elif isinstance(energy_input, dict) and energy_input.get("schedulePath"):
+            if "-sch" not in energy_input.get("args", []):
+                energy_input["args"] += ["-sch", os.path.abspath(energy_input["schedulePath"])]
+
+        if self.work_dir is not None:
+            os.makedirs(self.work_dir, exist_ok=True)
+        workspace = (
+            tempfile.TemporaryDirectory(prefix="moosas-energy-", dir=self.work_dir)
+            if self.input_path is None or self.result_path is None
+            else nullcontext(None)
+        )
+        with workspace as temporary_dir:
+            input_path = self.input_path or os.path.join(temporary_dir, "Energy.i")
+            result_path = self.result_path or os.path.join(temporary_dir, "Energy.o")
+            input_path = os.path.abspath(input_path)
+            result_path = os.path.abspath(result_path)
+            os.makedirs(os.path.dirname(input_path), exist_ok=True)
+            os.makedirs(os.path.dirname(result_path), exist_ok=True)
+
+            with open(input_path, "w") as file:
+                lines = [zone.paramToString() for zone in energy_input["zones"]]
+                file.write("!" + energy_input["zones"][0].paramTags() + "\n")
+                file.write("\n".join(lines))
+
+            arguments = list(energy_input["args"]) + ["-o", result_path, input_path]
+            command = (
+                os.path.abspath(os.path.join(energyScriptDir, f"MoosasEnergy{energyExeSuffix}")),
+                *arguments,
+            )
+            command_result = self.run_command(command, cwd=os.path.abspath(energyScriptDir))
+            weather_temperature = self._weather_temperature(arguments)
+            data = parseEnergyOutput(
+                result_path,
+                energy_input["zones"],
+                exportDaily=self.export_daily,
+                exportHourly=self.export_hourly,
+                exportByZone=self.export_by_zone,
+                weather_temperature=weather_temperature,
+            )
+            return EnergyResult(data=data, commands=(command_result,))
+
+    def _weather_temperature(self, arguments):
+        if self.model is not None:
+            if self.model.weather is None:
+                self.model.loadWeatherData()
+            return np.array(self.model.weather.weatherData.get("temperature")).astype(float).tolist()
+        for index, argument in enumerate(arguments):
+            if argument == "-w" and index + 1 < len(arguments):
+                weather_path = arguments[index + 1].strip('"')
+                if os.path.isfile(weather_path):
+                    return _read_weather_temperature_from_file(weather_path)
+        return None
+
+
 def energyAnalysis(model: MoosasModel = None,
                    core=buildingType.RESIDENTIAL,
                    requireRadiation=False,
@@ -258,73 +369,20 @@ def energyAnalysis(model: MoosasModel = None,
     References:
         https://doi.org/10.1016/j.buildenv.2021.107929.
     """
-    if not energyInput:
-        energyInput = getEnergyInput(
-            model,
-            core=core,
-            requireRadiation=requireRadiation,
-            exportDaily=exportDaily,
-            exportHourly=exportHourly,
-            exportByZone=exportByZone,
-            schedulePath=schedulePath,
-        )
-    elif isinstance(energyInput, dict) and energyInput.get("schedulePath"):
-        if "-sch" not in energyInput.get("args", []):
-            energyInput["args"] += ['-sch', os.path.abspath(energyInput["schedulePath"])]
-
-    if work_dir is not None:
-        os.makedirs(work_dir, exist_ok=True)
-    workspace = (
-        tempfile.TemporaryDirectory(prefix="moosas-energy-", dir=work_dir)
-        if inputPath is None or resultPath is None
-        else nullcontext(None)
-    )
-    with workspace as temporary_dir:
-        if inputPath is None:
-            inputPath = os.path.join(temporary_dir, "Energy.i")
-        if resultPath is None:
-            resultPath = os.path.join(temporary_dir, "Energy.o")
-        inputPath = os.path.abspath(inputPath)
-        resultPath = os.path.abspath(resultPath)
-        os.makedirs(os.path.dirname(inputPath), exist_ok=True)
-        os.makedirs(os.path.dirname(resultPath), exist_ok=True)
-
-        with open(inputPath, "w") as file:
-            lines = [zone.paramToString() for zone in energyInput['zones']]
-            file.write('!' + energyInput['zones'][0].paramTags() + '\n')
-            file.write('\n'.join(lines))
-
-        arguments = list(energyInput['args']) + ['-o', resultPath, inputPath]
-        exe_command = [
-            os.path.abspath(os.path.join(energyScriptDir, f"MoosasEnergy{energyExeSuffix}"))
-        ] + arguments
-        Runner(timeout_seconds=timeout_seconds).run_command(
-            exe_command,
-            cwd=os.path.abspath(energyScriptDir),
-        )
-
-        weather_temperature = None
-        if model is not None:
-            if model.weather is None:
-                model.loadWeatherData()
-            weather_temperature = np.array(model.weather.weatherData.get("temperature")).astype(float).tolist()
-        else:
-            w_path = None
-            for i, argument in enumerate(arguments):
-                if argument == "-w" and i + 1 < len(arguments):
-                    w_path = arguments[i + 1].strip('"')
-                    break
-            if w_path and os.path.isfile(w_path):
-                weather_temperature = _read_weather_temperature_from_file(w_path)
-
-        return parseEnergyOutput(
-            resultPath,
-            energyInput['zones'],
-            exportDaily=exportDaily,
-            exportHourly=exportHourly,
-            exportByZone=exportByZone,
-            weather_temperature=weather_temperature,
-        )
+    return EnergyRunner(
+        model=model,
+        core=core,
+        require_radiation=requireRadiation,
+        export_daily=exportDaily,
+        export_hourly=exportHourly,
+        export_by_zone=exportByZone,
+        schedule_path=schedulePath,
+        energy_input=energyInput,
+        input_path=inputPath,
+        result_path=resultPath,
+        work_dir=work_dir,
+        timeout_seconds=timeout_seconds,
+    ).run().as_legacy()
 
 
 def parseEnergyOutput(resultPath,

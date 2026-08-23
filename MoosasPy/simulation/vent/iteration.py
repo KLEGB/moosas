@@ -13,6 +13,7 @@ from .conread import *
 import csv
 import random
 from ...utils.tools import path, parseFile
+from ..contracts import SimulationResult
 from ..runner import Runner
 import os
 import shutil
@@ -56,6 +57,46 @@ class VentPaths:
             contam_dir=contam_dir,
             project_dir=project_dir,
             result_dir=result_dir,
+        )
+
+
+@dataclass(frozen=True)
+class AirflowResult(SimulationResult):
+    """Structured output from one CONTAM airflow calculation."""
+
+    airflow_matrix: np.ndarray | None = None
+
+
+class AirflowRunner(Runner):
+    """Run CONTAM and simread, then parse the resulting airflow matrix."""
+
+    def __init__(
+        self,
+        prj_file,
+        contam_exe=None,
+        simread_exe=None,
+        response_file=None,
+        paths: VentPaths | None = None,
+        timeout_seconds=300.0,
+    ):
+        super().__init__(timeout_seconds=timeout_seconds)
+        self.prj_file = prj_file
+        self.paths = paths or VentPaths.create()
+        self.contam_exe = contam_exe or self.paths.contamx
+        self.simread_exe = simread_exe or self.paths.simread
+        self.response_file = response_file or self.paths.response
+
+    def run(self) -> AirflowResult:
+        """Execute CONTAM tools and return the parsed airflow matrix."""
+        contam_result = self.run_command((self.contam_exe, self.prj_file))
+        with open(self.response_file, "r", encoding="utf-8") as response_file:
+            simread_result = self.run_command(
+                (self.simread_exe, self.prj_file),
+                stdin=response_file,
+            )
+        return AirflowResult(
+            airflow_matrix=build_matrix(file_path=self.prj_file),
+            commands=(contam_result, simread_result),
         )
 
 
@@ -392,14 +433,13 @@ def contam_iteration(prjFile, contamExe=None, simreadExe=None, responseFile=None
     numpy.ndarray
         AFN matrix parsed from generated CONTAM output files.
     """
-    paths = paths or VentPaths.create()
-    contam_exe = contamExe or paths.contamx
-    simread_exe = simreadExe or paths.simread
-    response_file = responseFile or paths.response
-
-    execContam(exe=contam_exe, file=prjFile)
-    exe_simread(simread_path=simread_exe, file_path=prjFile, responseFile=response_file)
-    return build_matrix(file_path=prjFile)
+    return AirflowRunner(
+        prj_file=prjFile,
+        contam_exe=contamExe,
+        simread_exe=simreadExe,
+        response_file=responseFile,
+        paths=paths,
+    ).run().airflow_matrix
 
 
 def _zoneinfo_text_to_roominfo(zoneInfoText):
@@ -514,11 +554,7 @@ def runFile(prjFiles, paths: VentPaths | None = None):
         prjFiles = [prjFiles]
     paths = paths or VentPaths.create()
     for prjFile in prjFiles:
-        execContam(exe=paths.contamx, file=prjFile)
-
-        """run simread.exe"""
-        exe_simread(simread_path=paths.simread, file_path=prjFile,
-                responseFile=paths.response)
+        AirflowRunner(prj_file=prjFile, paths=paths).run()
 
 
 

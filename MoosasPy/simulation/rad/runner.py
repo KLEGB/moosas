@@ -10,6 +10,7 @@ import tempfile
 from typing import TYPE_CHECKING, TextIO
 
 from ...utils import path
+from ..contracts import SimulationResult
 from ..runner import CommandError, CommandResult, CommandTimeoutError, Runner
 from .daylight import modelToRad, writeGrid
 
@@ -45,11 +46,10 @@ class DaylightFloorResult:
 
 
 @dataclass(frozen=True)
-class RadianceDaylightResult:
+class RadianceDaylightResult(SimulationResult):
     """Structured output from an isolated Radiance daylight run."""
 
-    floors: tuple[DaylightFloorResult, ...]
-    commands: tuple[RadianceCommandResult, ...]
+    floors: tuple[DaylightFloorResult, ...] = ()
 
     def as_legacy(self) -> list[dict]:
         """Return the dictionary payload historically produced by ``simModel``."""

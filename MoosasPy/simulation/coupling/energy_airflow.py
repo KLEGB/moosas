@@ -1,4 +1,6 @@
-﻿from .analysis import getEnergyInput, ThermalSettings, energyAnalysis
+﻿"""Coupled energy and airflow simulation workflows."""
+
+from ..energy.analysis import getEnergyInput, ThermalSettings, energyAnalysis
 from ...transformation.geometry.geos import Vector, Ray
 from ...models import MoosasModel, MoosasCumSky
 from ..weather.dest import MoosasWeather
@@ -53,7 +55,7 @@ def postprocess_zone_results_linear(zones: list[ZoneResult]) -> list[ZoneResult]
     return zones
 
 
-class heatLoadModel(object):
+class EnergyAirflowCoupler(object):
     __slots__ = [
         'model', 'zones', 'paths', 'networkDict', 'skySeries', 'pathRadIntensity', 'runtime',
         'schedulePath', '_sch_daily_map', '_sch_weekly_map', '_sch_loaded_names', 'weather'
@@ -1445,3 +1447,5 @@ class heatLoadModel(object):
                 "MechanicalVent": [float(v) for v in mech[:len(hoys)]],
             }
         return result
+
+
