@@ -602,6 +602,8 @@ class MoosasElement(object):
         areaGlazing = self.area3d(faces=gFace)
         surface = [shapely.polygons(shapely.get_exterior_ring(f)) for f in mixItemListToList(self.face)]
         areaSurface = self.area3d(faces=surface)
+        if areaSurface <= 0:
+            return 0.0
         return areaGlazing / areaSurface
 
     @property
