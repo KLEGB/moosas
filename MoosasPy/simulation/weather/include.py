@@ -2,8 +2,10 @@ import os
 import time
 import numpy as np
 import re
-from ...utils.tools import path, callCmd
-from .dest import Location, temp_dic, weather_dic, stationInfo
+import tempfile
+from ...utils.tools import path
+from ..runner import Runner
+from .dest import Location, weather_dic, stationInfo
 
 import platform
 if platform.system().lower() == 'linux':
@@ -133,7 +135,7 @@ def epw2csv(epw_file):
         return weather
 
 
-def epw2wea(location, epw_file):
+def epw2wea(location, epw_file, output_path=None, work_dir=None, timeout_seconds=300.0):
     """
     Convert EPW weather data file to WEA format using epw2wea executable.
     
@@ -154,17 +156,19 @@ def epw2wea(location, epw_file):
     SYNOPSIS
     epw2wea file_name.epw file_name.wea
     '''
-    wea_file = os.path.join(temp_dic, location.stationId + '.wea')
-    if not os.path.exists(temp_dic):
-        os.makedirs(temp_dic)
-    # command = ' '.join([epw2wea_exe, epw_file, wea_file])
-    # os.popen(command)
-    callCmd([epw2wea_exe, epw_file, wea_file])
+    if output_path is None:
+        if work_dir is not None:
+            os.makedirs(work_dir, exist_ok=True)
+        output_dir = tempfile.mkdtemp(prefix="moosas-weather-", dir=work_dir)
+        output_path = os.path.join(output_dir, location.stationId + '.wea')
+    wea_file = os.path.abspath(output_path)
+    os.makedirs(os.path.dirname(wea_file), exist_ok=True)
+    Runner(timeout_seconds=timeout_seconds).run_command([epw2wea_exe, epw_file, wea_file])
     wait(wea_file)
     return wea_file
 
 
-def cum_sky(location, weatherFile):
+def cum_sky(location, weatherFile, work_dir=None, timeout_seconds=300.0):
     """
     Compute cumulative sky matrix from weather data using gendaymtx.
     
@@ -181,16 +185,20 @@ def cum_sky(location, weatherFile):
         A 2D array of shape (145, 8760) representing the cumulative sky radiation in kWh/m²,
         with rows corresponding to sky patches and columns to hourly timesteps.
     """
-    mtx_file = os.path.join(temp_dic, location.stationId + '.mtx')
-    callCmd([gendaymtx_exe, '-m 1 -n -O1', weatherFile, '>', mtx_file])
-    mtx = []
-    # 读取matrix文件
-    wait(mtx_file)
-    with open(mtx_file, encoding='utf-8') as f:
-        mtx_data = [f.readline() for i in range(1279114)]
-        mtx = mtx_data[8:]
-        mtx = [line.strip('\n').split(' ') for line in mtx if len(line.split(' ')) == 3]
-        mtx = np.array(mtx).astype(float)
+    if work_dir is not None:
+        os.makedirs(work_dir, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="moosas-cumsky-", dir=work_dir) as temporary_dir:
+        mtx_file = os.path.join(temporary_dir, location.stationId + '.mtx')
+        with open(mtx_file, 'w', encoding='utf-8') as output_file:
+            Runner(timeout_seconds=timeout_seconds).run_command(
+                [gendaymtx_exe, '-m', '1', '-n', '-O1', weatherFile],
+                stdout=output_file,
+            )
+        with open(mtx_file, encoding='utf-8') as f:
+            mtx_data = [f.readline() for i in range(1279114)]
+            mtx = mtx_data[8:]
+            mtx = [line.strip('\n').split(' ') for line in mtx if len(line.split(' ')) == 3]
+            mtx = np.array(mtx).astype(float)
 
     '''Parse a row of gendaymtx RGB patch data in W/sr/m2 to radiation in kWh/m2.
 
@@ -206,9 +214,6 @@ def cum_sky(location, weatherFile):
     # TREGENZA天空模型系数折算
     coff = np.repeat(TREGENZA_COEFFICIENTS, TREGENZA_PATCHES_PER_ROW).reshape([145, 1]) * 8760 / 1000
     mtx *= coff
-
-    # mtx文件实在是太大了……
-    os.remove(mtx_file)
 
     return mtx
 
@@ -235,8 +240,9 @@ def includeEpw(epw_file, city=None)->str:
     if city is not None:
         location.city = str(city)
     epw_csv = epw2csv(epw_file)
-    epw_wea = epw2wea(location, epw_file)
-    mtx = cum_sky(location, epw_wea)
+    with tempfile.TemporaryDirectory(prefix="moosas-include-epw-") as workspace:
+        epw_wea = epw2wea(location, epw_file, work_dir=workspace)
+        mtx = cum_sky(location, epw_wea, work_dir=workspace)
     mtx = fix_rad(mtx, epw_csv[5])
     # 覆盖写入csv
     exist = False

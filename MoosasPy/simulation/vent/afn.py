@@ -5,12 +5,14 @@
 from __future__ import annotations
 
 import os
+import tempfile
 
 from ...transformation.geometry.element import *
 from ...transformation.geometry.geos import Vector
 from ..rad import modelRadiation
 from ...utils.constant import geom
-from ...utils.tools import path, generate_code, callCmd, parseFile
+from ...utils.tools import path, generate_code, parseFile
+from ..runner import Runner
 from ..weather.cumsky import MoosasCumSky
 
 
@@ -734,7 +736,7 @@ def buildNetworkFile(model=None, pathList: list[AfnPath] = None, zoneList: list[
     for p in pathList:
         networkStr += p.dump() + "\n"
     if networkFilePath is None:
-        networkFilePath = os.path.join(path.tempDir, generate_code(4) + '.net')
+        networkFilePath = os.path.join(tempfile.mkdtemp(prefix="moosas-afn-"), "network.net")
 
     with open(networkFilePath, 'w+') as f:
         f.write(networkStr)
@@ -960,8 +962,10 @@ def buildPrj(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone]
         -t / -t0 : OutdoorTemperature (default: 25)
     """
     prjTempName = 'afn_' + generate_code(4)
+    workspace = None
     if networkFilePath is None:
-        networkFilePath = os.path.join(path.tempDir, prjTempName + '.net')
+        workspace = tempfile.mkdtemp(prefix="moosas-afn-")
+        networkFilePath = os.path.join(workspace, prjTempName + '.net')
         if pathList is None or zoneList is None:
             if model is None:
                 raise Exception("model, pathList and zoneList cannot be all None")
@@ -970,8 +974,9 @@ def buildPrj(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone]
                                            windVector=windVector, airDensity=airDensity, alpha=alpha)
 
     if prjFilePath is None:
+        workspace = workspace or tempfile.mkdtemp(prefix="moosas-afn-")
         prjName = prjTempName
-        prjDirectory = path.tempDir
+        prjDirectory = workspace
         prjFilePath = os.path.join(prjDirectory, prjName + '.prj')
     else:
         prjName = os.path.basename(prjFilePath)[:-4]
@@ -989,7 +994,7 @@ def buildPrj(model=None, pathList: list[AfnPath] = None, zoneList: list[AfnZone]
         command += ['-s', "0"]
     command += [networkFilePath]
 
-    callCmd(command)
+    Runner().run_command(command)
 
     return prjFilePath
 
@@ -1052,7 +1057,7 @@ def buildZoneInfoFile(model=None, zoneList: list[AfnZone] = None, networkFilePat
     zoneStr += ["! zonePrjName,heatLoad,zoneName"]
     if networkFilePath is None:
         prjTempName = 'afn_' + generate_code(4)
-        networkFilePath = os.path.join(path.tempDir, prjTempName + '.net')
+        networkFilePath = os.path.join(tempfile.mkdtemp(prefix="moosas-afn-"), prjTempName + '.net')
         if zoneList is None:
             if model is None:
                 raise Exception("model, pathList and zoneList cannot be all None")

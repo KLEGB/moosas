@@ -12,12 +12,14 @@ MoosasEnergy Go executable, which supports both residential and
 public building types via the -t parameter.
 """
 from ...utils.support import os
-import subprocess
+from contextlib import nullcontext
 from datetime import datetime
 import re
-from ...utils import path, callCmd, parseFile, FileError
+import tempfile
+from ...utils import path, parseFile, FileError
 from ...utils.constant import buildingType, dateSetting
 from ..rad import modelRadiation
+from ..runner import Runner
 
 from ..thermal.settings import ThermalSettings
 
@@ -34,7 +36,6 @@ SOLAR_ACTIVE_HOURS = tuple(range(8, 18))
 
 # Directory paths for the energy module
 energyScriptDir = os.path.join(path.libDir, "energy")
-energyDataDir = os.path.join(path.dataDir, "energy")
 energyExeSuffix = ".exe" if os.name == "nt" else ""
 
 # Month names for output parsing (12 months)
@@ -190,8 +191,10 @@ def energyAnalysis(model: MoosasModel = None,
                    exportByZone=False,
                    schedulePath=None,
                    energyInput=None,
-                   inputPath=os.path.join(energyDataDir, "Energy.i"),
-                   resultPath=os.path.join(energyDataDir, "Energy.o")) -> dict:
+                   inputPath=None,
+                   resultPath=None,
+                   work_dir=None,
+                   timeout_seconds=300.0) -> dict:
     """Quick energy analysis function.
 
     This function prepares the input file, invokes the unified MoosasEnergy
@@ -217,10 +220,12 @@ def energyAnalysis(model: MoosasModel = None,
         energyInput (dict or None): Pre-built energy input dict. If provided,
             skips getEnergyInput(). Must contain 'zones' and 'args' keys.
             (default: None)
-        inputPath (str): Path to save the input .i file.
-            (default: data/energy/Energy.i)
-        resultPath (str): Path to save the output .o file.
-            (default: data/energy/Energy.o)
+        inputPath (str or None): Path to save the input .i file. If None, a
+            per-call temporary path is used.
+        resultPath (str or None): Path to save the output .o file. If None, a
+            per-call temporary path is used.
+        work_dir (str or None): Optional parent directory for temporary files.
+        timeout_seconds (float): Native executable timeout in seconds.
 
     Returns:
         dict: A dictionary containing the parsed energy results:
@@ -267,55 +272,59 @@ def energyAnalysis(model: MoosasModel = None,
         if "-sch" not in energyInput.get("args", []):
             energyInput["args"] += ['-sch', os.path.abspath(energyInput["schedulePath"])]
 
-    inputPath = os.path.abspath(inputPath)
-    resultPath = os.path.abspath(resultPath)
-
-    # Write the input .i file
-    with open(inputPath, "w") as file:
-        lines = [zone.paramToString() for zone in energyInput['zones']]
-        file.write('!' + energyInput['zones'][0].paramTags() + '\n')
-        file.write('\n'.join(lines))
-
-    # Append output path and input path to the command-line arguments
-    energyInput['args'] += ['-o', resultPath, inputPath]
-
-    # Use the unified MoosasEnergy executable
-    exe_command = [
-        os.path.abspath(os.path.join(energyScriptDir, f"MoosasEnergy{energyExeSuffix}"))
-    ] + list(energyInput['args'])
-    subprocess.run(
-        exe_command,
-        cwd=os.path.abspath(energyScriptDir),
-        check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
+    if work_dir is not None:
+        os.makedirs(work_dir, exist_ok=True)
+    workspace = (
+        tempfile.TemporaryDirectory(prefix="moosas-energy-", dir=work_dir)
+        if inputPath is None or resultPath is None
+        else nullcontext(None)
     )
+    with workspace as temporary_dir:
+        if inputPath is None:
+            inputPath = os.path.join(temporary_dir, "Energy.i")
+        if resultPath is None:
+            resultPath = os.path.join(temporary_dir, "Energy.o")
+        inputPath = os.path.abspath(inputPath)
+        resultPath = os.path.abspath(resultPath)
+        os.makedirs(os.path.dirname(inputPath), exist_ok=True)
+        os.makedirs(os.path.dirname(resultPath), exist_ok=True)
 
-    weather_temperature = None
-    if model is not None:
-        if model.weather is None:
-            model.loadWeatherData()
-        weather_temperature = np.array(model.weather.weatherData.get("temperature")).astype(float).tolist()
-    else:
-        # fallback from -w argument when only energyInput is provided.
-        args = energyInput.get("args", []) if isinstance(energyInput, dict) else []
-        w_path = None
-        for i, a in enumerate(args):
-            if a == "-w" and i + 1 < len(args):
-                w_path = args[i + 1].strip('"')
-                break
-        if w_path and os.path.isfile(w_path):
-            weather_temperature = _read_weather_temperature_from_file(w_path)
+        with open(inputPath, "w") as file:
+            lines = [zone.paramToString() for zone in energyInput['zones']]
+            file.write('!' + energyInput['zones'][0].paramTags() + '\n')
+            file.write('\n'.join(lines))
 
-    return parseEnergyOutput(
-        resultPath,
-        energyInput['zones'],
-        exportDaily=exportDaily,
-        exportHourly=exportHourly,
-        exportByZone=exportByZone,
-        weather_temperature=weather_temperature,
-    )
+        arguments = list(energyInput['args']) + ['-o', resultPath, inputPath]
+        exe_command = [
+            os.path.abspath(os.path.join(energyScriptDir, f"MoosasEnergy{energyExeSuffix}"))
+        ] + arguments
+        Runner(timeout_seconds=timeout_seconds).run_command(
+            exe_command,
+            cwd=os.path.abspath(energyScriptDir),
+        )
+
+        weather_temperature = None
+        if model is not None:
+            if model.weather is None:
+                model.loadWeatherData()
+            weather_temperature = np.array(model.weather.weatherData.get("temperature")).astype(float).tolist()
+        else:
+            w_path = None
+            for i, argument in enumerate(arguments):
+                if argument == "-w" and i + 1 < len(arguments):
+                    w_path = arguments[i + 1].strip('"')
+                    break
+            if w_path and os.path.isfile(w_path):
+                weather_temperature = _read_weather_temperature_from_file(w_path)
+
+        return parseEnergyOutput(
+            resultPath,
+            energyInput['zones'],
+            exportDaily=exportDaily,
+            exportHourly=exportHourly,
+            exportByZone=exportByZone,
+            weather_temperature=weather_temperature,
+        )
 
 
 def parseEnergyOutput(resultPath,

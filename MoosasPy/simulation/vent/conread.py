@@ -6,7 +6,7 @@
 
 import re
 import numpy as np
-from ...utils.tools import callCmd
+from ..runner import Runner
 
 AIR_DENSITY = 1.204
 
@@ -30,8 +30,8 @@ def exe_simread(simread_path, file_path, responseFile):
         This function does not return any value.
     """
     """simread.exe"""
-    # print(simread_path + ' ' + file_path+'<'+responseFile)
-    callCmd([simread_path, file_path, ' < ' ,responseFile])
+    with open(responseFile, 'r', encoding='utf-8') as response_file:
+        Runner().run_command([simread_path, file_path], stdin=response_file)
 
 
 def read_flowpath(file_path):

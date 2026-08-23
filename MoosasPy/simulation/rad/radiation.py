@@ -1,12 +1,15 @@
 ﻿from __future__ import annotations
 
+import tempfile
+
 from ...transformation.io import writeGeo
 from ...transformation.geometry import MoosasGrid
 from ...transformation.geometry.element import MoosasSpace, MoosasSkylight, MoosasGlazing, MoosasElement
 from ...transformation.geometry.geos import Ray, Vector
 from ...utils import np, os, Iterable
-from ...utils import path, callCmd, generate_code
+from ...utils import path
 from ...utils.constant import rad
+from ..runner import Runner
 from ..weather import MoosasCumSky
 
 
@@ -296,14 +299,16 @@ def rayTest(rays: Iterable[Ray], model=None, geo_path: str = None,
         If not, None will be add.
     """
     # export geometry file or use exist file directly
-    prj = 'ray_' + generate_code(4)
     if geo_path is None:
         if model is None:
             raise Exception('empty model')
         geo_path = writeRadGeo(model)
     if ray_path is None:
-        ray_path = os.path.abspath(os.path.join(path.tempDir, prj + '.i'))
-    result_path = os.path.abspath(os.path.join(path.tempDir, prj + '.o'))
+        run_dir = tempfile.mkdtemp(prefix="moosas-ray-")
+        ray_path = os.path.join(run_dir, "rays.i")
+    else:
+        ray_path = os.path.abspath(ray_path)
+    result_path = os.path.join(os.path.dirname(ray_path), "rays.o")
 
     # export ray file
     lines = ''
@@ -323,7 +328,7 @@ def rayTest(rays: Iterable[Ray], model=None, geo_path: str = None,
         '-o', result_path,
         ray_path
     ]
-    callCmd(command)
+    Runner().run_command(command)
 
     # read the result ray from the file
     result = []
@@ -340,7 +345,7 @@ def rayTest(rays: Iterable[Ray], model=None, geo_path: str = None,
     return reflectionRay
 
 
-def writeRadGeo(model):
+def writeRadGeo(model, work_dir=None):
     """
     Write a geometry file for the given model towards MoosasRayTest.exe.
     
@@ -354,8 +359,10 @@ def writeRadGeo(model):
     str
         The absolute file path to the generated .geo file.
     """
-    prj = 'ray_' + generate_code(4)
-    geo_path = os.path.abspath(os.path.join(path.tempDir, prj + '.geo'))
+    if work_dir is not None:
+        os.makedirs(work_dir, exist_ok=True)
+    geo_dir = tempfile.mkdtemp(prefix="moosas-ray-", dir=work_dir)
+    geo_path = os.path.join(geo_dir, "model.geo")
     writeGeo(geo_path, model)
     # with open(geoPath,'a') as f:
     #    f.write(

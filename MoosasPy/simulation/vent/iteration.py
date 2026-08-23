@@ -6,27 +6,57 @@
     you can call vent.buildPrj(), vent.buildNetworkFile() or vent.buildZoneInfoFile()
 """
 
+from dataclasses import dataclass
 import time
+import tempfile
 from .conread import *
 import csv
 import random
-from ...utils.tools import path, callCmd,parseFile
+from ...utils.tools import path, parseFile
+from ..runner import Runner
 import os
 import shutil
 
-working_dir = os.path.join(path.libDir, r'vent')
 EXE_SUFFIX = '.exe' if os.name == 'nt' else ''
-FilePath = {
-    'contamx': os.path.join(working_dir, 'contam', f'contamx3{EXE_SUFFIX}'),
-    'contamw': os.path.join(working_dir, 'contam', f'contamw3{EXE_SUFFIX}'),
-    'simread': os.path.join(working_dir, 'contam', f'simread{EXE_SUFFIX}'),
-    'response': os.path.join(working_dir, 'contam', 'response.txt'),
-    'roomInfo': os.path.join(path.dataDir, 'vent', 'roomInfo.txt'),
-    'project_dir': os.path.join(path.dataDir, 'vent', 'project'),
-    'contam_dir': os.path.join(working_dir, 'contam'),
-    'result_dir': os.path.join(path.dataDir, 'vent', 'result'),
-}
 DEFAULT_INDOOR_TEMPERATURE = 298.15
+
+
+@dataclass(frozen=True)
+class VentPaths:
+    """Native CONTAM resources and isolated runtime paths for one run."""
+
+    workspace: str
+    contamx: str
+    simread: str
+    response: str
+    contam_dir: str
+    project_dir: str
+    result_dir: str
+
+    @classmethod
+    def create(cls, work_dir=None):
+        if work_dir is not None:
+            os.makedirs(work_dir, exist_ok=True)
+        workspace = tempfile.mkdtemp(prefix="moosas-vent-", dir=work_dir)
+        return cls.from_workspace(workspace)
+
+    @classmethod
+    def from_workspace(cls, workspace):
+        workspace = os.path.abspath(workspace)
+        contam_dir = os.path.join(path.libDir, "vent", "contam")
+        project_dir = os.path.join(workspace, "project")
+        result_dir = os.path.join(workspace, "result")
+        os.makedirs(project_dir, exist_ok=True)
+        os.makedirs(result_dir, exist_ok=True)
+        return cls(
+            workspace=workspace,
+            contamx=os.path.join(contam_dir, f"contamx3{EXE_SUFFIX}"),
+            simread=os.path.join(contam_dir, f"simread{EXE_SUFFIX}"),
+            response=os.path.join(contam_dir, "response.txt"),
+            contam_dir=contam_dir,
+            project_dir=project_dir,
+            result_dir=result_dir,
+        )
 
 
 class ZoneResult(object):
@@ -71,7 +101,7 @@ class ZoneResult(object):
 
 
 def iterateProjects(prjFiles, zoneInfoFiles, concatResultFile=None, outdoorTemperature=20, maxIteration=10,
-                    exitResidual=0.01) -> list[ZoneResult]:
+                    exitResidual=0.01, paths: VentPaths | None = None) -> list[ZoneResult]:
     """
     Iterate over multiple CONTAM project files to perform buoyancy ventilation simulations and merge results.
     
@@ -151,11 +181,10 @@ def iterateProjects(prjFiles, zoneInfoFiles, concatResultFile=None, outdoorTempe
         prjFiles = [prjFiles]
     if isinstance(zoneInfoFiles, str):
         zoneInfoFiles = [zoneInfoFiles]
-    resultFiles = [os.path.join(path.tempDir, os.path.basename(prj)[:-4] + '_result.csv') for prj in prjFiles]
+    paths = paths or VentPaths.create()
+    resultFiles = [os.path.join(paths.result_dir, os.path.basename(prj)[:-4] + '_result.csv') for prj in prjFiles]
     if concatResultFile is None:
-        concatResultFile = FilePath['result_dir'] + 'concatResult.csv'
-    if os.path.exists(FilePath['result_dir']):
-        path.clean(FilePath['result_dir'])
+        concatResultFile = os.path.join(paths.result_dir, 'concatResult.csv')
 
     allZones = []
     for prj, heat, res in zip(prjFiles, zoneInfoFiles, resultFiles):
@@ -163,7 +192,7 @@ def iterateProjects(prjFiles, zoneInfoFiles, concatResultFile=None, outdoorTempe
                                 zoneInfoFile=heat,
                                 resultFile=res,
                                 outdoorTemperature=outdoorTemperature, maxIteration=int(maxIteration),
-                                exitResidual=float(exitResidual))
+                                exitResidual=float(exitResidual), paths=paths)
 
     writeZone(concatResultFile, allZones)
     print('------------------------------')
@@ -172,7 +201,7 @@ def iterateProjects(prjFiles, zoneInfoFiles, concatResultFile=None, outdoorTempe
 
 
 def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, maxIteration=50,
-                exitResidual=0.01) -> list[ZoneResult]:
+                exitResidual=0.01, paths: VentPaths | None = None) -> list[ZoneResult]:
     """
     Simulate buoyancy-driven airflow in a building using CONTAMX based on mass flow balance in an air flow network.
     
@@ -246,7 +275,7 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
 
     resultFile: the iteration result path, will be coded into csv.
         In this file, the temperature changes and Volume Metric Flow Rate in ACH will be recorded.
-        You can find all processing prj file in FilePath['project_dir'] and read the Air Flow Network by contamW.
+            The active project's workspace is provided through ``VentPaths``.
 
     outdoorTemperature: The static outdoor temperature.
         Notice that only the indoor/outdoor temperature difference will be considered in contamX,
@@ -260,20 +289,18 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
     residual = 100.0
 
     """preparing the file"""
-    FilePath['roomInfo'] = zoneInfoFile
-    FilePath['project_file'] = prjFile
-    if not test_exist():
+    paths = paths or VentPaths.create()
+    if not test_exist(paths, prjFile):
         raise Exception('Error occurred while checking files.')
-    FilePath['current_file'] = os.path.normpath(
-        os.path.join(FilePath['project_dir'], os.path.basename(FilePath['project_file'])))
-    src_prj = os.path.normcase(os.path.abspath(os.path.normpath(FilePath['project_file'])))
-    dst_prj = os.path.normcase(os.path.abspath(FilePath['current_file']))
+    current_file = os.path.normpath(os.path.join(paths.project_dir, os.path.basename(prjFile)))
+    src_prj = os.path.normcase(os.path.abspath(os.path.normpath(prjFile)))
+    dst_prj = os.path.normcase(os.path.abspath(current_file))
     if src_prj != dst_prj:
         shutil.copy2(src_prj, dst_prj)
 
     """build zone series"""
     tempResult, ACHresult = [], []
-    zones = readZoneInfo(FilePath['project_file'], FilePath['roomInfo'])
+    zones = readZoneInfo(prjFile, zoneInfoFile)
     invalidRoom = np.array([False] * len(zones))
 
     """start iteration"""
@@ -281,10 +308,10 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
         iteration += 1
 
         print('------------------------------')
-        print("Iteration", iteration, FilePath['current_file'])
+        print("Iteration", iteration, current_file)
 
         try:
-            AFN = contam_iteration(prjFile=FilePath['current_file'])
+            AFN = contam_iteration(prjFile=current_file, paths=paths)
             temperature = sensible_heat_iteration(
                 AFN=AFN,
                 zoneInfo=np.array([z.heat for z in zones]),
@@ -326,7 +353,7 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
                 print(' \t\t\t' + '\t'.join(np.round(thisResult, 1).astype(str)))
                 residual = np.mean(np.abs(residual1 + residual2))
 
-            write_contam(temperature=temperature, prjFile=FilePath['current_file'])
+            write_contam(temperature=temperature, prjFile=current_file)
 
         except Exception as e:
             print('\033[40m' + f'Error occurred and simulation has collapsed: {e}' + '\033[0m')
@@ -341,11 +368,11 @@ def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, m
     if resultFile is None:
         return zones
     print('simulation finished :', resultFile)
-    shutil.copy2(FilePath['current_file'], prjFile[:-4]+'_final.prj')
+    shutil.copy2(current_file, prjFile[:-4]+'_final.prj')
     return zones
 
 
-def contam_iteration(prjFile, contamExe=None, simreadExe=None, responseFile=None):
+def contam_iteration(prjFile, contamExe=None, simreadExe=None, responseFile=None, paths: VentPaths | None = None):
     """
     Run one CONTAM iteration and return the Air Flow Network matrix.
 
@@ -365,9 +392,10 @@ def contam_iteration(prjFile, contamExe=None, simreadExe=None, responseFile=None
     numpy.ndarray
         AFN matrix parsed from generated CONTAM output files.
     """
-    contam_exe = contamExe or FilePath['contamx']
-    simread_exe = simreadExe or FilePath['simread']
-    response_file = responseFile or FilePath['response']
+    paths = paths or VentPaths.create()
+    contam_exe = contamExe or paths.contamx
+    simread_exe = simreadExe or paths.simread
+    response_file = responseFile or paths.response
 
     execContam(exe=contam_exe, file=prjFile)
     exe_simread(simread_path=simread_exe, file_path=prjFile, responseFile=response_file)
@@ -403,7 +431,7 @@ def _zoneinfo_text_to_roominfo(zoneInfoText):
     return roomInfo
 
 
-def sensible_heat_iteration(AFN, zoneInfo, outdoorTemperature=25):
+def sensible_heat_iteration(AFN, zoneInfo, outdoorTemperature=25, prjFile=None):
     """
     Solve sensible heat balance and return updated indoor temperature (Kelvin).
 
@@ -427,7 +455,9 @@ def sensible_heat_iteration(AFN, zoneInfo, outdoorTemperature=25):
     roomInfo = None
     if isinstance(zoneInfo, str):
         if os.path.exists(zoneInfo):
-            parsed = readZoneInfo(prjFile=FilePath.get('current_file', FilePath.get('project_file', '')), roomInfoFile=zoneInfo)
+            if prjFile is None:
+                raise ValueError('prjFile is required when zoneInfo is a file path.')
+            parsed = readZoneInfo(prjFile=prjFile, roomInfoFile=zoneInfo)
             roomInfo = [z.heat for z in parsed]
         else:
             parsed = _zoneinfo_text_to_roominfo(zoneInfo)
@@ -472,7 +502,7 @@ def write_contam(temperature, prjFile, outputFile=None):
     write_file(output_file, head, temp_revise, rear)
     return output_file
 
-def runFile(prjFiles):
+def runFile(prjFiles, paths: VentPaths | None = None):
     """run and read the AirFlowNetwork result of a *.prj file.
 
     -----------------------------------------
@@ -482,12 +512,13 @@ def runFile(prjFiles):
     """
     if isinstance(prjFiles, str):
         prjFiles = [prjFiles]
+    paths = paths or VentPaths.create()
     for prjFile in prjFiles:
-        execContam(exe=FilePath['contamx'], file=prjFile)
+        execContam(exe=paths.contamx, file=prjFile)
 
         """run simread.exe"""
-        exe_simread(simread_path=FilePath['simread'], file_path=prjFile,
-                    responseFile=FilePath['response'])
+        exe_simread(simread_path=paths.simread, file_path=prjFile,
+                responseFile=paths.response)
 
 
 
@@ -594,7 +625,7 @@ def execContam(exe, file):
     if not os.path.exists(file):
         print('error: ' + file + ' not found')
         return False
-    callCmd([exe, file])
+    Runner().run_command([exe, file])
     return True
 
 def readPathResult(prjFile,netFile=None):
@@ -679,7 +710,7 @@ def change_temperature(AFN: np.ndarray, roomInfo: np.ndarray, t0):
     return temperature
 
 
-def test_exist():
+def test_exist(paths: VentPaths, prj_file):
     """
     Check existence and set up necessary directories and files for the project.
     
@@ -692,22 +723,10 @@ def test_exist():
     bool
         True if all required paths exist (or are created successfully), False otherwise.
     """
-    # for file in FilePath.keys():
-    #    if file != skip and file[-3:]!='dir':
-    #        if not os.path.exists(FilePath[file]):
-    #            print('File not found:',FilePath[file])
-    #            return False
-    # Do not clean project_dir here: input prj may already be placed inside this
-    # directory by upper-level workspace management.
-    if not os.path.exists(FilePath['project_dir']):
-        os.mkdir(FilePath['project_dir'])
-    if not os.path.exists(FilePath['contam_dir']):
+    if not os.path.exists(paths.contam_dir):
         return False
-    if not os.path.exists(FilePath['project_file']):
+    if not os.path.exists(prj_file):
         return False
-
-    if not os.path.exists(FilePath['result_dir']):
-        os.mkdir(FilePath['result_dir'])
     return True
 
 

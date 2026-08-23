@@ -38,7 +38,7 @@ class RadianceRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as parent_dir:
             with patch("MoosasPy.simulation.rad.runner.modelToRad"), patch(
                 "MoosasPy.simulation.rad.runner.writeGrid", side_effect=write_grid
-            ), patch("MoosasPy.simulation.rad.runner.subprocess.run", side_effect=run_command):
+            ), patch("MoosasPy.simulation.runner.subprocess.run", side_effect=run_command):
                 result = RadianceRunner(model, self.sky, work_dir=parent_dir).run()
 
         self.assertEqual(len(result.floors), 1)
@@ -53,7 +53,7 @@ class RadianceRunnerTests(unittest.TestCase):
         completed = subprocess.CompletedProcess(command, 3, stdout="", stderr="missing octree")
 
         with tempfile.TemporaryDirectory() as run_dir, patch(
-            "MoosasPy.simulation.rad.runner.subprocess.run", return_value=completed
+            "MoosasPy.simulation.runner.subprocess.run", return_value=completed
         ):
             with self.assertRaises(RadianceCommandError) as error:
                 runner._run_command(command, Path(run_dir))
@@ -67,7 +67,7 @@ class RadianceRunnerTests(unittest.TestCase):
         timeout = subprocess.TimeoutExpired(command, 1, output=b"partial output", stderr=b"still running")
 
         with tempfile.TemporaryDirectory() as run_dir, patch(
-            "MoosasPy.simulation.rad.runner.subprocess.run", side_effect=timeout
+            "MoosasPy.simulation.runner.subprocess.run", side_effect=timeout
         ):
             with self.assertRaises(RadianceTimeoutError) as error:
                 runner._run_command(command, Path(run_dir))

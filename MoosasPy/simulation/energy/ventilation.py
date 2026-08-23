@@ -9,6 +9,7 @@ from ...utils.date import DateTime
 from numpy.linalg import LinAlgError
 from ..vent.afn import AfnNetwork, buildPrj, buildZoneInfoFile, AfnPath, AfnZone
 from ..vent.iteration import (
+    VentPaths,
     iterateFile,
     contam_iteration,
     sensible_heat_iteration,
@@ -16,9 +17,9 @@ from ..vent.iteration import (
     readPathResult,
     ZoneResult,
 )
-from ..vent import iteration as vent_iteration
 import networkx as nx
 from copy import deepcopy
+import tempfile
 
 
 def _linear_interpolate_nan_series(values):
@@ -960,7 +961,7 @@ class heatLoadModel(object):
 
     def _ensure_runtime_workspace(self, reset=False):
         """
-        Prepare isolated per-task workspace under ``__temp__`` and remap vent FilePath.
+        Prepare isolated per-task workspace and explicit vent runtime paths.
 
         Parameters
         ----------
@@ -972,24 +973,12 @@ class heatLoadModel(object):
             if os.path.exists(ws.get('root', '')):
                 return ws
 
-        token = f"{int(os.times().elapsed * 1000)}_{os.getpid()}_{np.random.randint(1000, 9999)}"
-        root = os.path.join(path.tempDir, f"vent_task_{token}")
+        root = tempfile.mkdtemp(prefix="moosas-vent-task-")
         project_dir = os.path.join(root, "project")
         result_dir = os.path.join(root, "result")
         room_info_file = os.path.join(root, "roomInfo.txt")
         os.makedirs(project_dir, exist_ok=True)
         os.makedirs(result_dir, exist_ok=True)
-
-        if 'filepath_backup' not in self.runtime:
-            self.runtime['filepath_backup'] = {
-                'project_dir': vent_iteration.FilePath.get('project_dir'),
-                'result_dir': vent_iteration.FilePath.get('result_dir'),
-                'roomInfo': vent_iteration.FilePath.get('roomInfo'),
-            }
-
-        vent_iteration.FilePath['project_dir'] = project_dir
-        vent_iteration.FilePath['result_dir'] = result_dir
-        vent_iteration.FilePath['roomInfo'] = room_info_file
 
         ws = {
             'root': root,
@@ -998,6 +987,7 @@ class heatLoadModel(object):
             'room_info_file': room_info_file,
         }
         self.runtime['workspace'] = ws
+        self.runtime['vent_paths'] = VentPaths.from_workspace(root)
         self.runtime['prj_counter'] = 0
         return ws
 
@@ -1021,7 +1011,7 @@ class heatLoadModel(object):
         )
         peak_t = outdoor_series[hoys.index(peak_hoy)]
         for _ in range(max(int(preheat), 0)):
-            AFN = contam_iteration(prj_file)
+            AFN = contam_iteration(prj_file, paths=self.runtime['vent_paths'])
             AFN*=1+inf_p
             temperature = sensible_heat_iteration(AFN=AFN, zoneInfo=zone_info, outdoorTemperature=peak_t)
             prj_file = write_contam(temperature=temperature, prjFile=prj_file)
@@ -1061,7 +1051,7 @@ class heatLoadModel(object):
         zText = buildZoneInfoFile(zoneList=venNetwork['zones'], pathList=venNetwork['paths'])
 
         if mode == "onions":
-            zoneInfoFilePath = os.path.join(path.tempDir, f"zoneinfo_{hoy}.info")
+            zoneInfoFilePath = os.path.join(self.runtime['workspace']['root'], f"zoneinfo_{hoy}.info")
             zFile = buildZoneInfoFile(
                 zoneList=venNetwork['zones'],
                 pathList=venNetwork['paths'],
@@ -1079,7 +1069,8 @@ class heatLoadModel(object):
                 prjFile,
                 zFile,
                 maxIteration=iteration,
-                outdoorTemperature=self.runtime.get('outdoor_temperature', 25)
+                outdoorTemperature=self.runtime.get('outdoor_temperature', 25),
+                paths=self.runtime['vent_paths'],
             )
 
         zones = self._zone_result_template()
@@ -1109,7 +1100,7 @@ class heatLoadModel(object):
             last_AFN = None
             last_t = None
             for _ in range(max(int(iteration), 1)):
-                last_AFN = contam_iteration(current_prj)
+                last_AFN = contam_iteration(current_prj, paths=self.runtime['vent_paths'])
                 last_AFN *= 1 + inf_p
                 last_t = sensible_heat_iteration(
                     AFN=last_AFN, zoneInfo=zText, outdoorTemperature=self.runtime.get('outdoor_temperature', 25)
@@ -1295,7 +1286,7 @@ class heatLoadModel(object):
         preheated_prj = self._preheat(hoys=hoys, outdoor_series=outdoor_series, preheat=preheat,inf_p=inf_p, energyDict=energyDict)
 
         if mode == "sequence":
-            AFN_ref = contam_iteration(preheated_prj)
+            AFN_ref = contam_iteration(preheated_prj, paths=self.runtime['vent_paths'])
             AFN_ref*=1+inf_p
             self.runtime['AFN_ref'] = AFN_ref
             self.runtime['AFN_ref_prj'] = preheated_prj

@@ -1,9 +1,8 @@
 import os
 
 import numpy as np
-from ...utils.tools import path, callCmd
+from ...utils.tools import path
 weather_dic = os.path.join(path.dataBaseDir, 'weather')
-temp_dic = path.tempDir
 stationInfo = os.path.join(path.dataBaseDir, 'dest_station.csv')
 
 class Location(object):
