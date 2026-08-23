@@ -5,8 +5,8 @@ early design stage.
 
 This repository contains:
 
-- `MoosasPy`: core Python package for geometry transformation, I/O, weather,
-  energy, radiation, and ventilation workflows.
+- `MoosasPy`: Python package for geometry transformation, model I/O, and
+   building-performance simulation workflows.
 
 ## Version
 
@@ -14,10 +14,10 @@ Current Python package release target: `MoosasPy v1.2.2`.
 
 ## Quick Start
 
-Install Python dependencies for local development:
+Install the package and development tools:
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -e ".[dev]"
 ```
 
 Run a basic import check:
@@ -30,21 +30,19 @@ python -c "import MoosasPy; print(MoosasPy.__version__)"
 
 Packaging metadata is managed from repository root via `pyproject.toml`.
 
-Read:
-
-- [MoosasPy README](MoosasPy/README.md)
-- [MoosasPy publish guide](MoosasPy/PUBLISH_GITHUB_PACKAGES.md)
+Read the [package documentation](doc/document.md) for the current module
+layout and public API examples.
 
 Current release workflow:
 
-1. Build and validate distributions (`python -m build`, `python -m twine check dist/*`).
+1. Validate documentation and distributions (`python tools/check_docs.py`, `python -m build`, `python -m twine check dist/*`).
 2. Push tag `moosaspy-v*` (for example `moosaspy-v1.1.0`).
 3. GitHub Actions workflow `.github/workflows/moosaspy-release.yml` uploads
    wheel/sdist to GitHub Release assets.
 
 ## Documentation
 
-- Transformation and module docs: `MoosasPy/doc/document.md`
+- Transformation and module docs: [doc/document.md](doc/document.md)
 
 ## Contact
 

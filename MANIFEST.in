@@ -1,6 +1,5 @@
 include LICENSE
 include MoosasPy/README.md
-include MoosasPy/utils/_.pth
 
 graft MoosasPy/data
 graft MoosasPy/db

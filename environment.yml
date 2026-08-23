@@ -5,6 +5,5 @@ channels:
 dependencies:
   - python>=3.10,<3.13
   - pip
-  - ifcopenshell
   - pip:
-      - -r requirements.txt
+      - -e .[dev]

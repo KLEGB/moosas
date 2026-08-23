@@ -3,7 +3,7 @@ import string
 import random
 import shutil
 from .support import os, sys, np, json
-from .error import FileError, ShellError
+from .error import FileError
 
 
 class MoosasPath(object):
@@ -39,16 +39,16 @@ class MoosasPath(object):
     def clean(dir):
         """
         Clean all files in the specified directory.
-        
+
         Parameters
         ----------
         dir : str
             Path to the directory whose files are to be removed.
-        
+
         Returns
-        -------
+        ----------
         list
-            A list of removed paths.
+            Removed paths.
         """
         if os.path.exists(dir):
             removed = []
@@ -63,103 +63,15 @@ class MoosasPath(object):
 
     @staticmethod
     def checkBuildDir(*dir):
-        """
-        Check and create build directories if they do not exist.
-        
-        Parameters
-        ----------
-        *dir : str
-            Variable number of directory paths to check. If a given path is not an existing directory, 
-            its parent directory is used instead. For each valid directory path, if it does not exist, 
-            it will be created.
-        
-        Returns
-        -------
-        None
-            This function does not return any value.
-        """
+        """Create missing directories for the given file or directory paths."""
         for thisDir in dir:
             if not os.path.isdir(thisDir):
                 thisDir = os.path.dirname(thisDir)
             if not os.path.exists(thisDir):
                 os.mkdir(thisDir)
 
-with open(os.path.join(os.path.dirname(__file__), '_.pth'), encoding='utf-8') as path_file:
-    path = MoosasPath(os.path.join(os.path.dirname(__file__), path_file.read().strip()))
 
-def isFilePath(thePath):
-    """
-    Check if the given string contains path separators indicating it is a file path.
-    
-    Parameters
-    ----------
-    thePath : str
-        The string to check for file path separators.
-    
-    Returns
-    -------
-    bool
-        True if the string contains '\\' or '/', False otherwise.
-    """
-    if "\\" in thePath or "/" in thePath:
-        return True
-
-
-def callCmd(args, stdin=sys.stdin, stdout=sys.stdout, stderr=sys.stderr, block=True, cwd=None, _raise=False, **kwargs):
-    """
-    This method call the cmd using given args.
-
-    stdin: change the standard input sys.stdin. You can send other input var stdin.write().
-        however we suggest other way to do that: you can add '\n' in your args to run os like a bf batch file (*.bat).
-
-    stdout: change the standard out sys.stdout. The message return from shell will be writen into this stdout by stdout.write()
-        to write the message in a file, you can: with open(file.txt ,'w+') as f: callCmd(args,stdout=f)
-        to ban the message from shell you can give None to stdout: callCmd(args,stdout=None)
-
-    stderr: error will be skipped in this method. You can write the standard error by change the stderr to any file stream:
-        with open(file.txt , 'w+') as f: callCmd(args,stderr=f)
-        Otherwise the error will be print to console directly.
-
-    block: decide whether to wait the shell until it finished. you can create a parallel program by setting this to False.
-        however, reading the return from shell need to block the program,
-        which means that you can get the return from cmd only if block==True
-
-    cwd: on which dir the cmd call.
-
-    kwargs: other arguments for os.popen()
-    """
-    if isinstance(args, str):
-        args = [args]
-    for i, arg in enumerate(args):
-        if isFilePath(arg):
-            args[i] = f"\"{arg}\""
-    oldcwd = os.getcwd()
-    oldstdin, oldstdout, oldstderr = sys.stdin, sys.stdout, sys.stderr
-    sys.stdin, sys.stdout, sys.stderr = stdin, stdout, stderr
-    command = ' '.join(args)
-    if cwd is not None:
-        os.chdir(cwd)
-    result = None
-    # from app.core.logger import log_custom
-    # log_custom(f'Call cmd: {command}', level='info')
-    try:
-        # Keep shell command logging opt-in to avoid console flooding in batch runs.
-        if os.environ.get("MOOSAS_SHOW_CALL_CMD", "").strip().lower() in {"1", "true", "yes", "on"}:
-            print(f'Call:{command}')
-        result = os.popen(command, **kwargs)
-    except Exception as e:
-        if not _raise:
-            stderr.write(str(e))
-            print('\033[40m' + f'Error occurred in shell:\n{command}:\n{e}' + '\033[0m')
-            return -1
-        else:
-            raise ShellError(command.split(' ')[0], e)
-    finally:
-        os.chdir(oldcwd)
-        sys.stdin, sys.stdout, sys.stderr = oldstdin, oldstdout, oldstderr
-        if block and result is not None:
-            s = result.read()
-            return s
+path = MoosasPath(os.path.dirname(os.path.dirname(__file__)))
 
 
 def mixItemListToObject(*itemOrList: list | object) -> np.ndarray | object:

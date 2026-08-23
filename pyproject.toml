@@ -6,12 +6,12 @@ build-backend = "setuptools.build_meta"
 name = "moosaspy"
 dynamic = ["version"]
 description = "MOOSAS core Python package for geometry transformation and building performance analysis."
-readme = "MoosasPy/README.md"
+readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 authors = [
   { name = "Jun Xiao" },
-  { anme = "Yihui Li" },
+  { name = "Yihui Li" },
   { name = "Hongzhong Chen" }
 ]
 keywords = ["building", "simulation", "geometry", "energy", "moosas"]
@@ -42,6 +42,13 @@ dependencies = [
   "tinynumpy>=1.2,<2.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+  "build>=1.2,<2",
+  "twine>=5,<8",
+]
+
 [project.urls]
 Homepage = "https://github.com/KLEGB/moosas"
 Repository = "https://github.com/KLEGB/moosas"
@@ -60,7 +67,6 @@ MoosasPy = [
   "data/**/*",
   "db/**/*",
   "libs/**/*",
-  "utils/_.pth",
 ]
 
 [tool.setuptools.exclude-package-data]
