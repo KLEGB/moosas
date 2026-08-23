@@ -37,7 +37,7 @@ def writeJson(file_path, model) -> str:
                 faceId: the faceId of the 2LSB in the geo file,
                 id: the neighbor space id
             }]
-        settings: thermal settings of the space in dictionary, you can find their names in .thermal.settings
+        settings: thermal settings of the space in dictionary, defined by transformation.io.idf.model
         void: the void inside the space, also formatted in space[{space}..]
     }
 

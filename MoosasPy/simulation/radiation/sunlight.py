@@ -1,12 +1,12 @@
 ﻿from __future__ import annotations
 from datetime import datetime
 
-from .radiation import rayTest, writeRadGeo
+from .calculation import rayTest, writeRadGeo
 from ..weather.directsky import MoosasDirectSky
 from ...transformation.geometry.geos import Vector, Ray
 from ...utils.date import DateTime
 from ...utils import np,Iterable
-from ..weather.dest import Location
+from ..weather.data import Location
 from ...models import MoosasModel
 
 

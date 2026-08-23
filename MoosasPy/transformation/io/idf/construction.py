@@ -1,5 +1,5 @@
-from .settings import MoosasSettings
-from ...utils import generate_code,np
+from .model import MoosasSettings
+from ....utils import generate_code,np
 
 glzDefault = {
     'key': 'WindowMaterial:SimpleGlazingSystem',

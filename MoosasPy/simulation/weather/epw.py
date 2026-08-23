@@ -5,7 +5,7 @@ import re
 import tempfile
 from ...utils.tools import path
 from ..runner import Runner
-from .dest import Location, weather_dic, stationInfo
+from .data import Location, weather_dic, stationInfo
 
 import platform
 if platform.system().lower() == 'linux':

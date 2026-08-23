@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, TextIO
 from ...utils import path
 from ..contracts import SimulationResult
 from ..runner import CommandError, CommandResult, CommandTimeoutError, Runner
-from .daylight import modelToRad, writeGrid
+from .scene import modelToRad, writeGrid
 
 if TYPE_CHECKING:
     from ...models import MoosasModel

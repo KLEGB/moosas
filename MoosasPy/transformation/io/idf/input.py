@@ -4,12 +4,12 @@ import os
 from eppy.modeleditor import IDF
 
 from .construction import Construction
-from .settings import *
-from ...transformation.geometry import triangulate2dFace
-from ...transformation.geometry.element import MoosasSpace, MoosasElement
-from ...transformation.geometry.geos import ccwNormal, Vector, offset, trim, projectTo
-from ...utils import shapely, path
-from .zone import ZoneTemplate
+from .model import *
+from ...geometry import triangulate2dFace
+from ...geometry.element import MoosasSpace, MoosasElement
+from ...geometry.geos import ccwNormal, Vector, offset, trim, projectTo
+from ....utils import shapely, path
+from .parser import ZoneTemplate
 
 def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
                          Construction_Name="Office_External_Wall",

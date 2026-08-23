@@ -12,9 +12,9 @@ import shapely
 import xml.etree.ElementTree as ET
 from .utils.standard import loadBuildingTemplate
 from .utils.tools import path
-from .simulation.weather.dest import MoosasWeather
+from .simulation.weather.data import MoosasWeather
 from .simulation.weather.cumsky import loadCumSky, MoosasCumSky
-from .simulation.weather.include import includeEpw
+from .simulation.weather.epw import includeEpw
 
 from .transformation.geometry.element import *
 from .transformation.geometry.geos import faceNormal
@@ -277,7 +277,7 @@ class MoosasModel(MoosasContainer):
             An instance of MoosasWeather containing the loaded weather data.
         """
         """load weather data from the database,
-        or import an external epw file using weather.includeEpw method
+        or import an external epw file using weather.epw.includeEpw method
 
         Args:
             stationIdOrPath(str): the id of the station in epw file, or the path of the epw file
@@ -309,7 +309,7 @@ class MoosasModel(MoosasContainer):
             - 'winterCumSky': winter period cumulative sky dome
         """
         """load cumSky data from the database,
-                or import an external epw file using weather.includeEpw method
+                or import an external epw file using weather.epw.includeEpw method
 
         Args:
             stationIdOrPath(str): the id of the station in epw file, or the path of the epw file
@@ -503,7 +503,7 @@ class MoosasModel(MoosasContainer):
                 <faceId> the faceId of the 2LSB in the geo file, </faceId>
                 <id> the neighbor space id </id>
             </neighbor>
-            <setting> thermal settings of the space in dictionary, you can find their names in .thermal.settings
+            <setting> thermal settings of the space in dictionary, defined by transformation.io.idf.model
                 ...
             </setting>
             <void> the void inside the space, also formatted in space[{space}..]

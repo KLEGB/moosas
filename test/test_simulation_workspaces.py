@@ -4,10 +4,10 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from MoosasPy.simulation.energy.analysis import energyAnalysis
-from MoosasPy.simulation.rad.radiation import writeRadGeo
-from MoosasPy.simulation.vent.iteration import VentPaths
-from MoosasPy.simulation.weather.include import epw2wea
+from MoosasPy.simulation.energy.runner import energyAnalysis
+from MoosasPy.simulation.radiation.calculation import writeRadGeo
+from MoosasPy.simulation.airflow.runner import VentPaths
+from MoosasPy.simulation.weather.epw import epw2wea
 
 
 class SimulationWorkspaceTests(unittest.TestCase):
@@ -21,8 +21,8 @@ class SimulationWorkspaceTests(unittest.TestCase):
             output_path.write_text("output", encoding="utf-8")
             recorded_paths.append(output_path)
 
-        with patch("MoosasPy.simulation.energy.analysis.Runner.run_command", side_effect=run_command), patch(
-            "MoosasPy.simulation.energy.analysis.parseEnergyOutput", return_value={"total": {}}
+        with patch("MoosasPy.simulation.energy.runner.Runner.run_command", side_effect=run_command), patch(
+            "MoosasPy.simulation.energy.runner.parseEnergyOutput", return_value={"total": {}}
         ):
             result = energyAnalysis(energyInput=energy_input)
 
@@ -36,7 +36,7 @@ class SimulationWorkspaceTests(unittest.TestCase):
         def run_command(command, **_kwargs):
             Path(command[-1]).write_text("wea", encoding="utf-8")
 
-        with patch("MoosasPy.simulation.weather.include.Runner.run_command", side_effect=run_command):
+        with patch("MoosasPy.simulation.weather.epw.Runner.run_command", side_effect=run_command):
             wea_path = Path(epw2wea(location, "input.epw"))
 
         self.assertTrue(wea_path.exists())
@@ -46,7 +46,7 @@ class SimulationWorkspaceTests(unittest.TestCase):
 
     def test_radiation_and_vent_defaults_use_unique_workspaces(self):
         with TemporaryDirectory() as work_dir, patch(
-            "MoosasPy.simulation.rad.radiation.writeGeo"
+            "MoosasPy.simulation.radiation.calculation.writeGeo"
         ) as write_geo:
             geo_path = Path(writeRadGeo(SimpleNamespace(), work_dir=work_dir))
             write_geo.assert_called_once_with(str(geo_path), unittest.mock.ANY)

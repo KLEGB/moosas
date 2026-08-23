@@ -6,7 +6,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from MoosasPy.simulation.rad.runner import (
+from MoosasPy.simulation.radiation.runner import (
     RadianceCommandError,
     RadianceRunner,
     RadianceSky,
@@ -36,8 +36,8 @@ class RadianceRunnerTests(unittest.TestCase):
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
         with tempfile.TemporaryDirectory() as parent_dir:
-            with patch("MoosasPy.simulation.rad.runner.modelToRad"), patch(
-                "MoosasPy.simulation.rad.runner.writeGrid", side_effect=write_grid
+            with patch("MoosasPy.simulation.radiation.runner.modelToRad"), patch(
+                "MoosasPy.simulation.radiation.runner.writeGrid", side_effect=write_grid
             ), patch("MoosasPy.simulation.runner.subprocess.run", side_effect=run_command):
                 result = RadianceRunner(model, self.sky, work_dir=parent_dir).run()
 

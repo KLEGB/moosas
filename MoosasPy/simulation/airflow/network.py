@@ -9,7 +9,7 @@ import tempfile
 
 from ...transformation.geometry.element import *
 from ...transformation.geometry.geos import Vector
-from ..rad import modelRadiation
+from ..radiation import modelRadiation
 from ...utils.constant import geom
 from ...utils.tools import path, generate_code, parseFile
 from ..runner import Runner

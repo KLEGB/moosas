@@ -1,7 +1,7 @@
 ﻿from __future__ import annotations
 
 from ...models import MoosasModel, MoosasCumSky, MoosasElement
-from ..rad import faceRadiation,writeRadGeo
+from ..radiation import faceRadiation,writeRadGeo
 from ...utils import np, os, path
 
 

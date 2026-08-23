@@ -70,7 +70,7 @@ def writeXml(file_path, model: MoosasModel, writeGeometry=False) -> ET.ElementTr
                 <faceId> the faceId of the 2LSB in the geo file, </faceId>
                 <id> the neighbor space id </id>
             </neighbor>
-            <setting> thermal settings of the space in dictionary, you can find their names in .thermal.settings
+            <setting> thermal settings of the space in dictionary, defined by transformation.io.idf.model
                 ...
             </setting>
             <void> the void inside the space, also formatted in space[{space}..]

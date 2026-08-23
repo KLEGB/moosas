@@ -5,10 +5,10 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from MoosasPy.simulation import CommandResult, SimulationResult
-from MoosasPy.simulation.energy.analysis import EnergyResult, EnergyRunner
+from MoosasPy.simulation.energy.runner import EnergyResult, EnergyRunner
 from MoosasPy.simulation.coupling import EnergyAirflowCoupler
-from MoosasPy.simulation.rad.runner import RadianceDaylightResult
-from MoosasPy.simulation.vent.iteration import AirflowResult, AirflowRunner, VentPaths
+from MoosasPy.simulation.radiation.runner import RadianceDaylightResult
+from MoosasPy.simulation.airflow.runner import AirflowResult, AirflowRunner, VentPaths
 
 
 class SimulationContractTests(unittest.TestCase):
@@ -39,9 +39,9 @@ class SimulationContractTests(unittest.TestCase):
         command_result = CommandResult(("MoosasEnergy",), 0, "", "")
 
         with TemporaryDirectory() as work_dir, patch(
-            "MoosasPy.simulation.energy.analysis.Runner.run_command", return_value=command_result
+            "MoosasPy.simulation.energy.runner.Runner.run_command", return_value=command_result
         ), patch(
-            "MoosasPy.simulation.energy.analysis.parseEnergyOutput", return_value={"total": {}}
+            "MoosasPy.simulation.energy.runner.parseEnergyOutput", return_value={"total": {}}
         ):
             result = EnergyRunner(energy_input=energy_input, work_dir=work_dir).run()
 
@@ -60,10 +60,10 @@ class SimulationContractTests(unittest.TestCase):
             response_path.write_text("response", encoding="utf-8")
             paths = VentPaths.from_workspace(root / "workspace")
             with patch(
-                "MoosasPy.simulation.vent.iteration.AirflowRunner.run_command",
+                "MoosasPy.simulation.airflow.runner.AirflowRunner.run_command",
                 return_value=command_result,
             ) as run_command, patch(
-                "MoosasPy.simulation.vent.iteration.build_matrix", return_value=matrix
+                "MoosasPy.simulation.airflow.runner.build_matrix", return_value=matrix
             ):
                 result = AirflowRunner(
                     prj_file=str(project_path),

@@ -9,7 +9,7 @@
 from dataclasses import dataclass
 import time
 import tempfile
-from .conread import *
+from .parser import *
 import csv
 import random
 from ...utils.tools import path, parseFile

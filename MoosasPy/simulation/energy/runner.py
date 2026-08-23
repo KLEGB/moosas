@@ -19,11 +19,11 @@ import re
 import tempfile
 from ...utils import path, parseFile, FileError
 from ...utils.constant import buildingType, dateSetting
-from ..rad import modelRadiation
+from ..radiation import modelRadiation
 from ..contracts import SimulationResult
 from ..runner import Runner
 
-from ..thermal.settings import ThermalSettings
+from ...transformation.io.idf.model import ThermalSettings
 
 from ...models import *
 

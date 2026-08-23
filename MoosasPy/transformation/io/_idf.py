@@ -16,8 +16,8 @@ from rdflib.namespace import RDF
 
 from ._rdf import MoosasGraph, encodeURI, decodeURI
 from ._xml import loadXml
+from .idf import construction, input, model, parser, schedule
 from ...models import *
-from ...simulation.thermal import *
 from ...utils import path, mixItemListToList
 
 
@@ -102,7 +102,7 @@ def _idf_get_first_zone_name(idfTemplatePath=None) -> str:
     return ""
 
 
-def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zoneName: str = "") -> idfGeometry.ZoneTemplate:
+def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zoneName: str = "") -> parser.ZoneTemplate:
     """
     Load one zone template from an IDF template file and inject it into target spaces.
 
@@ -119,7 +119,7 @@ def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zon
 
     Returns
     -------
-    idfGeometry.ZoneTemplate
+    parser.ZoneTemplate
         Loaded template for the requested zoneName.
 
     """
@@ -136,7 +136,7 @@ def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zon
         idfTemplatePath = os.path.join(path.dataBaseDir, "in.idf")
 
     idf = IDF(idfTemplatePath)
-    zTemplate: idfGeometry.ZoneTemplate = idfGeometry.ZoneTemplate.fromIDF(idf, zoneName=zoneName)
+    zTemplate: parser.ZoneTemplate = parser.ZoneTemplate.fromIDF(idf, zoneName=zoneName)
     if zTemplate.isEmpty():
         print(f"\n******Warning: no valid zone template was found for Name='{zoneName}'")
         return zTemplate
@@ -255,7 +255,7 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
             zoneNameToSpaceDict = modelZoneMap
 
     zoneMap = _normalize_zone_name_to_space_dict(zoneNameToSpaceDict)
-    zTemplate: idfGeometry.ZoneTemplate = None
+    zTemplate: parser.ZoneTemplate = None
     objectHints = set()
     assignedSpaceIds = set()
     allSpaceIds = [str(space.id) for space in model.spaceList]
@@ -263,7 +263,7 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     # Apply templates by zone->space mapping. When space list is empty, it means all spaces.
     for zoneName, targetSpaceIds in zoneMap.items():
         mappedSpaceIds = list(targetSpaceIds) if len(targetSpaceIds) > 0 else list(allSpaceIds)
-        thisTemplate: idfGeometry.ZoneTemplate = loadIDFTemplate(
+        thisTemplate: parser.ZoneTemplate = loadIDFTemplate(
             model,
             idfTemplatePath=idfTemplatePath,
             spaceIds=targetSpaceIds,
@@ -290,7 +290,7 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
                 f"\n******Warning: fallback IDF template mapping activated. "
                 f"zone='{fallbackZoneName}', targets={len(fallbackTargets)}"
             )
-            fallbackTemplate: idfGeometry.ZoneTemplate = loadIDFTemplate(
+            fallbackTemplate: parser.ZoneTemplate = loadIDFTemplate(
                 model,
                 idfTemplatePath=idfTemplatePath,
                 spaceIds=fallbackTargets,
@@ -326,7 +326,7 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     for typeLimit in schedule.typeLimitSettings:
         if typeLimit.params['Name'] not in typeLimitsName:
             typeLimit.applyToIDF(idf)
-    airboundary = settings.MoosasSettings(construction.airBoundaryDefault)
+    airboundary = model.MoosasSettings(construction.airBoundaryDefault)
     airboundary.applyToIDF(idf)
 
     # check space boundary condition
@@ -349,10 +349,10 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
                 wallConstruction = zTemplate.getConstruction('opaque', wallU)
                 windowConstruction = zTemplate.getConstruction('window', winU, SHGC)
                 if wall.category == 2:
-                    idfGeometry.createThermalSurface(idf, wall, 'Wall', "Generic Air Boundary",
+                    input.createThermalSurface(idf, wall, 'Wall', "Generic Air Boundary",
                                                      None,encodeWindow=False)
                 else:
-                    idfGeometry.createThermalSurface(idf, wall, 'Wall', wallConstruction.params['Name'],
+                    input.createThermalSurface(idf, wall, 'Wall', wallConstruction.params['Name'],
                                                      windowConstruction.params['Name'])
         except IndexError as e:
             print(f"\n  Warning: Wall {wi} (UID: {wall.Uid}) encoding failed - list index error with spaces: {wall.space} - {str(e)}")
@@ -377,10 +377,10 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
                 wallConstruction = zTemplate.getConstruction('opaque', wallU)
                 windowConstruction = zTemplate.getConstruction('window', winU, SHGC)
                 if face.category == 2:
-                    idfGeometry.createThermalSurface(idf, face, faceType, "Moosas Air Boundary",
+                    input.createThermalSurface(idf, face, faceType, "Moosas Air Boundary",
                                                      None,encodeWindow=False)
                 else:
-                    idfGeometry.createThermalSurface(idf, face, faceType, wallConstruction.params['Name'],
+                    input.createThermalSurface(idf, face, faceType, wallConstruction.params['Name'],
                                                      windowConstruction.params['Name'])
         except IndexError as e:
             print(f"\n  Warning: Face {fi} encoding failed - invalid space list: {face.space} - {e}")
@@ -411,7 +411,7 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
 
     for zoneTwins in mixing:
         zoneTwins = zoneTwins.split("~~")
-        zoneMixing = settings.MoosasSettings(settings.ZoneMixingDefault)
+        zoneMixing = model.MoosasSettings(model.ZoneMixingDefault)
         zoneMixing.updateParams(**{
             'Name':zoneTwins[0]+"_"+zoneTwins[1],
             'Zone_or_Space_Name': zoneTwins[0],

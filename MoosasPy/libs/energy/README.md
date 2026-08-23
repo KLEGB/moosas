@@ -105,7 +105,7 @@ Notes:
 - Each data row must contain at least 27 comma-separated fields.
 - Field order is fixed.
 
-The field order below matches the actual order written by `MoosasPy.energy.analysis.energyAnalysis()` through `ThermalSettings.paramToString()`.
+The field order below matches the actual order written by `MoosasPy.simulation.energy.runner.energyAnalysis()` through `ThermalSettings.paramToString()`.
 
 ### Field Definitions
 
@@ -264,7 +264,7 @@ Matching `.i` row fragment:
 
 ### MoosasPy Generation Note
 
-When calling through `MoosasPy.energy.analysis.energyAnalysis()`:
+When calling through `MoosasPy.simulation.energy.runner.energyAnalysis()`:
 
 - `requireRadiation=False` or `0`: keep the fast geometric estimate
 - `requireRadiation=True` or `1`: write numeric seasonal solar totals into fields `8` and `9`

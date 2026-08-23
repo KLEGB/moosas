@@ -1,5 +1,5 @@
-from .settings import MoosasSettings
-from ...utils import generate_code
+from .model import MoosasSettings
+from ....utils import generate_code
 
 
 class schType:
