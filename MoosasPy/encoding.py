@@ -3,7 +3,7 @@ from .geometry.geos import *
 from .models import MoosasModel, MoosasSpace, searchBy
 import shapely
 import numpy as np
-from pythonDist.MoosasPy.utils.constant import geom
+from .utils.constant import geom
 
 class Moosasboundary(object):
     def __init__(self,polygon:shapely.Geometry):

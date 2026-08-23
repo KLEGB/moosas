@@ -4,7 +4,7 @@ import copy
 
 from .geos import *
 from ..models import *
-from pythonDist.MoosasPy.visual.visualization import *
+from ..visual.visualization import *
 from ..utils.constant import geom
 
 def closed_contour_calculation(model: MoosasModel, bld_level: float):

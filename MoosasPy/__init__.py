@@ -18,12 +18,3 @@ from .sunhour import positionSunHour
 from . import daylightFactor
 from .geometry import spaceGen
 from .weather import includeEpw
-
-# initialize temp directory
-from .utils import tools
-try:
-    tools.path.clean(tools.path.tempDir)
-except Exception:
-    # Temp cleanup should not block package import.
-    pass
-del tools

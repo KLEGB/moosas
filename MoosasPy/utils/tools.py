@@ -27,11 +27,10 @@ class MoosasPath(object):
         self.moosasPlusDir = MoosasPlusDirectory
         self.libDir = os.path.join(MoosasPlusDirectory, 'libs')
         self.dataBaseDir = os.path.join(MoosasPlusDirectory, 'db')
-        self.htmlDir = os.path.join(MoosasPlusDirectory, 'view')
         self.dataDir = os.path.join(MoosasPlusDirectory, 'data')
         self.tempDir = os.path.join(MoosasPlusDirectory, '__temp__')
 
-        for thisDir in [self.libDir, self.dataDir, self.dataBaseDir, self.htmlDir, self.tempDir]:
+        for thisDir in [self.libDir, self.dataDir, self.dataBaseDir, self.tempDir]:
             if not os.path.exists(thisDir):
                 print(thisDir)
                 os.mkdir(thisDir)
@@ -85,10 +84,8 @@ class MoosasPath(object):
             if not os.path.exists(thisDir):
                 os.mkdir(thisDir)
 
-curPath = os.path.abspath('.')
-os.chdir(os.path.dirname(__file__))
-path = MoosasPath(open(r'_.pth').read().strip())
-os.chdir(curPath)
+with open(os.path.join(os.path.dirname(__file__), '_.pth'), encoding='utf-8') as path_file:
+    path = MoosasPath(os.path.join(os.path.dirname(__file__), path_file.read().strip()))
 
 def isFilePath(thePath):
     """
