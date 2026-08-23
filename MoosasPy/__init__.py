@@ -4,15 +4,13 @@ from ._version import __version__
 
 # supporting packages
 from . import utils
-from . import weather
-from . import vent
+from .simulation import weather
+from .simulation import vent
 from . import transformation
 
 # simulation functions
 from .transformation import transform, loadModel, saveModel
-from .energy import energyAnalysis
-from .rad import positionRadiation
-from .sunhour import positionSunHour
-from . import daylightFactor
+from .simulation.energy import energyAnalysis
+from .simulation.rad import positionRadiation, positionSunHour
 from .transformation.geometry import spaceGen
-from .weather import includeEpw
+from .simulation.weather import includeEpw

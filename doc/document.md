@@ -54,11 +54,11 @@ The top-level `MoosasPy` package exposes these primary functions:
 | `geometry/` | Geometry primitives, topology, cleansing, grids, contours, and space generation. |
 | `IO/` | Model readers and writers for GEO, XML, JSON, RDF, IFC, IDF, GBXML, OBJ, and related formats. |
 | `encoding/` | Encoding and graph utilities, including geometry convexification support. |
-| `energy/` | Simplified energy analysis, photovoltaic calculations, and thermal-load helpers. |
-| `rad/` | Radiation geometry export, ray tests, and cumulative-sky calculations. |
-| `weather/` | Weather locations, EPW import, direct sky, and cumulative sky models. |
-| `vent/` | Airflow-network and CONTAM project preparation and iteration helpers. |
-| `thermal/` | Thermal constructions, zones, schedules, and IDF geometry support. |
+| `simulation/energy/` | Simplified energy analysis, photovoltaic calculations, and thermal-load helpers. |
+| `simulation/rad/` | Radiation geometry export, ray tests, cumulative-sky calculations, Radiance daylight workflows, and quick daylight-factor estimates. |
+| `simulation/weather/` | Weather locations, EPW import, direct sky, and cumulative sky models. |
+| `simulation/vent/` | Airflow-network and CONTAM project preparation and iteration helpers. |
+| `simulation/thermal/` | Thermal constructions, zones, schedules, and IDF geometry support. |
 | `visual/` | Geometry visualization helpers. |
 | `utils/` | Shared paths, constants, errors, date utilities, and support functions. |
 | `libs/` | Native executables and resources used by energy, radiation, ventilation, and weather workflows. |
@@ -85,19 +85,19 @@ Available helpers cover GEO, XML, JSON/GeoJSON, RDF, IFC, GBXML, IDF, and OBJ co
 
 ### Energy
 
-`MoosasPy.energy.energyAnalysis` performs rapid energy analysis using the native tools under `MoosasPy/libs/energy`. Use `getEnergyInput` and `parseEnergyOutput` for lower-level input and result handling.
+`MoosasPy.simulation.energy.energyAnalysis` performs rapid energy analysis using the native tools under `MoosasPy/libs/energy`. Use `getEnergyInput` and `parseEnergyOutput` for lower-level input and result handling.
 
 ### Radiation and Sunlight
 
-`MoosasPy.rad` provides `modelRadiation`, `spaceRadiation`, `faceRadiation`, `positionRadiation`, `writeRadGeo`, and `rayTest`. `positionSunHour` calculates direct sunlight duration using a `Location` or `MoosasDirectSky` instance and either a model or a GEO scene.
+`MoosasPy.simulation.rad` provides `modelRadiation`, `spaceRadiation`, `faceRadiation`, `positionRadiation`, `writeRadGeo`, and `rayTest`. `RadianceRunner` performs isolated Radiance daylight calculations from a model and `RadianceSky`; each run uses a temporary work directory and returns structured daylight metrics and command diagnostics. `positionSunHour` calculates direct sunlight duration using a `Location` or `MoosasDirectSky` instance and either a model or a GEO scene.
 
 ### Weather
 
-`MoosasPy.weather` exports `Location`, `MoosasWeather`, `MoosasCumSky`, `MoosasDirectSky`, and `includeEpw`. These utilities create or import the weather and sky data required by energy, radiation, and sunlight workflows.
+`MoosasPy.simulation.weather` exports `Location`, `MoosasWeather`, `MoosasCumSky`, `MoosasDirectSky`, and `includeEpw`. These utilities create or import the weather and sky data required by energy, radiation, and sunlight workflows.
 
 ### Ventilation
 
-`MoosasPy.vent` provides functions to construct airflow-network and CONTAM project files: `buildPrj`, `buildNetworkFile`, `buildZoneInfoFile`, `iterateFile`, `iterateProjects`, `contam_iteration`, and `sensible_heat_iteration`.
+`MoosasPy.simulation.vent` provides functions to construct airflow-network and CONTAM project files: `buildPrj`, `buildNetworkFile`, `buildZoneInfoFile`, `iterateFile`, `iterateProjects`, `contam_iteration`, and `sensible_heat_iteration`.
 
 ## Runtime Resources
 

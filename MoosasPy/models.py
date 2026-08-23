@@ -12,9 +12,9 @@ import shapely
 import xml.etree.ElementTree as ET
 from .utils.standard import loadBuildingTemplate
 from .utils.tools import path
-from .weather.dest import MoosasWeather
-from .weather.cumsky import loadCumSky, MoosasCumSky
-from .weather.include import includeEpw
+from .simulation.weather.dest import MoosasWeather
+from .simulation.weather.cumsky import loadCumSky, MoosasCumSky
+from .simulation.weather.include import includeEpw
 
 from .transformation.geometry.element import *
 from .transformation.geometry.geos import faceNormal

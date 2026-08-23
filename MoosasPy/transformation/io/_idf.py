@@ -17,7 +17,7 @@ from rdflib.namespace import RDF
 from ._rdf import MoosasGraph, encodeURI, decodeURI
 from ._xml import loadXml
 from ...models import *
-from ...thermal import *
+from ...simulation.thermal import *
 from ...utils import path, mixItemListToList
 
 
