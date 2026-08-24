@@ -33,28 +33,28 @@ def closed_contour_calculation(model: MoosasModel, bld_level: float):
     #        wall_list.append(i)
     if len(wall_list) == 0:
         return model
-    # 1.1 创建vec_list,清理出用于闭合识�?���?
+    # 1.1 创建 vec_list，清理出用于闭合识别的墙。
     vec_list, wall_list = useful_wall(wall_list, model)
     # 1.2 创造唯一点列表location_list / 点链接组node_list / 角度组angle_list
     location_list, node_list, angle_list = construct_node_network(vec_list)
-    # 1.3 翻译vec_list坐标为编号加�?���?
+    # 1.3 将 vec_list 坐标转换为编号以加快运算。
     for i in range(len(vec_list)):
         vec_list[i][1] = location_list.index(vec_list[i][1])
         vec_list[i][2] = location_list.index(vec_list[i][2])
 
-    # 2.1 大区域分�?得到node_groups
-    # 遍历到屋顶面时，nodelist会为空，将报�?
+    # 2.1 大区域分组，得到 node_groups。
+    # 遍历到屋顶面时，node_list 会为空并导致报错。
     print('Node groupping.......')
     if len(node_list) == 0: return model
     node_groups = node_Groupping(node_list)
 
     # plot_plan_in_node(node_list,[],location_list,False,True)
-    # print('将进�?.3f层�?�?��搜索' % bld_level)
-    # 2.2 搜索外轮�?得到boundary_list
+    # print('将进行%.3f层外轮廓搜索' % bld_level)
+    # 2.2 搜索外轮廓，得到 boundary_list。
     print('Nodegroup_outerboundary.......')
     boundary_list = nodegroup_outerboundary(node_groups, node_list, location_list, angle_list)
     # plot_plan_in_node(node_list, [bound for group in boundary_list for bound in group], location_list, False, True)
-    # print('将进�?.3f层分割轮�?%bld_level)
+    # print('将进行%.3f层分割轮廓' % bld_level)
     # 创建存储列表boundary_coordinates（存点序号）
     print('\nBoundary dividing.......')
     boundary_coordinates = []
@@ -193,7 +193,7 @@ def useful_wall(wall_list, model):
         Filtered list of wall indices with invalid, zero-length, duplicate, and 
         isolated walls removed.
     """
-    # 1.1.1 去除零长度线、无效线、重�?
+    # 1.1.1 去除零长度线、无效线和重复线。
     vec_list = []
     wall_list = [i for i in wall_list if model.wallList[i].force_2d() != None]
     wall_list = [i for i in wall_list if model.wallList[i].height > 0.9]
@@ -216,7 +216,7 @@ def useful_wall(wall_list, model):
                     pass
 
     # plot_object(model.wallList[wall_list], color='black')
-    # 1.1.2 去除wall_list孤立�?
+    # 1.1.2 去除 wall_list 中的孤立线。
     def remove_wall(wall_list):
         """
         Remove walls that do not meet connectivity criteria and generate a list of wall vectors.
@@ -311,7 +311,7 @@ def construct_node_network(vec_list):
     # 1.2.3 使用angle_list为node_list排序
     node_list = [np.array(node_list[i])[np.argsort(angle_list[i])] for i in range(len(node_list))]
     angle_list = [np.array(angle_list[i])[np.argsort(angle_list[i])] for i in range(len(angle_list))]
-    # 1.3.1 翻译node_list坐标为编号加�?���?
+    # 1.3.1 将 node_list 坐标转换为编号以加快运算。
     for i in range(len(node_list)):
         for j in range(len(node_list[i])):
             node_list[i][j] = location_list.index(node_list[i][j])
@@ -399,15 +399,15 @@ def nodegroup_outerboundary(node_groups, node_list, location_list, angle_list):
     """
     boundary_list = []
     for group in node_groups:
-        # 对node进�?二�?关键词排序，�?��关键词为x坐标(�?�?，�?二关�?��为y坐标(�?�?,即右下�?
+        # 按 node 的两级关键字排序：先按 x 坐标最大，再按 y 坐标最小，即右下角。
         group_xy = np.array(
             [[node, shapely.get_x(location_list[node]), shapely.get_y(location_list[node])] for node in group])
         max_x = np.max(group_xy.T[1])
         group_xy = group_xy[[i for i in range(len(group)) if group_xy[i][1] == max_x]]
-        start_node = int(group_xy[np.argmin(group_xy.T[2])][0])  # start_node: �?始节点编�?
+        start_node = int(group_xy[np.argmin(group_xy.T[2])][0])  # start_node：起始节点编号。
         end_node = node_list[start_node][0]  # end_node: 结束节点编号
-        last_node = start_node  # last_node: 上一�?��点编�?
-        outer_boundary = [start_node, end_node]  # outer_boundary: 用于记录外轮�?
+        last_node = start_node  # last_node：上一个节点编号。
+        outer_boundary = [start_node, end_node]  # outer_boundary：用于记录外轮廓。
         # plot_plan_in_node(node_list, [outer_boundary], location_list, save=False, show=True)
         is_valid = True
 
@@ -431,7 +431,7 @@ def nodegroup_outerboundary(node_groups, node_list, location_list, angle_list):
                         if node_list_T[i] == nextNodeDict[end_node]:
                             continue
                     next_node = node_list_T[i]
-                    # Ver1.3: 用于防�?�?��遍历，�?录每次的选择(妈的总不�?��给我经过三�?吧？？？�?
+                    # Ver1.3：防止循环遍历，并记录每次选择。
                     nextNodeDict[end_node] = next_node
                     break
             # 更新last_node和end_node和outer_boundary
@@ -503,13 +503,13 @@ def divide_boundary_node(boundary_iteration, node_list, location_list, eligible)
         Refined list of boundary node sequences after iterative splitting; each inner list is a 
         resulting polygon boundary with inserted nodes, ensuring no eligible interior nodes remain.
     """
-    # �?��分割�?��-�?
+    # 迭代分割轮廓：节点。
     ContinueSplit = True
     while len(eligible) > 0 and ContinueSplit:
 
         ContinueSplit = False
         new_boundary_coordinates = []
-        # 判断�?��为最小轮�?
+        # 判断是否为最小轮廓。
         for j in range(len(boundary_iteration)):
             node_of_region = boundary_iteration[j]
             if len(node_of_region) < 4: continue
@@ -520,7 +520,7 @@ def divide_boundary_node(boundary_iteration, node_list, location_list, eligible)
                     inside_node = node
                     ContinueSplit = True
                     break
-            # 若非�?小路径，执�?深度搜索并分割轮�?
+            # 若非最小路径，执行深度搜索并分割轮廓。
             if inside_node == None:
                 new_boundary_coordinates.append(node_of_region)
             else:
@@ -529,7 +529,7 @@ def divide_boundary_node(boundary_iteration, node_list, location_list, eligible)
                 path2.reverse()
                 # Ver1.3: 分割点处重复了！！！
                 for ip in range(1, len(path2)): path1.append(path2[ip])
-                # Ver1.3: 去除�?��的内�?
+                # Ver1.3：去除自交的内部区域。
                 repeat = True
                 while repeat:
                     repeat = False
@@ -549,7 +549,7 @@ def divide_boundary_node(boundary_iteration, node_list, location_list, eligible)
                     pass
                 # 更新eligible
                 eligible = [node for node in eligible if not (node in path1)]
-        # 更新�?roup的轮廓列�?
+        # 更新该 group 的轮廓列表。
         boundary_iteration = new_boundary_coordinates
 
     return boundary_iteration
@@ -573,7 +573,7 @@ def divide_boundary_edge(boundary_iteration, vec_list, node_groups):
     list of array_like
         A list of divided boundary edge vectors resulting from the grouping and iteration.
     """
-    # 整理线�?�?
+    # 整理线段组。
     def overlaps_in_node(geo1_node: list, geo2_node: list):
         """Check if two nodes overlap in a geometric sequence and process boundary edges accordingly.
         
@@ -612,7 +612,7 @@ def divide_boundary_edge(boundary_iteration, vec_list, node_groups):
                 eligible_edge.remove(edge)
                 break
     new_boundary_coordinates = copy.deepcopy(boundary_iteration)
-    # 把上述玩意儿怼进�?
+    # 将上述候选边加入轮廓。
     for edge in eligible_edge:
         for bound in new_boundary_coordinates:
             if (edge[0] in bound) and (edge[1] in bound):

@@ -2293,7 +2293,7 @@ def closeTheCurve(geo: shapely.Geometry):
         A new geometry where the input curve is closed by connecting the last point to the first.
         If the input was already closed, the original geometry is returned.
     """
-    # Ver 2.0 使曲线闭�?
+    # Ver 2.0：使曲线闭合。
     if shapely.is_closed(geo):
         return geo
     coordinates = shapely.get_coordinates(geo, include_z=True).tolist()
@@ -2301,7 +2301,7 @@ def closeTheCurve(geo: shapely.Geometry):
     return shapely.polygons(coordinates)
 
 
-# �ɰ汾��vector����
+# 旧版本的 vector 计算。
 # 向量计算 / 整合了shapely.Geometry类型，比np的泛用性广
 # def vector.dot(vec1, vec2):
 #    vec1 = vector(vec1).array
@@ -2378,8 +2378,8 @@ float or None
     Returns None if the input vector has zero length.
 """
 #    '''
-#    vec在正y轴：返回vector.dot([1,0],vec)结果在[-1,1]中，[1,0]�?,[0,1]�?,[-1,0]�?1
-#    vec在负y轴：返回-vector.dot([1,0],vec)-2结果在[-3,-1]�?[.99,-.01]�?3,[0,-1]�?2,[-.99,-.01]�?1
+#    vec 在正 y 轴：返回 vector.dot([1, 0], vec)，结果在 [-1, 1] 中。
+#    vec 在负 y 轴：返回 -vector.dot([1, 0], vec) - 2，结果在 [-3, -1] 中。
 #    返回值与沿逆时针方向[-3,1]的角度大小正相关
 #    '''
 #

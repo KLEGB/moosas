@@ -2153,7 +2153,7 @@ class MoosasEdge:
         self.__botBound = []
         self.__topBound = []
         self.Uid = generate_code(4)
-        # 创�?�底�?顶面投影多边�?
+        # 创建底面和顶面投影多边形。
         if len(self.wall) < 3:
             raise GeometryError(walls, "A boundary requires at least 3 walls.")
         self.prepareBoundary()

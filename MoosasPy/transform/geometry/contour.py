@@ -455,7 +455,7 @@ def closed_contour_calculation(model: MoosasContainer, bld_level: float) -> Moos
         boundariesNew += boundGroup
         # plot_TopoObject(*boundariesNew, show=True)
 
-    # 2.5 展平boundarylist并检查是否顺时针,转换为edge
+    # 2.5 展平 boundary_list，检查是否顺时针并转换为 edge。
     print(f'\rTOPOLOGY: in {bld_level}: find {len(boundariesNew)} boundaries')
     # plot_plan_in_node(node_list, [bound for group in boundary_coordinates for bound in group], location_list, False, True)
     model = _documentBoundary(np.array(boundariesNew).flatten(), model)

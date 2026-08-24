@@ -473,27 +473,27 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, iddFile=
 
 def find_closest_field(field_list: list, target_field: str) -> str:
     """
-    从字符串列表�?��到与�?��字�?�?接近的匹配项（结合�?�?相似度）
-    :param field_list: 待匹配的字�?串列�?
+    从字符串列表中找到与目标字段最接近的匹配项（结合正则和相似度）。
+    :param field_list: 待匹配的字符串列表。
     :param target_field: 目标字段名称
     :return: 最接近的匹配项（无匹配时返回空字符串）
     """
     # 步骤1：正则预处理（模糊匹配核心关键词，提升候选准确性）
     # 转义目标字段中的正则元字符，避免语法错误
     escaped_target = re.escape(target_field)
-    # 构建模糊匹配正则：允许目标字段前后有其他字�?，且忽略大小�?
+    # 构建模糊匹配正则：允许目标字段前后有其他字符，且忽略大小写。
     pattern = re.compile(f".*{escaped_target}.*", re.IGNORECASE)
 
     # 步骤2：筛选候选项（至少包含目标字段核心字符的项）
     candidates = [field for field in field_list if pattern.match(str(field))]
 
-    # 若无正则匹配的�?��?�项，直接基于全列表计算相似�?
+    # 若无正则匹配的候选项，直接基于全列表计算相似度。
     if not candidates:
         candidates = field_list
 
     # 步骤3：计算候选项与目标字段的相似度（编辑距离），排序
     def similarity(a: str, b: str) -> float:
-        """计算两个字�?串的相似度（0-1�?为完全一致）"""
+        """计算两个字符串的相似度（0-1，1 为完全一致）。"""
         return SequenceMatcher(None, str(a).strip(), str(b).strip()).ratio()
 
     # 按相似度降序排序，相似度相同则按字符串长度接近度排序
@@ -501,12 +501,12 @@ def find_closest_field(field_list: list, target_field: str) -> str:
         candidates,
         key=lambda x: (
             similarity(x, target_field),  # 优先按相似度
-            -abs(len(str(x)) - len(target_field))  # 次优先按长度接近�?
+            -abs(len(str(x)) - len(target_field))  # 次优先按长度接近度。
         ),
         reverse=True
     )
 
-    # 步�?4：返回最接近的项（无列表元素时返回空�?
+    # 步骤 4：返回最接近的项（无列表元素时返回空字符串）。
     return sorted_candidates[0] if sorted_candidates else ""
 
 
