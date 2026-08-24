@@ -325,21 +325,23 @@ class TopoNetwork(object):
         # plot_object([model.wallList[edge.id] for edge in edge_list], color='black')
 
         """blur match existing locations and the edge nodes"""
-        location = set()
+        locations = []
         for edge in edges:
-            if edge.fromLocation not in location:
-                for poi in location:
+            if edge.fromLocation not in locations:
+                for poi in locations:
                     if shapely.dwithin(edge.fromLocation, poi, 1.1 * geom.POINT_PRECISION):
                         edge.fromLocation = poi
                         break
-                location.add(edge.fromLocation)
+                else:
+                    locations.append(edge.fromLocation)
 
-            if edge.toLocation not in location:
-                for poi in location:
+            if edge.toLocation not in locations:
+                for poi in locations:
                     if shapely.dwithin(edge.toLocation, poi, 1.1 * geom.POINT_PRECISION):
                         edge.toLocation = poi
                         break
-                location.add(edge.toLocation)
+                else:
+                    locations.append(edge.toLocation)
 
         """double check zero length edges"""
         edges = [topoedge for topoedge in edges if topoedge.valid]
@@ -413,12 +415,13 @@ class TopoNetwork(object):
             the `edges` attribute to a list of unique TopoEdge objects.
         """
         """Extract unique edge list from node.edgeId"""
-        edges: set[TopoEdge] = set()
+        edges = []
         for node in self.nodes:
             for edge in node.connectedEdges:
-                edges.add(edge)
+                if edge not in edges:
+                    edges.append(edge)
 
-        self.edges = list(edges)
+        self.edges = edges
 
     @classmethod
     def inLevel(cls, bld_level: float, model) -> TopoNetwork:

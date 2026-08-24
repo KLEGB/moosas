@@ -4,6 +4,7 @@ __all__ = [
     "complete_topology",
     "load_model",
     "model_from_file",
+    "TransformOptions",
     "save_model",
     "structured",
     "transform",
@@ -11,6 +12,10 @@ __all__ = [
 
 
 def __getattr__(name):
+    if name == "TransformOptions":
+        from .stages.options import TransformOptions
+
+        return TransformOptions
     if name in {"complete_topology", "load_model", "structured", "transform"}:
         from . import pipeline
 

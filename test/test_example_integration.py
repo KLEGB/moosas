@@ -1,16 +1,26 @@
 from __future__ import annotations
 
+from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import math
 import unittest
 
-from MoosasPy.model_resources import load_weather
+from MoosasPy.model_resources import configure_model_resources, load_weather
 from MoosasPy.simulation.energy.runner import EnergyRunner
-from MoosasPy.transform import transform
+from MoosasPy.transform import TransformOptions, structured, transform
+from MoosasPy.transform.stages.classification import classify_model
+from MoosasPy.transform.stages.cleansing import cleanse_model
+from MoosasPy.transform.stages.generation import generate_space_boundaries
+from MoosasPy.transform.io import model_from_file
 from MoosasPy.transform.io._json import build_geojson
 from MoosasPy.transform.io._xml import build_xml
+from MoosasPy.transform.stages.glazing import attach_glazing_to_faces
+from MoosasPy.transform.stages.splitting import split_wall_intersections
+from MoosasPy.transform.stages.validation import validate_model
+from MoosasPy.transform.geometry.spaceGen import CCRSpaceGeneration
+from MoosasPy.utils import np
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -20,9 +30,8 @@ BEIJING_WEATHER = PROJECT_ROOT / "MoosasPy" / "db" / "weather" / "545110.csv"
 
 
 class ExampleIntegrationTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.model = transform(
+    def setUp(self):
+        self.model = transform(
             str(GEOMETRY_FIXTURE),
             input_type="geo",
             stdout=StringIO(),
@@ -51,6 +60,58 @@ class ExampleIntegrationTests(unittest.TestCase):
         }
         self.assertEqual(len(neighbor_pairs), 122)
         self.assertTrue(all(space.neighbor for space in self.model.spaceList))
+
+    def test_classification_stage_builds_elements_before_topology(self):
+        model = model_from_file(str(GEOMETRY_FIXTURE), "geo")
+        classified_model = classify_model(model)
+
+        self.assertIs(classified_model, model)
+        self.assertEqual(len(model.faceList), 144)
+        self.assertEqual(len(model.wallList), 193)
+        self.assertEqual(len(model.glazingList), 91)
+        self.assertEqual(len(model.skylightList), 0)
+        self.assertEqual(tuple(model.levelList), (0.0, 4.5, 9.0, 13.5, 18.0, 22.5, 27.0, 31.5, 36.0, 40.5, 45.0))
+
+    def test_file_and_model_entries_share_transform_options(self):
+        options = TransformOptions()
+        model = configure_model_resources(model_from_file(str(GEOMETRY_FIXTURE), "geo"))
+        with redirect_stdout(StringIO()):
+            model = structured(model, options=options)
+
+        self.assertEqual(len(model.spaceList), len(self.model.spaceList))
+        self.assertEqual(len(model.wallList), len(self.model.wallList))
+        self.assertAlmostEqual(
+            sum(space.area for space in model.spaceList),
+            sum(space.area for space in self.model.spaceList),
+            places=4,
+        )
+
+    def test_generation_stage_builds_boundaries_before_assembly(self):
+        model = model_from_file(str(GEOMETRY_FIXTURE), "geo")
+        with redirect_stdout(StringIO()):
+            model = classify_model(model)
+            model.faceList = np.array(model.faceList)
+            model.wallList = np.array(model.wallList)
+            model.glazingList = np.array(model.glazingList)
+            model, _ = cleanse_model(
+                model,
+                solve_duplicated=True,
+                solve_redundant=True,
+                solve_overlap=True,
+                match_glazing=attach_glazing_to_faces,
+            )
+            model = split_wall_intersections(model, enabled=True)
+            model = generate_space_boundaries(model, CCRSpaceGeneration)
+
+        self.assertEqual(len(model.boundaryList), 82)
+        self.assertEqual(len(model.edgeList), 0)
+        self.assertEqual(len(model.spaceList), 0)
+
+    def test_validation_rejects_an_unknown_neighbor(self):
+        self.model.spaceList[0].neighbor["missing-space"] = []
+
+        with self.assertRaisesRegex(ValueError, "unknown neighbor"):
+            validate_model(self.model)
 
     def test_xml_serialization_is_owned_by_the_io_boundary(self):
         root = build_xml(self.model)

@@ -934,19 +934,9 @@ def _loadIfc_via_geo_bridge(ifc_path: str | Path, ifc: Any | None = None, has_if
     try:
         if geo_list:
             writeGeo(str(temp_geo), geoList=geo_list)
-            model = transform(
-                str(temp_geo),
-                input_type="geo",
-                solve_duplicated=True,
-                solve_redundant=True,
-                solve_overlap=True,
-                triangulate_faces=True,
-                break_wall_vertical=True,
-                break_wall_horizontal=True,
-                attach_shading=False,
-                divided_zones=False,
-                standardize=False,
-            )
+            from ..stages.options import TransformOptions
+
+            model = transform(str(temp_geo), input_type="geo", options=TransformOptions())
             if model is None:
                 raise ValueError("IFC to GEO transform produced an empty model.")
         else:
