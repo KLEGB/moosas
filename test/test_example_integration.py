@@ -29,8 +29,26 @@ class ExampleIntegrationTests(unittest.TestCase):
     def test_geometry_fixture_transforms_to_expected_topology(self):
         self.assertGreaterEqual(len(self.model.geometryList), 450)
         self.assertEqual(len(self.model.spaceList), 70)
+        self.assertEqual(len(self.model.voidList), 0)
         self.assertEqual(len(self.model.wallList), 249)
+        self.assertEqual(len(self.model.faceList), 153)
+        self.assertEqual(len(self.model.glazingList), 91)
+        self.assertEqual(len(self.model.skylightList), 0)
+        self.assertEqual(
+            tuple(self.model.levelList),
+            (0.0, 4.5, 9.0, 13.5, 18.0, 22.5, 27.0, 31.5, 36.0, 40.5, 45.0),
+        )
         self.assertTrue(all(space.area > 0 for space in self.model.spaceList))
+        self.assertAlmostEqual(sum(space.area for space in self.model.spaceList), 28199.6484, places=4)
+
+        neighbor_pairs = {
+            tuple(sorted((str(space.id), str(neighbor_id))))
+            for space in self.model.spaceList
+            for neighbor_id in space.neighbor
+            if str(neighbor_id) != str(space.id)
+        }
+        self.assertEqual(len(neighbor_pairs), 122)
+        self.assertTrue(all(space.neighbor for space in self.model.spaceList))
 
     @unittest.skipUnless(
         ENERGY_ENGINE.is_file() and BEIJING_WEATHER.is_file(),
@@ -58,6 +76,10 @@ class ExampleIntegrationTests(unittest.TestCase):
             self.assertGreaterEqual(value, 0.0)
             component_total += value
         self.assertGreater(component_total, 0.0)
+        self.assertAlmostEqual(float(total["cooling"]), 3.54, places=2)
+        self.assertAlmostEqual(float(total["heating"]), 11.59, places=2)
+        self.assertAlmostEqual(float(total["lighting"]), 2.63, places=2)
+        self.assertAlmostEqual(float(total["total"]), 17.76, places=2)
         self.assertAlmostEqual(float(total["total"]), component_total, places=6)
 
 
