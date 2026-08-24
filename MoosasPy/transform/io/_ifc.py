@@ -117,7 +117,9 @@ def setup_ifc_model(project_name: str = "Moosas IFC Project") -> tuple[Any, Any,
 
 
 def _snapshot_model(model) -> dict[str, Any]:
-    root = model.buildXml(writeGeometry=True)
+    from ._xml import build_xml
+
+    root = build_xml(model, write_geometry=True)
     xml_text = ET.tostring(root, encoding="unicode")
 
     geo_path = Path(path.tempDir) / f"ifc_snapshot_{uuid.uuid4().hex}.geo"

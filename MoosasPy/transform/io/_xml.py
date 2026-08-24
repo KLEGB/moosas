@@ -4,7 +4,7 @@ from collections import defaultdict
 
 from ._geo import _readGeo, preClassified
 from ...models import *
-from ...utils import ET
+from ...utils import ET, np
 
 
 def _xml_float_or_none(value):
@@ -14,6 +14,37 @@ def _xml_float_or_none(value):
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def build_xml(model: MoosasModel, write_geometry: bool = False) -> ET.Element:
+    """Build the XML representation of a complete Moosas model."""
+    root = ET.Element("model")
+    elements = {"MoosasFace": set(), "MoosasSkylight": set(), "MoosasWall": set(), "MoosasGlazing": set()}
+    for space in model.spaceList + model.voidList:
+        root.append(space.to_xml(model, writeGeometry=write_geometry))
+        element_dict = space.getAllFaces(to_dict=True)
+        elements["MoosasFace"] |= set(element_dict["MoosasFloor"] + element_dict["MoosasCeiling"])
+        elements["MoosasWall"] |= set(element_dict["MoosasWall"] + element_dict["InternalMass"])
+        elements["MoosasSkylight"] |= set(element_dict["MoosasSkylight"])
+        elements["MoosasGlazing"] |= set(element_dict["MoosasGlazing"])
+
+    for face in elements["MoosasFace"]:
+        root.append(face.to_xml(model, writeGeometry=write_geometry))
+    for wall in elements["MoosasWall"]:
+        root.append(wall.to_xml(model, writeGeometry=write_geometry))
+    for glazing in elements["MoosasGlazing"]:
+        root.append(glazing.to_xml(model, writeGeometry=write_geometry))
+    for skylight in elements["MoosasSkylight"]:
+        root.append(skylight.to_xml(model, writeGeometry=write_geometry))
+
+    shading = ET.SubElement(root, "shading")
+    for glazing in model.glazingList:
+        for shade in glazing.shading:
+            face = ET.SubElement(shading, "face")
+            face.text = str(shade)
+            face.set("glazingId", str(glazing.faceId))
+    ET.SubElement(root, "level").text = " ".join(np.array(model.levelList).astype(str))
+    return root
 
 
 def writeXml(file_path, model: MoosasModel, writeGeometry=False) -> ET.ElementTree:
@@ -87,7 +118,7 @@ def writeXml(file_path, model: MoosasModel, writeGeometry=False) -> ET.ElementTr
             ElementTree
         """
     path.checkBuildDir(file_path)
-    tree = ET.ElementTree(model.buildXml(writeGeometry))
+    tree = ET.ElementTree(build_xml(model, writeGeometry))
     tree.write(file_path)
 
     return tree

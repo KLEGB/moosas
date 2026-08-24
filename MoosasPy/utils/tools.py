@@ -189,7 +189,7 @@ def to_dictionary(etree):
     """
     """
         3d objects are not support in shapely.to_geojson.
-        in this case we must write the geojson by ourselves using the model.buildGeojson() method
+        in this case we must write GeoJSON explicitly through the JSON I/O adapter
         this method can reform the given elementTree (xml) into dictionary
     """
     children = list(etree)

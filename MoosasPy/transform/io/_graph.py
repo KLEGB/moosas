@@ -606,9 +606,11 @@ def buildGraph(
     clean_airwall=True,
     outer_layer_edge_embedding=True,
 ) -> MoosasGraph:
+    from ._xml import build_xml
+
     graph = MoosasGraph()
     graph.graph_representation_from_model(
-        model.buildXml(writeGeometry=False),
+        build_xml(model, write_geometry=False),
         _geometry_lookup(model),
     )
     graph.graph_edit(

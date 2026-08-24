@@ -9,6 +9,8 @@ import unittest
 from MoosasPy.model_resources import load_weather
 from MoosasPy.simulation.energy.runner import EnergyRunner
 from MoosasPy.transform import transform
+from MoosasPy.transform.io._json import build_geojson
+from MoosasPy.transform.io._xml import build_xml
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -49,6 +51,23 @@ class ExampleIntegrationTests(unittest.TestCase):
         }
         self.assertEqual(len(neighbor_pairs), 122)
         self.assertTrue(all(space.neighbor for space in self.model.spaceList))
+
+    def test_xml_serialization_is_owned_by_the_io_boundary(self):
+        root = build_xml(self.model)
+
+        self.assertFalse(hasattr(self.model, "buildXml"))
+        self.assertEqual(root.tag, "model")
+        self.assertEqual(len(root.findall("space")), len(self.model.spaceList))
+        self.assertEqual(root.findtext("level"), " ".join(str(level) for level in self.model.levelList))
+
+    def test_geojson_serialization_is_owned_by_the_io_boundary(self):
+        geojson = build_geojson(self.model)
+        first_geometry_id = geojson["features"][0]["properties"]["id"]
+
+        self.assertFalse(hasattr(self.model, "buildGeojson"))
+        self.assertEqual(geojson["type"], "FeatureCollection")
+        self.assertEqual(len(geojson["features"]), 443)
+        self.assertEqual(len(build_geojson(self.model, [first_geometry_id])["features"]), 1)
 
     @unittest.skipUnless(
         ENERGY_ENGINE.is_file() and BEIJING_WEATHER.is_file(),

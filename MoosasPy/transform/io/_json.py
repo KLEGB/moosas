@@ -1,6 +1,37 @@
 ﻿from ...utils import json
-from ...utils import to_dictionary, path, parseFile
+from ...utils import mixItemListToList, to_dictionary, path, parseFile
+import shapely
 from ..geometry.element import MoosasGeometry
+
+
+def build_geojson(model, mask=None) -> dict:
+    """Build a GeoJSON feature collection from a model's active geometry."""
+    if mask is not None:
+        valid_geometry = model.findFace(mask)
+    else:
+        geometry_ids = set()
+        for element in model.getAllFaces():
+            geometry_ids.update(mixItemListToList(element.faceId))
+        valid_geometry = model.findFace(list(geometry_ids))
+
+    return {
+        "type": "FeatureCollection",
+        "features": [
+            {
+                "type": "Feature",
+                "properties": {
+                    "normal": shapely.get_coordinates(geometry.normal, include_z=True).tolist(),
+                    "id": geometry.faceId,
+                    "is_glazing": geometry.category,
+                },
+                "geometries": {
+                    "type": "Polygon",
+                    "coordinates": shapely.get_coordinates(geometry.face, include_z=True).tolist(),
+                },
+            }
+            for geometry in valid_geometry
+        ],
+    }
 
 def writeJson(file_path, model) -> str:
     """Get a json file describe the space topology.
@@ -49,7 +80,9 @@ def writeJson(file_path, model) -> str:
         json string of the file
     """
     path.checkBuildDir(file_path)
-    dictionary = to_dictionary(model.buildXml())
+    from ._xml import build_xml
+
+    dictionary = to_dictionary(build_xml(model))
 
     # Serializing json
     json_object = json.dumps(dictionary, indent=4)
@@ -88,7 +121,7 @@ def writeGeojson(file_path, model) -> str:
         json file string
     """
     path.checkBuildDir(file_path)
-    dictionary = model.buildGeojson()
+    dictionary = build_geojson(model)
 
     # Serializing json
     json_object = json.dumps(dictionary, indent=4)
