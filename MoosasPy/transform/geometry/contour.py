@@ -1,4 +1,4 @@
-﻿"""Ver0.4.3.3 new contour calculation module, more serious and stable"""
+"""Ver0.4.3.3 new contour calculation module, more serious and stable"""
 from __future__ import annotations
 
 from .geos import *
@@ -455,7 +455,7 @@ def closed_contour_calculation(model: MoosasContainer, bld_level: float) -> Moos
         boundariesNew += boundGroup
         # plot_TopoObject(*boundariesNew, show=True)
 
-    # 2.5 灞曞钩boundarylist骞舵鏌ユ槸鍚﹂『鏃堕拡,杞崲涓篹dge
+    # 2.5 展平boundarylist并检查是否顺时针,转换为edge
     print(f'\rTOPOLOGY: in {bld_level}: find {len(boundariesNew)} boundaries')
     # plot_plan_in_node(node_list, [bound for group in boundary_coordinates for bound in group], location_list, False, True)
     model = _documentBoundary(np.array(boundariesNew).flatten(), model)

@@ -263,11 +263,12 @@ class MoosasGraph(Graph):
             self.encodeSpace(space, ExportIFC)
         
 
-        if dumpUseless:
-            mElements = model.getAllFaces(True)
-        else:
-            mElements = {"MoosasFace": set(model.faceList), "MoosasWall": set(model.wallList),
-                         "MoosasSkylight": set(model.skylightList), "MoosasGlazing": set(model.glazingList)}
+        mElements = {
+            "MoosasFace": set(model.faceList),
+            "MoosasWall": set(model.wallList),
+            "MoosasSkylight": set(model.skylightList),
+            "MoosasGlazing": set(model.glazingList),
+        }
         uidSet = mElements['MoosasFace'] | mElements['MoosasWall'] | mElements['MoosasSkylight'] | mElements[
             'MoosasGlazing']
         uidSet = [ele.Uid for ele in uidSet]
@@ -1256,6 +1257,9 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
 
     idf_graph = extract_idf_graph(rdfGraph)
     model = MoosasModel()
+    from ...model_resources import configure_model_resources
+
+    configure_model_resources(model)
     _import_schedule_nodes(rdfGraph, model)
 
     print(f'\rLOADING: searching Objects', end='')

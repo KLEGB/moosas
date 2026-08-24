@@ -25,9 +25,10 @@ from .stages.validation import validate_model
 from .geometry.convexify import convexify_model
 from .geometry.standardize import standardize_model
 from .geometry.air_boundary import copy_air_boundaries
-from .io import load_model as loadModel
-from .io import model_from_file as modelFromFile
-from .io import save_model as saveModel
+from .io import load, save
+from .io._geo import _readGeo, preClassified
+from .io._obj import _readObj
+from .io._stl import _readStl
 from .geometry.cleanse import *
 from .geometry.contour import packing_edges, outerBoundary
 from .geometry.element import MoosasEdge, MoosasFace, MoosasFloor, MoosasGeometry, MoosasSpace
@@ -54,13 +55,19 @@ def complete_topology(model: MoosasModel) -> MoosasModel:
     return build_face_topology(model)
 
 
-def load_model(file_path: str, save_type: str | None = None, **kwargs) -> MoosasModel:
-    """Load a model through an I/O adapter, then configure and complete it."""
-    from .io import load_model as load_model_file
-
-    model = load_model_file(file_path, save_type, **kwargs)
-    configure_model_resources(model)
-    return complete_topology(model)
+def _load_geometry_source(input_path: str, input_type: str | None = None) -> MoosasModel:
+    """Create the draft geometry model consumed exclusively by ``transform``."""
+    suffix = (input_type or os.path.splitext(input_path)[1].lstrip('.')).lower()
+    model = MoosasModel()
+    if suffix == 'geo':
+        model.geometryList = _readGeo(input_path)
+    elif suffix == 'obj':
+        model.geometryList = _readObj(input_path)
+    elif suffix == 'stl':
+        model.geometryList = _readStl(input_path)
+    else:
+        raise ValueError(f"Unsupported geometry source format: {suffix or input_path}")
+    return preClassified(model)
 
 
 def transform(input_path: str, input_type: str = None,
@@ -76,16 +83,13 @@ def transform(input_path: str, input_type: str = None,
     input_path : str
         Path to input geometry file. Supported formats:
         - *.obj : Wavefront OBJ format
-        - *.xml : Custom XML structure
         - *.stl : STL format (future support)
         - *.geo : Stream format (future support)
 
     output_path : str, optional
         Output path for structured spatial data. Supported formats:
-        - *.spc : Steam format with space/element descriptions
         - *.xml : Tree-structured XML format
         - *.json : JSON equivalent of XML structure
-        - *.idf : EnergyPlus input with default thermal settings
         - *.rdf : RDF knowledge graph (Turtle format)
 
     input_type : str, optional
@@ -130,9 +134,9 @@ def transform(input_path: str, input_type: str = None,
 
     Notes
     -----
-    1. For RDF/XML output, use `.saveModel()` instead of output_path
-    2. IDF generation includes default thermal settings from ASHRAE 90.1
-    3. Geometry standardization reduces model fidelity for simulation efficiency
+    1. Pure geometry inputs are transformed before they can be serialized.
+    2. RDF is the model interchange format used by simulation adapters.
+    3. Geometry standardization reduces model fidelity for simulation efficiency.
     """
 
     # redirect stdout
@@ -144,7 +148,7 @@ def transform(input_path: str, input_type: str = None,
     t0 = time.time()
     # load model from file
     print('LOADING: ', end='')
-    model = modelFromFile(input_path, input_type)
+    model = _load_geometry_source(input_path, input_type)
     configure_model_resources(model)
     print('import face number:', len(model.geoId))
 
@@ -157,10 +161,10 @@ def transform(input_path: str, input_type: str = None,
     # export the model
     if output_path is not None:
         if isinstance(output_path, str):
-            saveModel(model, output_path, output_type)
+                save(model, output_path)
         else:
             for oP, oS in zip(output_path, output_type):
-                saveModel(model, oP, oS)
+                save(model, oP)
 
     sys.stdout = sysout
     # print(len(model.spaceList))

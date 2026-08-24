@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import os
 import math
@@ -473,40 +473,40 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, iddFile=
 
 def find_closest_field(field_list: list, target_field: str) -> str:
     """
-    浠庡瓧绗︿覆鍒楄〃涓壘鍒颁笌鐩爣瀛楁鏈€鎺ヨ繎鐨勫尮閰嶉」锛堢粨鍚堟鍒?鐩镐技搴︼級
-    :param field_list: 寰呭尮閰嶇殑瀛楃涓插垪琛?
-    :param target_field: 鐩爣瀛楁鍚嶇О
-    :return: 鏈€鎺ヨ繎鐨勫尮閰嶉」锛堟棤鍖归厤鏃惰繑鍥炵┖瀛楃涓诧級
+    从字符串列表�?��到与�?��字�?�?接近的匹配项（结合�?�?相似度）
+    :param field_list: 待匹配的字�?串列�?
+    :param target_field: 目标字段名称
+    :return: 最接近的匹配项（无匹配时返回空字符串）
     """
-    # 姝ラ1锛氭鍒欓澶勭悊锛堟ā绯婂尮閰嶆牳蹇冨叧閿瘝锛屾彁鍗囧€欓€夊噯纭€э級
-    # 杞箟鐩爣瀛楁涓殑姝ｅ垯鍏冨瓧绗︼紝閬垮厤璇硶閿欒
+    # 步骤1：正则预处理（模糊匹配核心关键词，提升候选准确性）
+    # 转义目标字段中的正则元字符，避免语法错误
     escaped_target = re.escape(target_field)
-    # 鏋勫缓妯＄硦鍖归厤姝ｅ垯锛氬厑璁哥洰鏍囧瓧娈靛墠鍚庢湁鍏朵粬瀛楃锛屼笖蹇界暐澶у皬鍐?
+    # 构建模糊匹配正则：允许目标字段前后有其他字�?，且忽略大小�?
     pattern = re.compile(f".*{escaped_target}.*", re.IGNORECASE)
 
-    # 姝ラ2锛氱瓫閫夊€欓€夐」锛堣嚦灏戝寘鍚洰鏍囧瓧娈垫牳蹇冨瓧绗︾殑椤癸級
+    # 步骤2：筛选候选项（至少包含目标字段核心字符的项）
     candidates = [field for field in field_list if pattern.match(str(field))]
 
-    # 鑻ユ棤姝ｅ垯鍖归厤鐨勫€欓€夐」锛岀洿鎺ュ熀浜庡叏鍒楄〃璁＄畻鐩镐技搴?
+    # 若无正则匹配的�?��?�项，直接基于全列表计算相似�?
     if not candidates:
         candidates = field_list
 
-    # 姝ラ3锛氳绠楀€欓€夐」涓庣洰鏍囧瓧娈电殑鐩镐技搴︼紙缂栬緫璺濈锛夛紝鎺掑簭
+    # 步骤3：计算候选项与目标字段的相似度（编辑距离），排序
     def similarity(a: str, b: str) -> float:
-        """璁＄畻涓や釜瀛楃涓茬殑鐩镐技搴︼紙0-1锛?涓哄畬鍏ㄤ竴鑷达級"""
+        """计算两个字�?串的相似度（0-1�?为完全一致）"""
         return SequenceMatcher(None, str(a).strip(), str(b).strip()).ratio()
 
-    # 鎸夌浉浼煎害闄嶅簭鎺掑簭锛岀浉浼煎害鐩稿悓鍒欐寜瀛楃涓查暱搴︽帴杩戝害鎺掑簭
+    # 按相似度降序排序，相似度相同则按字符串长度接近度排序
     sorted_candidates = sorted(
         candidates,
         key=lambda x: (
-            similarity(x, target_field),  # 浼樺厛鎸夌浉浼煎害
-            -abs(len(str(x)) - len(target_field))  # 娆′紭鍏堟寜闀垮害鎺ヨ繎搴?
+            similarity(x, target_field),  # 优先按相似度
+            -abs(len(str(x)) - len(target_field))  # 次优先按长度接近�?
         ),
         reverse=True
     )
 
-    # 姝ラ4锛氳繑鍥炴渶鎺ヨ繎鐨勯」锛堟棤鍒楄〃鍏冪礌鏃惰繑鍥炵┖锛?
+    # 步�?4：返回最接近的项（无列表元素时返回空�?
     return sorted_candidates[0] if sorted_candidates else ""
 
 

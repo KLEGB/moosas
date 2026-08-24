@@ -2,7 +2,7 @@
 """Package-native IFC bridge for Moosas models.
 
 This module converts between ``MoosasModel`` and IFC4 for use by the shared
-``saveModel`` / ``loadModel`` interface.  The project now routes IFC through an
+``save`` / ``load`` interface. The project routes IFC through an
 intermediate RDF step when entering or leaving the public I/O boundary, while
 still embedding a Moosas snapshot in the IFC file to preserve the original
 project data.

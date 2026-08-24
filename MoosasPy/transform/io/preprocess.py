@@ -27,14 +27,14 @@ def coPlanner(inputFile: str, outputFile: str):
     return: None
     """
     from ...models import MoosasModel, MoosasElement, MoosasGeometry
-    from . import model_from_file as modelFromFile
+    from ..pipeline import _load_geometry_source
     from ._geo import writeGeo
     from ..geometry.cleanse import _coPlannerCleanse
     from ...utils import shapely
     if isinstance(inputFile, MoosasModel):
         model = inputFile
     else:
-        model = modelFromFile(inputFile)
+        model = _load_geometry_source(inputFile)
     elementList = [MoosasElement(model, geo, level=0, offset=0) for geo in model.geometryList]
     # the _coPlannerCleanse function could find and merge the co-planner elements
     cleanseElement, redundant = _coPlannerCleanse(elementList)
@@ -83,7 +83,7 @@ def overlap(inputFile: str, outputFile: str):
     return: None
     """
     from ...models import MoosasModel, MoosasElement, MoosasGeometry
-    from . import model_from_file as modelFromFile
+    from ..pipeline import _load_geometry_source
     from ._geo import writeGeo
     from ..geometry.cleanse import _groupByNormal, Projection
     from ...utils import shapely, np
@@ -91,7 +91,7 @@ def overlap(inputFile: str, outputFile: str):
     if isinstance(inputFile, MoosasModel):
         model = inputFile
     else:
-        model = modelFromFile(inputFile)
+        model = _load_geometry_source(inputFile)
     elementList = [MoosasElement(model, geo, level=0, offset=0) for geo in model.geometryList]
     elementGroup = _groupByNormal(elementList, [w.normal for w in elementList])
     treatFaces = 0

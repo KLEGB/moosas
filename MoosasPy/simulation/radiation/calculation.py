@@ -2,7 +2,7 @@
 
 import tempfile
 
-from ...transform.io import writeGeo
+from ...transform.io._geo import writeGeo
 from ...transform.geometry import MoosasGrid
 from ...transform.geometry.element import MoosasSpace, MoosasSkylight, MoosasGlazing, MoosasElement
 from ...transform.geometry.geos import Ray, Vector

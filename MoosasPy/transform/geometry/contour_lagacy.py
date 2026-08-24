@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import copy
 
@@ -24,58 +24,58 @@ def closed_contour_calculation(model: MoosasModel, bld_level: float):
         The input model updated with detected boundary information at the specified level.
     """
     print(f'Preprocessing in level {bld_level}')
-    # 鍒涢€爓all_list
+    # 创造wall_list
     wall_list = searchBy('level', bld_level, model.wallList)
     # plot_object(model.wallList[wall_list])
-    # 鑰冭檻閫氶珮鐨勫
+    # 考虑通高的墙
     # for i in range(len(model.wallList)):
     #    if model.wallList[i].level<bld_level and model.wallList[i].toplevel>bld_level:
     #        wall_list.append(i)
     if len(wall_list) == 0:
         return model
-    # 1.1 鍒涘缓vec_list,娓呯悊鍑虹敤浜庨棴鍚堣瘑鍒殑闈?
+    # 1.1 创建vec_list,清理出用于闭合识�?���?
     vec_list, wall_list = useful_wall(wall_list, model)
-    # 1.2 鍒涢€犲敮涓€鐐瑰垪琛╨ocation_list / 鐐归摼鎺ョ粍node_list / 瑙掑害缁刟ngle_list
+    # 1.2 创造唯一点列表location_list / 点链接组node_list / 角度组angle_list
     location_list, node_list, angle_list = construct_node_network(vec_list)
-    # 1.3 缈昏瘧vec_list鍧愭爣涓虹紪鍙峰姞蹇繍绠?
+    # 1.3 翻译vec_list坐标为编号加�?���?
     for i in range(len(vec_list)):
         vec_list[i][1] = location_list.index(vec_list[i][1])
         vec_list[i][2] = location_list.index(vec_list[i][2])
 
-    # 2.1 澶у尯鍩熷垎缁?寰楀埌node_groups
-    # 閬嶅巻鍒板眿椤堕潰鏃讹紝nodelist浼氫负绌猴紝灏嗘姤閿?
+    # 2.1 大区域分�?得到node_groups
+    # 遍历到屋顶面时，nodelist会为空，将报�?
     print('Node groupping.......')
     if len(node_list) == 0: return model
     node_groups = node_Groupping(node_list)
 
     # plot_plan_in_node(node_list,[],location_list,False,True)
-    # print('灏嗚繘琛?.3f灞傚杞粨鎼滅储' % bld_level)
-    # 2.2 鎼滅储澶栬疆寤?寰楀埌boundary_list
+    # print('将进�?.3f层�?�?��搜索' % bld_level)
+    # 2.2 搜索外轮�?得到boundary_list
     print('Nodegroup_outerboundary.......')
     boundary_list = nodegroup_outerboundary(node_groups, node_list, location_list, angle_list)
     # plot_plan_in_node(node_list, [bound for group in boundary_list for bound in group], location_list, False, True)
-    # print('灏嗚繘琛?.3f灞傚垎鍓茶疆寤?%bld_level)
-    # 鍒涘缓瀛樺偍鍒楄〃boundary_coordinates锛堝瓨鐐瑰簭鍙凤級
+    # print('将进�?.3f层分割轮�?%bld_level)
+    # 创建存储列表boundary_coordinates（存点序号）
     print('\nBoundary dividing.......')
     boundary_coordinates = []
     for bound in boundary_list:
         boundary_coordinates.append(bound)
     for i in range(len(node_groups)):
-        # 2.3 鎸夌偣杩唬鍒嗗壊杞粨鑾峰緱鏂扮殑boundary_coordinates
+        # 2.3 按点迭代分割轮廓获得新的boundary_coordinates
         eligible = [node for node in node_groups[i] if not (node in boundary_list[i])]
         boundary_coordinates[i] = divide_boundary_node(boundary_coordinates[i], node_list, location_list, eligible)
 
-        # 鏍规嵁鍙鍖栫粨鏋滃彲瑙侊紝涓ょ閮藉湪杞粨涓婄殑绾夸粛鏈璇嗗埆
-        # 2.4 鎸夌嚎杩唬鍒嗗壊杞粨鑾峰緱鏂扮殑boundary_coordinates
+        # 根据可视化结果可见，两端都在轮廓上的线仍未被识别
+        # 2.4 按线迭代分割轮廓获得新的boundary_coordinates
         boundary_coordinates[i] = divide_boundary_edge(boundary_coordinates[i], vec_list, node_groups[i])
-    # 2.5 灞曞钩boundarylist骞舵鏌ユ槸鍚﹂『鏃堕拡,杞崲涓篹dge
+    # 2.5 展平boundarylist并检查是否顺时针,转换为edge
 
     print("find %d boundarys in building level" % np.sum([len(b) for b in boundary_coordinates]), bld_level)
     # plot_plan_in_node(node_list, [bound for group in boundary_coordinates for bound in group], location_list, False, True)
     model = document_boundary(boundary_coordinates, location_list, vec_list, model)
     return model
 
-# 璺緞鎼滅储鐩稿叧
+# 路径搜索相关
 def findpath_depth(node, end: list, node_list: list, block_list: list, last=None, max_depth=geom.PATH_MAX_DEPTH):
     """
     Find a path from the current node to any node in the end list using depth-limited DFS.
@@ -137,7 +137,7 @@ def split(linerring: list, splitline: list):
         rings after splitting the original linerring along the splitline. The splitline is included 
         in both output rings in forward order in linerring1 and reverse order in linerring2.
     """
-    # Ver1.3 瀹氫綅鍒板垎鍓茬畻娉曟湁闂锛侀噸鍐欐妯″潡
+    # Ver1.3 定位到分割算法有问题！重写此模块
     if linerring[0] == linerring[-1]:
         linerring.pop()
     linerring = np.roll(linerring, len(linerring) - linerring.index(splitline[0]))
@@ -173,7 +173,7 @@ def polygon_from_node(nodelist: list, location: list):
     polist = [[shapely.get_x(node), shapely.get_y(node)] for node in polist]
     return shapely.polygons(polist)
 
-# 杞粨璇嗗埆鏂规硶
+# 轮廓识别方法
 def useful_wall(wall_list, model):
     """
     Filter out invalid, zero-length, duplicate, and isolated walls from a wall list.
@@ -193,7 +193,7 @@ def useful_wall(wall_list, model):
         Filtered list of wall indices with invalid, zero-length, duplicate, and 
         isolated walls removed.
     """
-    # 1.1.1 鍘婚櫎闆堕暱搴︾嚎銆佹棤鏁堢嚎銆侀噸绾?
+    # 1.1.1 去除零长度线、无效线、重�?
     vec_list = []
     wall_list = [i for i in wall_list if model.wallList[i].force_2d() != None]
     wall_list = [i for i in wall_list if model.wallList[i].height > 0.9]
@@ -216,7 +216,7 @@ def useful_wall(wall_list, model):
                     pass
 
     # plot_object(model.wallList[wall_list], color='black')
-    # 1.1.2 鍘婚櫎wall_list瀛ょ珛绾?
+    # 1.1.2 去除wall_list孤立�?
     def remove_wall(wall_list):
         """
         Remove walls that do not meet connectivity criteria and generate a list of wall vectors.
@@ -258,7 +258,7 @@ def useful_wall(wall_list, model):
         wall_list = remove_wall(wall_list)
         # plot_object(model.wallList[wall_list], color='black')
 
-    # 1.1.3 鍒涢€爒ec_list
+    # 1.1.3 创造vec_list
     vec_list = []
     for i in wall_list:
         line = model.wallList[i].force_2d()
@@ -293,7 +293,7 @@ def construct_node_network(vec_list):
         List where each element is an array of angles corresponding to the direction 
         of connected vectors from the node, sorted in ascending order.
     """
-    # 1.2.1 鍒涢€犲敮涓€鐐瑰垪琛╨ocation_list / 鐐归摼鎺ョ粍node_list
+    # 1.2.1 创造唯一点列表location_list / 点链接组node_list
     unique_set = set()
     for point_item in vec_list:
         unique_set.add(point_item[1])
@@ -302,16 +302,16 @@ def construct_node_network(vec_list):
     for vec in vec_list:
         node_list[location_list.index(vec[1])].append(vec[2])
     for i in range(len(node_list)): node_list[i].pop(0)
-    # 1.2.2 璁＄畻鍚戦噺瑙抋ngle_list
+    # 1.2.2 计算向量角angle_list
     angle_list = copy.deepcopy(node_list)
     for i in range(len(angle_list)):
         for j in range(len(angle_list[i])):
             vec = Vector(node_list[i][j]).array - Vector(location_list[i]).array
             angle_list[i][j] = Vector(vec).quickAngle()
-    # 1.2.3 浣跨敤angle_list涓簄ode_list鎺掑簭
+    # 1.2.3 使用angle_list为node_list排序
     node_list = [np.array(node_list[i])[np.argsort(angle_list[i])] for i in range(len(node_list))]
     angle_list = [np.array(angle_list[i])[np.argsort(angle_list[i])] for i in range(len(angle_list))]
-    # 1.3.1 缈昏瘧node_list鍧愭爣涓虹紪鍙峰姞蹇繍绠?
+    # 1.3.1 翻译node_list坐标为编号加�?���?
     for i in range(len(node_list)):
         for j in range(len(node_list[i])):
             node_list[i][j] = location_list.index(node_list[i][j])
@@ -399,22 +399,22 @@ def nodegroup_outerboundary(node_groups, node_list, location_list, angle_list):
     """
     boundary_list = []
     for group in node_groups:
-        # 瀵筺ode杩涜浜屾鍏抽敭璇嶆帓搴忥紝绗竴鍏抽敭璇嶄负x鍧愭爣(鏈€澶?锛岀浜屽叧閿瘝涓簓鍧愭爣(鏈€灏?,鍗冲彸涓嬭
+        # 对node进�?二�?关键词排序，�?��关键词为x坐标(�?�?，�?二关�?��为y坐标(�?�?,即右下�?
         group_xy = np.array(
             [[node, shapely.get_x(location_list[node]), shapely.get_y(location_list[node])] for node in group])
         max_x = np.max(group_xy.T[1])
         group_xy = group_xy[[i for i in range(len(group)) if group_xy[i][1] == max_x]]
-        start_node = int(group_xy[np.argmin(group_xy.T[2])][0])  # start_node: 寮€濮嬭妭鐐圭紪鍙?
-        end_node = node_list[start_node][0]  # end_node: 缁撴潫鑺傜偣缂栧彿
-        last_node = start_node  # last_node: 涓婁竴涓妭鐐圭紪鍙?
-        outer_boundary = [start_node, end_node]  # outer_boundary: 鐢ㄤ簬璁板綍澶栬疆寤?
+        start_node = int(group_xy[np.argmin(group_xy.T[2])][0])  # start_node: �?始节点编�?
+        end_node = node_list[start_node][0]  # end_node: 结束节点编号
+        last_node = start_node  # last_node: 上一�?��点编�?
+        outer_boundary = [start_node, end_node]  # outer_boundary: 用于记录外轮�?
         # plot_plan_in_node(node_list, [outer_boundary], location_list, save=False, show=True)
         is_valid = True
 
-        # Ver1.3: 鐢ㄤ簬闃叉寰幆閬嶅巻锛岃褰曟瘡娆＄殑閫夋嫨
+        # Ver1.3: 用于防止循环遍历，记录每次的选择
         nextNodeDict = {}
         while end_node != start_node and is_valid:
-            # 璁＄畻鏉ユ簮鏂瑰悜
+            # 计算来源方向
             # print(start_node, end_node, last_node, outer_boundary)
             last_node_vec = Vector(location_list[last_node]).array
             end_node_vec = Vector(location_list[end_node]).array
@@ -422,19 +422,19 @@ def nodegroup_outerboundary(node_groups, node_list, location_list, angle_list):
             node_list_T = [item for item in node_list[end_node] if item != last_node]
             angle_list_T = [angle_list[end_node][i] for i in range(len(angle_list[end_node])) if
                             node_list[end_node][i] != last_node]
-            # 鎵惧埌鏉ユ簮鏂瑰悜椤烘椂閽堢涓€涓偣
+            # 找到来源方向顺时针第一个点
             next_node = node_list_T[0]
             for i in range(len(angle_list_T)):
                 if angle_list_T[i] > Vector(vec_last).quickAngle():
                     if end_node in nextNodeDict.keys():
-                        # Ver1.3: 鐢ㄤ簬闃叉寰幆閬嶅巻锛岃褰曟瘡娆＄殑閫夋嫨
+                        # Ver1.3: 用于防止循环遍历，记录每次的选择
                         if node_list_T[i] == nextNodeDict[end_node]:
                             continue
                     next_node = node_list_T[i]
-                    # Ver1.3: 鐢ㄤ簬闃叉寰幆閬嶅巻锛岃褰曟瘡娆＄殑閫夋嫨(濡堢殑鎬讳笉鍙兘缁欐垜缁忚繃涓夋鍚э紵锛燂紵锛?
+                    # Ver1.3: 用于防�?�?��遍历，�?录每次的选择(妈的总不�?��给我经过三�?吧？？？�?
                     nextNodeDict[end_node] = next_node
                     break
-            # 鏇存柊last_node鍜宔nd_node鍜宱uter_boundary
+            # 更新last_node和end_node和outer_boundary
             outer_boundary.append(next_node)
             # print(outer_boundary)
             # print(location_list[next_node])
@@ -450,14 +450,14 @@ def nodegroup_outerboundary(node_groups, node_list, location_list, angle_list):
 
         if is_valid:
             # plot_plan_in_node(node_list, [outer_boundary], location_list, save=False, show=True)
-            # Ver1.3 寰幆缁撴潫锛屾柇寮€鑷氦閮ㄥ垎
+            # Ver1.3 循环结束，断开自交部分
             new_outer_boundary = []
             while len(outer_boundary) > 0:
                 sub_boundary = []
                 break_point = 0
                 end_point = len(outer_boundary) - 1
                 for i in range(len(outer_boundary)):
-                    # 鎼滅储鏂偣
+                    # 搜索断点
                     if outer_boundary[i] in outer_boundary[0:i]:
                         break_point = outer_boundary.index(outer_boundary[i])
                         end_point = i
@@ -503,13 +503,13 @@ def divide_boundary_node(boundary_iteration, node_list, location_list, eligible)
         Refined list of boundary node sequences after iterative splitting; each inner list is a 
         resulting polygon boundary with inserted nodes, ensuring no eligible interior nodes remain.
     """
-    # 杩唬鍒嗗壊杞粨-鐐?
+    # �?��分割�?��-�?
     ContinueSplit = True
     while len(eligible) > 0 and ContinueSplit:
 
         ContinueSplit = False
         new_boundary_coordinates = []
-        # 鍒ゆ柇鏄惁涓烘渶灏忚疆寤?
+        # 判断�?��为最小轮�?
         for j in range(len(boundary_iteration)):
             node_of_region = boundary_iteration[j]
             if len(node_of_region) < 4: continue
@@ -520,16 +520,16 @@ def divide_boundary_node(boundary_iteration, node_list, location_list, eligible)
                     inside_node = node
                     ContinueSplit = True
                     break
-            # 鑻ラ潪鏈€灏忚矾寰勶紝鎵ц娣卞害鎼滅储骞跺垎鍓茶疆寤?
+            # 若非�?小路径，执�?深度搜索并分割轮�?
             if inside_node == None:
                 new_boundary_coordinates.append(node_of_region)
             else:
                 path1 = findpath_depth(inside_node, node_of_region, node_list, [inside_node])
                 path2 = findpath_depth(inside_node, node_of_region, node_list, path1)
                 path2.reverse()
-                # Ver1.3: 鍒嗗壊鐐瑰閲嶅浜嗭紒锛侊紒
+                # Ver1.3: 分割点处重复了！！！
                 for ip in range(1, len(path2)): path1.append(path2[ip])
-                # Ver1.3: 鍘婚櫎鑷氦鐨勫唴鍦?
+                # Ver1.3: 去除�?��的内�?
                 repeat = True
                 while repeat:
                     repeat = False
@@ -547,9 +547,9 @@ def divide_boundary_node(boundary_iteration, node_list, location_list, eligible)
                     new_boundary_coordinates.append(region2)
                 except:
                     pass
-                # 鏇存柊eligible
+                # 更新eligible
                 eligible = [node for node in eligible if not (node in path1)]
-        # 鏇存柊璇roup鐨勮疆寤撳垪琛?
+        # 更新�?roup的轮廓列�?
         boundary_iteration = new_boundary_coordinates
 
     return boundary_iteration
@@ -573,7 +573,7 @@ def divide_boundary_edge(boundary_iteration, vec_list, node_groups):
     list of array_like
         A list of divided boundary edge vectors resulting from the grouping and iteration.
     """
-    # 鏁寸悊绾挎缁?
+    # 整理线�?�?
     def overlaps_in_node(geo1_node: list, geo2_node: list):
         """Check if two nodes overlap in a geometric sequence and process boundary edges accordingly.
         
@@ -612,7 +612,7 @@ def divide_boundary_edge(boundary_iteration, vec_list, node_groups):
                 eligible_edge.remove(edge)
                 break
     new_boundary_coordinates = copy.deepcopy(boundary_iteration)
-    # 鎶婁笂杩扮帺鎰忓効鎬艰繘鍘?
+    # 把上述玩意儿怼进�?
     for edge in eligible_edge:
         for bound in new_boundary_coordinates:
             if (edge[0] in bound) and (edge[1] in bound):
@@ -656,7 +656,7 @@ def document_boundary(boundary_coordinates, location_list, vec_list, model):
             new_boundary_coordinates.append(j)
 
     boundary_coordinates = new_boundary_coordinates
-    # 杞崲
+    # 转换
     for path in boundary_coordinates:
         boundary_edge = []
 

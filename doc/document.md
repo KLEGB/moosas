@@ -31,10 +31,10 @@ python -c "import MoosasPy; print(MoosasPy.__version__)"
 Convert a supported geometry file into a structured `MoosasModel`:
 
 ```python
-from MoosasPy.transform import save_model, transform
+from MoosasPy.transform import save, transform
 
 model = transform("example.obj", output_path="model.xml", stdout=None)
-save_model(model, "model.rdf")
+save(model, "model.rdf")
 ```
 
 `transform()` accepts geometry input such as OBJ, XML, GEO, and STL according to the active I/O implementation. It can clean duplicate or redundant faces, resolve overlaps, split wall surfaces, generate spaces, and write the result when an output path is supplied.
@@ -46,7 +46,7 @@ The top-level `MoosasPy` package exposes these primary functions:
 | API | Purpose |
 | --- | --- |
 | `transform` | Transform source geometry into a structured building model. |
-| `loadModel` / `saveModel` | Load and save `MoosasModel` instances. |
+| `load` / `save` | Load and save complete `MoosasModel` serializations. |
 | `energyAnalysis` | Run the simplified building-energy workflow. |
 | `positionRadiation` | Calculate radiation at one or more positions. |
 | `positionSunHour` | Calculate average direct-sun hours for one or more rays. |
@@ -60,7 +60,7 @@ The top-level `MoosasPy` package exposes these primary functions:
 | `MoosasPy/transform/` | Public transformation pipeline and model conversion boundary. |
 | `MoosasPy/transform/alignment/` | Geometric alignment and coordinate-processing helpers. |
 | `MoosasPy/transform/geometry/` | Geometry primitives, topology cleansing, contours, and space generation. |
-| `MoosasPy/transform/io/` | File-format adapters and dispatch for GEO, XML, JSON, RDF, IFC, IDF, GBXML, OBJ, and graph formats. |
+| `MoosasPy/transform/io/` | File-format adapters and dispatch for complete RDF, XML, JSON, and IFC models. |
 | `MoosasPy/simulation/airflow/` | Airflow-network and CONTAM project preparation, execution, and iteration. |
 | `MoosasPy/simulation/coupling/` | Cross-domain workflows such as coupled energy and airflow analysis. |
 | `MoosasPy/simulation/energy/` | Simplified energy analysis, photovoltaic calculations, and thermal-load helpers. |
@@ -77,15 +77,15 @@ The top-level `MoosasPy` package exposes these primary functions:
 `MoosasPy.transform.io` provides model loading, saving, and format conversion functions. Common entry points include:
 
 ```python
-from MoosasPy.transform.io import load_model, save_model, writeGeo, writeIDF
+from MoosasPy.transform.io import load, save
 
-model = load_model("model.xml")
-save_model(model, "model.rdf")
+model = load("model.xml")
+save(model, "model.rdf")
 writeGeo("model.geo", model)
 writeIDF("model.idf", model)
 ```
 
-Available helpers cover GEO, XML, JSON/GeoJSON, RDF, IFC, GBXML, IDF, and OBJ conversion. Format support can depend on optional dependencies and the input model content.
+GEO, OBJ, and STL contain only geometric faces and must enter through `transform()`. `load()` accepts complete RDF, XML, JSON, and IFC models; XML and JSON use a same-named `.geo` companion for geometry. RDF is the standard interchange format for simulation adapters, which generate IDF or gbXML when required by an engine.
 
 ## Analysis Modules
 

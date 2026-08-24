@@ -1,4 +1,4 @@
-﻿"""Element definition in moosas+
+"""Element definition in moosas+
 
 we split the MoosasModel definition from geometry.element to avoid circular import.
 however, we still need some method in MoosasModel,
@@ -17,7 +17,7 @@ from ...utils.tools import path
 from ...utils.constant import geom
 from ...model_resources import get_schedule_name, load_schedule
 
-# 涓嶅仛inch meter杞崲
+# 不做inch meter转换
 INCH_METER_MULTIPLIER = 1
 INCH_METER_MULTIPLIER_SQR = 1
 
@@ -1185,7 +1185,7 @@ class MoosasFace(MoosasElement):
 
 class MoosasSkylight(MoosasFace):
     '''
-        涓€涓壒鍒畝鍗曠殑glazing绫伙紝鍙负涓嶮oosasface鍖哄垎寮€
+        一个特别简单的glazing类，只为与Moosasface区分开
         '''
     __slots__ = ['parentFace','SHGC','operable']
 
@@ -2153,7 +2153,7 @@ class MoosasEdge:
         self.__botBound = []
         self.__topBound = []
         self.Uid = generate_code(4)
-        # 鍒涢€犲簳闈?椤堕潰鎶曞奖澶氳竟褰?
+        # 创�?�底�?顶面投影多边�?
         if len(self.wall) < 3:
             raise GeometryError(walls, "A boundary requires at least 3 walls.")
         self.prepareBoundary()

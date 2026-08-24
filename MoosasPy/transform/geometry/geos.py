@@ -1,4 +1,4 @@
-﻿"""
+"""
     This module defines the main function for geometric processing. This module is used as a foundation for the models,
     transforming and encoding module. It has no documented public API and should not be used directly.
     This module has been translated from Chinese into English by Microsoft translation. Some expressions may be
@@ -779,11 +779,11 @@ class Projection(Ray):
         
         Returns
         -------
-        numpy.matrix
-            A 3x3 matrix where each column is one of the local axes (axisX, axisY, axisZ),
+        numpy.ndarray
+            A 3x3 array where each column is one of the local axes (axisX, axisY, axisZ),
             representing the rotation from the local coordinate system to the global coordinate system.
         """
-        return np.asmatrix(np.array([self.axisX, self.axisY, self.axisZ]).T)
+        return np.array([self.axisX, self.axisY, self.axisZ]).T
 
     @property
     def axisZ(self):
@@ -864,8 +864,8 @@ class Projection(Ray):
         coors = np.nan_to_num(coors, nan=0)
         coor_new = [coor - self.origin.array for coor in coors]
         if not (Vector.parallel(self.axisZ, np.array([0, 0, 1])) and Vector.parallel(self.axisX, np.array([1, 0, 0]))):
-            coor_new = [np.asmatrix(coor) * self.rotateMatrix for coor in coor_new]
-        coor_new = np.array([np.array(coor).flatten() for coor in coor_new])
+            coor_new = [coor @ self.rotateMatrix for coor in coor_new]
+        coor_new = np.array([coor.flatten() for coor in coor_new])
         if dims == 0:
             return shapely.points(coor_new[0])
         if dims == 1:
@@ -910,12 +910,10 @@ class Projection(Ray):
         UVGeometry = shapely.force_3d(UVGeometry, z=0)
         coors = shapely.get_coordinates(UVGeometry, include_z=True)
         if not (Vector.parallel(self.axisZ, np.array([0, 0, 1])) and Vector.parallel(self.axisX, np.array([1, 0, 0]))):
-            coor_new = [np.asmatrix(coor) * self.rotateMatrix.I for coor in coors]
+            coor_new = [coor @ np.linalg.inv(self.rotateMatrix) for coor in coors]
         else:
             coor_new = coors
         coor_new = np.array([coor + self.origin.array for coor in coor_new])
-
-        coor_new = np.array([np.array(coor).flatten() for coor in coor_new])
 
         if shapely.get_dimensions(UVGeometry) == 0:
             return shapely.points(coor_new[0])
@@ -975,12 +973,12 @@ class Transformation2d:
         
         Returns
         -------
-        numpy.matrix
-            A 2x2 inverse rotation matrix represented as a NumPy matrix object.
+        numpy.ndarray
+            A 2x2 inverse rotation matrix represented as a NumPy array.
         """
         rotateMatrix = [np.cos(self.rotateRadius), -np.sin(self.rotateRadius)], [np.sin(self.rotateRadius),
                                                                                  np.cos(self.rotateRadius)]
-        rotateMatrix = np.asmatrix(np.array(rotateMatrix).T).I
+        rotateMatrix = np.linalg.inv(np.array(rotateMatrix).T)
         return rotateMatrix
 
     @classmethod
@@ -1037,8 +1035,8 @@ class Transformation2d:
             if rotateOrigin is None:
                 rotateOrigin = np.array([np.mean(coor) for coor in coordiantes.T])
             coordinatesRelative = np.array([coor - rotateOrigin for coor in coordiantes])
-            coordinatesRelative = np.array([np.asmatrix(coor) * self.rotateMatrix for coor in coordinatesRelative])
-            coordiantes = np.array([np.array(coor + rotateOrigin).flatten() for coor in coordinatesRelative])
+            coordinatesRelative = np.array([coor @ self.rotateMatrix for coor in coordinatesRelative])
+            coordiantes = np.array([coor + rotateOrigin for coor in coordinatesRelative])
         if shapely.get_dimensions(geo) == 0:
             return shapely.points(coordiantes[0])
         if shapely.get_dimensions(geo) == 1:
@@ -2295,7 +2293,7 @@ def closeTheCurve(geo: shapely.Geometry):
         A new geometry where the input curve is closed by connecting the last point to the first.
         If the input was already closed, the original geometry is returned.
     """
-    # Ver 2.0 浣挎洸绾块棴鍚?
+    # Ver 2.0 使曲线闭�?
     if shapely.is_closed(geo):
         return geo
     coordinates = shapely.get_coordinates(geo, include_z=True).tolist()
@@ -2303,8 +2301,8 @@ def closeTheCurve(geo: shapely.Geometry):
     return shapely.polygons(coordinates)
 
 
-# 鏃х増鏈殑vector璁＄畻
-# 鍚戦噺璁＄畻 / 鏁村悎浜唖hapely.Geometry绫诲瀷锛屾瘮np鐨勬硾鐢ㄦ€у箍
+# �ɰ汾��vector����
+# 向量计算 / 整合了shapely.Geometry类型，比np的泛用性广
 # def vector.dot(vec1, vec2):
 #    vec1 = vector(vec1).array
 #    vec2 = vector(vec2).array
@@ -2380,9 +2378,9 @@ float or None
     Returns None if the input vector has zero length.
 """
 #    '''
-#    vec鍦ㄦy杞达細杩斿洖vector.dot([1,0],vec)缁撴灉鍦╗-1,1]涓紝[1,0]涓?,[0,1]涓?,[-1,0]涓?1
-#    vec鍦ㄨ礋y杞达細杩斿洖-vector.dot([1,0],vec)-2缁撴灉鍦╗-3,-1]涓?[.99,-.01]涓?3,[0,-1]涓?2,[-.99,-.01]涓?1
-#    杩斿洖鍊间笌娌块€嗘椂閽堟柟鍚慬-3,1]鐨勮搴﹀ぇ灏忔鐩稿叧
+#    vec在正y轴：返回vector.dot([1,0],vec)结果在[-1,1]中，[1,0]�?,[0,1]�?,[-1,0]�?1
+#    vec在负y轴：返回-vector.dot([1,0],vec)-2结果在[-3,-1]�?[.99,-.01]�?3,[0,-1]�?2,[-.99,-.01]�?1
+#    返回值与沿逆时针方向[-3,1]的角度大小正相关
 #    '''
 #
 #    if type(vec) == shapely.Geometry:
@@ -2430,7 +2428,7 @@ str
 #    return '_'.join(vec)
 
 
-# Ver1.3 鍒ゆ柇骞宠
+# Ver1.3 判断平行
 # def vector.parallel(vec1, vec2):
 #    vec1 = vec_unit(vec1)
 #    vec2 = vec_unit(vec2)

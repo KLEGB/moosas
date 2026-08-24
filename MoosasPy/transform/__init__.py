@@ -2,10 +2,9 @@
 
 __all__ = [
     "complete_topology",
-    "load_model",
-    "model_from_file",
+    "load",
+    "save",
     "TransformOptions",
-    "save_model",
     "structured",
     "transform",
 ]
@@ -16,11 +15,11 @@ def __getattr__(name):
         from .stages.options import TransformOptions
 
         return TransformOptions
-    if name in {"complete_topology", "load_model", "structured", "transform"}:
+    if name in {"complete_topology", "structured", "transform"}:
         from . import pipeline
 
         return getattr(pipeline, name)
-    if name in {"model_from_file", "save_model"}:
+    if name in {"load", "save"}:
         from . import io
 
         return getattr(io, name)

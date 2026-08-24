@@ -10,10 +10,10 @@ import unittest
 from MoosasPy.model_resources import configure_model_resources, load_weather
 from MoosasPy.simulation.energy.runner import EnergyRunner
 from MoosasPy.transform import TransformOptions, structured, transform
+from MoosasPy.transform.pipeline import _load_geometry_source
 from MoosasPy.transform.stages.classification import classify_model
 from MoosasPy.transform.stages.cleansing import cleanse_model
 from MoosasPy.transform.stages.generation import generate_space_boundaries
-from MoosasPy.transform.io import model_from_file
 from MoosasPy.transform.io._json import build_geojson
 from MoosasPy.transform.io._xml import build_xml
 from MoosasPy.transform.stages.glazing import attach_glazing_to_faces
@@ -62,7 +62,7 @@ class ExampleIntegrationTests(unittest.TestCase):
         self.assertTrue(all(space.neighbor for space in self.model.spaceList))
 
     def test_classification_stage_builds_elements_before_topology(self):
-        model = model_from_file(str(GEOMETRY_FIXTURE), "geo")
+        model = _load_geometry_source(str(GEOMETRY_FIXTURE), "geo")
         classified_model = classify_model(model)
 
         self.assertIs(classified_model, model)
@@ -74,7 +74,7 @@ class ExampleIntegrationTests(unittest.TestCase):
 
     def test_file_and_model_entries_share_transform_options(self):
         options = TransformOptions()
-        model = configure_model_resources(model_from_file(str(GEOMETRY_FIXTURE), "geo"))
+        model = configure_model_resources(_load_geometry_source(str(GEOMETRY_FIXTURE), "geo"))
         with redirect_stdout(StringIO()):
             model = structured(model, options=options)
 
@@ -87,7 +87,7 @@ class ExampleIntegrationTests(unittest.TestCase):
         )
 
     def test_generation_stage_builds_boundaries_before_assembly(self):
-        model = model_from_file(str(GEOMETRY_FIXTURE), "geo")
+        model = _load_geometry_source(str(GEOMETRY_FIXTURE), "geo")
         with redirect_stdout(StringIO()):
             model = classify_model(model)
             model.faceList = np.array(model.faceList)

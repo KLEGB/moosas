@@ -1,4 +1,7 @@
-﻿from ...utils import json
+﻿import os
+import tempfile
+
+from ...utils import ET, json
 from ...utils import mixItemListToList, to_dictionary, path, parseFile
 import shapely
 from ..geometry.element import MoosasGeometry
@@ -92,6 +95,49 @@ def writeJson(file_path, model) -> str:
         outfile.write(json_object)
 
     return json_object
+
+
+def _append_xml_value(parent, tag, value) -> None:
+    if isinstance(value, list):
+        for item in value:
+            _append_xml_value(parent, tag, item)
+        return
+    element = ET.SubElement(parent, tag)
+    if isinstance(value, dict):
+        for child_tag, child_value in value.items():
+            _append_xml_value(element, child_tag, child_value)
+    else:
+        element.text = "" if value is None else str(value)
+
+
+def loadJson(file_path: str, geo_path: str):
+    """Load the JSON form of the XML model serialization and its GEO companion."""
+    from ._xml import loadXml
+
+    with open(file_path, encoding="utf-8") as source:
+        document = json.load(source)
+    if not isinstance(document, dict):
+        raise ValueError("JSON model must be an object.")
+
+    if len(document) == 1 and "model" in document:
+        root_tag, root_value = "model", document["model"]
+    else:
+        root_tag, root_value = "model", document
+    root = ET.Element(root_tag)
+    if isinstance(root_value, dict):
+        for tag, value in root_value.items():
+            _append_xml_value(root, tag, value)
+    else:
+        root.text = "" if root_value is None else str(root_value)
+
+    handle = tempfile.NamedTemporaryFile(suffix=".xml", delete=False)
+    try:
+        handle.close()
+        ET.ElementTree(root).write(handle.name)
+        return loadXml(handle.name, geo_path)
+    finally:
+        if os.path.exists(handle.name):
+            os.remove(handle.name)
 
 
 def writeGeojson(file_path, model) -> str:

@@ -28,6 +28,11 @@ def build_xml(model: MoosasModel, write_geometry: bool = False) -> ET.Element:
         elements["MoosasSkylight"] |= set(element_dict["MoosasSkylight"])
         elements["MoosasGlazing"] |= set(element_dict["MoosasGlazing"])
 
+    elements["MoosasFace"].update(model.faceList)
+    elements["MoosasWall"].update(model.wallList)
+    elements["MoosasSkylight"].update(model.skylightList)
+    elements["MoosasGlazing"].update(model.glazingList)
+
     for face in elements["MoosasFace"]:
         root.append(face.to_xml(model, writeGeometry=write_geometry))
     for wall in elements["MoosasWall"]:
@@ -127,6 +132,9 @@ def writeXml(file_path, model: MoosasModel, writeGeometry=False) -> ET.ElementTr
 def loadXml(filePath, geoPath):
     # initialize model
     model: MoosasModel = MoosasModel()
+    from ...model_resources import configure_model_resources
+
+    configure_model_resources(model)
     model.geometryList = _readGeo(geoPath)
     model = preClassified(model)
     # read the tree to dict
