@@ -3,7 +3,7 @@ from datetime import datetime
 
 from .calculation import rayTest, writeRadGeo
 from ..weather.directsky import MoosasDirectSky
-from ...transformation.geometry.geos import Vector, Ray
+from ...transform.geometry.geos import Vector, Ray
 from ...utils.date import DateTime
 from ...utils import np,Iterable
 from ..weather.data import Location

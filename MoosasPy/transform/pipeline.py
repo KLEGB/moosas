@@ -186,7 +186,7 @@ def transform(input_path: str, input_type: str = None,
 
     Examples
     --------
-    >>> from MoosasPy.transformation.geometry.spaceGen import CCRSpaceGeneration
+    >>> from MoosasPy.transform.geometry.spaceGen import CCRSpaceGeneration
     >>> model = transform('test.obj', method=CCRSpaceGeneration)
     >>> model.save('output.xml', fmt='xml')
 

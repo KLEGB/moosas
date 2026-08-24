@@ -1,7 +1,7 @@
 ﻿"""Coupled energy and airflow simulation workflows."""
 
 from ..energy.runner import getEnergyInput, ThermalSettings, energyAnalysis
-from ...transformation.geometry.geos import Vector, Ray
+from ...transform.geometry.geos import Vector, Ray
 from ...models import MoosasModel
 from ...model_resources import get_schedule_name, load_cumulative_sky, load_schedule, load_weather, write_schedule
 from ..weather.data import MoosasWeather

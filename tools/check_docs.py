@@ -9,10 +9,10 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 DOCUMENTS = (ROOT / "README.md", ROOT / "doc" / "document.md")
 PACKAGE_PATHS = (
-    "MoosasPy/transformation/",
-    "MoosasPy/transformation/alignment/",
-    "MoosasPy/transformation/geometry/",
-    "MoosasPy/transformation/io/",
+    "MoosasPy/transform/",
+    "MoosasPy/transform/alignment/",
+    "MoosasPy/transform/geometry/",
+    "MoosasPy/transform/io/",
     "MoosasPy/simulation/airflow/",
     "MoosasPy/simulation/coupling/",
     "MoosasPy/simulation/energy/",

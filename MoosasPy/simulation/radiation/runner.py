@@ -16,7 +16,7 @@ from .scene import modelToRad, writeGrid
 
 if TYPE_CHECKING:
     from ...models import MoosasModel
-    from ...transformation.geometry.element import MoosasElement
+    from ...transform.geometry.element import MoosasElement
 
 
 @dataclass(frozen=True)

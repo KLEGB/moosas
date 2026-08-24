@@ -8,8 +8,8 @@ from __future__ import annotations
 import shapely
 import xml.etree.ElementTree as ET
 
-from .transformation.geometry.element import *
-from .transformation.geometry.geos import faceNormal
+from .transform.geometry.element import *
+from .transform.geometry.geos import faceNormal
 
 """you can apply the inch to meter translation here"""
 # from .utils.constant import geom

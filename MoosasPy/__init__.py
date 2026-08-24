@@ -16,7 +16,6 @@ __all__ = [
 	"save_model",
 	"spaceGen",
 	"transform",
-	"transformation",
 	"utils",
 	"weather",
 ]
@@ -25,15 +24,14 @@ _EXPORTS = {
 	"utils": (".utils", None),
 	"weather": (".simulation.weather", None),
 	"airflow": (".simulation.airflow", None),
-	"transformation": (".transformation", None),
-	"transform": (".transformation", "transform"),
-	"load_model": (".transformation", "load_model"),
-	"model_from_file": (".transformation", "model_from_file"),
-	"save_model": (".transformation", "save_model"),
+	"transform": (".transform", "transform"),
+	"load_model": (".transform", "load_model"),
+	"model_from_file": (".transform", "model_from_file"),
+	"save_model": (".transform", "save_model"),
 	"energyAnalysis": (".simulation.energy", "energyAnalysis"),
 	"positionRadiation": (".simulation.radiation", "positionRadiation"),
 	"positionSunHour": (".simulation.radiation", "positionSunHour"),
-	"spaceGen": (".transformation.geometry", "spaceGen"),
+	"spaceGen": (".transform.geometry", "spaceGen"),
 	"includeEpw": (".simulation.weather", "includeEpw"),
 }
 

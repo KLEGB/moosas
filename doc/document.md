@@ -31,7 +31,7 @@ python -c "import MoosasPy; print(MoosasPy.__version__)"
 Convert a supported geometry file into a structured `MoosasModel`:
 
 ```python
-from MoosasPy.transformation import save_model, transform
+from MoosasPy.transform import save_model, transform
 
 model = transform("example.obj", output_path="model.xml", stdout=None)
 save_model(model, "model.rdf")
@@ -57,10 +57,10 @@ The top-level `MoosasPy` package exposes these primary functions:
 | Path | Contents |
 | --- | --- |
 | `MoosasPy/models.py` | Shared `MoosasModel` domain model and its building templates, schedules, and weather state. |
-| `MoosasPy/transformation/` | Public transformation pipeline and model conversion boundary. |
-| `MoosasPy/transformation/alignment/` | Geometric alignment and coordinate-processing helpers. |
-| `MoosasPy/transformation/geometry/` | Geometry primitives, topology cleansing, contours, and space generation. |
-| `MoosasPy/transformation/io/` | File-format adapters and dispatch for GEO, XML, JSON, RDF, IFC, IDF, GBXML, OBJ, and graph formats. |
+| `MoosasPy/transform/` | Public transformation pipeline and model conversion boundary. |
+| `MoosasPy/transform/alignment/` | Geometric alignment and coordinate-processing helpers. |
+| `MoosasPy/transform/geometry/` | Geometry primitives, topology cleansing, contours, and space generation. |
+| `MoosasPy/transform/io/` | File-format adapters and dispatch for GEO, XML, JSON, RDF, IFC, IDF, GBXML, OBJ, and graph formats. |
 | `MoosasPy/simulation/airflow/` | Airflow-network and CONTAM project preparation, execution, and iteration. |
 | `MoosasPy/simulation/coupling/` | Cross-domain workflows such as coupled energy and airflow analysis. |
 | `MoosasPy/simulation/energy/` | Simplified energy analysis, photovoltaic calculations, and thermal-load helpers. |
@@ -74,10 +74,10 @@ The top-level `MoosasPy` package exposes these primary functions:
 
 ## Model I/O
 
-`MoosasPy.transformation.io` provides model loading, saving, and format conversion functions. Common entry points include:
+`MoosasPy.transform.io` provides model loading, saving, and format conversion functions. Common entry points include:
 
 ```python
-from MoosasPy.transformation.io import load_model, save_model, writeGeo, writeIDF
+from MoosasPy.transform.io import load_model, save_model, writeGeo, writeIDF
 
 model = load_model("model.xml")
 save_model(model, "model.rdf")

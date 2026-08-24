@@ -7,8 +7,8 @@ from __future__ import annotations
 import os
 import tempfile
 
-from ...transformation.geometry.element import *
-from ...transformation.geometry.geos import Vector
+from ...transform.geometry.element import *
+from ...transform.geometry.geos import Vector
 from ..radiation import modelRadiation
 from ...utils.constant import geom
 from ...utils.tools import path, generate_code, parseFile

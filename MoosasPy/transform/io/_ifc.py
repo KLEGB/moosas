@@ -8,7 +8,7 @@ still embedding a Moosas snapshot in the IFC file to preserve the original
 project data.
 
 The helpers here remain the IFC-specific implementation layer; they are not the
-public dispatch point and should be called through :mod:`MoosasPy.transformation.io`
+public dispatch point and should be called through :mod:`MoosasPy.transform.io`
 when possible.
 """
 from __future__ import annotations
@@ -875,7 +875,7 @@ def _legacy_loadIfc_direct(ifc_path: str | Path) -> Any:
 
 def _loadIfc_via_geo_bridge(ifc_path: str | Path, ifc: Any | None = None, has_ifc_space: bool | None = None) -> Any:
     require_ifc()
-    from ..transformation import transform
+    from ..transform import transform
     from ._geo import writeGeo
 
     if ifc is None:

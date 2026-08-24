@@ -23,7 +23,7 @@ from ..radiation import modelRadiation
 from ..contracts import SimulationResult
 from ..runner import Runner
 
-from ...transformation.io.idf.model import ThermalSettings
+from ...transform.io.idf.model import ThermalSettings
 
 from ...model_resources import get_schedule_name, load_cumulative_sky, load_schedule, load_weather
 from ...models import MoosasModel

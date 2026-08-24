@@ -1,6 +1,6 @@
 # Transformation Boundary
 
-`MoosasPy.transformation` owns all geometry, model conversion, encoding, and
+`MoosasPy.transform` owns all geometry, model conversion, encoding, and
 multi-file alignment workflows.
 
 | Target module | Current source | Responsibility |
@@ -12,7 +12,7 @@ multi-file alignment workflows.
 
 Migration rules:
 
-1. New code imports from `MoosasPy.transformation` or one of its subpackages.
+1. New code imports from `MoosasPy.transform` or one of its subpackages.
 2. File adapters return a model representation only; topology completion and
    cleanup remain explicit pipeline steps.
 3. Geometry algorithms must not import the encoding or IO layers.

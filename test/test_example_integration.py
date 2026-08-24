@@ -8,7 +8,7 @@ import unittest
 
 from MoosasPy.model_resources import load_weather
 from MoosasPy.simulation.energy.runner import EnergyRunner
-from MoosasPy.transformation import transform
+from MoosasPy.transform import transform
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

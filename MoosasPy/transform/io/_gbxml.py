@@ -3,7 +3,7 @@
 """RDF <-> gbXML conversion utilities for MOOSAS.
 
 This module implements an end-to-end conversion workflow between the BOT /
-MOOSAS RDF representation used by :mod:`MoosasPy.transformation.io._rdf` and a compact gbXML
+MOOSAS RDF representation used by :mod:`MoosasPy.transform.io._rdf` and a compact gbXML
 representation focused on spaces, surfaces, openings and planar geometry.
 
 The converter is intentionally graph based.  It does not require constructing a

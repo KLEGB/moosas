@@ -4,9 +4,9 @@ import shapely
 
 from ...utils import Iterable
 from ...utils.tools import path
-from ...transformation.geometry.element import MoosasGlazing
+from ...transform.geometry.element import MoosasGlazing
 
-from ...transformation.geometry.geos import Vector
+from ...transform.geometry.geos import Vector
 
 
 def _modelBoundBox(model) -> np.ndarray:
