@@ -7,6 +7,8 @@
 """
 
 from dataclasses import dataclass
+import platform
+import sys
 import time
 from .parser import *
 import csv
@@ -19,8 +21,20 @@ from ..workspace import SimulationWorkspace, WorkspaceReport
 import os
 import shutil
 
-EXE_SUFFIX = '.exe' if os.name == 'nt' else ''
 DEFAULT_INDOOR_TEMPERATURE = 298.15
+
+
+def _contam_platform(system=None, machine=None):
+    """Return the bundled CONTAM directory and executable suffix for this host."""
+    system = system or sys.platform
+    machine = (machine or platform.machine()).lower()
+    if machine not in {"amd64", "x86_64"}:
+        raise OSError(f"Bundled CONTAM tools do not support architecture: {machine}")
+    if system == "win32":
+        return "windows-x86_64", ".exe"
+    if system.startswith("linux"):
+        return "linux-x86_64", ""
+    raise OSError(f"Bundled CONTAM tools do not support platform: {system}")
 
 
 @dataclass(frozen=True)
@@ -43,16 +57,27 @@ class VentPaths:
     @classmethod
     def from_workspace(cls, workspace):
         workspace = os.path.abspath(workspace)
-        contam_dir = os.path.join(path.libDir, "vent", "contam")
+        platform_dir, executable_suffix = _contam_platform()
+        contam_root = os.path.join(path.libDir, "vent", "contam")
+        bundled_dir = os.path.join(contam_root, platform_dir)
+        contam_dir = os.path.join(workspace, "contam")
         project_dir = os.path.join(workspace, "project")
         result_dir = os.path.join(workspace, "result")
+        os.makedirs(contam_dir, exist_ok=True)
         os.makedirs(project_dir, exist_ok=True)
         os.makedirs(result_dir, exist_ok=True)
+        contamx_name = f"contamx3{executable_suffix}"
+        simread_name = f"simread{executable_suffix}"
+        for executable_name in (contamx_name, simread_name):
+            target = os.path.join(contam_dir, executable_name)
+            shutil.copy2(os.path.join(bundled_dir, executable_name), target)
+            if not executable_suffix:
+                os.chmod(target, 0o755)
         return cls(
             workspace=workspace,
-            contamx=os.path.join(contam_dir, f"contamx3{EXE_SUFFIX}"),
-            simread=os.path.join(contam_dir, f"simread{EXE_SUFFIX}"),
-            response=os.path.join(contam_dir, "response.txt"),
+            contamx=os.path.join(contam_dir, contamx_name),
+            simread=os.path.join(contam_dir, simread_name),
+            response=os.path.join(contam_root, "response.txt"),
             contam_dir=contam_dir,
             project_dir=project_dir,
             result_dir=result_dir,

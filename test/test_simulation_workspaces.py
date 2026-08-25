@@ -6,11 +6,21 @@ from unittest.mock import patch
 
 from MoosasPy.simulation.energy.runner import energyAnalysis
 from MoosasPy.simulation.radiation.calculation import writeRadGeo
-from MoosasPy.simulation.airflow.runner import VentPaths
+from MoosasPy.simulation.airflow.runner import VentPaths, _contam_platform
 from MoosasPy.simulation.weather.epw import epw2wea
 
 
 class SimulationWorkspaceTests(unittest.TestCase):
+    def test_contam_platform_selects_supported_x86_64_binaries(self):
+        self.assertEqual(_contam_platform("win32", "AMD64"), ("windows-x86_64", ".exe"))
+        self.assertEqual(_contam_platform("linux", "x86_64"), ("linux-x86_64", ""))
+
+    def test_contam_platform_rejects_unsupported_hosts(self):
+        with self.assertRaisesRegex(OSError, "architecture"):
+            _contam_platform("linux", "aarch64")
+        with self.assertRaisesRegex(OSError, "platform"):
+            _contam_platform("darwin", "x86_64")
+
     def test_energy_defaults_are_removed_after_parsing(self):
         zone = SimpleNamespace(paramToString=lambda: "zone", paramTags=lambda: "header")
         energy_input = {"zones": [zone], "args": []}
@@ -57,6 +67,10 @@ class SimulationWorkspaceTests(unittest.TestCase):
             self.assertEqual(Path(vent_paths.workspace).parent, Path(work_dir))
             self.assertTrue(Path(vent_paths.project_dir).is_dir())
             self.assertTrue(Path(vent_paths.result_dir).is_dir())
+            self.assertTrue(Path(vent_paths.contamx).is_file())
+            self.assertTrue(Path(vent_paths.simread).is_file())
+            self.assertEqual(Path(vent_paths.contamx).parent, Path(vent_paths.workspace) / "contam")
+            self.assertEqual(Path(vent_paths.response).name, "response.txt")
 
 
 if __name__ == "__main__":
