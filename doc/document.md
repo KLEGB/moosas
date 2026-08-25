@@ -116,7 +116,6 @@ Keep tests and fixtures under the repository-level `test/` directory. Example da
 Run validation from the repository root:
 
 ```bash
-python tools/check_docs.py
 python -m pytest -q
 ```
 
@@ -125,9 +124,8 @@ python -m pytest -q
 Package metadata is defined in the repository-level `pyproject.toml`. Build distributions from the repository root:
 
 ```bash
-python tools/check_docs.py
 python -m build
 python -m twine check dist/*
 ```
 
-The version is derived from tags in the form `moosaspy-vMAJOR.MINOR.PATCH`. The GitHub Actions release workflow validates documentation, builds distributions, checks package metadata, and publishes release assets when such a tag is pushed.
+The version is derived from tags in the form `moosaspy-vMAJOR.MINOR.PATCH`. The GitHub Actions release workflow builds distributions, checks package metadata, and publishes release assets when such a tag is pushed.

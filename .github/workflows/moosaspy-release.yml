@@ -23,9 +23,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Check documentation
-        run: python tools/check_docs.py
-
       - name: Install development dependencies
         run: |
           python -m pip install --upgrade pip

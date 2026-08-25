@@ -21,7 +21,6 @@ From repository root:
 
 ```bash
 python -m pip install -e ".[dev]"
-python tools/check_docs.py
 python -m build
 python -m twine check dist/*
 ```

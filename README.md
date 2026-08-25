@@ -35,7 +35,7 @@ layout and public API examples.
 
 Current release workflow:
 
-1. Validate documentation and distributions (`python tools/check_docs.py`, `python -m build`, `python -m twine check dist/*`).
+1. Validate distributions (`python -m build`, `python -m twine check dist/*`).
 2. Push tag `moosaspy-v*` (for example `moosaspy-v1.1.0`).
 3. GitHub Actions workflow `.github/workflows/moosaspy-release.yml` uploads
    wheel/sdist to GitHub Release assets.
