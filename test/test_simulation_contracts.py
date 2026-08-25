@@ -4,6 +4,7 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import MoosasPy
 from MoosasPy.simulation import CommandResult, SimulationResult
 from MoosasPy.simulation.energy.runner import EnergyResult, EnergyRunner
 from MoosasPy.simulation.coupling import EnergyAirflowCoupler
@@ -12,6 +13,27 @@ from MoosasPy.simulation.airflow.runner import AirflowResult, AirflowRunner, Ven
 
 
 class SimulationContractTests(unittest.TestCase):
+    def test_root_api_contains_only_transform_io_and_simulation(self):
+        self.assertEqual(
+            set(MoosasPy.__all__),
+            {"__version__", "load", "save", "simulation", "transform"},
+        )
+        self.assertEqual(MoosasPy.transform.__name__, "MoosasPy.transform")
+        self.assertTrue(callable(MoosasPy.transform.transform))
+        self.assertTrue(callable(MoosasPy.load))
+        self.assertTrue(callable(MoosasPy.save))
+        self.assertFalse(hasattr(MoosasPy, "energyAnalysis"))
+        self.assertFalse(hasattr(MoosasPy, "includeEpw"))
+        self.assertFalse(hasattr(MoosasPy, "positionRadiation"))
+        self.assertFalse(hasattr(MoosasPy, "positionSunHour"))
+
+    def test_simulation_aggregates_domain_modules(self):
+        self.assertEqual(MoosasPy.simulation.energy.__name__, "MoosasPy.simulation.energy")
+        self.assertEqual(MoosasPy.simulation.radiation.__name__, "MoosasPy.simulation.radiation")
+        self.assertEqual(MoosasPy.simulation.airflow.__name__, "MoosasPy.simulation.airflow")
+        self.assertEqual(MoosasPy.simulation.weather.__name__, "MoosasPy.simulation.weather")
+        self.assertEqual(MoosasPy.simulation.coupling.__name__, "MoosasPy.simulation.coupling")
+
     def test_base_result_defaults_to_empty_diagnostics(self):
         result = SimulationResult()
 

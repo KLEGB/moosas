@@ -6,31 +6,17 @@ from ._version import __version__
 
 __all__ = [
 	"__version__",
-	"airflow",
-	"energyAnalysis",
-	"includeEpw",
 	"load",
-	"positionRadiation",
-	"positionSunHour",
 	"save",
-	"spaceGen",
+	"simulation",
 	"transform",
-	"utils",
-	"weather",
 ]
 
 _EXPORTS = {
-	"utils": (".utils", None),
-	"weather": (".simulation.weather", None),
-	"airflow": (".simulation.airflow", None),
-	"transform": (".transform", "transform"),
+	"transform": (".transform", None),
 	"load": (".transform", "load"),
 	"save": (".transform", "save"),
-	"energyAnalysis": (".simulation.energy", "energyAnalysis"),
-	"positionRadiation": (".simulation.radiation", "positionRadiation"),
-	"positionSunHour": (".simulation.radiation", "positionSunHour"),
-	"spaceGen": (".transform.geometry", "spaceGen"),
-	"includeEpw": (".simulation.weather", "includeEpw"),
+	"simulation": (".simulation", None),
 }
 
 

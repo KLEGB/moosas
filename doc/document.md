@@ -77,16 +77,24 @@ save(model, "model.rdf")
 
 ## Public API
 
-The top-level `MoosasPy` package exposes these primary functions:
+The top-level `MoosasPy` package has three operational API areas:
 
 | API | Purpose |
 | --- | --- |
 | `transform` | Transform source geometry into a structured building model. |
 | `load` / `save` | Load and save complete `MoosasModel` serializations. |
-| `energyAnalysis` | Run the simplified building-energy workflow. |
-| `positionRadiation` | Calculate radiation at one or more positions. |
-| `positionSunHour` | Calculate average direct-sun hours for one or more rays. |
-| `includeEpw` | Import weather data from an EPW file. |
+| `simulation` | Access energy, radiation, airflow, weather, and coupled simulation domains. |
+
+```python
+from MoosasPy import load, save, simulation, transform
+
+model = transform.transform("example.obj", stdout=None)
+energy = simulation.energy.EnergyRunner(model=model).run()
+save(model, "model.rdf")
+```
+
+Domain-level APIs are accessed from `simulation`, for example
+`simulation.radiation.positionRadiation` and `simulation.weather.includeEpw`.
 
 ## Package Layout
 
