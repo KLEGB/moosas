@@ -7,11 +7,15 @@ __all__ = [
 	"CommandError",
 	"CommandResult",
 	"CommandTimeoutError",
+	"NativeEngine",
+	"SubprocessEngine",
 	"coupling",
 	"energy",
 	"radiation",
 	"Runner",
 	"SimulationResult",
+	"SimulationWorkspace",
+	"WorkspaceReport",
 	"weather",
 ]
 
@@ -20,11 +24,15 @@ _EXPORTS = {
 	"CommandError": (".runner", "CommandError"),
 	"CommandResult": (".runner", "CommandResult"),
 	"CommandTimeoutError": (".runner", "CommandTimeoutError"),
+	"NativeEngine": (".engine", "NativeEngine"),
+	"SubprocessEngine": (".engine", "SubprocessEngine"),
 	"coupling": (".coupling", None),
 	"energy": (".energy", None),
 	"radiation": (".radiation", None),
 	"Runner": (".runner", "Runner"),
 	"SimulationResult": (".contracts", "SimulationResult"),
+	"SimulationWorkspace": (".workspace", "SimulationWorkspace"),
+	"WorkspaceReport": (".workspace", "WorkspaceReport"),
 	"weather": (".weather", None),
 }
 

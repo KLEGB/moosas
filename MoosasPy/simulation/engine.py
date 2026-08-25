@@ -1,0 +1,94 @@
+"""Adapters for executing native simulation engines."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+import subprocess
+from typing import Callable, Protocol, TextIO
+
+
+@dataclass(frozen=True)
+class NativeExecution:
+    command: tuple[str, ...]
+    returncode: int
+    stdout: str
+    stderr: str
+
+
+class NativeEngineError(RuntimeError):
+    def __init__(self, command: tuple[str, ...], stdout: str = "", stderr: str = ""):
+        self.command = command
+        self.stdout = stdout
+        self.stderr = stderr
+        super().__init__(stderr)
+
+
+class NativeEngineProcessError(NativeEngineError):
+    def __init__(self, command: tuple[str, ...], returncode: int, stdout: str, stderr: str):
+        self.returncode = returncode
+        super().__init__(command, stdout, stderr)
+
+
+class NativeEngineTimeoutError(NativeEngineError):
+    def __init__(self, command: tuple[str, ...], timeout_seconds: float, stdout: str, stderr: str):
+        self.timeout_seconds = timeout_seconds
+        super().__init__(command, stdout, stderr)
+
+
+class NativeEngine(Protocol):
+    """Execution boundary implemented by local or remote native providers."""
+
+    name: str
+
+    def execute(
+        self,
+        command: tuple[str, ...],
+        *,
+        cwd: str | Path | None = None,
+        stdin: TextIO | None = None,
+        stdout: TextIO | None = None,
+        timeout_seconds: float = 300.0,
+    ) -> NativeExecution: ...
+
+
+class SubprocessEngine:
+    """Local-process implementation of :class:`NativeEngine`."""
+
+    name = "subprocess"
+
+    def __init__(self, run_process: Callable | None = None):
+        self._run_process = run_process
+
+    def execute(self, command, *, cwd=None, stdin=None, stdout=None, timeout_seconds=300.0):
+        run_process = self._run_process or subprocess.run
+        try:
+            completed = run_process(
+                command,
+                cwd=str(cwd) if cwd is not None else None,
+                stdin=stdin,
+                stdout=stdout if stdout is not None else subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=timeout_seconds,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise NativeEngineTimeoutError(
+                command, timeout_seconds,
+                self._decode_output(error.stdout), self._decode_output(error.stderr),
+            ) from error
+        except OSError as error:
+            raise NativeEngineProcessError(command, -1, "", str(error)) from error
+
+        stdout_text = completed.stdout or ""
+        stderr_text = completed.stderr or ""
+        if completed.returncode != 0:
+            raise NativeEngineProcessError(command, completed.returncode, stdout_text, stderr_text)
+        return NativeExecution(command, completed.returncode, stdout_text, stderr_text)
+
+    @staticmethod
+    def _decode_output(output: str | bytes | None) -> str:
+        if isinstance(output, bytes):
+            return output.decode(errors="replace")
+        return output or ""

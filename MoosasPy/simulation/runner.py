@@ -7,6 +7,13 @@ from pathlib import Path
 import subprocess
 from typing import TextIO
 
+from .engine import (
+    NativeEngine,
+    NativeEngineProcessError,
+    NativeEngineTimeoutError,
+    SubprocessEngine,
+)
+
 
 @dataclass(frozen=True)
 class CommandResult:
@@ -49,10 +56,11 @@ class Runner:
     error_type = CommandError
     timeout_error_type = CommandTimeoutError
 
-    def __init__(self, timeout_seconds: float = 300.0):
+    def __init__(self, timeout_seconds: float = 300.0, engine: NativeEngine | None = None):
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive.")
         self.timeout_seconds = timeout_seconds
+        self.engine = engine or SubprocessEngine()
 
     def run_command(
         self,
@@ -64,34 +72,25 @@ class Runner:
         """Run one command and return captured diagnostics or raise a typed error."""
         command_tuple = tuple(str(part) for part in command)
         try:
-            completed = subprocess.run(
+            completed = self.engine.execute(
                 command_tuple,
                 cwd=str(cwd) if cwd is not None else None,
                 stdin=stdin,
-                stdout=stdout if stdout is not None else subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                timeout=self.timeout_seconds,
-                check=False,
+                stdout=stdout,
+                timeout_seconds=self.timeout_seconds,
             )
-        except subprocess.TimeoutExpired as error:
+        except NativeEngineTimeoutError as error:
             raise self.timeout_error_type(
                 command_tuple,
                 self.timeout_seconds,
-                self._decode_output(error.stdout),
-                self._decode_output(error.stderr),
+                error.stdout,
+                error.stderr,
             ) from error
-        except OSError as error:
-            raise self.error_type(command_tuple, -1, "", str(error)) from error
+        except NativeEngineProcessError as error:
+            raise self.error_type(command_tuple, error.returncode, error.stdout, error.stderr) from error
 
-        stdout_text = completed.stdout or ""
-        stderr_text = completed.stderr or ""
-        if completed.returncode != 0:
-            raise self.error_type(command_tuple, completed.returncode, stdout_text, stderr_text)
-        return self.result_type(command_tuple, completed.returncode, stdout_text, stderr_text)
+        return self.result_type(completed.command, completed.returncode, completed.stdout, completed.stderr)
 
     @staticmethod
     def _decode_output(output: str | bytes | None) -> str:
-        if isinstance(output, bytes):
-            return output.decode(errors="replace")
-        return output or ""
+        return SubprocessEngine._decode_output(output)

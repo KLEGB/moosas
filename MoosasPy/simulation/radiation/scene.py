@@ -18,6 +18,7 @@ def simModel(
     *,
     work_dir=None,
     timeout_seconds: float = 300.0,
+    engine=None,
 ):
     """
         Simulate a model by embedded RADIANCE module.
@@ -63,6 +64,7 @@ def simModel(
         sky=RadianceSky(date, skyType, lat, lon, diff),
         work_dir=work_dir,
         timeout_seconds=timeout_seconds,
+        engine=engine,
     ).run()
     return result.as_legacy()
 

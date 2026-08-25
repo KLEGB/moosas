@@ -6,12 +6,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 import os
-import tempfile
 from typing import TYPE_CHECKING, TextIO
 
 from ...utils import path
 from ..contracts import SimulationResult
+from ..engine import NativeEngine
 from ..runner import CommandError, CommandResult, CommandTimeoutError, Runner
+from ..workspace import SimulationWorkspace
 from .scene import modelToRad, writeGrid
 
 if TYPE_CHECKING:
@@ -91,8 +92,9 @@ class RadianceRunner(Runner):
         work_dir: str | Path | None = None,
         timeout_seconds: float = 300.0,
         executable_dir: str | Path | None = None,
+        engine: NativeEngine | None = None,
     ):
-        super().__init__(timeout_seconds=timeout_seconds)
+        super().__init__(timeout_seconds=timeout_seconds, engine=engine)
         self.model = model
         self.sky = sky
         self.work_dir = Path(work_dir) if work_dir is not None else None
@@ -100,11 +102,8 @@ class RadianceRunner(Runner):
 
     def run(self) -> RadianceDaylightResult:
         """Generate inputs, run Radiance, and return parsed daylight metrics."""
-        if self.work_dir is not None:
-            self.work_dir.mkdir(parents=True, exist_ok=True)
-
-        with tempfile.TemporaryDirectory(prefix="moosas-radiance-", dir=self.work_dir) as temporary_dir:
-            run_dir = Path(temporary_dir)
+        with SimulationWorkspace(parent=self.work_dir, prefix="moosas-radiance-") as workspace:
+            run_dir = workspace.path
             rad_path = run_dir / "model.rad"
             grid_path = run_dir / "grid.input"
             octree_path = run_dir / "model.oct"
@@ -112,7 +111,7 @@ class RadianceRunner(Runner):
 
             floors = self._write_inputs(rad_path, grid_path)
             if not floors:
-                return RadianceDaylightResult(floors=(), commands=())
+                return RadianceDaylightResult(floors=(), commands=(), workspace=workspace.report)
 
             oconv_result = self._compile_scene(rad_path, octree_path, run_dir)
             rtrace_result, illuminances = self._trace_illuminance(octree_path, grid_path, output_path, run_dir)
@@ -120,6 +119,7 @@ class RadianceRunner(Runner):
             return RadianceDaylightResult(
                 floors=tuple(floor_results),
                 commands=(oconv_result, rtrace_result),
+                workspace=workspace.report,
             )
 
     def _write_inputs(self, rad_path: Path, grid_path: Path) -> list[tuple[MoosasElement, int]]:

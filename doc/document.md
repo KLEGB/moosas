@@ -151,6 +151,13 @@ GEO, OBJ, and STL contain only geometric faces and must enter through `transform
 
 ## Runtime Resources
 
+Native execution is separated from domain runners by the `NativeEngine`
+protocol, with `SubprocessEngine` as the local default. Energy, Radiance, and
+airflow runners use `SimulationWorkspace` for isolated run files and attach a
+`WorkspaceReport` to their `SimulationResult`. Temporary workspaces are cleaned
+automatically; retained airflow and coupling workspaces remain available for
+follow-up processing and diagnostics.
+
 The package expects `libs`, `db`, `data`, and `__temp__` to remain adjacent to the Python modules in an installed distribution. Native executables are platform-specific; validate target-platform support before deploying to a non-Windows environment.
 
 ## Testing

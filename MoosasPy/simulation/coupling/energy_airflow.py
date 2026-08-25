@@ -22,7 +22,7 @@ from ..airflow.runner import (
 )
 import networkx as nx
 from copy import deepcopy
-import tempfile
+from ..workspace import SimulationWorkspace
 
 
 def _linear_interpolate_nan_series(values):
@@ -972,7 +972,8 @@ class EnergyAirflowCoupler(object):
             if os.path.exists(ws.get('root', '')):
                 return ws
 
-        root = tempfile.mkdtemp(prefix="moosas-vent-task-")
+        with SimulationWorkspace(prefix="moosas-vent-task-", retain=True) as workspace:
+            root = str(workspace.path)
         project_dir = os.path.join(root, "project")
         result_dir = os.path.join(root, "result")
         room_info_file = os.path.join(root, "roomInfo.txt")

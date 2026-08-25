@@ -12,16 +12,16 @@ MoosasEnergy Go executable, which supports both residential and
 public building types via the -t parameter.
 """
 from ...utils.support import os
-from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime
 import re
-import tempfile
 from ...utils import path, parseFile, FileError
 from ...utils.constant import buildingType, dateSetting
 from ..radiation import modelRadiation
 from ..contracts import SimulationResult
+from ..engine import NativeEngine
 from ..runner import Runner
+from ..workspace import SimulationWorkspace
 
 from ...transform.io.idf.model import ThermalSettings
 
@@ -215,8 +215,9 @@ class EnergyRunner(Runner):
         result_path=None,
         work_dir=None,
         timeout_seconds=300.0,
+        engine: NativeEngine | None = None,
     ):
-        super().__init__(timeout_seconds=timeout_seconds)
+        super().__init__(timeout_seconds=timeout_seconds, engine=engine)
         self.model = model
         self.core = core
         self.require_radiation = require_radiation
@@ -246,16 +247,9 @@ class EnergyRunner(Runner):
             if "-sch" not in energy_input.get("args", []):
                 energy_input["args"] += ["-sch", os.path.abspath(energy_input["schedulePath"])]
 
-        if self.work_dir is not None:
-            os.makedirs(self.work_dir, exist_ok=True)
-        workspace = (
-            tempfile.TemporaryDirectory(prefix="moosas-energy-", dir=self.work_dir)
-            if self.input_path is None or self.result_path is None
-            else nullcontext(None)
-        )
-        with workspace as temporary_dir:
-            input_path = self.input_path or os.path.join(temporary_dir, "Energy.i")
-            result_path = self.result_path or os.path.join(temporary_dir, "Energy.o")
+        with SimulationWorkspace(parent=self.work_dir, prefix="moosas-energy-") as workspace:
+            input_path = self.input_path or str(workspace.child("Energy.i"))
+            result_path = self.result_path or str(workspace.child("Energy.o"))
             input_path = os.path.abspath(input_path)
             result_path = os.path.abspath(result_path)
             os.makedirs(os.path.dirname(input_path), exist_ok=True)
@@ -281,7 +275,7 @@ class EnergyRunner(Runner):
                 exportByZone=self.export_by_zone,
                 weather_temperature=weather_temperature,
             )
-            return EnergyResult(data=data, commands=(command_result,))
+            return EnergyResult(data=data, commands=(command_result,), workspace=workspace.report)
 
     def _weather_temperature(self, arguments):
         if self.model is not None:
@@ -307,7 +301,8 @@ def energyAnalysis(model: MoosasModel = None,
                    inputPath=None,
                    resultPath=None,
                    work_dir=None,
-                   timeout_seconds=300.0) -> dict:
+                   timeout_seconds=300.0,
+                   engine: NativeEngine | None = None) -> dict:
     """Quick energy analysis function.
 
     This function prepares the input file, invokes the unified MoosasEnergy
@@ -384,6 +379,7 @@ def energyAnalysis(model: MoosasModel = None,
         result_path=resultPath,
         work_dir=work_dir,
         timeout_seconds=timeout_seconds,
+        engine=engine,
     ).run().as_legacy()
 
 

@@ -8,13 +8,14 @@
 
 from dataclasses import dataclass
 import time
-import tempfile
 from .parser import *
 import csv
 import random
 from ...utils.tools import path, parseFile
 from ..contracts import SimulationResult
+from ..engine import NativeEngine
 from ..runner import Runner
+from ..workspace import SimulationWorkspace, WorkspaceReport
 import os
 import shutil
 
@@ -36,10 +37,8 @@ class VentPaths:
 
     @classmethod
     def create(cls, work_dir=None):
-        if work_dir is not None:
-            os.makedirs(work_dir, exist_ok=True)
-        workspace = tempfile.mkdtemp(prefix="moosas-vent-", dir=work_dir)
-        return cls.from_workspace(workspace)
+        with SimulationWorkspace(parent=work_dir, prefix="moosas-vent-", retain=True) as workspace:
+            return cls.from_workspace(workspace.path)
 
     @classmethod
     def from_workspace(cls, workspace):
@@ -78,8 +77,9 @@ class AirflowRunner(Runner):
         response_file=None,
         paths: VentPaths | None = None,
         timeout_seconds=300.0,
+        engine: NativeEngine | None = None,
     ):
-        super().__init__(timeout_seconds=timeout_seconds)
+        super().__init__(timeout_seconds=timeout_seconds, engine=engine)
         self.prj_file = prj_file
         self.paths = paths or VentPaths.create()
         self.contam_exe = contam_exe or self.paths.contamx
@@ -97,6 +97,7 @@ class AirflowRunner(Runner):
         return AirflowResult(
             airflow_matrix=build_matrix(file_path=self.prj_file),
             commands=(contam_result, simread_result),
+            workspace=WorkspaceReport(self.paths.workspace, True),
         )
 
 

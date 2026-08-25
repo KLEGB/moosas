@@ -15,6 +15,13 @@ available until a documented deprecation cycle replaces them.
   and `ach_values`.
 - Every runner returns a subclass of `SimulationResult`. Domain calculations
   belong in explicit result fields; external-process diagnostics go in
-  `commands`; non-fatal conditions go in `warnings`.
+  `commands`; non-fatal conditions go in `warnings`; workspace diagnostics go
+  in `workspace`.
 - Results are frozen dataclasses. Collections exposed by results are tuples,
   so a completed simulation result remains reproducible and inspectable.
+- Native processes are invoked through the `NativeEngine` protocol. The local
+  default is `SubprocessEngine`; tests and alternative providers should inject
+  an engine rather than patch domain logic.
+- Run files are owned by `SimulationWorkspace`. Short-lived calculations use
+  auto-cleaned workspaces. Workflows that need follow-up files explicitly use
+  retained workspaces and expose their location through `WorkspaceReport`.

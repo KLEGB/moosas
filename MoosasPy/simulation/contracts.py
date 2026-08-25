@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .runner import CommandResult
+from .workspace import WorkspaceReport
 
 
 @dataclass(frozen=True)
@@ -23,3 +24,9 @@ class SimulationResult:
 
     commands: tuple[CommandResult, ...] = ()
     warnings: tuple[str, ...] = ()
+    workspace: WorkspaceReport | None = None
+
+    @property
+    def successful(self) -> bool:
+        """Whether all native commands completed successfully."""
+        return all(command.returncode == 0 for command in self.commands)
