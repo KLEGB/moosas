@@ -6,6 +6,42 @@ MoosasPy is a Python toolkit for building geometry processing and building-perfo
 
 This repository is Python-only. It does not contain the previous SketchUp plugin, Ruby sources, or browser UI compatibility layer.
 
+## Architecture
+
+```mermaid
+flowchart TB
+	User[User code] --> API[MoosasPy public API]
+
+	API --> Transform[Transform pipeline]
+	API --> IO[Model I/O]
+	API --> Simulation[Simulation workflows]
+
+	Transform --> Geometry[Geometry and topology]
+	Transform --> Model[MoosasModel]
+	IO --> Model
+
+	Simulation --> Energy[Energy]
+	Simulation --> Radiation[Radiation and sunlight]
+	Simulation --> Weather[Weather and sky]
+	Simulation --> Airflow[Airflow and CONTAM]
+	Simulation --> Coupling[Energy-airflow coupling]
+
+	Energy --> Model
+	Radiation --> Model
+	Airflow --> Model
+	Coupling --> Energy
+	Coupling --> Airflow
+	Weather --> Energy
+	Weather --> Radiation
+
+	Model --> Utils[Shared utilities]
+	Transform --> Utils
+	Simulation --> Utils
+	Energy --> Resources[Runtime resources: data, db, libs]
+	Radiation --> Resources
+	Airflow --> Resources
+```
+
 ## Requirements and Installation
 
 MoosasPy requires Python 3.10 or newer. Install the package from the repository root:

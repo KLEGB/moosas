@@ -1,12 +1,10 @@
 # MOOSAS
 
-MOOSAS is a building performance analysis and optimization toolkit for the
-early design stage.
+MOOSAS is a building performance analysis and optimization toolkit for the early design stage.
 
 This repository contains:
 
-- `MoosasPy`: Python package for geometry transformation, model I/O, and
-   building-performance simulation workflows.
+- `MoosasPy`: Python package for geometry transformation, model I/O, and building-performance simulation workflows.
 
 ## Version
 
