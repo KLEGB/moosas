@@ -141,5 +141,17 @@ dmypy.json
 # pytype static type analyzer
 .pytype/
 
+# Generated native simulation artifacts
+MoosasPy/libs/rad/*.oct
+MoosasPy/libs/rad/ill_*.output
+MoosasPy/libs/vent/.xlog
+MoosasPy/libs/vent/airVel
+MoosasPy/libs/vent/airVol
+MoosasPy/libs/vent/afn/*.lfr
+MoosasPy/libs/vent/afn/*.sim
+MoosasPy/libs/vent/afn/*.xrf
+MoosasPy/libs/vent/thermal/thermal_afn_*.heat
+MoosasPy/libs/vent/triangulate/triangulate.output
+
 # Cython debug symbols
 cython_debug/
