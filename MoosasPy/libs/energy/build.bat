@@ -1,2 +1,2 @@
-go build -ldflags="-H windowsgui" MoosasEnergyResidential.go
-go build -ldflags="-H windowsgui" MoosasEnergyPublic.go
+@echo off
+go build -o MoosasEnergy.exe MoosasEnergy.go

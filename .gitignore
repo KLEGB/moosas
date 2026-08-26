@@ -81,7 +81,7 @@ target/
 # Jupyter Notebook
 .ipynb_checkpoints
 .vscode
-.idea
+.idea/
 
 # IPython
 profile_default/
