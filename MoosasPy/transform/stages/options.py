@@ -16,4 +16,6 @@ class TransformOptions:
     break_wall_horizontal: bool = True
     attach_shading: bool = False
     divided_zones: bool = False
+    simplify_boundary: bool = False
+    insert_core: bool = False
     standardize: bool = False

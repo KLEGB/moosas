@@ -155,7 +155,7 @@ def loadXml(filePath, geoPath):
         Uid = str(element['Uid'])
         u_value = _xml_float_or_none(faceInfo.get('U_Value'))
         existing = searchBy('Uid', Uid, model.faceList, earlyEnd=True, asObject=True)
-        if existing:
+        if len(existing) > 0:
             if u_value is not None:
                 existing[0].U_Value = u_value
             continue
@@ -174,7 +174,7 @@ def loadXml(filePath, geoPath):
         Uid = str(element['Uid'])
         u_value = _xml_float_or_none(wallInfo.get('U_Value'))
         existing = searchBy('Uid', Uid, model.wallList, earlyEnd=True, asObject=True)
-        if existing:
+        if len(existing) > 0:
             if u_value is not None:
                 existing[0].U_Value = u_value
             continue
@@ -195,7 +195,7 @@ def loadXml(filePath, geoPath):
             u_value = _xml_float_or_none(glazingInfo.get('U_Value'))
             shgc = _xml_float_or_none(glazingInfo.get('SHGC'))
             existing = searchBy('Uid', Uid, model.glazingList, earlyEnd=True, asObject=True)
-            if existing:
+            if len(existing) > 0:
                 if u_value is not None:
                     existing[0].U_Value = u_value
                 if shgc is not None:
@@ -220,7 +220,7 @@ def loadXml(filePath, geoPath):
             u_value = _xml_float_or_none(skylightInfo.get('U_Value'))
             shgc = _xml_float_or_none(skylightInfo.get('SHGC'))
             existing = searchBy('Uid', Uid, model.skylightList, earlyEnd=True, asObject=True)
-            if existing:
+            if len(existing) > 0:
                 if u_value is not None:
                     existing[0].U_Value = u_value
                 if shgc is not None:

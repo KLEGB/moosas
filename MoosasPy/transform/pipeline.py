@@ -23,6 +23,7 @@ from .stages.splitting import prepare_divided_zones, split_wall_intersections
 from .stages.topology import build_face_topology, build_space_topology
 from .stages.validation import validate_model
 from .geometry.convexify import convexify_model
+from .geometry.boundary import prepare_boundary_geometry
 from .geometry.standardize import standardize_model
 from .geometry.air_boundary import copy_air_boundaries
 from .io import load, save
@@ -211,6 +212,12 @@ def structured(
     if model is None:  # zero len space will cause several errors
         return
 
+    model = prepare_boundary_geometry(
+        model,
+        simplify_boundary=options.simplify_boundary,
+        insert_core=options.insert_core,
+    )
+
     did_convexify = False
     while True:
         t1 = time.time()
@@ -367,7 +374,6 @@ def structured(
     print(f"Total Duration     {'%.3fs' % (t7 - t0)}\t100%")
 
     return model
-
 
 
 
