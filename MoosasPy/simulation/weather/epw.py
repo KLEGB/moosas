@@ -2,6 +2,9 @@ import os
 import time
 import numpy as np
 import re
+import argparse
+import csv
+import math
 import tempfile
 from ...utils.tools import path
 from ..runner import Runner
@@ -20,6 +23,11 @@ TREGENZA_COEFFICIENTS = \
     [0.0435449227, 0.0416418006, 0.0473984151, 0.0406730411, 0.0428934136,
      0.0445221864, 0.0455168385, 0.0344199465]
 TREGENZA_PATCHES_PER_ROW = [30, 30, 24, 24, 18, 12, 6, 1]
+
+
+def _round_dest(values):
+    values = np.asarray(values, dtype=float)
+    return np.where(values >= 0, np.floor(values * 100 + 0.5), np.ceil(values * 100 - 0.5)) / 100
 
 
 def epw2location(epw_file):
@@ -121,18 +129,55 @@ def epw2csv(epw_file):
             [LOCATION[5][0:-1]] * 8760,  # 气象站编号
             [0] * 8760,  # 无用，0
             np.arange(8760),  # 小时数
-            climate_data[:, 6].astype(float).round(2),  # 空气温度 Dry Bulb Temperature
-            np.array(d).round(2),  # 空气含湿量 Humidity Ratio
-            climate_data[:, 13].astype(float).round(2),  # 地面水平总辐射量 Global Horizontal Radiation
-            climate_data[:, 15].astype(float).round(2),  # 地面水平散射辐射量 Diffuse Horizontal Radiation
-            np.array(T_ground).astype(float).round(2),  # 0.5m地面温度，按月平均拓展 Ground Temperature record in month
-            np.array(T_sky).astype(float).round(2),  # 天空有效温度 Effective Sky (Radiating) Temperature
-            np.array(vs).astype(float).round(2),  # 风速
+            _round_dest(climate_data[:, 6]),  # 空气温度 Dry Bulb Temperature
+            _round_dest(d),  # 空气含湿量 Humidity Ratio
+            _round_dest(climate_data[:, 13]),  # 地面水平总辐射量 Global Horizontal Radiation
+            _round_dest(climate_data[:, 15]),  # 地面水平散射辐射量 Diffuse Horizontal Radiation
+            _round_dest(T_ground),  # 0.5m地面温度，按月平均拓展 Ground Temperature record in month
+            _round_dest(T_sky),  # 天空有效温度 Effective Sky (Radiating) Temperature
+            _round_dest(vs),  # 风速
             np.array(vd).astype(int),  # 风向 C=0,NE=1,E=2....NW=15,N=16
             climate_data[:, 9].astype(float).round(2),  # 大气压 Atmospheric Station Pressure
             [9999999] * 8760  # ！未知数据
         ]
         return weather
+
+
+def _format_dest_float(value: float) -> str:
+    return f"{value:.2f}"
+
+
+def write_epw_csv(epw_file, output_path=None) -> str:
+    """Convert an EPW file to the DeST CSV format and return the output path."""
+    if output_path is None:
+        output_path = os.path.splitext(epw_file)[0] + ".csv"
+    output_path = os.path.abspath(output_path)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    weather = epw2csv(epw_file)
+    with open(output_path, "w", newline="", encoding="utf-8") as output_file:
+        writer = csv.writer(output_file)
+        for hour_index in range(8760):
+            writer.writerow([
+                str(weather[0][hour_index]),
+                "0",
+                str(hour_index),
+                *(_format_dest_float(float(weather[column][hour_index])) for column in range(3, 10)),
+                str(int(weather[10][hour_index])),
+                _format_dest_float(float(weather[11][hour_index])),
+                "9999999",
+            ])
+    return output_path
+
+
+def main(argv=None) -> int:
+    """Run the EPW-to-CSV converter as a command-line utility."""
+    parser = argparse.ArgumentParser(description="Convert an EPW file to Moosas DeST CSV weather data.")
+    parser.add_argument("input_path", help="input EPW file")
+    parser.add_argument("-o", "-output", "--output", dest="output_path", help="output CSV path")
+    args = parser.parse_args(argv)
+    write_epw_csv(args.input_path, args.output_path)
+    return 0
 
 
 def epw2wea(location, epw_file, output_path=None, work_dir=None, timeout_seconds=300.0):

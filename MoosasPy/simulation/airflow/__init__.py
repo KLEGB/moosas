@@ -1,5 +1,6 @@
 """ventilation support files"""
 from .network import buildPrj,buildNetworkFile,buildZoneInfoFile
+from .workspace import create_openfoam_workspace
 # from .ventXgb import callXgb
 from .runner import (
     AirflowResult,
