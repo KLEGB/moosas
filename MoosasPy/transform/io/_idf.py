@@ -14,7 +14,7 @@ from eppy.modeleditor import IDF
 from rdflib import Literal, URIRef
 from rdflib.namespace import RDF
 
-from ._rdf import MoosasGraph, encodeURI, decodeURI
+from ._rdf import MoosasRDF, encodeURI, decodeURI
 from ._xml import loadXml
 from .idf import construction, input, model, parser, schedule
 from ...models import *
@@ -530,7 +530,7 @@ def IDFtoOWL(idfTemplatePath):
     idd = os.path.join(path.dataBaseDir, "Energy+.idd")
     IDF.setiddname(idd)
     rootFile = IDF(idfTemplatePath)
-    rootGraph = MoosasGraph()
+    rootGraph = MoosasRDF()
 
     def encodedObject(objectName, className, obj, objectType):
         if "memo" in obj.objidd[0]:
@@ -603,12 +603,12 @@ def OWLtoIDF(owl, outFile):
         An IDF object representing the EnergyPlus input data file, populated with objects
         derived from the input OWL graph and saved to the specified output path.
     """
-    # copy the graph into a MoosasGraph
+    # copy the graph into a MoosasRDF
     if isinstance(owl, str):
-        newowl = MoosasGraph()
+        newowl = MoosasRDF()
         newowl.parse(owl)
         owl = newowl
-    graph = MoosasGraph()
+    graph = MoosasRDF()
 
     # ensure the owl is an edGraph() by copying all triples to a new graph
     for triple in owl:
@@ -655,25 +655,25 @@ def OWLtoIDF(owl, outFile):
     return idfFile
 
 
-def getIdfObjects(graph: MoosasGraph, objectURI: URIRef) -> MoosasGraph:
+def getIdfObjects(graph: MoosasRDF, objectURI: URIRef) -> MoosasRDF:
     """
     Given an input graph and an object URI, find all objects derived from the input idfObjectURI.
     Parameters
     ----------
-    graph : MoosasGraph
-        An MoosasGraph containing the OWL ontology data from IDFtoOWL().
+    graph : MoosasRDF
+        A MoosasRDF containing the OWL ontology data from IDFtoOWL().
     objectURI: URIRef
         An RDFlib URI which targets to a idfObject of the input graph.
 
     Returns
     -------
-    subGraph : MoosasGraph
+    subGraph : MoosasRDF
         An subGraph containing the zone settings.
     """
     for typeURI in graph.objects(objectURI, graph.rdf.type):
         if typeURI != graph.idf.idfObject:
-            return MoosasGraph()
-    subGraph = MoosasGraph()
+            return MoosasRDF()
+    subGraph = MoosasRDF()
     for s, p, o in graph.triples((objectURI, None, None)):
         subGraph.add((s, p, o))
     for field in graph.objects(objectURI, graph.idf.hasField):
@@ -682,22 +682,22 @@ def getIdfObjects(graph: MoosasGraph, objectURI: URIRef) -> MoosasGraph:
     return subGraph
 
 
-def extractZoneTemplate(graph: MoosasGraph):
+def extractZoneTemplate(graph: MoosasRDF):
     """
-    Extract the first zone and all relate settings from a MoosasGraph object;
+    Extract the first zone and all related settings from a MoosasRDF object.
     except for the geometry information.
     Parameters
     ----------
-    graph : MoosasGraph
-        An MoosasGraph containing the OWL ontology data from IDFtoOWL().
+    graph : MoosasRDF
+        A MoosasRDF containing the OWL ontology data from IDFtoOWL().
 
 
     Returns
     -------
-    subGraph : MoosasGraph
+    subGraph : MoosasRDF
         An subGraph containing the zone settings.
     """
-    subGraph = MoosasGraph()
+    subGraph = MoosasRDF()
     zoneURI = mixItemListToList(graph.getSubject(graph.idf.instanceOf, encodeURI("ZONE")))[0]
     zoneName = decodeURI(zoneURI).split(">")[1]
     print(zoneName)
@@ -1358,7 +1358,5 @@ def readIDF(idfPath: str, geoPath: str = None, xmlPath: str = None, iddPath: str
         model = loadXml(temp_xml, temp_geo)
         _idf_apply_zone_templates(model, idfPath)
         return model
-
-
 
 

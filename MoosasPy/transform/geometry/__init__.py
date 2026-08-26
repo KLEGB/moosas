@@ -1,6 +1,6 @@
 ﻿"""Geometry transformation algorithms."""
 
-from .convexify import MoosasConvexify, triangulate2dFace
+from .convexify import GeometryConvexifier, triangulate2dFace
 from .quad import create_quadrilaterals
 from .element import (
 	MoosasContainer,
@@ -19,7 +19,7 @@ from .grid import MoosasGrid
 
 __all__ = [
 	"MoosasContainer",
-	"MoosasConvexify",
+	"GeometryConvexifier",
 	"MoosasEdge",
 	"MoosasElement",
 	"MoosasFace",

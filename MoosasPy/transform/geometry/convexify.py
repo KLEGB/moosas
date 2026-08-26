@@ -388,8 +388,8 @@ def convexify_faces(cat, idd, normal, faces, holes, valid_face=True, clean_quad=
     return convex_cat, convex_idd, convex_normal, convex_faces, divide_lines
 
 
-class MoosasConvexify:
-    """Compatibility wrapper preserving the historical Moosas API."""
+class GeometryConvexifier:
+    """Convexification operations for polygonal building geometry."""
 
     @staticmethod
     def convexify_faces(cat, idd, normal, faces, holes, is_valid_face=True, is_quad_clean=False):
@@ -463,7 +463,7 @@ def triangulate2dFace(boundary: shapely.Geometry, holes: np.ndarray[shapely.Geom
         holes = [proj.toUV(hole) for hole in holes]
         holes = [shapely.get_coordinates(shapely.force_3d(hole, z=0), include_z=True)[:-1] for hole in holes]
 
-    convex_faces, divided_lines = MoosasConvexify.convexify_faces_2d(
+    convex_faces, divided_lines = GeometryConvexifier.convexify_faces_2d(
         [boundary],
         [holes],
         is_quad_clean=False,
@@ -500,7 +500,7 @@ def convexify_model(model):
         [shapely.get_coordinates(ring, include_z=True)[:-1] for ring in shapely.get_rings(geometry.face)[1:]]
         for geometry in source_geometry
     ]
-    convex_categories, convex_ids, convex_normals, convex_faces, _ = MoosasConvexify.convexify_faces(
+    convex_categories, convex_ids, convex_normals, convex_faces, _ = GeometryConvexifier.convexify_faces(
         categories,
         face_ids,
         normals,

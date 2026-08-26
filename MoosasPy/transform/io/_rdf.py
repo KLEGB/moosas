@@ -155,10 +155,10 @@ def decodeURI(hint):
     return hint
 
 
-class MoosasGraph(Graph):
+class MoosasRDF(Graph):
     def __init__(self, model: MoosasModel = None, dumpUseless=True, ExportIFC=False):
         """
-        Initialize the MoosasGraph instance with optional model encoding and namespace bindings.
+        Initialize the MoosasRDF instance with optional model encoding and namespace bindings.
         
         Parameters
         ----------
@@ -176,7 +176,7 @@ class MoosasGraph(Graph):
         -------
         None
         """
-        super(MoosasGraph, self).__init__()
+        super(MoosasRDF, self).__init__()
         # create namespace
         self.bot = Namespace("https://w3id.org/bot#")
         self.moosas = Namespace("https://moosas#")
@@ -210,7 +210,7 @@ class MoosasGraph(Graph):
             self.encodeModel(model, dumpUseless, ExportIFC)
 
     @classmethod
-    def load(cls, filePath, fileFormat='turtle') -> MoosasGraph:
+    def load(cls, filePath, fileFormat='turtle') -> MoosasRDF:
         """
         Load a graph from a file.
         
@@ -1145,7 +1145,7 @@ class MoosasGraph(Graph):
         return encodeURI(name)
 
 
-def _import_schedule_nodes(rdfGraph: MoosasGraph, model: MoosasModel):
+def _import_schedule_nodes(rdfGraph: MoosasRDF, model: MoosasModel):
     model.schedule = {}
     model.schedulePath = None
     schedule_nodes = set()
@@ -1190,14 +1190,14 @@ def _import_schedule_nodes(rdfGraph: MoosasGraph, model: MoosasModel):
     rebuild_schedule_index(model)
 
 
-def _decode_space_settings(rdfGraph: MoosasGraph, spaceUri, spc: MoosasSpace):
+def _decode_space_settings(rdfGraph: MoosasRDF, spaceUri, spc: MoosasSpace):
     spcSettings = mixItemListToList(rdfGraph.getObject(spaceUri, rdfGraph.moosas.hasSetting))
     for key in spcSettings:
         raw_value = _first_or_none(rdfGraph.getObject(spaceUri, Literal(key)))
         spc.settings[str(key)] = _decode_space_setting_value(raw_value)
 
 
-def _decode_space_type(rdfGraph: MoosasGraph, spaceUri) -> str:
+def _decode_space_type(rdfGraph: MoosasRDF, spaceUri) -> str:
     """Read an optional semantic type; old RDF files default to a normal room."""
     raw_value = _first_or_none(rdfGraph.getObject(spaceUri, rdfGraph.moosas.spaceType))
     value = _literal_to_python(raw_value)
@@ -1223,10 +1223,10 @@ def writeRDF(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseless
     
     Returns
     -------
-    MoosasGraph
-        The generated MoosasGraph object that was serialized to the file.
+    MoosasRDF
+        The generated MoosasRDF object that was serialized to the file.
     """
-    g = MoosasGraph(model, dumpUseless, ExportIFC)
+    g = MoosasRDF(model, dumpUseless, ExportIFC)
     idf_graph = getattr(model, "idfGraph", None)
     if idf_graph is not None and len(idf_graph) > 0:
         from ..alignment import merge_moosas_and_idf_graphs
@@ -1252,7 +1252,7 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     MoosasModel
         A constructed MoosasModel instance populated with data from the RDF file.
     """
-    rdfGraph: MoosasGraph = MoosasGraph.load(input_path, fileFormat=fileFormat)
+    rdfGraph: MoosasRDF = MoosasRDF.load(input_path, fileFormat=fileFormat)
     from ..alignment import extract_idf_graph, attach_idf_graph
 
     idf_graph = extract_idf_graph(rdfGraph)

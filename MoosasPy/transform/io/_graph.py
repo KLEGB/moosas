@@ -190,7 +190,7 @@ class NumpyEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-class MoosasGraph:
+class CugerGraph:
     """
     Graph module that converts building spaces into a structured graph representation.
     """
@@ -520,7 +520,7 @@ class MoosasGraph:
         return self.graph
 
 
-def graph_to_dict(graph: MoosasGraph) -> dict:
+def graph_to_dict(graph: CugerGraph) -> dict:
     nodes_data = {}
     for node_id, node_attrs in graph.graph.nodes(data=True):
         node_data = {}
@@ -556,8 +556,8 @@ def _restore_graph_value(key: str, value):
     return value
 
 
-def graph_from_dict(data: dict) -> MoosasGraph:
-    """Rebuild a :class:`MoosasGraph` from :func:`graph_to_dict` output."""
+def graph_from_dict(data: dict) -> CugerGraph:
+    """Rebuild a :class:`CugerGraph` from :func:`graph_to_dict` output."""
     if not isinstance(data, dict):
         raise TypeError("graph data must be a dictionary")
 
@@ -566,7 +566,7 @@ def graph_from_dict(data: dict) -> MoosasGraph:
     if not isinstance(nodes, dict) or not isinstance(edges, list):
         raise ValueError("graph data must contain a nodes dictionary and an edges list")
 
-    graph = MoosasGraph()
+    graph = CugerGraph()
     for node_id, node_attrs in nodes.items():
         if not isinstance(node_attrs, dict):
             raise ValueError(f"node attributes must be a dictionary: {node_id}")
@@ -594,7 +594,7 @@ def graph_from_dict(data: dict) -> MoosasGraph:
     return graph
 
 
-def loadGraph(file_path: str) -> MoosasGraph:
+def loadGraph(file_path: str) -> CugerGraph:
     """Load a graph written by :func:`writeGraph`."""
     with open(file_path, "r", encoding="utf-8") as infile:
         return graph_from_dict(json.load(infile))
@@ -605,10 +605,10 @@ def buildGraph(
     clean_isolated=True,
     clean_airwall=True,
     outer_layer_edge_embedding=True,
-) -> MoosasGraph:
+) -> CugerGraph:
     from ._xml import build_xml
 
-    graph = MoosasGraph()
+    graph = CugerGraph()
     graph.graph_representation_from_model(
         build_xml(model, write_geometry=False),
         _geometry_lookup(model),
