@@ -74,14 +74,18 @@ class GeometryValidator:
         p1_2d = p1[:2]
         p2_2d = p2[:2]
         p3_2d = p3[:2]
-        cross = np.cross(p2_2d - p1_2d, p3_2d - p2_2d)
+        edge = p2_2d - p1_2d
+        offset = p3_2d - p2_2d
+        cross = edge[0] * offset[1] - edge[1] * offset[0]
         if cross > 0 and np.abs(cross) < 1e-6 * np.linalg.norm(p2_2d - p1_2d) * np.linalg.norm(p3_2d - p2_2d):
             return False
         return cross > 0
 
     @staticmethod
     def _is_collinear(p1, p2, p3):
-        area = np.cross(p2 - p1, p3 - p2)
+        edge = p2 - p1
+        offset = p3 - p2
+        area = edge[0] * offset[1] - edge[1] * offset[0]
         dist = area / (np.dot(p1, p2 - p1) + 1e-6)
         return np.abs(dist) < 1e-3
 
