@@ -1089,7 +1089,14 @@ def is_ccw(geo: shapely.Geometry) -> bool:
 
     poilist = shapely.get_coordinates(geo)
     veclist = [poilist[i] - poilist[i - 1] for i in range(1, len(poilist))]
-    crosslist = [np.cross(veclist[i], veclist[i - 1]) for i in range(len(veclist))]
+    # NumPy 2.0 removed the two-dimensional-vector form of ``np.cross``.
+    # Preserve the former scalar z-component result for projected polygons.
+    crosslist = [
+        (veclist[i][0] * veclist[i - 1][1] - veclist[i][1] * veclist[i - 1][0])
+        if len(veclist[i]) == 2
+        else np.cross(veclist[i], veclist[i - 1])
+        for i in range(len(veclist))
+    ]
     ccw = np.sum([2 for vec in crosslist if vec > 0])
     ccw -= len(crosslist)
     return ccw < 0
@@ -1658,32 +1665,68 @@ def rayFaceIntersect(ray: Ray, face: shapely.Geometry,
 
 def simplify(geo: shapely.Geometry, include_z=False) -> shapely.Geometry:
     """simplified the geometry to remove redundant points where the last and next directions are parallel"""
+    dimensions = shapely.get_dimensions(geo)
+    coordinates = shapely.get_coordinates(geo, include_z=include_z)
+    if len(coordinates) == 0:
+        return geo
 
-    coordinates = shapely.get_coordinates(geo, include_z=include_z)[:-1]
-    points = shapely.points(coordinates)
-    delPoints = []
-    # remove overlap points
-    for i in range(1, len(points)):
-        if Vector(coordinates[i] - coordinates[i - 1]).length(power=True) == 0:
-            delPoints.append(i)
-    points = np.delete(points, delPoints)
-    coordinates = shapely.get_coordinates(points, include_z=include_z)
-    edges = [coordinates[i] - coordinates[i - 1] for i in range(len(coordinates))]
+    is_polygon = dimensions == 2
+    if is_polygon and len(coordinates) > 1 and np.allclose(
+            coordinates[0], coordinates[-1], atol=geom.POINT_PRECISION):
+        coordinates = coordinates[:-1]
 
-    # remove parallel redundant points
-    delPoints = []
-    for i in range(1, len(edges)):
-        if Vector.parallel(edges[i - 1], edges[i]):
-            delPoints.append(i)
-    points = np.delete(points, delPoints)
-    points = np.append(points, points[0])
-    if shapely.get_dimensions(geo) == 1:
-        return shapely.linestrings(shapely.get_coordinates(points, include_z=include_z))
-    if shapely.get_dimensions(geo) == 2:
+    # First remove only adjacent duplicate points.  Keeping this as a Python
+    # list avoids ``np.append`` flattening Shapely object arrays.
+    simplified = []
+    for point in coordinates:
+        if not simplified or np.linalg.norm(point - simplified[-1]) >= geom.POINT_PRECISION:
+            simplified.append(point)
+    if is_polygon and len(simplified) > 1 and np.linalg.norm(simplified[0] - simplified[-1]) < geom.POINT_PRECISION:
+        simplified.pop()
+
+    minimum_vertices = 3 if is_polygon else 2
+    if len(simplified) < minimum_vertices:
+        raise GeometryError(geo, f"requires at least {minimum_vertices} unique vertices")
+
+    def _is_redundant_middle(previous, current, following):
+        incoming = current - previous
+        outgoing = following - current
+        incoming_length = np.linalg.norm(incoming)
+        outgoing_length = np.linalg.norm(outgoing)
+        if incoming_length < geom.POINT_PRECISION or outgoing_length < geom.POINT_PRECISION:
+            return True
+        # Delete a vertex only when it lies on the same directed line.  The
+        # former angle-only test treated narrow, valid triangles as collinear.
+        if len(incoming) == 2:
+            cross_length = abs(incoming[0] * outgoing[1] - incoming[1] * outgoing[0])
+        else:
+            cross_length = np.linalg.norm(np.cross(incoming, outgoing))
+        line_distance = cross_length / max(incoming_length, outgoing_length)
+        return line_distance < geom.POINT_PRECISION and np.dot(incoming, outgoing) > 0
+
+    changed = True
+    while changed and len(simplified) > minimum_vertices:
+        changed = False
+        for index in range(len(simplified)):
+            if not is_polygon and index in (0, len(simplified) - 1):
+                continue
+            previous = simplified[index - 1]
+            following = simplified[(index + 1) % len(simplified)]
+            if _is_redundant_middle(previous, simplified[index], following):
+                simplified.pop(index)
+                changed = True
+                break
+
+    coordinates = np.asarray(simplified, dtype=float)
+    if dimensions == 1:
+        return shapely.linestrings(coordinates)
+    if is_polygon:
         try:
-            return shapely.polygons(shapely.get_coordinates(points, include_z=include_z))
+            # Shapely's LinearRing requires an explicit closing coordinate.
+            return shapely.polygons(np.vstack((coordinates, coordinates[0])))
         except Exception as e:
             raise GeometryError(geo, str(e))
+    return geo
 
 
 def split(geo: shapely.Geometry, spliter: Ray | shapely.Geometry, normal=None) -> list[list[shapely.Geometry]]:

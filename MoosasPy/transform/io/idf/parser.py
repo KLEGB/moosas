@@ -45,7 +45,12 @@ class ZoneTemplate():
         """
         if not isinstance(self.zoneObject, MoosasSettings):
             return True
-        return ('Floor_Area' not in self.zoneObject.params) and ('Volume' not in self.zoneObject.params)
+        if ('Floor_Area' in self.zoneObject.params) or ('Volume' in self.zoneObject.params):
+            return False
+        # Many EnergyPlus files leave Zone floor area and volume blank.  The
+        # writer can derive them from BuildingSurface:Detailed geometry.
+        area, volume, height = self._infer_zone_geometry()
+        return not any((area, volume, height))
 
     @staticmethod
     def _as_positive_float(value):
@@ -65,6 +70,7 @@ class ZoneTemplate():
         height = self._as_positive_float(self.zoneObject.params.get("Ceiling_Height"))
 
         z_values = []
+        floor_areas = []
         for surface in self.idf.idfobjects['BuildingSurface:Detailed']:
             try:
                 if str(surface['Zone_Name']).strip() != zone_name:
@@ -72,18 +78,31 @@ class ZoneTemplate():
             except Exception:
                 continue
 
+            vertices = []
             for idx in range(1, 256):
                 x_field = f'Vertex_{idx}_Xcoordinate'
+                y_field = f'Vertex_{idx}_Ycoordinate'
                 z_field = f'Vertex_{idx}_Zcoordinate'
-                if x_field not in surface.objls or z_field not in surface.objls:
+                if x_field not in surface.objls or y_field not in surface.objls or z_field not in surface.objls:
                     break
-                z_val = surface[z_field]
-                if z_val == '':
+                x_val, y_val, z_val = surface[x_field], surface[y_field], surface[z_field]
+                if x_val == '' or y_val == '' or z_val == '':
                     break
                 try:
+                    vertices.append((float(x_val), float(y_val)))
                     z_values.append(float(z_val))
                 except (TypeError, ValueError):
                     continue
+
+            if str(surface['Surface_Type']).strip().upper() == 'FLOOR' and len(vertices) >= 3:
+                floor_areas.append(abs(sum(
+                    vertices[index][0] * vertices[(index + 1) % len(vertices)][1]
+                    - vertices[(index + 1) % len(vertices)][0] * vertices[index][1]
+                    for index in range(len(vertices))
+                )) / 2)
+
+        if area is None and floor_areas:
+            area = sum(floor_areas)
 
         if height is None and len(z_values) >= 2:
             inferred_height = max(z_values) - min(z_values)
@@ -460,9 +479,14 @@ class ZoneTemplate():
             if 'Flow_Rate_per_Floor_Area' in self.objectList["ZoneInfiltration:DesignFlowRate"].params:
                 inftM3sM2 = self.objectList["ZoneInfiltration:DesignFlowRate"]['Flow_Rate_per_Floor_Area']  # {m3/s-m2}
                 zone.settings['zone_infiltration'] = inftM3sM2 / zoneTemplateHeight * 3600  # ac/h
-            if 'Flow_Rate_per_Exterior_Surface_Area' in self.objectList["ZoneInfiltration:DesignFlowRate"].params:
-                inftM3sM2 = self.objectList["ZoneInfiltration:DesignFlowRate"][
-                    'Flow_Rate_per_Exterior_Surface_Area']  # {m3/s-m2}
+            exterior_surface_field = next((field for field in (
+                'Flow_Rate_per_Exterior_Surface_Area',
+                'Flow_per_Exterior_Surface_Area',
+                'Flow_Rate_per_Exterior_Wall_Area',
+                'Flow_per_Exterior_Wall_Area',
+            ) if field in self.objectList["ZoneInfiltration:DesignFlowRate"].params), None)
+            if exterior_surface_field:
+                inftM3sM2 = self.objectList["ZoneInfiltration:DesignFlowRate"][exterior_surface_field]  # {m3/s-m2}
                 zone.settings[
                     'zone_infiltration'] = inftM3sM2 * zoneOutWallArea / zone.height / zone.area * 3600  # ac/h
         zone.settings['zone_infiltration'] = float(zone.settings['zone_infiltration'])
@@ -473,8 +497,12 @@ class ZoneTemplate():
                 zone.settings['zone_ppsm'] = self.objectList["People"]["Number_of_People"] / zoneTemplateArea
             if 'People_per_Floor_Area' in self.objectList["People"].params:
                 zone.settings['zone_ppsm'] = self.objectList["People"]["People_per_Floor_Area"]
+            if 'People_per_Zone_Floor_Area' in self.objectList["People"].params:
+                zone.settings['zone_ppsm'] = self.objectList["People"]["People_per_Zone_Floor_Area"]
             if 'Floor_Area_per_Person' in self.objectList["People"].params:
                 zone.settings['zone_ppsm'] = 1 / self.objectList["People"]["Floor_Area_per_Person"]
+            if 'Zone_Floor_Area_per_Person' in self.objectList["People"].params:
+                zone.settings['zone_ppsm'] = 1 / self.objectList["People"]["Zone_Floor_Area_per_Person"]
         zone.settings['zone_ppsm'] = float(zone.settings['zone_ppsm'])
 
         # equipment (equip elec)
@@ -484,6 +512,8 @@ class ZoneTemplate():
                                                       'Design_Level'] / zoneTemplateArea
             if 'Watts_per_Floor_Area' in self.objectList["ElectricEquipment"].params:
                 zone.settings['zone_equipment'] = self.objectList["ElectricEquipment"]["Watts_per_Floor_Area"]
+            if 'Watts_per_Zone_Floor_Area' in self.objectList["ElectricEquipment"].params:
+                zone.settings['zone_equipment'] = self.objectList["ElectricEquipment"]["Watts_per_Zone_Floor_Area"]
             if 'Watts_per_Person' in self.objectList["ElectricEquipment"].params:
                 zone.settings['zone_equipment'] = self.objectList["ElectricEquipment"]["Watts_per_Person"] * \
                                                   zone.settings['zone_ppsm']
@@ -506,6 +536,8 @@ class ZoneTemplate():
                 zone.settings['zone_lighting'] = self.objectList["Lights"]['Lighting_Level'] / zoneTemplateArea
             if 'Watts_per_Floor_Area' in self.objectList["Lights"].params:
                 zone.settings['zone_lighting'] = self.objectList["Lights"]["Watts_per_Floor_Area"]
+            if 'Watts_per_Zone_Floor_Area' in self.objectList["Lights"].params:
+                zone.settings['zone_lighting'] = self.objectList["Lights"]["Watts_per_Zone_Floor_Area"]
             if 'Watts_per_Person' in self.objectList["Lights"].params:
                 zone.settings['zone_lighting'] = self.objectList["Lights"]["Watts_per_Person"] * zone.settings[
                     'zone_ppsm']

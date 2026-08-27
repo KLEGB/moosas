@@ -509,6 +509,13 @@ def convexify_model(model):
     )
 
     convex_model = MoosasModel()
+    # The divided-zone pipeline continues with a fresh geometry model.  Keep
+    # its shared thermal resources so generated spaces can apply a template.
+    convex_model.buildingTemplate = model.buildingTemplate
+    convex_model.schedule = model.schedule
+    convex_model.scheduleByType = model.scheduleByType
+    convex_model.schedulePath = model.schedulePath
+    convex_model.weather = model.weather
     convex_model.geometryList = [
         MoosasGeometry(
             shapely.polygons(face),

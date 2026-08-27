@@ -529,8 +529,13 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
         for levelIdx, bldLevel in enumerate(model.levelList):
             edges = np.array(model.edgeList)[searchBy('level', bldLevel, model.edgeList)]
             for edgeIdx, edge in enumerate(edges):
+                # ``contains`` considers a geometry to contain itself.  That
+                # made the current boundary an identical "hole", so a
+                # concave footprint was passed to the convexifier with its
+                # exterior removed and could not be divided.  A hole must lie
+                # strictly inside the boundary instead.
                 holes = [subEdge.force_2d() for subEdge in edges if
-                         shapely.contains(edge.force_2d(), subEdge.force_2d())]
+                         shapely.contains_properly(edge.force_2d(), subEdge.force_2d())]
                 newEdges, dividedLines = triangulate2dFace(edge.force_2d(), holes)
                 if len(newEdges) > 1:
                     for li in dividedLines:

@@ -15,7 +15,7 @@ from ...utils import generate_code, searchBy, mixItemListToObject, mixItemListTo
 from ...utils import shapely, np, ET
 from ...utils.tools import path
 from ...utils.constant import geom
-from ...model_resources import get_schedule_name, load_schedule
+from ...model_resources import load_schedule
 
 # 不做inch meter转换
 INCH_METER_MULTIPLIER = 1
@@ -537,9 +537,26 @@ class MoosasElement(object):
             C += np.matmul(coor.reshape(3, 1), coor.reshape(1, 3))
         C /= len(coordinates)
 
-        # PCA2: get minimum characteristic
-        eig_values, eig_vectors = np.linalg.eig(C)
-        return Vector(eig_vectors[np.argmin(eig_values)]).unit().array
+        # PCA2: the covariance matrix is real and symmetric.  ``eig`` may
+        # return complex-valued vectors for a nearly singular matrix (notably
+        # with newer NumPy versions), which Shapely cannot consume downstream.
+        # ``eigh`` guarantees real eigenpairs for this matrix type and stores
+        # eigenvectors by *column*.
+        eig_values, eig_vectors = np.linalg.eigh(C)
+        normal = np.real_if_close(eig_vectors[:, np.argmin(eig_values)])
+        if np.iscomplexobj(normal):
+            raise GeometryError(self.face, "complex multi-face normal")
+        normal = np.asarray(normal, dtype=float)
+        length = np.linalg.norm(normal)
+        if not np.isfinite(normal).all() or length < geom.POINT_PRECISION:
+            raise GeometryError(self.face, "invalid multi-face normal")
+
+        # Eigenvector signs are arbitrary.  Preserve the orientation of the
+        # first constituent face so callers get a stable outward normal.
+        reference = Vector(self.__geometries[0].normal).unit().array
+        if np.dot(normal, reference) < 0:
+            normal = -normal
+        return normal / length
 
     @property
     def faceId(self) -> str | np.ndarray[str]:
@@ -2390,7 +2407,7 @@ class MoosasEdge:
         else:
             factor = np.array([0, 0, 1])
         poly_vector = [poly_coordinates[i] - poly_coordinates[i - 1] for i in range(1, len(poly_coordinates))]
-        return np.array([Vector(np.cross(factor, vec)) for vec in poly_vector])
+        return np.array([Vector.cross(factor, vec, style=Vector) for vec in poly_vector])
 
     @property
     def area(self) -> float:
@@ -3100,11 +3117,17 @@ class MoosasSpace(object):
                 load_schedule(self.parent, schedule_path)
         
 
-        for key in template.keys():
-            self.settings[key] = template[key]
-            if key in ("zone_ppsm", "zone_equipment", "zone_lighting"):
-                scheduleName = get_schedule_name(self.parent, templateType, key)
-                self.settings[key] = scheduleName
+        load_intensity_fields = ("zone_ppsm", "zone_equipment", "zone_lighting")
+        for key, value in template.items():
+            if key in load_intensity_fields:
+                try:
+                    value = float(value)
+                except (TypeError, ValueError) as error:
+                    raise ValueError(
+                        f"Building template '{buildingTemplateHint}' field '{key}' must be numeric; "
+                        f"got {value!r}. Store schedules separately from load intensities."
+                    ) from error
+            self.settings[key] = value
     
 
         if 'zone_wallU' in self.settings:

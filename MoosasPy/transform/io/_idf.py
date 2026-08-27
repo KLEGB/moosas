@@ -17,6 +17,7 @@ from rdflib.namespace import RDF
 from ._rdf import MoosasRDF, encodeURI, decodeURI
 from ._xml import loadXml
 from .idf import construction, input, model, parser, schedule
+from .idf.model import MoosasSettings, ZoneMixingDefault
 from ...models import *
 from ...utils import path, mixItemListToList
 
@@ -326,7 +327,7 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     for typeLimit in schedule.typeLimitSettings:
         if typeLimit.params['Name'] not in typeLimitsName:
             typeLimit.applyToIDF(idf)
-    airboundary = model.MoosasSettings(construction.airBoundaryDefault)
+    airboundary = MoosasSettings(construction.airBoundaryDefault)
     airboundary.applyToIDF(idf)
 
     # check space boundary condition
@@ -411,7 +412,7 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
 
     for zoneTwins in mixing:
         zoneTwins = zoneTwins.split("~~")
-        zoneMixing = model.MoosasSettings(model.ZoneMixingDefault)
+        zoneMixing = MoosasSettings(ZoneMixingDefault)
         zoneMixing.updateParams(**{
             'Name':zoneTwins[0]+"_"+zoneTwins[1],
             'Zone_or_Space_Name': zoneTwins[0],
@@ -420,8 +421,8 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
         zoneMixing.applyToIDF(idf)
         zoneMixing.updateParams(**{
             'Name':zoneTwins[1]+"_"+zoneTwins[0],
-            'Zone or Space Name': zoneTwins[1],
-            'Source Zone or Space Name': zoneTwins[0],
+            'Zone_or_Space_Name': zoneTwins[1],
+            'Source_Zone_or_Space_Name': zoneTwins[0],
         })
         zoneMixing.applyToIDF(idf)
 
