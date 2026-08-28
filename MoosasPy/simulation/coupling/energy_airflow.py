@@ -5,7 +5,7 @@ from ...transform.geometry.geos import Vector, Ray
 from ...models import MoosasModel
 from ...model_resources import get_schedule_name, load_cumulative_sky, load_schedule, load_weather, write_schedule
 from ..weather.data import MoosasWeather
-from ..weather.cumsky import MoosasCumSky
+from ..weather.cumsky import CumulativeSky
 from ..radiation import modelRadiation, writeRadGeo, rayTest
 from ...utils import np, path, os
 from ...utils.date import DateTime
@@ -114,7 +114,7 @@ class EnergyAirflowCoupler(object):
         with open(os.path.join(path.dataBaseDir, 'cum_sky', f'cumsky_{stationid}.csv')) as f:
             cumValue = np.array([line.split(',') for line in f.read().split('\n') if len(line) > 1]).astype(float)
             for i in range(8760):
-                self.skySeries.append(MoosasCumSky(cumValue[:, i] / MoosasCumSky.FIX_RADIATION))
+                self.skySeries.append(CumulativeSky(cumValue[:, i] / CumulativeSky.FIX_RADIATION))
 
         print("-----------------------\nCalculating path radiation intensity...\n-----------------------")
         print(time.time() - t0)
@@ -604,9 +604,9 @@ class EnergyAirflowCoupler(object):
             pid = ps["userName"]
             if pid not in self.pathRadIntensity:
                 self.pathRadIntensity[pid] = [0.0] * 8760
-            summer_intensity = np.sum(self.pathRadIntensity[pid][MoosasCumSky.SUMMER_START_HOY:MoosasCumSky.SUMMER_END_HOY])
-            winter_intensity = np.sum(self.pathRadIntensity[pid][MoosasCumSky.WINTER_START_HOY:]) + \
-                               np.sum(self.pathRadIntensity[pid][:MoosasCumSky.WINTER_END_HOY])
+            summer_intensity = np.sum(self.pathRadIntensity[pid][CumulativeSky.SUMMER_START_HOY:CumulativeSky.SUMMER_END_HOY])
+            winter_intensity = np.sum(self.pathRadIntensity[pid][CumulativeSky.WINTER_START_HOY:]) + \
+                               np.sum(self.pathRadIntensity[pid][:CumulativeSky.WINTER_END_HOY])
             summerradHeat = summer_intensity * float(ps['pathHeight']) * float(ps['pathWidth'])
             winterradHeat = winter_intensity * float(ps['pathHeight']) * float(ps['pathWidth'])
             if ps["fromZone"] != "-1":

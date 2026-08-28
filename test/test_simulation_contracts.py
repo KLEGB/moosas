@@ -34,6 +34,14 @@ class SimulationContractTests(unittest.TestCase):
         self.assertEqual(MoosasPy.simulation.weather.__name__, "MoosasPy.simulation.weather")
         self.assertEqual(MoosasPy.simulation.coupling.__name__, "MoosasPy.simulation.coupling")
 
+    def test_weather_exports_unprefixed_sky_types(self):
+        weather = MoosasPy.simulation.weather
+
+        self.assertEqual(weather.DirectSky.__name__, "DirectSky")
+        self.assertEqual(weather.CumulativeSky.__name__, "CumulativeSky")
+        self.assertFalse(hasattr(weather, "MoosasDirectSky"))
+        self.assertFalse(hasattr(weather, "MoosasCumSky"))
+
     def test_base_result_defaults_to_empty_diagnostics(self):
         result = SimulationResult()
 

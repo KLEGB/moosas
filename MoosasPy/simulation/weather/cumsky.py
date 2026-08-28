@@ -8,7 +8,7 @@ from ...utils.date import DateTime
 from ...utils import Iterable
 
 
-class MoosasCumSky(object):
+class CumulativeSky(object):
     __slots__ = ['_position', 'value']
     ANNUAL_HOY = 8760
     FIX_RADIATION = 1000
@@ -70,17 +70,17 @@ class MoosasCumSky(object):
         if isinstance(edDateTime, DateTime):
             edDateTime = edDateTime.hoy
         if stDateTime < edDateTime:
-            cumValue = np.sum(cumValue[:, stDateTime:edDateTime], axis=1) / MoosasCumSky.FIX_RADIATION
+            cumValue = np.sum(cumValue[:, stDateTime:edDateTime], axis=1) / CumulativeSky.FIX_RADIATION
         else:
             cumValue = (np.sum(cumValue[:, stDateTime:], axis=1) + np.sum(cumValue[:, :edDateTime],
-                                                                          axis=1)) / MoosasCumSky.FIX_RADIATION
+                                                                          axis=1)) / CumulativeSky.FIX_RADIATION
         return cls(cumValue)
 
 
 def loadCumSky(stationid: str,
                stDateTime: DateTime | int | Iterable[DateTime] | Iterable[int] = None,
-               edDateTime: DateTime | int | Iterable[DateTime] | Iterable[int] = None) -> MoosasCumSky | list[
-    MoosasCumSky]:
+               edDateTime: DateTime | int | Iterable[DateTime] | Iterable[int] = None) -> CumulativeSky | list[
+    CumulativeSky]:
     """
     Load cumulative sky data for a given station over specified time periods.
     
@@ -97,8 +97,8 @@ def loadCumSky(stationid: str,
     
     Returns
     -------
-    MoosasCumSky or list[MoosasCumSky]
-        A single MoosasCumSky object if one period is requested, otherwise a list of MoosasCumSky objects,
+    CumulativeSky or list[CumulativeSky]
+        A single CumulativeSky object if one period is requested, otherwise a list of CumulativeSky objects,
         each representing cumulative sky data for the corresponding time period.
     """
     m_cumSky = []
@@ -109,9 +109,9 @@ def loadCumSky(stationid: str,
                 stDateTime = [stDateTime]
                 edDateTime = [edDateTime]
             for stTime, edTime in zip(stDateTime, edDateTime):
-                m_cumSky.append(MoosasCumSky.fromPeriod(cumValue, stTime, edTime))
+                m_cumSky.append(CumulativeSky.fromPeriod(cumValue, stTime, edTime))
         else:
-            m_cumSky.append(MoosasCumSky.fromPeriod(cumValue, 0, 8760))
+            m_cumSky.append(CumulativeSky.fromPeriod(cumValue, 0, 8760))
     if len(m_cumSky) == 1:
         m_cumSky = m_cumSky[0]
     return m_cumSky

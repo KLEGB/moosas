@@ -128,15 +128,15 @@ def load_weather(model, station_id_or_path: str = "545110"):
 
 def load_cumulative_sky(model, station_id_or_path: str = "545110"):
     """Load annual, summer, and winter cumulative sky data onto a model."""
-    from .simulation.weather.cumsky import MoosasCumSky, loadCumSky
+    from .simulation.weather.cumsky import CumulativeSky, loadCumSky
     from .simulation.weather.epw import includeEpw
 
     if os.path.isfile(station_id_or_path):
         station_id_or_path = includeEpw(station_id_or_path)
     cumulative_sky = loadCumSky(
         station_id_or_path,
-        [0, MoosasCumSky.SUMMER_START_HOY, MoosasCumSky.SUMMER_END_HOY],
-        [8760, MoosasCumSky.WINTER_START_HOY, MoosasCumSky.WINTER_END_HOY],
+        [0, CumulativeSky.SUMMER_START_HOY, CumulativeSky.SUMMER_END_HOY],
+        [8760, CumulativeSky.WINTER_START_HOY, CumulativeSky.WINTER_END_HOY],
     )
     model.cumSky = {
         "annualCumSky": cumulative_sky[0],

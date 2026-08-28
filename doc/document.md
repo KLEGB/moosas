@@ -139,11 +139,11 @@ GEO, OBJ, and STL contain only geometric faces and must enter through `transform
 
 ### Radiation and Sunlight
 
-`MoosasPy.simulation.radiation` provides `modelRadiation`, `spaceRadiation`, `faceRadiation`, `positionRadiation`, `writeRadGeo`, and `rayTest`. `RadianceRunner` performs isolated Radiance daylight calculations from a model and `RadianceSky`; each run uses a temporary work directory and returns structured daylight metrics and command diagnostics. `positionSunHour` calculates direct sunlight duration using a `Location` or `MoosasDirectSky` instance and either a model or a GEO scene.
+`MoosasPy.simulation.radiation` provides `modelRadiation`, `spaceRadiation`, `faceRadiation`, `positionRadiation`, `writeRadGeo`, and `rayTest`. `RadianceRunner` performs isolated Radiance daylight calculations from a model and `RadianceSky`; each run uses a temporary work directory and returns structured daylight metrics and command diagnostics. `positionSunHour` calculates direct sunlight duration from an explicit `DirectSky`-compatible object and either a model or a GEO scene.
 
 ### Weather
 
-`MoosasPy.simulation.weather` exports `Location`, `MoosasWeather`, `MoosasCumSky`, `MoosasDirectSky`, and `includeEpw`. These utilities create or import the weather and sky data required by energy, radiation, and sunlight workflows.
+`MoosasPy.simulation.weather` exports `Location`, `MoosasWeather`, `CumulativeSky`, `DirectSky`, and `includeEpw`. These utilities create or import the weather and sky data required by energy, radiation, and sunlight workflows.
 
 ### Ventilation
 

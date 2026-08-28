@@ -7,7 +7,7 @@ from ...transform.geometry.element import MoosasElement
 from ...utils import np, os, path
 from ..energy.pv import calculate_pv_generation
 from ..radiation import faceRadiation, writeRadGeo
-from ..weather.cumsky import MoosasCumSky
+from ..weather.cumsky import CumulativeSky
 
 
 def run_roof_pv(
@@ -72,7 +72,7 @@ def calculate_face_incident_energy(
     grid_offset: float = 0.2,
     reflection: int = 0,
     geo_path: str,
-    radiation_scale: float = MoosasCumSky.FIX_RADIATION,
+    radiation_scale: float = CumulativeSky.FIX_RADIATION,
 ) -> np.ndarray:
     """Aggregate hourly incident solar energy across a collection of faces."""
     if isinstance(faces, MoosasElement):

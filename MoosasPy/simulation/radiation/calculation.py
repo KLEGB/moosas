@@ -157,7 +157,7 @@ def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky=None,
     ----------
     face : object
         The face to be calculated.
-    sky : MoosasCumSky
+    sky : CumulativeSky-compatible object
         The position will be replaced if a sky is given,
         and the radiation value will be multiplied by the visibility.
     gridSize : float
@@ -231,7 +231,7 @@ def positionRadiation(positionRay: Ray | Iterable[Ray], sky,
         -------------------------------------
 
         positionRay: Iterable[Ray] position(origin, factor) to test. Put as much as possible in one coll on this func.
-        sky: MoosasCumSky cumulative sky model we use in this func.
+        sky: cumulative sky model used in this function.
         model: MoosasModel the reflectance test content.
         reflection: how many reflection will be calculated. default 1
         geoPath: optional *.geo file input for the test content.

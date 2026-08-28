@@ -92,7 +92,7 @@ class SunPosition(Vector):
 
 
 
-class MoosasDirectSky(object):
+class DirectSky(object):
     """Calculate sun positions
 
     Args:
