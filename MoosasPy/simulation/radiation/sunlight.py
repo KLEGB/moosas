@@ -2,15 +2,13 @@
 from datetime import datetime
 
 from .calculation import rayTest, writeRadGeo
-from ..weather.directsky import MoosasDirectSky
 from ...transform.geometry.geos import Vector, Ray
 from ...utils.date import DateTime
 from ...utils import np,Iterable
-from ..weather.data import Location
 from ...models import MoosasModel
 
 
-def positionSunHour(positionRay: Ray | Iterable[Ray], location: Location = None, sky: MoosasDirectSky = None,
+def positionSunHour(positionRay: Ray | Iterable[Ray], sky,
                     model: MoosasModel = None, geo_path=None,
                     periodStart: datetime | DateTime = DateTime(1, 1, 0),
                     periodEnd: datetime | DateTime = DateTime(12, 31, 23),
@@ -23,11 +21,8 @@ def positionSunHour(positionRay: Ray | Iterable[Ray], location: Location = None,
     positionRay : Ray or Iterable[Ray]
         Position(s) defined as Ray objects with origin and direction. Each Ray may include a weighting factor.
         Can be a single Ray or an iterable of Rays.
-    location : Location, optional
-        Location object containing latitude and longitude. Used to create the MoosasDirectSky if sky is not provided.
-        If both location and sky are None, an exception is raised.
-    sky : MoosasDirectSky, optional
-        Predefined direct sun sky model. If not provided, a new MoosasDirectSky is created from the location.
+    sky : object
+        Direct-sun sky object providing ``annualSun(leapYear=...)``.
     model : MoosasModel, optional
         Model containing geometry for reflectance and shadow testing. Required if geo_path is not provided.
     geo_path : str, optional
@@ -55,8 +50,7 @@ def positionSunHour(positionRay: Ray | Iterable[Ray], location: Location = None,
         -------------------------------------
 
         positionRay: Iterable[Ray] position(origin, factor) to test. Put as much as possible in one coll on this func.
-        location: Location the location object define in weather, which is used to create MoosasDirectSky
-        sky: optional MoosasDirectSky direct sun sky model we use in this func.
+        sky: direct sun sky model used in this function.
         model: optional MoosasModel the reflectance test content.
         geoPath: optional *.geo file input for the test content.
         periodStart: datetime | DateTime optional start time in for analysis
@@ -66,8 +60,6 @@ def positionSunHour(positionRay: Ray | Iterable[Ray], location: Location = None,
         returns: Iterable[float]
         The return value is unit in hour/day
     """
-    if location is not None:
-        sky = MoosasDirectSky(location.latitude, location.longitude)
     if sky is None:
         raise Exception('Sky not found')
     if geo_path is None:

@@ -13,11 +13,9 @@ public building types via the -t parameter.
 """
 from ...utils.support import os
 from dataclasses import dataclass
-from datetime import datetime
 import re
 from ...utils import path, parseFile, FileError
 from ...utils.constant import buildingType, dateSetting
-from ..radiation import modelRadiation
 from ..contracts import SimulationResult
 from ..engine import NativeEngine
 from ..runner import Runner
@@ -25,7 +23,7 @@ from ..workspace import SimulationWorkspace
 
 from ...transform.io.idf.model import ThermalSettings
 
-from ...model_resources import get_schedule_name, load_cumulative_sky, load_schedule, load_weather
+from ...model_resources import get_schedule_name, load_schedule
 from ...models import MoosasModel
 from ...utils import np, shapely
 
@@ -279,9 +277,8 @@ class EnergyRunner(Runner):
 
     def _weather_temperature(self, arguments):
         if self.model is not None:
-            if self.model.weather is None:
-                load_weather(self.model)
-            return np.array(self.model.weather.weatherData.get("temperature")).astype(float).tolist()
+            if self.model.weather is not None:
+                return np.array(self.model.weather.weatherData.get("temperature")).astype(float).tolist()
         for index, argument in enumerate(arguments):
             if argument == "-w" and index + 1 < len(arguments):
                 weather_path = arguments[index + 1].strip('"')
@@ -315,8 +312,8 @@ def energyAnalysis(model: MoosasModel = None,
             residential buildings (type=0), or any other buildingType value
             for public buildings (type=1~6). (default: buildingType.RESIDENTIAL)
         requireRadiation (bool | int): 0/False keeps the fast geometric
-            estimate, 1/True uses MoosasRad-derived seasonal radiation totals,
-            and 2 writes schedule-driven solar gains for both seasons. (default: False)
+            estimate, 1/True consumes precomputed seasonal radiation totals,
+            and 2 consumes those totals to write schedule-driven solar gains.
         exportDaily (bool): If True, include daily (365-row) results in output.
             (default: False)
         exportHourly (bool): If True, include hourly (8760-row) results in
@@ -352,9 +349,6 @@ def energyAnalysis(model: MoosasModel = None,
         ShellError: Error occurred in MoosasEnergy executable.
 
     Examples:
-        >>> e_data = energyAnalysis(model, requireRadiation=True)
-        >>> print(e_data['total'])
-
         >>> # With daily and hourly output
         >>> e_data = energyAnalysis(model, exportDaily=True, exportHourly=True)
         >>> print(len(e_data['days']))   # 365
@@ -583,8 +577,8 @@ def getEnergyInput(model: MoosasModel,
             residential buildings, or any other buildingType value for public
             buildings. (default: buildingType.RESIDENTIAL)
         requireRadiation (bool | int): 0/False keeps the fast geometric
-            estimate, 1/True uses MoosasRad-derived seasonal radiation totals,
-            and 2 writes schedule-driven solar gains for both seasons. (default: False)
+            estimate, 1/True consumes precomputed seasonal radiation totals,
+            and 2 consumes those totals to write schedule-driven solar gains.
         exportDaily (bool): If True, adds '-d 1' to command-line args.
             (default: False)
         exportHourly (bool): If True, adds '-r 1' to command-line args.
@@ -640,15 +634,18 @@ def getEnergyInput(model: MoosasModel,
 
     radiation_mode = _normalize_radiation_mode(requireRadiation)
 
-    # Perform radiation calculation if requested
     if radiation_mode in (1, 2):
-        t2 = datetime.now()
-        if model.cumSky is None:
-            load_cumulative_sky(model)
-        if any(s.settings.get('zone_summerrad') is None or s.settings.get('zone_winterrad') is None for s in model.spaceList):
-            modelRadiation(model, reflection=0)
-        t3 = datetime.now()
-        print(f"Radiation calculation time: {t3 - t2}")
+        missing_space_ids = [
+            s.id
+            for s in model.spaceList
+            if s.settings.get('zone_summerrad') is None
+            or s.settings.get('zone_winterrad') is None
+        ]
+        if missing_space_ids:
+            raise ValueError(
+                "Precomputed zone_summerrad and zone_winterrad are required "
+                f"for spaces: {', '.join(map(str, missing_space_ids))}"
+            )
 
     total_outside_area, total_volume = 0, 0
     zones = []
@@ -694,10 +691,6 @@ def getEnergyInput(model: MoosasModel,
         elif radiation_mode == 2:
             summer_total = _num_or_zero(s.settings.get('zone_summerrad'))
             winter_total = _num_or_zero(s.settings.get('zone_winterrad'))
-            if summer_total == 0.0 and winter_total == 0.0:
-                modelRadiation(model, reflection=0)
-                summer_total = _num_or_zero(s.settings.get('zone_summerrad'))
-                winter_total = _num_or_zero(s.settings.get('zone_winterrad'))
             summer_schedule = _write_typical_solar_schedule(model, s, i, "summer", summer_total * 60)
             winter_schedule = _write_typical_solar_schedule(model, s, i, "winter", winter_total * 60)
             s.settings['summer_solar'] = summer_schedule
@@ -739,9 +732,8 @@ def getEnergyInput(model: MoosasModel,
         theZone.updateParams(**addSettings)
         zones.append(theZone)
 
-    # Load weather data if not already loaded
     if model.weather is None:
-        load_weather(model)
+        raise ValueError("model.weather must be prepared before energy input generation")
     weather = model.weather
 
     # ── Build command-line arguments ──────────────────────

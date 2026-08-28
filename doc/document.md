@@ -106,8 +106,8 @@ Domain-level APIs are accessed from `simulation`, for example
 | `MoosasPy/transform/geometry/` | Geometry primitives, topology cleansing, contours, and space generation. |
 | `MoosasPy/transform/io/` | File-format adapters and dispatch for complete RDF, XML, JSON, and IFC models. |
 | `MoosasPy/simulation/airflow/` | Airflow-network and CONTAM project preparation, execution, and iteration. |
-| `MoosasPy/simulation/coupling/` | Cross-domain workflows such as coupled energy and airflow analysis. |
-| `MoosasPy/simulation/energy/` | Simplified energy analysis, photovoltaic calculations, and thermal-load helpers. |
+| `MoosasPy/simulation/coupling/` | Cross-domain workflows for energy-airflow, energy-radiation, sunlight, and photovoltaic analysis. |
+| `MoosasPy/simulation/energy/` | Simplified energy analysis, photovoltaic energy conversion, and thermal-load helpers. |
 | `MoosasPy/simulation/radiation/` | Radiation geometry export, ray tests, sunlight, and Radiance daylight workflows. |
 | `MoosasPy/simulation/weather/` | Weather locations, EPW import, direct sky, and cumulative sky models. |
 | `MoosasPy/utils/` | Shared paths, constants, errors, date utilities, and support functions. |

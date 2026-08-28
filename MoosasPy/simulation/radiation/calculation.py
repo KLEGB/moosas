@@ -9,12 +9,20 @@ from ...transform.geometry.geos import Ray, Vector
 from ...utils import np, os, Iterable
 from ...utils import path
 from ...utils.constant import rad
-from ...model_resources import load_cumulative_sky
 from ..runner import Runner
-from ..weather import MoosasCumSky
 
 
 RAD_EXE_SUFFIX = ".exe" if os.name == "nt" else ""
+
+
+def _default_sky_positions():
+    sky_path = os.path.join(path.libDir, "weather", "sun_position.csv")
+    with open(sky_path, encoding="utf-8") as sky_file:
+        return [
+            Vector(np.array(line.split(","), dtype=float))
+            for line in sky_file.read().splitlines()
+            if line.strip()
+        ]
 
 
 def modelRadiation(model, reflection=1):
@@ -35,6 +43,8 @@ def modelRadiation(model, reflection=1):
         The input model with updated space settings including 'zone_summerrad' and 'zone_winterrad'
         values representing the total solar radiation for summer and winter periods.
     """
+    if model.cumSky is None:
+        raise ValueError("model.cumSky must be prepared before radiation calculation")
     model.x = 1000
     """
          This method is faster than spaceRadiation since it only call MoosasRad.exe once.
@@ -108,7 +118,7 @@ def spaceRadiation(space: MoosasSpace, reflection=1) -> dict:
     model = space.parent
     geo_path = writeRadGeo(model)
     if model.cumSky is None:
-        load_cumulative_sky(model)
+        raise ValueError("model.cumSky must be prepared before radiation calculation")
     moFaces = space.getAllFaces(to_dict=False)
     rays = []
     windowArea = []
@@ -137,7 +147,7 @@ def spaceRadiation(space: MoosasSpace, reflection=1) -> dict:
     return settings
 
 
-def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky: MoosasCumSky = None, reflection=1,
+def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky=None, reflection=1,
                   geo_path=None) -> np.ndarray:
     """
     Calculate the sky visibility for each patch in the sky model, for a gridded face.
@@ -166,7 +176,7 @@ def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky: Moos
     grid: MoosasGrid = MoosasGrid(face, gridSize, gridOffset)
     model = face.parent
     if sky is None:
-        position = MoosasCumSky.defaultPosition()
+        position = _default_sky_positions()
     else:
         position = sky.position
     rays = []
@@ -208,7 +218,7 @@ def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky: Moos
     return np.mean(rays, axis=0)
 
 
-def positionRadiation(positionRay: Ray | Iterable[Ray], sky: MoosasCumSky,
+def positionRadiation(positionRay: Ray | Iterable[Ray], sky,
                       model=None, reflection=1, geo_path=None) -> Iterable[float]:
     """
         Cumulative radiation for positions with factors.

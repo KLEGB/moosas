@@ -9,14 +9,13 @@ import tempfile
 
 from ...transform.geometry.element import *
 from ...transform.geometry.geos import Vector
-from ..radiation import modelRadiation
 from ...utils.constant import geom
 from ...utils.tools import path, generate_code, parseFile
 from ..runner import Runner
-from ..weather.cumsky import MoosasCumSky
 
 
 VENT_EXE_SUFFIX = ".exe" if os.name == "nt" else ""
+SUMMER_RADIATION_PERIOD_HOURS = 5832 - 3624
 
 
 class AfnZone(object):
@@ -56,14 +55,10 @@ class AfnZone(object):
         None
             This constructor does not return a value.
         """
-        spaceId = space.parent.spaceList.index(space)
-        if space.settings['zone_summerrad'] is None:
-            try:
-                modelRadiation(space.parent, reflection=0)
-            except:
-                space.settings['zone_summerrad'] = 0
-                space.settings['zone_winterrad'] = 0
-            space = space.parent.spaceList[spaceId]
+        if space.settings.get('zone_summerrad') is None:
+            raise ValueError(
+                f"Precomputed zone_summerrad is required for airflow zone {space.id}"
+            )
         theZone = {}
         theZone["userName"] = space.id
         theZone["temperature"] = temperature
@@ -143,7 +138,7 @@ class AfnZone(object):
 
         heat = 0
         heat += _resolve_setting(self.element.settings.get('zone_summerrad')) / (
-                MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY) * 1000 * _resolve_setting(
+                SUMMER_RADIATION_PERIOD_HOURS) * 1000 * _resolve_setting(
             self.element.settings.get('zone_win_SHGC'))
         heat += _resolve_setting(self.element.settings.get('zone_ppsm')) * _resolve_setting(
             self.element.settings.get('zone_popheat')) * self.element.area
@@ -207,7 +202,7 @@ class AfnZone(object):
             return default
 
         solar = _resolve_setting(self.element.settings.get('zone_summerrad')) / (
-            MoosasCumSky.SUMMER_END_HOY - MoosasCumSky.SUMMER_START_HOY
+            SUMMER_RADIATION_PERIOD_HOURS
         ) * 1000 * _resolve_setting(self.element.settings.get('zone_win_SHGC'))
         people = _resolve_setting(self.element.settings.get('zone_ppsm')) * _resolve_setting(
             self.element.settings.get('zone_popheat')
