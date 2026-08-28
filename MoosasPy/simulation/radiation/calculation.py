@@ -33,7 +33,7 @@ def modelRadiation(model, reflection=1):
     ----------
     model : object
         The building model containing spaces, geometry, and sky data. Must have `spaceList`, 
-        `cumSky['summerCumSky']`, `cumSky['winterCumSky']`, and settings attributes.
+        `cumSky['summer']`, `cumSky['winter']`, and settings attributes.
     reflection : int, optional
         The number of reflections to consider in the radiation calculation. Default is 1.
     
@@ -71,13 +71,13 @@ def modelRadiation(model, reflection=1):
     """radiation calculation"""
     summerRad = positionRadiation(
         positionRay=rays,
-        sky=model.cumSky['summerCumSky'],
+        sky=model.cumSky['summer'],
         geo_path=geo_path,
         reflection=reflection
     )
     winterRad = positionRadiation(
         positionRay=rays,
-        sky=model.cumSky['winterCumSky'],
+        sky=model.cumSky['winter'],
         geo_path=geo_path,
         reflection=reflection
     )
@@ -132,14 +132,14 @@ def spaceRadiation(space: MoosasSpace, reflection=1) -> dict:
     windowArea = np.array(windowArea)
     settings['zone_summerrad'] = np.sum(windowArea * positionRadiation(
         positionRay=rays,
-        sky=model.cumSky['summerCumSky'],
+        sky=model.cumSky['summer'],
         geo_path=geo_path,
         reflection=reflection
     ))
 
     settings['zone_winterrad'] = np.sum(windowArea * positionRadiation(
         positionRay=rays,
-        sky=model.cumSky['winterCumSky'],
+        sky=model.cumSky['winter'],
         geo_path=geo_path,
         reflection=reflection
     ))
@@ -178,7 +178,7 @@ def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky=None,
     if sky is None:
         position = _default_sky_positions()
     else:
-        position = sky.position
+        position = sky.positions
     rays = []
     fixMatrix = []
     allCells = [c for row in grid.gridCell for c in row if c.valid]
@@ -214,7 +214,7 @@ def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky=None,
     if sky is None:
         rays = [cell * fixMatrix[i] for i, cell in enumerate(rays)]
     else:
-        rays = [cell * sky.value * fixMatrix[i] for i, cell in enumerate(rays)]
+        rays = [cell * sky.values * fixMatrix[i] for i, cell in enumerate(rays)]
     return np.mean(rays, axis=0)
 
 
@@ -258,7 +258,7 @@ def positionRadiation(positionRay: Ray | Iterable[Ray], sky,
     for pointRay in positionRay:
         # project the direct sun radiation to the pointRay direction
         thisRays = [Ray(pointRay.origin, pos, value=val) for pos, val in
-                    zip(sky.position, sky.value)]
+                    zip(sky.positions, sky.values)]
         # Add ground reflection to the rays
         nagativeRays = [ra.reverse() for ra in thisRays]
         for ra in nagativeRays:

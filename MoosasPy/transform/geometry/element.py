@@ -3405,7 +3405,7 @@ class MoosasContainer(object):
         ceilingList (List): List of ceilings as MoosasFloor objects.
         spaceList (List): List of valid spaces as MoosasSpace objects.
         voidList (List): List of void spaces as MoosasSpace objects.
-        weather (MoosasWeather): MoosasWeather in this model, default is None.
+        weather (WeatherData): Hourly weather series and location metadata, default is None.
         builtData (Object): Data used to construct space manually.
 
     Properties:

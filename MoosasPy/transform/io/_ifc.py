@@ -136,7 +136,7 @@ def _snapshot_model(model) -> dict[str, Any]:
     weather = getattr(model, "weather", None)
     if weather is not None:
         location = getattr(weather, "location", None)
-        weather_station = str(getattr(location, "stationId", "") or getattr(weather, "stationId", "") or "")
+        weather_station = str(getattr(location, "station_id", "") or "")
 
     return {
         "version": "moosas-ifc-v1",
@@ -663,7 +663,7 @@ def writeIfc(model, ifc_path: str | Path, project_name: str = "Moosas IFC Projec
             model_file,
             project,
             {
-                "WeatherStationId": str(getattr(getattr(model.weather, "location", None), "stationId", "") or ""),
+                "WeatherStationId": str(getattr(getattr(model.weather, "location", None), "station_id", "") or ""),
             },
             name=PSET_IFC,
         )
@@ -865,12 +865,9 @@ def _legacy_loadIfc_direct(ifc_path: str | Path) -> Any:
         project_pset = _get_pset(projects[0], PSET_IFC)
         weather_station = str(project_pset.get("WeatherStationId") or "").strip()
         if weather_station:
-            try:
-                from ...model_resources import load_weather
+            from ...simulation.weather import load_station_weather
 
-                load_weather(model, weather_station)
-            except Exception:
-                pass
+            model.weather = load_station_weather(weather_station)
 
     return model
 

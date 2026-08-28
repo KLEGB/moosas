@@ -120,7 +120,7 @@ def transform(input_path: str, input_type: str = None,
         - spacesList : List[MoosasSpace] - Spatial units with thermal properties
         - wallList : List[MoosasWall] - Architectural components
         - buildingTemplate : dict -  dictionary of the termal building templates and properties
-        - weather : MoosasWeather - weather object and information
+        - weather : WeatherData - hourly weather series and location metadata
 
     Examples
     --------
@@ -206,7 +206,7 @@ def structured(
         - spacesList : List[MoosasSpace] - Spatial units with thermal properties
         - wallList : List[MoosasWall] - Architectural components
         - buildingTemplate : dict -  dictionary of the termal building templates and properties
-        - weather : MoosasWeather - weather object and information
+        - weather : WeatherData - hourly weather series and location metadata
 
     """
     if model is None:  # zero len space will cause several errors

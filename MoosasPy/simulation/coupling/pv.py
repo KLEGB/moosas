@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from ...models import MoosasModel
 from ...transform.geometry.element import MoosasElement
-from ...utils import np, os, path
+from ...utils import np
 from ..energy.pv import calculate_pv_generation
 from ..radiation import faceRadiation, writeRadGeo
-from ..weather.cumsky import CumulativeSky
+from ..weather import CumulativeSky, load_cumulative_sky_matrix
 
 
 def run_roof_pv(
@@ -72,7 +72,7 @@ def calculate_face_incident_energy(
     grid_offset: float = 0.2,
     reflection: int = 0,
     geo_path: str,
-    radiation_scale: float = CumulativeSky.FIX_RADIATION,
+    radiation_scale: float = CumulativeSky.RADIATION_SCALE,
 ) -> np.ndarray:
     """Aggregate hourly incident solar energy across a collection of faces."""
     if isinstance(faces, MoosasElement):
@@ -115,12 +115,7 @@ def _run_pv(
     grid_offset,
     reflection,
 ):
-    sky_path = os.path.join(path.dataBaseDir, "cum_sky", f"cumsky_{station_id}.csv")
-    with open(sky_path, encoding="utf-8") as sky_file:
-        sky_values = np.array(
-            [line.split(",") for line in sky_file.read().splitlines() if line.strip()],
-            dtype=float,
-        )
+    sky_values = load_cumulative_sky_matrix(station_id)
     incident_energy = calculate_face_incident_energy(
         faces,
         sky_values,

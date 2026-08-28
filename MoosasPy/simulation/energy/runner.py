@@ -278,7 +278,7 @@ class EnergyRunner(Runner):
     def _weather_temperature(self, arguments):
         if self.model is not None:
             if self.model.weather is not None:
-                return np.array(self.model.weather.weatherData.get("temperature")).astype(float).tolist()
+                return self.model.weather.temperature.tolist()
         for index, argument in enumerate(arguments):
             if argument == "-w" and index + 1 < len(arguments):
                 weather_path = arguments[index + 1].strip('"')
@@ -743,7 +743,7 @@ def getEnergyInput(model: MoosasModel,
     building_type_int = 0 if core == buildingType.RESIDENTIAL else 1
 
     args = [
-        '-w', weather.weatherFile,
+        '-w', weather.weather_file,
         '-t', str(building_type_int),
         '-l', str(round(float(weather.location.latitude), 2)),
         '-a', str(round(float(weather.location.altitude), 2)),

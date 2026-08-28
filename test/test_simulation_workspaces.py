@@ -7,7 +7,7 @@ from unittest.mock import patch
 from MoosasPy.simulation.energy.runner import energyAnalysis
 from MoosasPy.simulation.radiation.calculation import writeRadGeo
 from MoosasPy.simulation.airflow.runner import VentPaths, _contam_platform
-from MoosasPy.simulation.weather.epw import epw2wea
+from MoosasPy.simulation.weather.epw import convert_epw_to_wea
 
 
 class SimulationWorkspaceTests(unittest.TestCase):
@@ -40,19 +40,18 @@ class SimulationWorkspaceTests(unittest.TestCase):
         self.assertEqual(len(recorded_paths), 1)
         self.assertFalse(recorded_paths[0].parent.exists())
 
-    def test_weather_default_output_uses_temporary_directory(self):
-        location = SimpleNamespace(stationId="station")
-
+    def test_weather_conversion_uses_explicit_output_path(self):
         def run_command(command, **_kwargs):
             Path(command[-1]).write_text("wea", encoding="utf-8")
 
-        with patch("MoosasPy.simulation.weather.epw.Runner.run_command", side_effect=run_command):
-            wea_path = Path(epw2wea(location, "input.epw"))
+        with TemporaryDirectory() as work_dir, patch(
+            "MoosasPy.simulation.weather.epw.Runner.run_command", side_effect=run_command
+        ):
+            output_path = Path(work_dir) / "station.wea"
+            wea_path = Path(convert_epw_to_wea("input.epw", str(output_path)))
 
-        self.assertTrue(wea_path.exists())
-        self.assertNotIn("MoosasPy", str(wea_path))
-        wea_path.unlink()
-        wea_path.parent.rmdir()
+            self.assertEqual(wea_path, output_path)
+            self.assertTrue(wea_path.exists())
 
     def test_radiation_and_vent_defaults_use_unique_workspaces(self):
         with TemporaryDirectory() as work_dir, patch(

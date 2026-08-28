@@ -5,9 +5,9 @@
 """
 from __future__ import annotations
 
-from ...utils.date import DateTime
-from ...transform.geometry.geos import Vector
-from ...utils.constant import dateSetting
+from ....utils.date import DateTime
+from ....transform.geometry.geos import Vector
+from ....utils.constant import dateSetting
 import numpy as np
 
 
@@ -73,7 +73,7 @@ class SunPosition(Vector):
                 .format(azimuth, -self.PI, self.PI)
         if north_angle != 0:
             azimuth -= north_angle
-        sunVec = self.azimuthToVector(azimuth)
+        sunVec = Vector.azimuthToVector(azimuth)
         sunVec.z = sunVec.length() * np.tan(np.radians(altitude))
         super(SunPosition, self).__init__(sunVec.unit())
 
@@ -100,7 +100,7 @@ class DirectSky(object):
             in degrees. (Default: 0 for the equator)
         longitude: A number between -180 and 180 for the longitude of the location
             in degrees (Default: 0 for the prime meridian)
-        timeZone: A number representing the time zone of the location for the
+        time_zone: A number representing the time zone of the location for the
             sun path. Typically, this value is an integer, assuming that a
             standard time zone is used but this value can also be a decimal
             for the purposes of modeling location-specific solar time.
@@ -109,7 +109,7 @@ class DirectSky(object):
             are to the East of Greenwich and negative values are to the West.
             If None, this value will be set to solar time using the Sunpath's
             longitude. (Default: None).
-        northAngle: A number between -360 and 360 for the counterclockwise
+        north_angle: A number between -360 and 360 for the counterclockwise
             difference between the North and the positive Y-axis in degrees.
             90 is West and 270 is East (Default: 0).
         daylight_saving_period: An analysis period for daylight saving time.
@@ -124,13 +124,14 @@ class DirectSky(object):
         * is_leap_year
     """
 
-    __slots__ = ('longitude', 'latitude', 'northAngle', 'timeZone',
-                 'daylightSavingPeriod')
+    __slots__ = ('longitude', 'latitude', 'north_angle', 'time_zone',
+                 'daylight_saving_period')
     PI = np.pi
 
     def __init__(self, latitude: float, longitude: float,
-                 timeZone: int = None, northAngle: float = 0,
-                 daylightSavingStDay: DateTime | int = None, daylightSavingEdDay: DateTime | int = None):
+                 time_zone: float = None, north_angle: float = 0,
+                 daylight_saving_start: DateTime | int = None,
+                 daylight_saving_end: DateTime | int = None):
         """
         Initialize a Sunpath object with geographic and time-related parameters.
         
@@ -140,13 +141,13 @@ class DirectSky(object):
             The latitude of the location in degrees. Must be between -90 and 90.
         longitude : float
             The longitude of the location in degrees. Must be between -180 and 180.
-        timeZone : int, optional
+        time_zone : float, optional
             The time zone as an offset from UTC in hours. If None, calculated from longitude (default: None).
-        northAngle : float, optional
+        north_angle : float, optional
             The angle in degrees clockwise from true north representing the direction of the local Y-axis (default: 0).
-        daylightSavingStDay : DateTime or int, optional
+        daylight_saving_start : DateTime or int, optional
             The start day of daylight saving time. If int, interpreted as hour of the year (HOY) (default: None).
-        daylightSavingEdDay : DateTime or int, optional
+        daylight_saving_end : DateTime or int, optional
             The end day of daylight saving time. If int, interpreted as hour of the year (HOY) (default: None).
         
         Returns
@@ -156,27 +157,27 @@ class DirectSky(object):
         """Init sunpath.
         """
         self.latitude = float(latitude)
-        if self.latitude == self.PI / 2:  # prevent np domain errors
-            self.latitude = self.latitude - 1e-9
-        if self.latitude == -self.PI / 2:  # prevent np domain errors
-            self.latitude = self.latitude + 1e-9
+        if not -90 <= self.latitude <= 90:
+            raise ValueError("latitude must be between -90 and 90 degrees")
         self.longitude = float(longitude)
-        self.timeZone = longitude / 15 if timeZone is None else timeZone
-        self.northAngle = int(northAngle)
-        if isinstance(daylightSavingStDay, int):
-            daylightSavingStDay = DateTime.from_hoy(daylightSavingStDay)
-        if isinstance(daylightSavingEdDay, int):
-            daylightSavingEdDay = DateTime.from_hoy(daylightSavingEdDay)
-        self.daylightSavingPeriod = (daylightSavingStDay, daylightSavingEdDay)
+        if not -180 <= self.longitude <= 180:
+            raise ValueError("longitude must be between -180 and 180 degrees")
+        self.time_zone = longitude / 15 if time_zone is None else float(time_zone)
+        self.north_angle = float(north_angle)
+        if isinstance(daylight_saving_start, int):
+            daylight_saving_start = DateTime.from_hoy(daylight_saving_start)
+        if isinstance(daylight_saving_end, int):
+            daylight_saving_end = DateTime.from_hoy(daylight_saving_end)
+        self.daylight_saving_period = (daylight_saving_start, daylight_saving_end)
 
-    def isDaylightSavingHour(self, datetime: DateTime) -> bool:
+    def is_daylight_saving_hour(self, datetime: DateTime) -> bool:
         """Check if a datetime is within the daylight saving time."""
-        if not self.daylightSavingPeriod[0] or not self.daylightSavingPeriod[1]:
+        if not self.daylight_saving_period[0] or not self.daylight_saving_period[1]:
             return False
         else:
-            return self.daylightSavingPeriod[0].moy <= datetime.moy < self.daylightSavingPeriod[1].moy
+            return self.daylight_saving_period[0].moy <= datetime.moy < self.daylight_saving_period[1].moy
 
-    def sunAtDateTime(self, datetime: DateTime) -> SunPosition:
+    def sun_at_datetime(self, datetime: DateTime) -> SunPosition:
         """Get Sun for a specific datetime.
 
         This code is originally written by Trygve Wastvedt (Trygve.Wastvedt@gmail.com)
@@ -190,23 +191,24 @@ class DirectSky(object):
         """
 
         # compute solar geometry
-        sol_dec, eq_of_time = self.calculateSolarGeometry(datetime)
+        sol_dec, eq_of_time = self.calculate_solar_geometry(datetime)
 
         # get the correct mintue of the day for which solar position is to be computed
         try:
             hour = datetime.float_hour
         except AttributeError:  # native Python datetime; try to compute manually
             hour = datetime.hour + datetime.minute / 60.0
-        is_daylight_saving = self.isDaylightSavingHour(datetime)
+        is_daylight_saving = self.is_daylight_saving_hour(datetime)
         hour = hour - 1 if is_daylight_saving else hour  # spring forward!
-        sol_time = self.calculateSolarTime(hour, eq_of_time) * 60
+        sol_time = self.calculate_solar_time(hour, eq_of_time) * 60
 
         # degrees for the angle between solar noon and the current time.
         hour_angle = sol_time / 4 + 180 if sol_time < 0 else sol_time / 4 - 180
 
         # radians for the zenith and degrees for altitude
-        zenith = np.arccos(np.sin(self.latitude) * np.sin(sol_dec) +
-                         np.cos(self.latitude) * np.cos(sol_dec) *
+        latitude_radians = np.radians(self.latitude)
+        zenith = np.arccos(np.sin(latitude_radians) * np.sin(sol_dec) +
+                         np.cos(latitude_radians) * np.cos(sol_dec) *
                          np.cos(np.radians(hour_angle)))
         altitude = 90 - np.degrees(zenith)
 
@@ -227,29 +229,27 @@ class DirectSky(object):
         altitude += atmos_refraction
 
         # azimuth in degrees
-        az_init = ((np.sin(self.latitude) * np.cos(zenith)) - np.sin(sol_dec)) / \
-                  (np.cos(self.latitude) * np.sin(zenith))
-        try:
-            if hour_angle > 0:
-                azimuth = (np.degrees(np.arccos(az_init)) + 180) % 360
-            else:
-                azimuth = (540 - np.degrees(np.arccos(az_init))) % 360
-        except ValueError:  # perfect solar noon yields np domain error
-            azimuth = 180
+        az_init = ((np.sin(latitude_radians) * np.cos(zenith)) - np.sin(sol_dec)) / \
+                  (np.cos(latitude_radians) * np.sin(zenith))
+        azimuth_angle = np.degrees(np.arccos(np.clip(az_init, -1.0, 1.0)))
+        if hour_angle > 0:
+            azimuth = (azimuth_angle + 180) % 360
+        else:
+            azimuth = (540 - azimuth_angle) % 360
 
         # create the sun for this hour
         return SunPosition(datetime, altitude, azimuth, is_daylight_saving,
-                           self.northAngle)
+                           self.north_angle)
 
-    def annualSun(self, leapYear=False) -> list[SunPosition]:
+    def annual_sun(self, leap_year=False) -> list[SunPosition]:
         """
         Calculate sun positions for all hours in a year.
         
         Parameters
         ----------
         self : object
-            The instance of the class containing this method, which provides the `sunAtDateTime` method.
-        leapYear : bool, optional
+            The instance of the class containing this method, which provides the `sun_at_datetime` method.
+        leap_year : bool, optional
             If True, calculates sun positions for a leap year (8761 hours), otherwise for a standard year (8760 hours). Default is False.
         
         Returns
@@ -257,12 +257,13 @@ class DirectSky(object):
         list of SunPosition
             A list of SunPosition objects representing the sun's position for each hour of the year.
         """
-        hoyList = list(np.arange(8760)) if not leapYear else list(np.arange(8761))
-        datetimeList = [DateTime.from_hoy(hoy) for hoy in hoyList]
-        sunList = [self.sunAtDateTime(dateTime) for dateTime in datetimeList]
+        hour_count = 8784 if leap_year else 8760
+        hoyList = list(np.arange(hour_count))
+        datetimeList = [DateTime.from_hoy(hoy, leap_year=leap_year) for hoy in hoyList]
+        sunList = [self.sun_at_datetime(dateTime) for dateTime in datetimeList]
         return sunList
 
-    def calculateSolarGeometry(self, datetime: DateTime):
+    def calculate_solar_geometry(self, datetime: DateTime):
         """
         Calculate solar geometry parameters for a given date and time.
         
@@ -337,7 +338,7 @@ class DirectSky(object):
             datetime.year, datetime.month, datetime.day, datetime.hour, datetime.minute
 
         julian_day = _days_from_010119(year, month, day) + 2415018.5 + \
-                     round((minute + hour * 60) / 1440.0, 2) - (float(self.timeZone) / 24)
+                     round((minute + hour * 60) / 1440.0, 2) - (self.time_zone / 24)
 
         julian_century = (julian_day - 2451545) / 36525
 
@@ -401,13 +402,13 @@ class DirectSky(object):
 
         return sol_dec, eq_of_time
 
-    def calculateSolarTime(self, hour: float, eq_of_time: float):
+    def calculate_solar_time(self, hour: float, eq_of_time: float):
         """Calculate Solar time for an hour."""
 
-        return ((hour * 60 + eq_of_time + 4 * np.degrees(self.longitude) -
-                 60 * self.timeZone) % 1440) / 60
+        return ((hour * 60 + eq_of_time + 4 * self.longitude -
+                 60 * self.time_zone) % 1440) / 60
 
     def __repr__(self):
         """Sunpath representation."""
         return "Sunpath (lat:{}, lon:{}, time zone:{})".format(
-            self.latitude, self.longitude, self.timeZone)
+            self.latitude, self.longitude, self.time_zone)

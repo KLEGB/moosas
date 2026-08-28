@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ..radiation import positionSunHour
-from ..weather.directsky import DirectSky
+from ..weather import DirectSky
 
 
 def run_position_sun_hours(position_rays, location, **radiation_options):

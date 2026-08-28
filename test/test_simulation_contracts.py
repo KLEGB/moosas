@@ -39,8 +39,12 @@ class SimulationContractTests(unittest.TestCase):
 
         self.assertEqual(weather.DirectSky.__name__, "DirectSky")
         self.assertEqual(weather.CumulativeSky.__name__, "CumulativeSky")
+        self.assertEqual(weather.WeatherData.__name__, "WeatherData")
         self.assertFalse(hasattr(weather, "MoosasDirectSky"))
         self.assertFalse(hasattr(weather, "MoosasCumSky"))
+        self.assertFalse(hasattr(weather, "MoosasWeather"))
+        self.assertFalse(hasattr(weather, "includeEpw"))
+        self.assertFalse(hasattr(weather, "loadCumSky"))
 
     def test_base_result_defaults_to_empty_diagnostics(self):
         result = SimulationResult()

@@ -7,7 +7,8 @@ from rdflib import Graph, Namespace, Literal, URIRef
 from rdflib.namespace import RDF, RDFS, GEO, BRICK, WGS
 
 from ...models import *
-from ...model_resources import load_weather, rebuild_schedule_index
+from ...model_resources import rebuild_schedule_index
+from ...simulation.weather import Location, read_weather_csv
 from ...utils import np, shapely, mixItemListToList, mixItemListToObject, searchBy, generate_code, path
 from ...utils.constant import geom
 
@@ -542,13 +543,11 @@ class MoosasRDF(Graph):
         None
             This function does not return any value. It modifies the internal RDF graph by adding weather-related triples.
         """
-        wea = URIRef(model.weather.location.stationId)
+        wea = URIRef(model.weather.location.station_id)
         site = self.getSubject(self.rdf.type, self.bot.Site)
         self.add((wea, self.rdf.type, self.pgd.Weather))
-        self.add((wea, self.pgd.fileStoreAt, Literal(model.weather.weatherFile)))
-        self.add((wea, self.pgd.stationId, Literal(model.weather.location.stationId)))
-        self.add((wea, self.pgd.hasCumSky,
-              Literal(os.path.join(path.dataBaseDir, 'cum_sky', f"cumsky_{model.weather.location.stationId}.csv"))))
+        self.add((wea, self.pgd.fileStoreAt, Literal(model.weather.weather_file)))
+        self.add((wea, self.pgd.stationId, Literal(model.weather.location.station_id)))
         self.add((wea, self.pgd.hasLocation, URIRef(str(site))))
         self.add((wea, self.pgd.pressure, Literal(model.weather.location.pressure)))
         self.add((URIRef(str(site)), self.wgs.lat, Literal(model.weather.location.latitude)))
@@ -1289,12 +1288,20 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     weather = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.pgd.Weather)
 
     if isinstance(weather, str):
-        weatherPath = rdfGraph.getObject(URIRef(str(weather)), rdfGraph.pgd.fileStoreAt)
-        if isinstance(weatherPath, str) and str(weatherPath).endswith('epw'):
-            load_weather(model, str(weatherPath))
-        else:
-            stationId = rdfGraph.getObject(URIRef(str(weather)), rdfGraph.pgd.stationId)
-            load_weather(model, str(stationId))
+        weather_node = URIRef(str(weather))
+        site = rdfGraph.getObject(weather_node, rdfGraph.pgd.hasLocation)
+        station_id = rdfGraph.getObject(URIRef(str(weather)), rdfGraph.pgd.stationId)
+        location = Location(
+            station_id=station_id,
+            city=rdfGraph.getObject(site, rdfGraph.pgd.city),
+            state=rdfGraph.getObject(site, rdfGraph.pgd.state),
+            latitude=rdfGraph.getObject(site, rdfGraph.wgs.lat),
+            longitude=rdfGraph.getObject(site, rdfGraph.wgs.long),
+            altitude=rdfGraph.getObject(site, rdfGraph.wgs.alt),
+            pressure=rdfGraph.getObject(weather_node, rdfGraph.pgd.pressure),
+        )
+        weather_file = rdfGraph.getObject(weather_node, rdfGraph.pgd.fileStoreAt)
+        model.weather = read_weather_csv(str(weather_file), location)
 
     print()
 

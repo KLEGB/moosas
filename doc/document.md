@@ -94,7 +94,7 @@ save(model, "model.rdf")
 ```
 
 Domain-level APIs are accessed from `simulation`, for example
-`simulation.radiation.positionRadiation` and `simulation.weather.includeEpw`.
+`simulation.radiation.positionRadiation` and `simulation.weather.prepare_epw`.
 
 ## Package Layout
 
@@ -109,7 +109,8 @@ Domain-level APIs are accessed from `simulation`, for example
 | `MoosasPy/simulation/coupling/` | Cross-domain workflows for energy-airflow, energy-radiation, sunlight, and photovoltaic analysis. |
 | `MoosasPy/simulation/energy/` | Simplified energy analysis, photovoltaic energy conversion, and thermal-load helpers. |
 | `MoosasPy/simulation/radiation/` | Radiation geometry export, ray tests, sunlight, and Radiance daylight workflows. |
-| `MoosasPy/simulation/weather/` | Weather locations, EPW import, direct sky, and cumulative sky models. |
+| `MoosasPy/simulation/weather/` | Typed weather data, station access, downloads, and explicit EPW preparation. |
+| `MoosasPy/simulation/weather/sky/` | Direct-sun geometry and cumulative Tregenza sky models. |
 | `MoosasPy/utils/` | Shared paths, constants, errors, date utilities, and support functions. |
 | `MoosasPy/data/` | Legacy runtime example data. New test fixtures belong under `test/`. |
 | `MoosasPy/db/` | Building templates, material libraries, schedules, weather data, and EnergyPlus resources. |
@@ -143,7 +144,25 @@ GEO, OBJ, and STL contain only geometric faces and must enter through `transform
 
 ### Weather
 
-`MoosasPy.simulation.weather` exports `Location`, `MoosasWeather`, `CumulativeSky`, `DirectSky`, and `includeEpw`. These utilities create or import the weather and sky data required by energy, radiation, and sunlight workflows.
+`MoosasPy.simulation.weather` is organized around immutable `Location` and
+`WeatherData` records. `station.py` reads the packaged station catalog and
+hourly CSV data; `downloader.py` handles explicit external catalog lookup and
+EPW download; `epw.py` converts an EPW into weather, WEA, and cumulative-sky
+assets; and `weather.sky` owns both direct-sun geometry and cumulative Tregenza
+sky models. EPW-generated assets are written only to a caller-provided output
+directory and are returned together as `PreparedWeather`.
+
+```python
+from MoosasPy.simulation.weather import load_station_weather, prepare_epw
+
+weather = load_station_weather("545110")
+prepared = prepare_epw("custom.epw", "simulation-input/weather")
+model.weather = prepared.weather
+model.cumSky = prepared.cumulative_skies
+```
+
+Energy, radiation, and airflow do not import each other. Cross-domain workflows
+load and attach weather through `MoosasPy.simulation.coupling`.
 
 ### Ventilation
 

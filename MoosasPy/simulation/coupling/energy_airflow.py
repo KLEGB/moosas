@@ -3,9 +3,8 @@
 from ..energy.runner import getEnergyInput, ThermalSettings, energyAnalysis
 from ...transform.geometry.geos import Vector, Ray
 from ...models import MoosasModel
-from ...model_resources import get_schedule_name, load_cumulative_sky, load_schedule, load_weather, write_schedule
-from ..weather.data import MoosasWeather
-from ..weather.cumsky import CumulativeSky
+from ...model_resources import get_schedule_name, load_schedule, write_schedule
+from ..weather import CumulativeSky, load_cumulative_sky, load_cumulative_sky_matrix, load_station_weather
 from ..radiation import modelRadiation, writeRadGeo, rayTest
 from ...utils import np, path, os
 from ...utils.date import DateTime
@@ -92,14 +91,14 @@ class EnergyAirflowCoupler(object):
             self.schedulePath = write_schedule(self.model)
         self._parse_schedule_file()
         if self.model.weather is None:
-            load_weather(self.model, stationid or '545110')
+            self.model.weather = load_station_weather(stationid or '545110')
         self.weather = self.model.weather
         stationid = str(
-            getattr(getattr(self.weather, "location", None), "stationId", "")
+            getattr(getattr(self.weather, "location", None), "station_id", "")
             or stationid
             or '545110'
         )
-        load_cumulative_sky(self.model, stationid)
+        self.model.cumSky = load_cumulative_sky(stationid)
         modelRadiation(self.model, reflection=0)
         network = AfnNetwork(self.model)
         self.zones = network.zones
@@ -111,10 +110,11 @@ class EnergyAirflowCoupler(object):
         print(time.time() - t0)
         t0 = time.time()
         self.skySeries = []
-        with open(os.path.join(path.dataBaseDir, 'cum_sky', f'cumsky_{stationid}.csv')) as f:
-            cumValue = np.array([line.split(',') for line in f.read().split('\n') if len(line) > 1]).astype(float)
-            for i in range(8760):
-                self.skySeries.append(CumulativeSky(cumValue[:, i] / CumulativeSky.FIX_RADIATION))
+        cumulative_sky_matrix = load_cumulative_sky_matrix(stationid)
+        for i in range(8760):
+            self.skySeries.append(
+                CumulativeSky(cumulative_sky_matrix[:, i] / CumulativeSky.RADIATION_SCALE)
+            )
 
         print("-----------------------\nCalculating path radiation intensity...\n-----------------------")
         print(time.time() - t0)
@@ -123,7 +123,7 @@ class EnergyAirflowCoupler(object):
         fixMatrix = []
         for ps in self.paths:
             origin = Vector(ps.position_x, ps.position_y, ps.position_z)
-            thisRays = [Ray(origin, pos) for pos in self.skySeries[0].position]
+            thisRays = [Ray(origin, pos) for pos in self.skySeries[0].positions]
             rays += thisRays
             fixMatrix.append(np.array([abs(Vector.dot(ps.element.normal, r.direction)) for r in thisRays]))
         rays = np.array(rays)
@@ -134,7 +134,7 @@ class EnergyAirflowCoupler(object):
 
         for i, ps in enumerate(self.paths):
             for sky in self.skySeries:
-                self.pathRadIntensity[ps.userName].append(np.sum(resRay[i] * sky.value * fixMatrix[i]) * 1000)
+                self.pathRadIntensity[ps.userName].append(np.sum(resRay[i] * sky.values * fixMatrix[i]) * 1000)
         print("-----------------------\nNetwork Ready...\n-----------------------")
         print(time.time() - t0)
         t0 = time.time()
@@ -604,9 +604,9 @@ class EnergyAirflowCoupler(object):
             pid = ps["userName"]
             if pid not in self.pathRadIntensity:
                 self.pathRadIntensity[pid] = [0.0] * 8760
-            summer_intensity = np.sum(self.pathRadIntensity[pid][CumulativeSky.SUMMER_START_HOY:CumulativeSky.SUMMER_END_HOY])
-            winter_intensity = np.sum(self.pathRadIntensity[pid][CumulativeSky.WINTER_START_HOY:]) + \
-                               np.sum(self.pathRadIntensity[pid][:CumulativeSky.WINTER_END_HOY])
+            summer_intensity = np.sum(self.pathRadIntensity[pid][CumulativeSky.SUMMER_START_HOUR:CumulativeSky.SUMMER_END_HOUR])
+            winter_intensity = np.sum(self.pathRadIntensity[pid][CumulativeSky.WINTER_START_HOUR:]) + \
+                               np.sum(self.pathRadIntensity[pid][:CumulativeSky.WINTER_END_HOUR])
             summerradHeat = summer_intensity * float(ps['pathHeight']) * float(ps['pathWidth'])
             winterradHeat = winter_intensity * float(ps['pathHeight']) * float(ps['pathWidth'])
             if ps["fromZone"] != "-1":
@@ -1268,7 +1268,7 @@ class EnergyAirflowCoupler(object):
         if st_hoy > ed_hoy:
             raise ValueError("start_hoy must be <= end_hoy.")
         hoys = list(range(st_hoy, ed_hoy + 1, int(timestep)))
-        raw_weather_t = list(self.weather.weatherData['temperature'])
+        raw_weather_t = self.weather.temperature.tolist()
         if len(raw_weather_t) >= 8761:
             try:
                 float(raw_weather_t[0])

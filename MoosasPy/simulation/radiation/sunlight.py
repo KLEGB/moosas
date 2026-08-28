@@ -22,7 +22,7 @@ def positionSunHour(positionRay: Ray | Iterable[Ray], sky,
         Position(s) defined as Ray objects with origin and direction. Each Ray may include a weighting factor.
         Can be a single Ray or an iterable of Rays.
     sky : object
-        Direct-sun sky object providing ``annualSun(leapYear=...)``.
+        Direct-sun sky object providing ``annual_sun(leap_year=...)``.
     model : MoosasModel, optional
         Model containing geometry for reflectance and shadow testing. Required if geo_path is not provided.
     geo_path : str, optional
@@ -75,7 +75,7 @@ def positionSunHour(positionRay: Ray | Iterable[Ray], sky,
     if isinstance(periodEnd, datetime):
         periodEnd = DateTime(periodEnd)
 
-    sunPositions = sky.annualSun(leapYear=leapYear)
+    sunPositions = sky.annual_sun(leap_year=leapYear)
     if int(periodStart.hoy) < int(periodEnd.hoy):
         sunPositions = sunPositions[int(periodStart.hoy):int(periodEnd.hoy)]
         totalDays = 0 - int(periodStart.doy) + int(periodEnd.doy)

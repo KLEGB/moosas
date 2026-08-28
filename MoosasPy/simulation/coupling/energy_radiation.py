@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from ...model_resources import load_cumulative_sky, load_weather
 from ..energy.runner import energyAnalysis
 from ..radiation import modelRadiation
+from ..weather import load_cumulative_sky, load_station_weather
 
 
 def run_energy_with_radiation(
@@ -19,9 +19,9 @@ def run_energy_with_radiation(
     if radiation_mode not in (1, 2):
         raise ValueError("radiation_mode must be 1 or 2")
     if model.weather is None:
-        load_weather(model, station_id)
+        model.weather = load_station_weather(station_id)
     if model.cumSky is None:
-        load_cumulative_sky(model, station_id)
+        model.cumSky = load_cumulative_sky(station_id)
     modelRadiation(model, reflection=reflection)
     return energyAnalysis(
         model,
