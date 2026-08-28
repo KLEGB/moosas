@@ -12,10 +12,6 @@ IDF_NAMESPACE = "https://energyplus.net#"
 idf = Namespace(IDF_NAMESPACE)
 
 
-def default_idd_path(idd_path: str | None = None) -> str:
-    return idd_path or os.path.join(path.dataBaseDir, "Energy+.idd")
-
-
 def default_template_idf_path(template_idf_path: str | None = None) -> str:
     return template_idf_path or os.path.join(path.dataBaseDir, "in.idf")
 

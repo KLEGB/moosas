@@ -10,7 +10,6 @@ from .linking import (
 from .ontology import (
     IDF_NAMESPACE,
     decodeURI,
-    default_idd_path,
     default_template_idf_path,
     edGraph,
     encodeURI,
@@ -25,7 +24,6 @@ __all__ = [
     "OWLtoIDF",
     "attach_idf_graph",
     "decodeURI",
-    "default_idd_path",
     "default_template_idf_path",
     "edGraph",
     "encodeURI",

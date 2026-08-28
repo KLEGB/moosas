@@ -24,6 +24,12 @@ Run a basic import check:
 python -c "import MoosasPy; print(MoosasPy.__version__)"
 ```
 
+## EnergyPlus IDF Contract
+
+MOOSAS reads and writes EnergyPlus 26.1 IDF files using its bundled 26.1
+`Energy+.idd`. Older IDFs must be migrated with the official EnergyPlus
+Transition chain before they enter MOOSAS; runtime conversion is not provided.
+
 ## MoosasPy Packaging and Release
 
 Packaging metadata is managed from repository root via `pyproject.toml`.

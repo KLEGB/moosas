@@ -18,6 +18,11 @@ from ._rdf import MoosasRDF, encodeURI, decodeURI
 from ._xml import loadXml
 from .idf import construction, input, model, parser, schedule
 from .idf.model import MoosasSettings, ZoneMixingDefault
+from .idf.version import (
+    bundled_template_idf_path,
+    configure_idd,
+    require_idf_version,
+)
 from ...models import *
 from ...utils import path, mixItemListToList
 
@@ -81,15 +86,8 @@ def _normalize_zone_name_to_space_dict(zoneNameToSpaceDict):
 
 def _idf_get_first_zone_name(idfTemplatePath=None) -> str:
     """Return the first valid Zone name in template IDF, or empty string when unavailable."""
-    idd = os.path.join(path.dataBaseDir, "Energy+.idd")
-    if os.path.isfile(idd):
-        try:
-            IDF.setiddname(idd)
-        except Exception:
-            pass
-
-    if not idfTemplatePath:
-        idfTemplatePath = os.path.join(path.dataBaseDir, "in.idf")
+    configure_idd()
+    idfTemplatePath = require_idf_version(idfTemplatePath or bundled_template_idf_path())
 
     try:
         idf = IDF(idfTemplatePath)
@@ -124,17 +122,8 @@ def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zon
         Loaded template for the requested zoneName.
 
     """
-    # Properly handle paths for cross-platform compatibility
-    idd = os.path.join(path.dataBaseDir, "Energy+.idd")
-    if os.path.isfile(idd):
-        try:
-            IDF.setiddname(idd)
-        except Exception:
-            # Eppy may reject resetting IDD after first use in the same process.
-            pass
-
-    if not idfTemplatePath:
-        idfTemplatePath = os.path.join(path.dataBaseDir, "in.idf")
+    configure_idd()
+    idfTemplatePath = require_idf_version(idfTemplatePath or bundled_template_idf_path())
 
     idf = IDF(idfTemplatePath)
     zTemplate: parser.ZoneTemplate = parser.ZoneTemplate.fromIDF(idf, zoneName=zoneName)
@@ -217,7 +206,7 @@ def _copy_idf_schedule_files(template_path, output_path):
         if source.is_file():
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
-def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None, iddFile=None, zoneNameToSpaceDict=None):
+def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None):
     """
     Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
 
@@ -231,8 +220,6 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
         Path to save the generated IDF file. The directory must be writable.
     idfTemplatePath : str, optional
         Path to template IDF file. Defaults to dataBaseDir/in.idf.
-    iddFile : str, optional
-        Path to Energy+.idd file. If provided, used as IDD before writing.
     zoneNameToSpaceDict : dict, optional
         Mapping from template zone name to target space ids.
         Example: {"Zone_A": "Space-1", "Zone_B": ["Space-2", "Space-3"]}
@@ -244,8 +231,8 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
         This function does not return any value. It writes the IDF file to the specified path and prints progress information.
     """
     print('IDF: initialization from IDF file...')
-    if iddFile:
-        IDF.setiddname(iddFile)
+    configure_idd()
+    idfTemplatePath = require_idf_version(idfTemplatePath or bundled_template_idf_path())
     moElements = model.getAllFaces(dumpUseless=True)
 
     if zoneNameToSpaceDict is None and idfTemplatePath:
@@ -434,15 +421,14 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     print()
 
 
-def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, iddFile=None, zoneNameToSpaceDict=None):
+def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None):
     """Write IDF using the parallel IDF RDF graph when available.
 
     First-time writes keep the existing stable IDF generation path, then read the
     generated IDF back into ``model.idfGraph`` for future field-level edits.
     """
-    from ..alignment import IDFtoOWL, OWLtoIDF, default_idd_path, default_template_idf_path, idf, link_idf_graph_to_moosas
+    from ..alignment import IDFtoOWL, OWLtoIDF, default_template_idf_path, idf, link_idf_graph_to_moosas
 
-    resolved_idd = default_idd_path(iddFile)
     resolved_template = default_template_idf_path(idfTemplatePath)
     idf_graph = getattr(model, "idfGraph", None)
 
@@ -455,17 +441,16 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, iddFile=
         )
 
     if has_idf_objects:
-        OWLtoIDF(idf_graph, outputPath, template_idf_path=resolved_template, idd_path=resolved_idd)
+        OWLtoIDF(idf_graph, outputPath, template_idf_path=resolved_template)
         return
 
     _writeIDF_default(
         model,
         outputPath,
         idfTemplatePath=resolved_template,
-        iddFile=resolved_idd,
         zoneNameToSpaceDict=zoneNameToSpaceDict,
     )
-    generated_graph = IDFtoOWL(outputPath, idd_path=resolved_idd)
+    generated_graph = IDFtoOWL(outputPath)
     linked_graph, uri_map = link_idf_graph_to_moosas(generated_graph, model)
     model.idfGraph = linked_graph
     model.idfGraphSource = outputPath
@@ -528,8 +513,8 @@ def IDFtoOWL(idfTemplatePath):
             properties, and instances derived from the IDF file, with semantics aligned to the EnergyPlus
             InputOutputReference documentation. Subjects are defined under the 'idf' namespace.
     """
-    idd = os.path.join(path.dataBaseDir, "Energy+.idd")
-    IDF.setiddname(idd)
+    configure_idd()
+    idfTemplatePath = require_idf_version(idfTemplatePath)
     rootFile = IDF(idfTemplatePath)
     rootGraph = MoosasRDF()
 
@@ -615,7 +600,8 @@ def OWLtoIDF(owl, outFile):
     for triple in owl:
         graph.add(triple)
 
-    idfFile = IDF(os.path.join(path.dataBaseDir, "in.idf"))
+    configure_idd()
+    idfFile = IDF(require_idf_version(bundled_template_idf_path()))
     for key in idfFile.idfobjects:
         idfFile.idfobjects[key] = []
 
@@ -653,6 +639,7 @@ def OWLtoIDF(owl, outFile):
         decodeObject(outputObject)
 
     idfFile.save(outFile)
+    require_idf_version(outFile)
     return idfFile
 
 
@@ -776,19 +763,6 @@ class _IDFUnifiedFace:
         return abs(self.normal[2]) >= 0.9
 
 
-def _idf_safe_set_idd(idd_path: str) -> None:
-    try:
-        IDF.setiddname(idd_path)
-    except Exception:
-        pass
-
-
-def _idf_default_idd_path(iddPath: str = None) -> str:
-    if iddPath:
-        return iddPath
-    return os.path.join(path.dataBaseDir, "Energy+.idd")
-
-
 def _idf_default_output_path(idfPath: str, extension: str) -> str:
     base, _ = os.path.splitext(idfPath)
     return base + extension
@@ -883,10 +857,9 @@ def _idf_map_cat(rec: _IDFSurfaceRecord, is_horizontal: bool) -> int:
     return -2
 
 
-def _idf_read_surfaces(idfPath: str, iddPath: str = None) -> list[_IDFSurfaceRecord]:
-    idd = _idf_default_idd_path(iddPath)
-    _idf_safe_set_idd(idd)
-    idf = IDF(idfPath)
+def _idf_read_surfaces(idfPath: str) -> list[_IDFSurfaceRecord]:
+    configure_idd()
+    idf = IDF(require_idf_version(idfPath))
     records: list[_IDFSurfaceRecord] = []
     building_zone_by_name: dict[str, str] = {}
 
@@ -1265,25 +1238,25 @@ def _idf_write_xml(outputPath: str, faces: list[_IDFUnifiedFace], rec_to_face: d
     tree.write(outputPath)
 
 
-def _idf_build_artifacts(idfPath: str, iddPath: str = None) -> tuple[list[_IDFSurfaceRecord], list[_IDFUnifiedFace], dict[str, _IDFUnifiedFace], dict[str, int]]:
-    records = _idf_read_surfaces(idfPath, iddPath)
+def _idf_build_artifacts(idfPath: str) -> tuple[list[_IDFSurfaceRecord], list[_IDFUnifiedFace], dict[str, _IDFUnifiedFace], dict[str, int]]:
+    records = _idf_read_surfaces(idfPath)
     faces, rec_to_face, stats = _idf_unify_faces(records)
     return records, faces, rec_to_face, stats
 
 
-def IDFtoGeo(idfPath: str, outputPath: str = None, iddPath: str = None) -> None:
+def IDFtoGeo(idfPath: str, outputPath: str = None) -> None:
     """Export Moosas GEO from an IDF file."""
     if outputPath is None:
         outputPath = _idf_default_output_path(idfPath, ".geo")
-    _, faces, _, _ = _idf_build_artifacts(idfPath, iddPath)
+    _, faces, _, _ = _idf_build_artifacts(idfPath)
     _idf_write_geo(outputPath, faces)
 
 
-def IDFtoXml(idfPath: str, outputPath: str = None, iddPath: str = None) -> None:
+def IDFtoXml(idfPath: str, outputPath: str = None) -> None:
     """Export Moosas XML topology from an IDF file."""
     if outputPath is None:
         outputPath = _idf_default_output_path(idfPath, ".xml")
-    records, faces, rec_to_face, _ = _idf_build_artifacts(idfPath, iddPath)
+    records, faces, rec_to_face, _ = _idf_build_artifacts(idfPath)
     _idf_write_xml(outputPath, faces, rec_to_face, records)
 
 
@@ -1342,11 +1315,11 @@ def _idf_apply_zone_templates(model: MoosasModel, idfPath: str) -> None:
     model.idfZoneTemplate = dict(zoneIDFSettings)
 
 
-def readIDF(idfPath: str, geoPath: str = None, xmlPath: str = None, iddPath: str = None) -> MoosasModel:
+def readIDF(idfPath: str, geoPath: str = None, xmlPath: str = None) -> MoosasModel:
     """Convert IDF to GEO/XML and construct a MoosasModel through loadXml."""
     if geoPath is not None and xmlPath is not None:
-        IDFtoGeo(idfPath, geoPath, iddPath)
-        IDFtoXml(idfPath, xmlPath, iddPath)
+        IDFtoGeo(idfPath, geoPath)
+        IDFtoXml(idfPath, xmlPath)
         model = loadXml(xmlPath, geoPath)
         _idf_apply_zone_templates(model, idfPath)
         return model
@@ -1354,8 +1327,8 @@ def readIDF(idfPath: str, geoPath: str = None, xmlPath: str = None, iddPath: str
     with tempfile.TemporaryDirectory(prefix="moosas_idf_") as tmpdir:
         temp_geo = geoPath or os.path.join(tmpdir, "from_idf.geo")
         temp_xml = xmlPath or os.path.join(tmpdir, "from_idf.xml")
-        IDFtoGeo(idfPath, temp_geo, iddPath)
-        IDFtoXml(idfPath, temp_xml, iddPath)
+        IDFtoGeo(idfPath, temp_geo)
+        IDFtoXml(idfPath, temp_xml)
         model = loadXml(temp_xml, temp_geo)
         _idf_apply_zone_templates(model, idfPath)
         return model

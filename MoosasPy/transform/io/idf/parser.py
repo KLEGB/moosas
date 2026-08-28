@@ -3,6 +3,8 @@ import os
 
 from eppy.modeleditor import IDF
 
+from .version import bundled_template_idf_path, configure_idd, require_idf_version
+
 from .construction import Construction
 from .model import *
 from ...geometry.element import MoosasSpace
@@ -216,15 +218,8 @@ class ZoneTemplate():
         Build a ZoneTemplate by reversing zone settings back to IDF template objects.
         """
         if baseTemplate is None:
-            idd = os.path.join(path.dataBaseDir, "Energy+.idd")
-            if os.path.isfile(idd):
-                try:
-                    IDF.setiddname(idd)
-                except Exception:
-                    pass
-
-            if idfTemplatePath is None:
-                idfTemplatePath = os.path.join(path.dataBaseDir, "in.idf")
+            configure_idd()
+            idfTemplatePath = require_idf_version(idfTemplatePath or bundled_template_idf_path())
             baseIDF = IDF(idfTemplatePath)
             baseTemplate = cls.fromIDF(baseIDF, zoneName=zoneName)
 

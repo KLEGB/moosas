@@ -9,23 +9,13 @@ from rdflib.namespace import RDF
 
 from .ontology import (
     decodeURI,
-    default_idd_path,
     default_template_idf_path,
     edGraph,
     encodeURI,
     idf,
     normalize_to_list,
 )
-
-
-def _safe_set_idd(idd_path: str | None) -> None:
-    if not idd_path:
-        return
-    try:
-        IDF.setiddname(idd_path)
-    except Exception:
-        # Eppy rejects resetting IDD in many long-lived Python processes.
-        pass
+from ..io.idf.version import configure_idd, require_idf_version
 
 
 def _first(value):
@@ -51,10 +41,10 @@ def find_closest_field(field_list: list, target_field: str) -> str:
     return sorted_candidates[0] if sorted_candidates else ""
 
 
-def IDFtoOWL(idf_path: str, idd_path: str | None = None) -> edGraph:
+def IDFtoOWL(idf_path: str) -> edGraph:
     """Translate an EnergyPlus IDF into an RDF graph of IDF objects and fields."""
-    _safe_set_idd(default_idd_path(idd_path))
-    rootFile = IDF(idf_path)
+    configure_idd()
+    rootFile = IDF(require_idf_version(idf_path))
     rootGraph = edGraph()
 
     def encodedObject(objectName, className, obj, objectType):
@@ -101,17 +91,16 @@ def IDFtoOWL(idf_path: str, idd_path: str | None = None) -> edGraph:
     return rootGraph
 
 
-def OWLtoIDF(owl: Graph | str, out_file: str, template_idf_path: str | None = None,
-             idd_path: str | None = None) -> IDF:
+def OWLtoIDF(owl: Graph | str, out_file: str, template_idf_path: str | None = None) -> IDF:
     """Convert an IDF RDF graph back into an EnergyPlus IDF file."""
-    _safe_set_idd(default_idd_path(idd_path))
+    configure_idd()
     if isinstance(owl, str):
         parsed = Graph()
         parsed.parse(owl)
         owl = parsed
     graph = edGraph.from_graph(owl)
 
-    idfFile = IDF(default_template_idf_path(template_idf_path))
+    idfFile = IDF(require_idf_version(default_template_idf_path(template_idf_path)))
     for key in idfFile.idfobjects:
         idfFile.idfobjects[key] = []
 
@@ -143,4 +132,5 @@ def OWLtoIDF(owl: Graph | str, out_file: str, template_idf_path: str | None = No
             decodeObject(idfObject)
 
     idfFile.save(out_file)
+    require_idf_version(out_file)
     return idfFile
