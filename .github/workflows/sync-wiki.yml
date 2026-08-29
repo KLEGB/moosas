@@ -1,0 +1,47 @@
+name: Sync documentation to Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "doc/document.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki-documentation-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Clone Wiki
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: git clone "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" wiki
+
+      - name: Update Wiki home page
+        run: cp doc/document.md wiki/Home.md
+
+      - name: Commit and push changes
+        working-directory: wiki
+        run: |
+          if [[ -z "$(git status --porcelain -- Home.md)" ]]; then
+            echo "Wiki is already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Home.md
+          git commit -m "docs: sync documentation from ${GITHUB_SHA}"
+          git push origin HEAD:master
