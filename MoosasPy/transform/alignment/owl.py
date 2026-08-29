@@ -15,7 +15,7 @@ from .ontology import (
     idf,
     normalize_to_list,
 )
-from ..io.idf.version import configure_idd, require_idf_version
+from ...model.io.idf.version import configure_idd, require_idf_version
 
 
 def _first(value):

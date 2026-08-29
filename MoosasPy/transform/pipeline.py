@@ -21,12 +21,11 @@ from .stages.glazing import attach_glazing_to_faces
 from .stages.options import TransformOptions
 from .stages.splitting import prepare_divided_zones, split_wall_intersections
 from .stages.topology import build_face_topology, build_space_topology
-from .io import load, save
-from .io._geo import _readGeo, preClassified
-from .io._obj import _readObj
-from .io._stl import _readStl
-from ..models import MoosasModel
-from ..model_resources import configure_model_resources
+from .importers.geo import _readGeo, preClassified
+from .importers.obj import _readObj
+from .importers.stl import _readStl
+from ..model import MoosasModel
+from ..model.resources import configure_model_resources
 from ..utils import np
 
 
@@ -59,11 +58,14 @@ def _load_geometry_source(input_path: str, input_type: str | None = None) -> Moo
     return preClassified(model)
 
 
-def transform(input_path: str, input_type: str = None,
-              output_path: str = None, output_type: str = None,
-              method=CCRSpaceGeneration,
-              options: TransformOptions = TransformOptions(),
-              stdout=sys.stdout) -> MoosasModel:
+def transform(
+    input_path: str,
+    input_type: str | None = None,
+    *,
+    method=CCRSpaceGeneration,
+    options: TransformOptions | None = None,
+    stdout=sys.stdout,
+) -> MoosasModel:
     """
     Convert geometric data to structured spatial model with optional processing.
 
@@ -75,19 +77,9 @@ def transform(input_path: str, input_type: str = None,
         - *.stl : STL format (future support)
         - *.geo : Stream format (future support)
 
-    output_path : str, optional
-        Output path for structured spatial data. Supported formats:
-        - *.xml : Tree-structured XML format
-        - *.json : JSON equivalent of XML structure
-        - *.rdf : RDF knowledge graph (Turtle format)
-
     input_type : str, optional
-        Explicit input format specification (e.g., 'obj', 'xml').
+        Explicit geometry format specification: ``geo``, ``obj``, or ``stl``.
         Auto-detected from input_path suffix if None.
-
-    output_type : str, optional
-        Explicit output format specification.
-        Auto-detected from output_path suffix if None.
 
     method : callable, optional
         Space generation algorithm (default: CCRSpaceGeneration). Options:
@@ -114,7 +106,7 @@ def transform(input_path: str, input_type: str = None,
     --------
     >>> from MoosasPy.transform.stages.generation import CCRSpaceGeneration
     >>> model = transform('test.obj', method=CCRSpaceGeneration)
-    >>> model.save('output.xml', fmt='xml')
+    >>> model.save('output.xml')
 
     Energy analysis example:
     >>> from MoosasPy import energyAnalysis
@@ -123,9 +115,8 @@ def transform(input_path: str, input_type: str = None,
 
     Notes
     -----
-    1. Pure geometry inputs are transformed before they can be serialized.
-    2. RDF is the model interchange format used by simulation adapters.
-    3. Geometry standardization reduces model fidelity for simulation efficiency.
+    GEO, OBJ, and STL are the only accepted source formats. Model-file loading
+    and saving are exposed by :class:`MoosasModel`.
     """
 
     # redirect stdout
@@ -145,15 +136,12 @@ def transform(input_path: str, input_type: str = None,
         return
 
     # transformation
-    model = structured(model, options=options, generation_method=method, t0=t0)
-
-    # export the model
-    if output_path is not None:
-        if isinstance(output_path, str):
-                save(model, output_path)
-        else:
-            for oP, oS in zip(output_path, output_type):
-                save(model, oP)
+    model = structured(
+        model,
+        options=options or TransformOptions(),
+        generation_method=method,
+        t0=t0,
+    )
 
     sys.stdout = sysout
     # print(len(model.spaceList))
@@ -165,7 +153,7 @@ def transform(input_path: str, input_type: str = None,
 def structured(
     model: MoosasModel,
     *,
-    options: TransformOptions = TransformOptions(),
+    options: TransformOptions | None = None,
     generation_method=CCRSpaceGeneration,
     t0=0,
 ) -> MoosasModel:
@@ -199,6 +187,8 @@ def structured(
     """
     if model is None:  # zero len space will cause several errors
         return
+
+    options = options or TransformOptions()
 
     model = prepare_boundary_geometry(
         model,

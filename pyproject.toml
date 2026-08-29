@@ -34,7 +34,6 @@ dependencies = [
   "rdflib>=7.1,<8.0",
   "eppy>=0.5.63,<0.6",
   "ifcopenshell>=0.8,<0.9",
-  "lxml>=5.4,<6.0",
   "scikit-learn>=1.5,<2.0",
   "xgboost>=2.1,<3.0",
   "requests>=2.31,<3.0",

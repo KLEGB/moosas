@@ -15,7 +15,7 @@ from ...utils import generate_code, searchBy, mixItemListToObject, mixItemListTo
 from ...utils import shapely, np, ET
 from ...utils.tools import path
 from ...utils.constant import geom
-from ...model_resources import load_schedule
+from ...model.resources import load_schedule
 
 # 不做inch meter转换
 INCH_METER_MULTIPLIER = 1

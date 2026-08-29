@@ -3,7 +3,7 @@
 """RDF <-> gbXML conversion utilities for MOOSAS.
 
 This module implements an end-to-end conversion workflow between the BOT /
-MOOSAS RDF representation used by :mod:`MoosasPy.transform.io._rdf` and a compact gbXML
+MOOSAS RDF representation used by :mod:`MoosasPy.model.io.rdf` and a compact gbXML
 representation focused on spaces, surfaces, openings and planar geometry.
 
 The converter is intentionally graph based.  It does not require constructing a
@@ -15,8 +15,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import re
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+import xml.etree.ElementTree as etree
 
-from lxml import etree
 from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.namespace import RDF, RDFS, XSD
 from shapely import wkt as shapely_wkt
@@ -403,7 +403,7 @@ def _collect_surfaces(graph: Graph, space_id_map: Dict[URIRef, str]) -> List[Gbx
     return surfaces
 
 
-def _add_text(parent, tag: str, text) -> Optional[etree._Element]:
+def _add_text(parent, tag: str, text) -> Optional[etree.Element]:
     if text is None:
         return None
     child = etree.SubElement(parent, _q(tag))
@@ -439,13 +439,13 @@ def build_gbxml_tree(
     campus_id: str = "campus-1",
     building_type: str = "Unknown",
     gbxml_version: str = "6.01",
-) -> etree._ElementTree:
-    """Build an lxml ElementTree in gbXML namespace from parsed DTOs."""
+) -> etree.ElementTree:
+    """Build an ElementTree in the gbXML namespace from parsed DTOs."""
 
-    nsmap = {None: GBXML_NS, "xsi": XSI_NS}
+    etree.register_namespace("", GBXML_NS)
+    etree.register_namespace("xsi", XSI_NS)
     root = etree.Element(
         _q("gbXML"),
-        nsmap=nsmap,
         attrib={
             "version": gbxml_version,
             "useSIUnitsForResults": "true",
@@ -504,7 +504,7 @@ def convert_rdf_to_gbxml(
     campus_id: str = "campus-1",
     building_type: str = "Unknown",
     gbxml_version: str = "6.01",
-) -> etree._ElementTree:
+) -> etree.ElementTree:
     """Convert a BOT/MOOSAS RDF Turtle file to gbXML.
 
     Parameters
@@ -527,7 +527,8 @@ def convert_rdf_to_gbxml(
         building_type=building_type,
         gbxml_version=gbxml_version,
     )
-    tree.write(str(output_path), xml_declaration=True, encoding="utf-8", pretty_print=True)
+    etree.indent(tree, space="  ")
+    tree.write(str(output_path), xml_declaration=True, encoding="utf-8")
     return tree
 
 
@@ -586,8 +587,7 @@ def convert_gbxml_to_rdf(
     def uri(identifier: str) -> URIRef:
         return URIRef(f"{base_uri}{identifier}") if base_uri else URIRef(identifier)
 
-    parser = etree.XMLParser(remove_blank_text=True)
-    tree = etree.parse(str(input_path), parser)
+    tree = etree.parse(str(input_path))
     root = tree.getroot()
 
     graph = Graph()

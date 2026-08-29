@@ -51,7 +51,7 @@ def writeJson(file_path, model) -> str:
         json string of the file
     """
     path.checkBuildDir(file_path)
-    from ._xml import build_xml
+    from .xml import build_xml
 
     dictionary = to_dictionary(build_xml(model))
 
@@ -80,7 +80,7 @@ def _append_xml_value(parent, tag, value) -> None:
 
 def loadJson(file_path: str, geo_path: str):
     """Load the JSON form of the XML model serialization and its GEO companion."""
-    from ._xml import loadXml
+    from .xml import loadXml
 
     with open(file_path, encoding="utf-8") as source:
         document = json.load(source)

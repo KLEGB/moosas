@@ -7,7 +7,7 @@ from .version import bundled_template_idf_path, configure_idd, require_idf_versi
 
 from .construction import Construction
 from .model import *
-from ...geometry.element import MoosasSpace
+from ....transform.geometry.element import MoosasSpace
 from ....utils import path
 
 

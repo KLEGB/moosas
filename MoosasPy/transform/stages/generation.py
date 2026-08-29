@@ -1,7 +1,7 @@
 """Space-boundary generation stages for the transformation pipeline."""
 from __future__ import annotations
 
-from ...models import MoosasModel
+from ...model import MoosasModel
 from ...utils import searchBy
 from ..geometry.contour import _documentBoundary, closed_contour_calculation
 from ..geometry.element import MoosasEdge

@@ -6,8 +6,8 @@ import re
 from rdflib import Graph, Namespace, Literal, URIRef
 from rdflib.namespace import RDF, RDFS, GEO, BRICK, WGS
 
-from ...models import *
-from ...model_resources import rebuild_schedule_index
+from ..model import *
+from ..resources import rebuild_schedule_index
 from ...utils import np, shapely, mixItemListToList, mixItemListToObject, searchBy, generate_code, path
 from ...utils.constant import geom
 
@@ -1216,7 +1216,7 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     """
     rdfGraph: MoosasRDF = MoosasRDF.load(input_path, fileFormat=fileFormat)
     model = MoosasModel()
-    from ...model_resources import configure_model_resources
+    from ..resources import configure_model_resources
 
     configure_model_resources(model)
     _import_schedule_nodes(rdfGraph, model)

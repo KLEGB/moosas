@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ...models import MoosasModel
+from ...model import MoosasModel
 from ...transform.geometry.element import MoosasElement
 from ...utils import np
 from ..energy.pv import calculate_pv_generation

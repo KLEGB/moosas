@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from MoosasPy.models import MoosasModel
+from MoosasPy.model import MoosasModel
 from MoosasPy.transform import TransformOptions
 from MoosasPy.transform.stages.boundary import prepare_boundary_geometry
 from MoosasPy.transform.geometry.element import MoosasGeometry

@@ -23,10 +23,10 @@ from ..engine import NativeEngine
 from ..runner import Runner
 from ..workspace import SimulationWorkspace
 
-from ...transform.io.idf.model import ThermalSettings
+from ...model.io.idf.model import ThermalSettings
 
-from ...model_resources import get_schedule_name, load_schedule
-from ...models import MoosasModel
+from ...model.resources import get_schedule_name, load_schedule
+from ...model import MoosasModel
 from ...utils import np, shapely
 
 # A quick radiation estimation based on measured data (Beijing cumSky)
@@ -765,7 +765,7 @@ def getEnergyInput(model: MoosasModel,
 
     schedule_out_path = None
     if getattr(model, "schedule", None):
-        from ...model_resources import write_schedule
+        from ...model.resources import write_schedule
 
         schedule_out_path = write_schedule(model)
         args += ['-sch', schedule_out_path]

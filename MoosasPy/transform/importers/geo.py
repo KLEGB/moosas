@@ -3,7 +3,7 @@ from ...utils import path, parseFile, mixItemListToList
 from ...utils.constant import geom
 from ..geometry.element import MoosasGeometry
 from ..geometry.geos import simplify,Vector
-from ._obj import _readObj
+from .obj import _readObj
 
 
 def preClassified(model):
@@ -139,7 +139,7 @@ def objToGeo(file_path, geo_path):
     Returns:
         None
     """
-    from ...models import MoosasModel
+    from ...model import MoosasModel
     path.checkBuildDir(geo_path)
     model = MoosasModel()
     model.geometryList = _readObj(file_path)
@@ -157,7 +157,7 @@ def geoLegacyToGeo(file_path, geo_path=None):
         Returns:
             None
         """
-    from ...models import MoosasModel
+    from ...model import MoosasModel
     path.checkBuildDir(geo_path)
     if geo_path is None:
         geo_path = file_path

@@ -2,9 +2,11 @@
 
 import struct
 
+# This module is a transform-only geometry source reader.
+
 from ...utils import np, shapely
 from ..geometry.element import MoosasGeometry
-from ._obj import _roundPolygons
+from .obj import _roundPolygons
 from ...utils.constant import geom
 
 

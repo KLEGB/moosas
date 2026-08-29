@@ -6,16 +6,16 @@ from ._version import __version__
 
 __all__ = [
 	"__version__",
-	"load",
-	"save",
+	"MoosasModel",
+	"TransformOptions",
 	"simulation",
 	"transform",
 ]
 
 _EXPORTS = {
+	"MoosasModel": (".model", "MoosasModel"),
+	"TransformOptions": (".transform", "TransformOptions"),
 	"transform": (".transform", None),
-	"load": (".transform", "load"),
-	"save": (".transform", "save"),
 	"simulation": (".simulation", None),
 }
 

@@ -1,7 +1,7 @@
 """Air-boundary preparation stage for divided-zone transformations."""
 from __future__ import annotations
 
-from ...models import MoosasModel
+from ...model import MoosasModel
 from ...utils import np, shapely
 from ...utils.tools import searchBy
 from ..geometry.cleanse import cleanseOverlapWall

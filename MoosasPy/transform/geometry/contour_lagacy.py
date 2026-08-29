@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 
 from .geos import *
-from ...models import *
+from ...model import *
 from ...visual.visualization import *
 from ...utils.constant import geom
 

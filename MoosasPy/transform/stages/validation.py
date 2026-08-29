@@ -1,7 +1,7 @@
 """Read-only validation for completed Moosas models."""
 from __future__ import annotations
 
-from ...models import MoosasModel
+from ...model import MoosasModel
 
 
 def validate_model(model: MoosasModel) -> MoosasModel:

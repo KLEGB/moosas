@@ -1,7 +1,7 @@
 """Topology and optional finalization stage for transformations."""
 from __future__ import annotations
 
-from ...models import MoosasModel
+from ...model import MoosasModel
 from ...utils import np, shapely
 from ...utils.tools import searchBy
 from .standardization import standardize_model

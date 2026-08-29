@@ -1,6 +1,8 @@
 from .model import MoosasSettings
 from ....utils import generate_code
 
+# IDF schedule encoder used by model I/O.
+
 
 class schType:
     Temperature = "Temperature"  # for setPoint

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ....models import MoosasModel
+    from ...model import MoosasModel
     from .parser import ZoneTemplate
 
 

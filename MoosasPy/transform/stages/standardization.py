@@ -1,7 +1,7 @@
 """Geometry representation standardization stage."""
 from __future__ import annotations
 
-from ...models import MoosasModel
+from ...model import MoosasModel
 from ...utils import mixItemListToList, np
 from ..geometry.element import MoosasFace, MoosasGlazing, MoosasSkylight
 from ..geometry.geos import GeometryError

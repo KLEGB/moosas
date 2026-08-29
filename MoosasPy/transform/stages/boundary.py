@@ -1,7 +1,7 @@
 """Boundary preparation stage for draft geometry models."""
 from __future__ import annotations
 
-from ...models import MoosasModel
+from ...model import MoosasModel
 from ..geometry.boundary import geometry_arrays, simplify_to_layered_obb
 from ..geometry.convexify import inject_minimal_core
 from ..geometry.element import MoosasGeometry

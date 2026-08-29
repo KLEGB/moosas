@@ -6,7 +6,7 @@ from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.namespace import RDF, RDFS
 
 from ...utils import path
-from ..io._rdf import decodeURI, encodeURI
+from ...model.io.rdf import decodeURI, encodeURI
 
 IDF_NAMESPACE = "https://energyplus.net#"
 idf = Namespace(IDF_NAMESPACE)

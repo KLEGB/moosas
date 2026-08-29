@@ -1,7 +1,7 @@
 """Geometry cleansing stage for the transformation pipeline."""
 from __future__ import annotations
 
-from ...models import MoosasModel
+from ...model import MoosasModel
 from ...utils import np
 from ...utils.tools import searchBy
 from ..geometry.cleanse import (

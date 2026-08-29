@@ -1,6 +1,8 @@
 from .model import MoosasSettings
 from ....utils import generate_code,np
 
+# IDF construction encoder used by model I/O.
+
 glzDefault = {
     'key': 'WindowMaterial:SimpleGlazingSystem',
     'Name': 'Gls_Simple',

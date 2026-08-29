@@ -2,8 +2,8 @@
 
 from ..energy.runner import getEnergyInput, ThermalSettings, energyAnalysis
 from ...transform.geometry.geos import Vector, Ray
-from ...models import MoosasModel
-from ...model_resources import get_schedule_name, load_schedule, write_schedule
+from ...model import MoosasModel
+from ...model.resources import get_schedule_name, load_schedule, write_schedule
 from ..weather import CumulativeSky, load_cumulative_sky, load_cumulative_sky_matrix, load_station_weather
 from ..radiation import modelRadiation, writeRadGeo, rayTest
 from ...utils import np, path, os

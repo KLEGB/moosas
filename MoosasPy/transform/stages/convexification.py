@@ -1,7 +1,7 @@
 """Model convexification stage for divided-zone transformations."""
 from __future__ import annotations
 
-from ...models import MoosasModel
+from ...model import MoosasModel
 from ...utils import mixItemListToList, shapely
 from ..geometry.convexify import GeometryConvexifier
 from ..geometry.element import MoosasGeometry

@@ -1,7 +1,7 @@
 import unittest
 
-from MoosasPy.model_resources import configure_model_resources
-from MoosasPy.models import MoosasModel
+from MoosasPy.model.resources import configure_model_resources
+from MoosasPy.model import MoosasModel
 
 
 class ModelResourceBoundaryTests(unittest.TestCase):

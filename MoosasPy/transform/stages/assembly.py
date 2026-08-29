@@ -1,7 +1,7 @@
 """Space generation and model assembly stage for transformations."""
 from __future__ import annotations
 
-from ...models import MoosasModel
+from ...model import MoosasModel
 from ...utils import mixItemListToList, np, shapely
 from ...utils.constant import geom
 from ...utils.tools import searchBy

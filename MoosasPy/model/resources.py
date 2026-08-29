@@ -5,8 +5,8 @@ import os
 import tempfile
 import uuid
 
-from .utils.standard import loadBuildingTemplate
-from .utils.tools import path
+from ..utils.standard import loadBuildingTemplate
+from ..utils.tools import path
 
 
 def configure_model_resources(model, schedule_path: str | None = None):

@@ -5,6 +5,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+# EnergyPlus version configuration for model I/O.
+
 from eppy.modeleditor import IDF
 
 from ....utils import path

@@ -67,13 +67,13 @@ python -c "import MoosasPy; print(MoosasPy.__version__)"
 Convert a supported geometry file into a structured `MoosasModel`:
 
 ```python
-from MoosasPy.transform import save, transform
+from MoosasPy.transform import transform
 
-model = transform("example.obj", output_path="model.xml", stdout=None)
-save(model, "model.rdf")
+model = transform("example.obj", stdout=None)
+model.save("model.rdf")
 ```
 
-`transform()` accepts geometry input such as OBJ, XML, GEO, and STL according to the active I/O implementation. It can clean duplicate or redundant faces, resolve overlaps, split wall surfaces, generate spaces, and write the result when an output path is supplied.
+`transform()` accepts only GEO, OBJ, and STL geometry sources. It constructs a complete model but does not write model files.
 
 ## Public API
 
@@ -82,15 +82,16 @@ The top-level `MoosasPy` package has three operational API areas:
 | API | Purpose |
 | --- | --- |
 | `transform` | Transform source geometry into a structured building model. |
-| `load` / `save` | Load and save complete `MoosasModel` serializations. |
+| `MoosasModel.load` / `model.save` | Load and save model formats. |
 | `simulation` | Access energy, radiation, airflow, weather, and coupled simulation domains. |
 
 ```python
-from MoosasPy import load, save, simulation, transform
+from MoosasPy import MoosasModel, simulation, transform
 
 model = transform.transform("example.obj", stdout=None)
 energy = simulation.energy.EnergyRunner(model=model).run()
-save(model, "model.rdf")
+model.save("model.rdf")
+restored = MoosasModel.load("model.rdf")
 ```
 
 Domain-level APIs are accessed from `simulation`, for example
@@ -100,11 +101,12 @@ Domain-level APIs are accessed from `simulation`, for example
 
 | Path | Contents |
 | --- | --- |
-| `MoosasPy/models.py` | Shared `MoosasModel` domain model and its building templates, schedules, and weather state. |
-| `MoosasPy/transform/` | Public transformation pipeline and model conversion boundary. |
+| `MoosasPy/model/` | `MoosasModel` and its model-file I/O boundary. |
+| `MoosasPy/model/io/` | RDF, XML, JSON, IDF, Graph, and gbXML model adapters. |
+| `MoosasPy/transform/` | GEO/OBJ/STL transformation pipeline. |
+| `MoosasPy/transform/importers/` | Geometry-source readers used only by transform. |
 | `MoosasPy/transform/alignment/` | Geometric alignment and coordinate-processing helpers. |
 | `MoosasPy/transform/geometry/` | Geometry primitives, topology cleansing, contours, and space generation. |
-| `MoosasPy/transform/io/` | File-format adapters and dispatch for complete RDF, XML, JSON, and IFC models. |
 | `MoosasPy/simulation/airflow/` | Airflow-network and CONTAM project preparation, execution, and iteration. |
 | `MoosasPy/simulation/coupling/` | Cross-domain workflows for energy-airflow, energy-radiation, sunlight, and photovoltaic analysis. |
 | `MoosasPy/simulation/energy/` | Simplified energy analysis, photovoltaic energy conversion, and thermal-load helpers. |
@@ -119,18 +121,18 @@ Domain-level APIs are accessed from `simulation`, for example
 
 ## Model I/O
 
-`MoosasPy.transform.io` provides model loading, saving, and format conversion functions. Common entry points include:
+Model-file I/O is exposed by `MoosasModel`:
 
 ```python
-from MoosasPy.transform.io import load, save
+from MoosasPy import MoosasModel
 
-model = load("model.xml")
-save(model, "model.rdf")
-writeGeo("model.geo", model)
-writeIDF("model.idf", model)
+model = MoosasModel.load("model.xml")
+model.save("model.rdf")
+model.save("model.idf")
+model.save("model.graph.json")
 ```
 
-GEO, OBJ, and STL contain only geometric faces and must enter through `transform()`. `load()` accepts complete RDF, XML, JSON, and IFC models; XML and JSON use a same-named `.geo` companion for geometry. RDF is the standard interchange format for simulation adapters, which generate IDF or gbXML when required by an engine.
+GEO, OBJ, and STL must enter through `transform()`. `MoosasModel.load()` accepts RDF/TTL, XML, JSON, and IDF. XML and JSON use a same-named `.geo` companion as an internal sidecar. `model.save()` additionally supports Graph JSON and gbXML.
 
 ## Analysis Modules
 

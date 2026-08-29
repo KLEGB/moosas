@@ -1,5 +1,7 @@
 import numpy as np
 import copy
+
+# IDF-specific settings models.
 SpaceDefault = {
     'space_height': 3.0,  #
     'zone_area': 10.0,  #

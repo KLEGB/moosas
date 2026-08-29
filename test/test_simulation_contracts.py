@@ -13,15 +13,17 @@ from MoosasPy.simulation.airflow.runner import AirflowResult, AirflowRunner, Ven
 
 
 class SimulationContractTests(unittest.TestCase):
-    def test_root_api_contains_only_transform_io_and_simulation(self):
+    def test_root_api_contains_only_model_transform_and_simulation(self):
         self.assertEqual(
             set(MoosasPy.__all__),
-            {"__version__", "load", "save", "simulation", "transform"},
+            {"__version__", "MoosasModel", "TransformOptions", "simulation", "transform"},
         )
         self.assertEqual(MoosasPy.transform.__name__, "MoosasPy.transform")
         self.assertTrue(callable(MoosasPy.transform.transform))
-        self.assertTrue(callable(MoosasPy.load))
-        self.assertTrue(callable(MoosasPy.save))
+        self.assertTrue(callable(MoosasPy.MoosasModel.load))
+        self.assertTrue(callable(MoosasPy.MoosasModel().save))
+        self.assertFalse(hasattr(MoosasPy, "load"))
+        self.assertFalse(hasattr(MoosasPy, "save"))
         self.assertFalse(hasattr(MoosasPy, "energyAnalysis"))
         self.assertFalse(hasattr(MoosasPy, "includeEpw"))
         self.assertFalse(hasattr(MoosasPy, "positionRadiation"))

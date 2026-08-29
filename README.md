@@ -24,6 +24,15 @@ Run a basic import check:
 python -c "import MoosasPy; print(MoosasPy.__version__)"
 ```
 
+Transform geometry and save the resulting model:
+
+```python
+from MoosasPy.transform import transform
+
+model = transform("building.geo")
+model.save("building.ttl")
+```
+
 ## EnergyPlus IDF Contract
 
 MOOSAS reads and writes EnergyPlus 26.1 IDF files using its bundled 26.1

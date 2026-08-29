@@ -3,7 +3,7 @@ from __future__ import annotations
 from eppy.modeleditor import IDF
 import pytest
 
-from MoosasPy.transform.io.idf.version import (
+from MoosasPy.model.io.idf.version import (
     ENERGYPLUS_VERSION,
     bundled_idd_path,
     bundled_template_idf_path,

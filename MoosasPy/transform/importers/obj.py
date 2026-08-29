@@ -2,6 +2,8 @@
 
 import os
 
+# This module is a transform-only geometry source reader.
+
 from ..geometry.element import MoosasGeometry
 from ...utils import np, shapely, path, GeometryError
 from ...utils.constant import geom

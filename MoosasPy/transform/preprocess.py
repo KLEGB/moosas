@@ -26,11 +26,11 @@ def coPlanner(inputFile: str, outputFile: str):
 
     return: None
     """
-    from ...models import MoosasModel, MoosasElement, MoosasGeometry
-    from ..pipeline import _load_geometry_source
-    from ._geo import writeGeo
-    from ..geometry.cleanse import _coPlannerCleanse
-    from ...utils import shapely
+    from ..model import MoosasModel, MoosasElement, MoosasGeometry
+    from .pipeline import _load_geometry_source
+    from .importers.geo import writeGeo
+    from .geometry.cleanse import _coPlannerCleanse
+    from ..utils import shapely
     if isinstance(inputFile, MoosasModel):
         model = inputFile
     else:
@@ -82,12 +82,12 @@ def overlap(inputFile: str, outputFile: str):
 
     return: None
     """
-    from ...models import MoosasModel, MoosasElement, MoosasGeometry
-    from ..pipeline import _load_geometry_source
-    from ._geo import writeGeo
-    from ..geometry.cleanse import _groupByNormal, Projection
-    from ...utils import shapely, np
-    from ...utils.constant import geom
+    from ..model import MoosasModel, MoosasElement, MoosasGeometry
+    from .pipeline import _load_geometry_source
+    from .importers.geo import writeGeo
+    from .geometry.cleanse import _groupByNormal, Projection
+    from ..utils import shapely, np
+    from ..utils.constant import geom
     if isinstance(inputFile, MoosasModel):
         model = inputFile
     else:

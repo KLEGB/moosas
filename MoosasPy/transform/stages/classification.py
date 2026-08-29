@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import shapely
 
-from ...models import MoosasModel
+from ...model import MoosasModel
 from ...utils import np
 from ...utils.constant import geom
 from ..geometry import triangulate2dFace

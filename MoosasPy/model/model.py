@@ -5,8 +5,14 @@ we split the MoosasModel definition from geometry.element to avoid circular impo
 """
 from __future__ import annotations
 
-from .transform.geometry.element import *
-from .transform.geometry.geos import faceNormal
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from ..transform.geometry.element import *
+from ..transform.geometry.geos import faceNormal
+
+if TYPE_CHECKING:
+    from .io import SaveResult
 
 """you can apply the inch to meter translation here"""
 # from .utils.constant import geom
@@ -19,7 +25,7 @@ INCH_METER_MULTIPLIER_SQR = 1
 class MoosasModel(MoosasContainer):
     """Domain state for a building geometry and its analysis configuration.
 
-    Resource loading is deliberately handled by ``MoosasPy.model_resources``.
+    Resource loading is deliberately handled by ``MoosasPy.model.resources``.
     """
 
     def __init__(self):
@@ -43,6 +49,19 @@ class MoosasModel(MoosasContainer):
         self.schedulePath = None
         self.schedule = {}
         self.scheduleByType = {}
+
+    @classmethod
+    def load(cls, file_path: str | Path) -> MoosasModel:
+        """Load a model from a supported semantic model format."""
+        from .io import load_model
+
+        return load_model(file_path)
+
+    def save(self, file_path: str | Path) -> SaveResult:
+        """Save this model to a supported semantic model format."""
+        from .io import save_model
+
+        return save_model(self, file_path)
 
     def autoDescribe(self):
         """automatically generate description for each space and element in the model, based on their geometry and settings.

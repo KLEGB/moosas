@@ -7,6 +7,7 @@ from scipy.spatial.transform import Rotation as R
 
 from ...utils import np, path, shapely
 
+# Graph JSON is a model projection, not a MoosasModel load format.
 FACE_PARAM_TEMPLATE = {
     "t": None,
     "v": None,
@@ -63,12 +64,9 @@ def create_obb(points, normal, min_scale=0.1):
             original_obb_centroid = centroid
         else:
             x_vec = obb_coords[1] - obb_coords[0]
-            y_vec = obb_coords[3] - obb_coords[0]
-
             x_norm = np.linalg.norm(x_vec)
-            y_norm = np.linalg.norm(y_vec)
             x_r = x_vec / x_norm if x_norm > 1e-6 else np.array([1.0, 0.0, 0.0], dtype=float)
-            y_r = y_vec / y_norm if y_norm > 1e-6 else np.array([0.0, 1.0, 0.0], dtype=float)
+            y_r = np.cross(z_r, x_r)
 
             rotation_matrix = R.from_matrix(np.array([x_r, y_r, z_r])).as_matrix()
             l = max(np.linalg.norm(obb_coords[1] - obb_coords[0]), min_scale)
@@ -606,7 +604,7 @@ def buildGraph(
     clean_airwall=True,
     outer_layer_edge_embedding=True,
 ) -> CugerGraph:
-    from ._xml import build_xml
+    from .xml import build_xml
 
     graph = CugerGraph()
     graph.graph_representation_from_model(

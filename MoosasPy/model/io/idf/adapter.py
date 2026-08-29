@@ -15,17 +15,17 @@ from eppy.modeleditor import IDF
 from rdflib import Literal, URIRef
 from rdflib.namespace import RDF
 
-from ._rdf import MoosasRDF, encodeURI, decodeURI
-from ._xml import loadXml
-from .idf import IDFConversionResult, construction, input, model, parser, schedule
-from .idf.model import MoosasSettings, ZoneMixingDefault
-from .idf.version import (
+from ..rdf import MoosasRDF, encodeURI, decodeURI
+from ..xml import loadXml
+from . import IDFConversionResult, construction, input, model, parser, schedule
+from .model import MoosasSettings, ZoneMixingDefault
+from .version import (
     bundled_template_idf_path,
     configure_idd,
     require_idf_version,
 )
-from ...models import *
-from ...utils import path, mixItemListToList
+from ...model import *
+from ....utils import path, mixItemListToList
 
 
 def _normalize_zone_name_to_space_dict(zoneNameToSpaceDict):
@@ -383,7 +383,7 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
 
 def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None) -> IDFConversionResult:
     """Write IDF and return its IDF-specific conversion state."""
-    from ..alignment import IDFtoOWL, default_template_idf_path, link_idf_graph_to_moosas
+    from ....transform.alignment import IDFtoOWL, default_template_idf_path, link_idf_graph_to_moosas
 
     resolved_template = default_template_idf_path(idfTemplatePath)
     zone_map, templates = _writeIDF_default(
@@ -1069,7 +1069,7 @@ def _idf_write_geo(outputPath: str, faces: list[_IDFUnifiedFace]) -> None:
 
 
 def _idf_write_xml(outputPath: str, faces: list[_IDFUnifiedFace], rec_to_face: dict[str, _IDFUnifiedFace], records: list[_IDFSurfaceRecord]) -> None:
-    from ...utils import ET
+    from ....utils import ET
 
     path.checkBuildDir(outputPath)
     root = ET.Element("model")
@@ -1247,7 +1247,7 @@ def _idf_apply_zone_templates(model: MoosasModel, idfPath: str) -> tuple[dict[st
 
 def readIDF(idfPath: str, geoPath: str = None, xmlPath: str = None) -> IDFConversionResult:
     """Convert IDF to a model plus independent IDF-specific state."""
-    from ..alignment import IDFtoOWL, link_idf_graph_to_moosas
+    from ....transform.alignment import IDFtoOWL, link_idf_graph_to_moosas
 
     def build_result(model: MoosasModel) -> IDFConversionResult:
         zone_map, templates = _idf_apply_zone_templates(model, idfPath)

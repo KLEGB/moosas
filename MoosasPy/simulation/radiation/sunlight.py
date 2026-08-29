@@ -5,7 +5,7 @@ from .calculation import rayTest, writeRadGeo
 from ...transform.geometry.geos import Vector, Ray
 from ...utils.date import DateTime
 from ...utils import np,Iterable
-from ...models import MoosasModel
+from ...model import MoosasModel
 
 
 def positionSunHour(positionRay: Ray | Iterable[Ray], sky,

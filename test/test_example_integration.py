@@ -7,15 +7,15 @@ from tempfile import TemporaryDirectory
 import math
 import unittest
 
-from MoosasPy.model_resources import configure_model_resources
+from MoosasPy.model.resources import configure_model_resources
 from MoosasPy.simulation.energy.runner import EnergyRunner
 from MoosasPy.simulation.weather import load_station_weather
-from MoosasPy.transform import TransformOptions, structured, transform
-from MoosasPy.transform.pipeline import _load_geometry_source
+from MoosasPy.transform import TransformOptions, transform
+from MoosasPy.transform.pipeline import _load_geometry_source, structured
 from MoosasPy.transform.stages.classification import classify_model
 from MoosasPy.transform.stages.cleansing import cleanse_model
 from MoosasPy.transform.stages.generation import CCRSpaceGeneration
-from MoosasPy.transform.io._xml import build_xml
+from MoosasPy.model.io.xml import build_xml
 from MoosasPy.transform.stages.splitting import split_wall_intersections
 from MoosasPy.transform.stages.validation import validate_model
 from MoosasPy.utils import np

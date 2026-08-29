@@ -1,23 +1,22 @@
 # Transformation Boundary
 
-`MoosasPy.transform` owns all geometry, model conversion, encoding, and
-multi-file alignment workflows.
+`MoosasPy.transform` accepts GEO, OBJ, and STL geometry sources and produces a
+structured `MoosasModel`. It does not load or save semantic model formats.
 
-| Target module | Current source | Responsibility |
-| --- | --- | --- |
-| `pipeline.py` | former `transformation.py` | draft geometry to structured model pipeline |
-| `stages/` | extracted transformation phases | model-level classification, cleanup, generation, assembly, and topology |
-| `geometry/` | former `MoosasPy.geometry`, convexification helpers | geometry types and reusable geometric algorithms |
-| `io/` | former `MoosasPy.IO` and graph encoders | model loading, saving, format adapters, graph encoding, and dispatch |
-| `alignment/` | former `MoosasPy.IO.alignment` | RDF/IDF graph linking and multi-file alignment |
+| Module | Responsibility |
+| --- | --- |
+| `pipeline.py` | Geometry source to complete `MoosasModel` pipeline |
+| `importers/` | GEO, OBJ, and STL source readers |
+| `stages/` | Classification, cleanup, generation, assembly, and topology |
+| `geometry/` | Geometry types and transformation algorithms |
+| `alignment/` | RDF/IDF graph linking and multi-file alignment |
 
-Migration rules:
+Model formats are owned by `MoosasPy.model.io` and exposed only through
+`MoosasModel.load()` and `model.save()`.
 
-1. New code imports from `MoosasPy.transform` or one of its subpackages.
-2. File adapters return a model representation only; topology completion and
-   cleanup remain explicit pipeline steps.
-3. Geometry algorithms must not import the encoding or IO layers.
-4. Pipeline orchestration calls model-level operations through `stages`; stages
-   may depend on `geometry`, but geometry must not depend on stages.
-5. Add a focused regression test before changing a format adapter or pipeline
-   stage.
+Dependency rules:
+
+1. Geometry files enter through `transform()` only.
+2. Transform stages return a complete `MoosasModel`.
+3. Geometry algorithms do not import model I/O or simulation.
+4. Simulation consumes `MoosasModel` and does not invoke transform.

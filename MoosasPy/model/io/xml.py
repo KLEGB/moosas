@@ -2,8 +2,8 @@
 
 from collections import defaultdict
 
-from ._geo import _readGeo, preClassified
-from ...models import *
+from ...transform.importers.geo import _readGeo, preClassified
+from ..model import *
 from ...utils import ET, np
 
 
@@ -132,7 +132,7 @@ def writeXml(file_path, model: MoosasModel, writeGeometry=False) -> ET.ElementTr
 def loadXml(filePath, geoPath):
     # initialize model
     model: MoosasModel = MoosasModel()
-    from ...model_resources import configure_model_resources
+    from ..resources import configure_model_resources
 
     configure_model_resources(model)
     model.geometryList = _readGeo(geoPath)

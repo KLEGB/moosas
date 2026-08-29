@@ -67,8 +67,8 @@ class MoosasPath(object):
         for thisDir in dir:
             if not os.path.isdir(thisDir):
                 thisDir = os.path.dirname(thisDir)
-            if not os.path.exists(thisDir):
-                os.mkdir(thisDir)
+            if thisDir and not os.path.exists(thisDir):
+                os.makedirs(thisDir)
 
 
 path = MoosasPath(os.path.dirname(os.path.dirname(__file__)))

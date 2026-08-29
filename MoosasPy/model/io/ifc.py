@@ -2,14 +2,14 @@
 """Package-native IFC bridge for Moosas models.
 
 This module converts between ``MoosasModel`` and IFC4 for use by the shared
-``save`` / ``load`` interface. The project routes IFC through an
+internal IFC conversion utilities. IFC is not part of the public model
+``save`` / ``load`` interface. The converter can route IFC through an
 intermediate RDF step when entering or leaving the public I/O boundary, while
 still embedding a Moosas snapshot in the IFC file to preserve the original
 project data.
 
 The helpers here remain the IFC-specific implementation layer; they are not the
-public dispatch point and should be called through :mod:`MoosasPy.transform.io`
-when possible.
+public dispatch point.
 """
 from __future__ import annotations
 
@@ -117,14 +117,14 @@ def setup_ifc_model(project_name: str = "Moosas IFC Project") -> tuple[Any, Any,
 
 
 def _snapshot_model(model) -> dict[str, Any]:
-    from ._xml import build_xml
+    from .xml import build_xml
 
     root = build_xml(model, write_geometry=True)
     xml_text = ET.tostring(root, encoding="unicode")
 
     geo_path = Path(path.tempDir) / f"ifc_snapshot_{uuid.uuid4().hex}.geo"
     try:
-        from ._geo import writeGeo
+        from ...transform.importers.geo import writeGeo
 
         geo_text = writeGeo(str(geo_path), model)
     finally:
@@ -471,7 +471,7 @@ def _backfill_ifc_metadata(model, metadata_by_face: dict[str, dict[str, Any]], s
 
 
 def _restore_ifc_spaces_from_psets(ifc, product_psets: dict[int, dict[str, Any]], model, element_by_uid: dict[str, Any]) -> int:
-    from ..geometry.element import MoosasFloor, MoosasEdge, MoosasSpace
+    from ...transform.geometry.element import MoosasFloor, MoosasEdge, MoosasSpace
 
     restored = 0
     existing_ids = {str(space.id) for space in getattr(model, "spaceList", [])}
@@ -665,8 +665,8 @@ def writeIfc(model, ifc_path: str | Path, project_name: str = "Moosas IFC Projec
 
 def _legacy_loadIfc_direct(ifc_path: str | Path) -> Any:
     require_ifc()
-    from ...models import MoosasModel
-    from ..geometry.element import (
+    from ..model import MoosasModel
+    from ...transform.geometry.element import (
         MoosasFace,
         MoosasWall,
         MoosasGlazing,
@@ -847,8 +847,8 @@ def _legacy_loadIfc_direct(ifc_path: str | Path) -> Any:
 
 def _loadIfc_via_geo_bridge(ifc_path: str | Path, ifc: Any | None = None, has_ifc_space: bool | None = None) -> Any:
     require_ifc()
-    from ..transform import transform
-    from ._geo import writeGeo
+    from ...transform import transform
+    from ...transform.importers.geo import writeGeo
 
     if ifc is None:
         ifc = ifcopenshell.open(str(ifc_path))
@@ -877,8 +877,8 @@ def _loadIfc_via_geo_bridge(ifc_path: str | Path, ifc: Any | None = None, has_if
     # Build a temporary MoosasModel-shaped geometry library and serialize it
     # to GEO first. The downstream transformation pipeline keeps geo ids, so
     # we can later backfill IFC metadata onto the transformed model.
-    from ..geometry.element import MoosasGeometry
-    from ..geometry.geos import faceNormal
+    from ...transform.geometry.element import MoosasGeometry
+    from ...transform.geometry.geos import faceNormal
 
     geo_list: list[MoosasGeometry] = []
     for product in ifc.by_type("IfcProduct"):
@@ -904,7 +904,7 @@ def _loadIfc_via_geo_bridge(ifc_path: str | Path, ifc: Any | None = None, has_if
     try:
         if geo_list:
             writeGeo(str(temp_geo), geoList=geo_list)
-            from ..stages.options import TransformOptions
+            from ...transform.stages.options import TransformOptions
 
             model = transform(str(temp_geo), input_type="geo", options=TransformOptions())
             if model is None:
@@ -975,14 +975,14 @@ def loadIfc(ifc_path: str | Path) -> Any:
 
 
 def rdf_to_ifc(rdf_path: str | Path, ifc_path: str | Path, rdf_format: str = "turtle", project_name: str = "RDF-IFC Project") -> dict[str, Any]:
-    from ._rdf import loadRDF
+    from .rdf import loadRDF
 
     model = loadRDF(str(rdf_path), fileFormat=rdf_format)
     return writeIfc(model, ifc_path, project_name=project_name)
 
 
 def ifc_to_rdf(ifc_path: str | Path, rdf_path: str | Path, rdf_format: str = "turtle") -> dict[str, Any]:
-    from ._rdf import writeRDF
+    from .rdf import writeRDF
 
     model = loadIfc(ifc_path)
     writeRDF(model, str(rdf_path), fileFormat=rdf_format, dumpUseless=True)
