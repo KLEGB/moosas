@@ -14,13 +14,11 @@ from MoosasPy.transform import TransformOptions, structured, transform
 from MoosasPy.transform.pipeline import _load_geometry_source
 from MoosasPy.transform.stages.classification import classify_model
 from MoosasPy.transform.stages.cleansing import cleanse_model
-from MoosasPy.transform.stages.generation import generate_space_boundaries
+from MoosasPy.transform.stages.generation import CCRSpaceGeneration
 from MoosasPy.transform.io._json import build_geojson
 from MoosasPy.transform.io._xml import build_xml
-from MoosasPy.transform.stages.glazing import attach_glazing_to_faces
 from MoosasPy.transform.stages.splitting import split_wall_intersections
 from MoosasPy.transform.stages.validation import validate_model
-from MoosasPy.transform.geometry.spaceGen import CCRSpaceGeneration
 from MoosasPy.utils import np
 
 
@@ -99,10 +97,9 @@ class ExampleIntegrationTests(unittest.TestCase):
                 solve_duplicated=True,
                 solve_redundant=True,
                 solve_overlap=True,
-                match_glazing=attach_glazing_to_faces,
             )
             model = split_wall_intersections(model, enabled=True)
-            model = generate_space_boundaries(model, CCRSpaceGeneration)
+            model = CCRSpaceGeneration(model)
 
         self.assertEqual(len(model.boundaryList), 82)
         self.assertEqual(len(model.edgeList), 0)
@@ -136,11 +133,12 @@ class ExampleIntegrationTests(unittest.TestCase):
         "requires the bundled MoosasEnergy engine and Beijing 545110 weather data",
     )
     def test_energy_engine_returns_real_results_for_geometry_fixture(self):
-        self.model.weather = load_station_weather("545110")
+        weather = load_station_weather("545110")
 
         with TemporaryDirectory() as work_dir:
             result = EnergyRunner(
                 model=self.model,
+                weather=weather,
                 work_dir=work_dir,
                 timeout_seconds=60,
             ).run()

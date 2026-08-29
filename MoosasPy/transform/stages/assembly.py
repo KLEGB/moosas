@@ -1,8 +1,6 @@
 """Space generation and model assembly stage for transformations."""
 from __future__ import annotations
 
-from collections.abc import Callable
-
 from ...models import MoosasModel
 from ...utils import mixItemListToList, np, shapely
 from ...utils.constant import geom
@@ -18,7 +16,6 @@ def assemble_model(
     *,
     divided_zones: bool,
     solve_overlap: bool,
-    pack_model: Callable[[MoosasModel, bool], MoosasModel],
 ) -> MoosasModel:
     """Assemble edges and spaces from a model with generated boundaries."""
     model = packing_edges(model, divided_zones)

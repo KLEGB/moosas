@@ -10,7 +10,9 @@ class ModelResourceBoundaryTests(unittest.TestCase):
 
         self.assertEqual(model.buildingTemplate, {})
         self.assertEqual(model.schedule, {})
-        self.assertIsNone(model.weather)
+        self.assertFalse(hasattr(model, "weather"))
+        self.assertFalse(hasattr(model, "cumSky"))
+        self.assertFalse(hasattr(model, "idfZoneTemplate"))
         self.assertFalse(hasattr(model, "loadSchedule"))
         self.assertFalse(hasattr(model, "loadWeatherData"))
 

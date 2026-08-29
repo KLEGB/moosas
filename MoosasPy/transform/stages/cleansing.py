@@ -1,8 +1,6 @@
 """Geometry cleansing stage for the transformation pipeline."""
 from __future__ import annotations
 
-from collections.abc import Callable
-
 from ...models import MoosasModel
 from ...utils import np
 from ...utils.tools import searchBy
@@ -14,6 +12,7 @@ from ..geometry.cleanse import (
     cleanseOverlapFace,
     cleanseOverlapWall,
 )
+from .glazing import attach_glazing_to_faces
 
 
 def cleanse_model(
@@ -22,7 +21,6 @@ def cleanse_model(
     solve_duplicated: bool,
     solve_redundant: bool,
     solve_overlap: bool,
-    match_glazing: Callable[[MoosasModel], MoosasModel],
 ) -> tuple[MoosasModel, list[int]]:
     """Clean classified geometry and attach glazing before space generation."""
     if solve_redundant:
@@ -30,7 +28,7 @@ def cleanse_model(
 
     model = cleanseInvalidWall(model)
     model = cleanseInvalidFace(model)
-    model = match_glazing(model)
+    model = attach_glazing_to_faces(model)
 
     wall_counts = [len(searchBy("level", level, model.wallList)) for level in model.levelList]
     if solve_redundant:

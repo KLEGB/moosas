@@ -132,18 +132,11 @@ def _snapshot_model(model) -> dict[str, Any]:
             geo_path.unlink(missing_ok=True)
 
     schedule_text = json.dumps(getattr(model, "schedule", {}) or {}, ensure_ascii=False)
-    weather_station = ""
-    weather = getattr(model, "weather", None)
-    if weather is not None:
-        location = getattr(weather, "location", None)
-        weather_station = str(getattr(location, "station_id", "") or "")
-
     return {
         "version": "moosas-ifc-v1",
         "xml": xml_text,
         "geo": geo_text,
         "schedule": schedule_text,
-        "weather_station": weather_station,
     }
 
 
@@ -658,16 +651,6 @@ def writeIfc(model, ifc_path: str | Path, project_name: str = "Moosas IFC Projec
             )
         elements.append(ent)
 
-    if getattr(model, "weather", None) is not None:
-        add_pset(
-            model_file,
-            project,
-            {
-                "WeatherStationId": str(getattr(getattr(model.weather, "location", None), "station_id", "") or ""),
-            },
-            name=PSET_IFC,
-        )
-
     ifc_path = Path(ifc_path)
     ifc_path.parent.mkdir(parents=True, exist_ok=True)
     model_file.write(str(ifc_path))
@@ -858,16 +841,6 @@ def _legacy_loadIfc_direct(ifc_path: str | Path) -> Any:
                     parent.add_void(void)
                 except Exception:
                     pass
-
-    # Restore schedule and weather if present in IFC project pset.
-    projects = ifc.by_type("IfcProject")
-    if projects:
-        project_pset = _get_pset(projects[0], PSET_IFC)
-        weather_station = str(project_pset.get("WeatherStationId") or "").strip()
-        if weather_station:
-            from ...simulation.weather import load_station_weather
-
-            model.weather = load_station_weather(weather_station)
 
     return model
 

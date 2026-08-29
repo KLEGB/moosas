@@ -90,16 +90,14 @@ class EnergyAirflowCoupler(object):
         elif getattr(self.model, "schedule", None):
             self.schedulePath = write_schedule(self.model)
         self._parse_schedule_file()
-        if self.model.weather is None:
-            self.model.weather = load_station_weather(stationid or '545110')
-        self.weather = self.model.weather
+        self.weather = load_station_weather(stationid or '545110')
         stationid = str(
             getattr(getattr(self.weather, "location", None), "station_id", "")
             or stationid
             or '545110'
         )
-        self.model.cumSky = load_cumulative_sky(stationid)
-        modelRadiation(self.model, reflection=0)
+        cumulative_sky = load_cumulative_sky(stationid)
+        modelRadiation(self.model, cumulative_sky, reflection=0)
         network = AfnNetwork(self.model)
         self.zones = network.zones
         self.paths = network.paths
@@ -294,7 +292,7 @@ class EnergyAirflowCoupler(object):
         #     print(z.printHeatLoad())
         zoneDict = {z.userName: z.toDict() for z in network.zones}
         pathDict = {p.userName: p.toDict() for p in network.paths}
-        energyDict = getEnergyInput(self.model, requireRadiation=True)
+        energyDict = getEnergyInput(self.model, self.weather, requireRadiation=True)
         for z in energyDict['zones']:
             for key in z.params.keys():
                 zone_name = z.params.get('zone_name')
@@ -389,7 +387,7 @@ class EnergyAirflowCoupler(object):
         if energyDict:
             self.networkDict = self._normalize_energy_schedule_fields_in_dict(energyDict)
         energyDict = self.networkDict
-        base_args = list(getEnergyInput(self.model, requireRadiation=False).get("args", []))
+        base_args = list(getEnergyInput(self.model, self.weather, requireRadiation=False).get("args", []))
         energyInput = {
             "zones": [],
             "args": [self._normalize_energy_cli_arg(arg) for arg in base_args],
@@ -630,6 +628,7 @@ class EnergyAirflowCoupler(object):
         if '-z' not in energyInput['args']:
             energyInput['args'] += ['-z', '1']
         e_data = energyAnalysis(
+            weather=self.weather,
             energyInput=energyInput,
             exportDaily=True,
             exportHourly=True,

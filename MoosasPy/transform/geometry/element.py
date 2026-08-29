@@ -406,7 +406,7 @@ class MoosasElement(object):
 
     """
     __slots__ = ['__geometries', 'level', 'offset', 'Uid','U_Value', '__glazingElement', 'parent', 'neighbor', 'isOuter', 'space',
-                 'shading','description', 'idfObjectUris']
+                 'shading','description']
 
     def __init__(self, model: MoosasContainer,
                  faceId: str | list[str] | np.ndarray[str] | MoosasGeometry | list[MoosasGeometry] | np.ndarray[
@@ -455,7 +455,6 @@ class MoosasElement(object):
         self.isOuter: bool = True
         self.neighbor = {}
         self.description = ""
-        self.idfObjectUris = []
 
         # get the geometry(s)
         faceId = mixItemListToList(faceId)
@@ -2638,7 +2637,7 @@ class MoosasSpace(object):
 
     """
     __slots__ = ['floor', 'edge', 'ceiling', '__void', '__id','__uniqueId', '__neighbor', 'internalMass', 'settings',
-                 'description', 'idfObjectUris', 'space_type']
+                 'description', 'space_type']
 
     def __init__(self, _floor: MoosasFloor | None, _edge: MoosasEdge, _ceiling: MoosasFloor | None,
                  void: list[MoosasSpace] = None, Uid: str = None, space_type: str = "room"):
@@ -2664,7 +2663,6 @@ class MoosasSpace(object):
         self.edge: MoosasEdge = _edge
         self.ceiling: MoosasFloor | None = _ceiling
         self.description = ""
-        self.idfObjectUris = []
         self.space_type = space_type
 
         self.__neighbor = {}
@@ -2681,8 +2679,7 @@ class MoosasSpace(object):
             "zone_summerrad": None,  # summer radiant heat units:kwh
             "zone_winterrad": None,  # winter radiant heat units:kwh
 
-            "zone_template": None,
-            "idf_template": None
+            "zone_template": None
         }
         self.applySettings('climatezone3_GB/T51350-2019_RESIDENTIAL')
 

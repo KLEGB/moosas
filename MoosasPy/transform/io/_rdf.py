@@ -8,7 +8,6 @@ from rdflib.namespace import RDF, RDFS, GEO, BRICK, WGS
 
 from ...models import *
 from ...model_resources import rebuild_schedule_index
-from ...simulation.weather import Location, read_weather_csv
 from ...utils import np, shapely, mixItemListToList, mixItemListToObject, searchBy, generate_code, path
 from ...utils.constant import geom
 
@@ -254,8 +253,6 @@ class MoosasRDF(Graph):
         self.encodeScheduleOntology()
         self.encodeSchedule(model)
         self.encodeStorey(model)
-        if model.weather:
-            self.encodeWeather(model)
         for tmp in model.buildingTemplate.keys():
             self.encodeProgram(tmp, model.buildingTemplate[tmp])
         for geo in model.geometryList:
@@ -526,35 +523,6 @@ class MoosasRDF(Graph):
         # the boundary object on the other side
         self.add((self.ifc.CorrespondingBoundary, self.rdfs.subPropertyOf, self.ifc.IfcRelSpaceBoundary2ndLevel))
         self.add((self.ifc.CorrespondingBoundary, self.rdfs.range, self.ifc.IfcRelSpaceBoundary2ndLevel))
-
-    def encodeWeather(self, model: MoosasModel):
-        """
-        Encode weather data from a MoosasModel into RDF triples.
-        
-        Parameters
-        ----------
-        self : object
-            The instance of the class containing this method, providing access to RDF graph and namespaces.
-        model : MoosasModel
-            An instance of MoosasModel containing weather data to be encoded, including location and file information.
-        
-        Returns
-        -------
-        None
-            This function does not return any value. It modifies the internal RDF graph by adding weather-related triples.
-        """
-        wea = URIRef(model.weather.location.station_id)
-        site = self.getSubject(self.rdf.type, self.bot.Site)
-        self.add((wea, self.rdf.type, self.pgd.Weather))
-        self.add((wea, self.pgd.fileStoreAt, Literal(model.weather.weather_file)))
-        self.add((wea, self.pgd.stationId, Literal(model.weather.location.station_id)))
-        self.add((wea, self.pgd.hasLocation, URIRef(str(site))))
-        self.add((wea, self.pgd.pressure, Literal(model.weather.location.pressure)))
-        self.add((URIRef(str(site)), self.wgs.lat, Literal(model.weather.location.latitude)))
-        self.add((URIRef(str(site)), self.wgs.long, Literal(model.weather.location.longitude)))
-        self.add((URIRef(str(site)), self.wgs.alt, Literal(model.weather.location.altitude)))
-        self.add((URIRef(str(site)), self.pgd.city, Literal(model.weather.location.city)))
-        self.add((URIRef(str(site)), self.pgd.state, Literal(model.weather.location.state)))
 
     def encodeProgram(self, pgName: str, pgDict: dict):
         """
@@ -1226,11 +1194,6 @@ def writeRDF(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseless
         The generated MoosasRDF object that was serialized to the file.
     """
     g = MoosasRDF(model, dumpUseless, ExportIFC)
-    idf_graph = getattr(model, "idfGraph", None)
-    if idf_graph is not None and len(idf_graph) > 0:
-        from ..alignment import merge_moosas_and_idf_graphs
-
-        g = merge_moosas_and_idf_graphs(g, idf_graph)
     g.serialize(out_path, format=fileFormat)
     return g
 
@@ -1252,9 +1215,6 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
         A constructed MoosasModel instance populated with data from the RDF file.
     """
     rdfGraph: MoosasRDF = MoosasRDF.load(input_path, fileFormat=fileFormat)
-    from ..alignment import extract_idf_graph, attach_idf_graph
-
-    idf_graph = extract_idf_graph(rdfGraph)
     model = MoosasModel()
     from ...model_resources import configure_model_resources
 
@@ -1285,24 +1245,6 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     pgList = mixItemListToList(pgList)
     spList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.bot.Space)
     spList = mixItemListToList(spList)
-    weather = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.pgd.Weather)
-
-    if isinstance(weather, str):
-        weather_node = URIRef(str(weather))
-        site = rdfGraph.getObject(weather_node, rdfGraph.pgd.hasLocation)
-        station_id = rdfGraph.getObject(URIRef(str(weather)), rdfGraph.pgd.stationId)
-        location = Location(
-            station_id=station_id,
-            city=rdfGraph.getObject(site, rdfGraph.pgd.city),
-            state=rdfGraph.getObject(site, rdfGraph.pgd.state),
-            latitude=rdfGraph.getObject(site, rdfGraph.wgs.lat),
-            longitude=rdfGraph.getObject(site, rdfGraph.wgs.long),
-            altitude=rdfGraph.getObject(site, rdfGraph.wgs.alt),
-            pressure=rdfGraph.getObject(weather_node, rdfGraph.pgd.pressure),
-        )
-        weather_file = rdfGraph.getObject(weather_node, rdfGraph.pgd.fileStoreAt)
-        model.weather = read_weather_csv(str(weather_file), location)
-
     print()
 
     # construct geometryList
@@ -1428,8 +1370,5 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
         print(f'\rLOADING: space {i + 1}/{len(spList)}', end='')
     print()
 
-    attach_idf_graph(model, idf_graph)
-    if idf_graph is not None:
-        model.idfGraphSource = input_path
     return model
 

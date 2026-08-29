@@ -1,17 +1,14 @@
-'''Boundary simplification and core insertion for draft geometry models.'''
+'''Pure geometry helpers for boundary simplification and core insertion.'''
 from __future__ import annotations
 
-from ...models import MoosasModel
 from ...utils import np, shapely
-from .convexify import inject_minimal_core
-from .element import MoosasGeometry
 from .geos import Vector
 from .polygon import GeometryBasic, calculate_wwr, create_obb, obb_to_face_vertices
 
 
-def _geometry_arrays(model: MoosasModel):
+def geometry_arrays(geometries):
     categories, face_ids, normals, faces, holes = [], [], [], [], []
-    for geometry in model.geometryList:
+    for geometry in geometries:
         rings = shapely.get_rings(geometry.face)
         categories.append(geometry.category)
         face_ids.append(geometry.faceId)
@@ -45,7 +42,7 @@ def _create_window_on_wall(face, normal, wwr, margin_ratio=0.1):
     return {0: window}, window
 
 
-def _simplify_to_layered_obb(categories, normals, faces):
+def simplify_to_layered_obb(categories, normals, faces):
     if not faces:
         raise ValueError('Boundary simplification requires non-empty geometry.')
     min_area = 1e-5
@@ -124,53 +121,3 @@ def _simplify_to_layered_obb(categories, normals, faces):
                 out_holes.append(None)
 
     return np.asarray(out_categories), out_ids, np.asarray(out_normals), out_faces, out_holes
-
-
-def _replace_geometry(model, categories, face_ids, normals, faces, holes):
-    geometry_list = []
-    for category, face_id, normal, face, face_holes in zip(
-        categories, face_ids, normals, faces, holes
-    ):
-        if isinstance(face_holes, dict):
-            face_holes = [face_holes[index] for index in sorted(face_holes)]
-        geometry_list.append(
-            MoosasGeometry(
-                face,
-                str(face_id),
-                Vector(normal),
-                int(category),
-                face_holes or [],
-                errors='raise',
-            )
-        )
-    model.geometryList = geometry_list
-    model.geoId = [geometry.faceId for geometry in geometry_list]
-    model.newIndex = len(geometry_list)
-    return model
-
-
-def prepare_boundary_geometry(
-    model: MoosasModel,
-    *,
-    simplify_boundary: bool,
-    insert_core: bool,
-) -> MoosasModel:
-    '''Apply the requested boundary operations to a draft geometry model.'''
-    if not simplify_boundary and not insert_core:
-        return model
-
-    categories, face_ids, normals, faces, holes = _geometry_arrays(model)
-    if simplify_boundary:
-        categories, face_ids, normals, faces, holes = _simplify_to_layered_obb(
-            categories, normals, faces
-        )
-
-    if insert_core:
-        original_face_count = len(faces)
-        categories, face_ids, normals, faces, holes = inject_minimal_core(
-            categories, face_ids, normals, faces, holes
-        )
-        if len(faces) == original_face_count:
-            raise ValueError('Core insertion could not find a valid multi-level footprint.')
-
-    return _replace_geometry(model, categories, face_ids, normals, faces, holes)

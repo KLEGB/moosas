@@ -66,14 +66,15 @@ class DomainBoundaryTests(unittest.TestCase):
         model = SimpleNamespace(
             spaceList=[SimpleNamespace(id="zone-1", settings={})],
         )
+        weather = SimpleNamespace()
 
         with self.assertRaisesRegex(ValueError, "Precomputed"):
-            getEnergyInput(model, requireRadiation=True)
+            getEnergyInput(model, weather, requireRadiation=True)
 
-    def test_energy_requires_prepared_weather(self):
-        model = SimpleNamespace(spaceList=[], weather=None, schedule=None)
+    def test_energy_requires_explicit_weather(self):
+        model = SimpleNamespace(spaceList=[], schedule=None)
 
-        with self.assertRaisesRegex(ValueError, "model.weather"):
+        with self.assertRaises(TypeError):
             getEnergyInput(model)
 
     def test_airflow_requires_precomputed_radiation(self):

@@ -4,7 +4,7 @@ import pytest
 
 from MoosasPy.models import MoosasModel
 from MoosasPy.transform import TransformOptions
-from MoosasPy.transform.geometry.boundary import prepare_boundary_geometry
+from MoosasPy.transform.stages.boundary import prepare_boundary_geometry
 from MoosasPy.transform.geometry.element import MoosasGeometry
 from MoosasPy.utils import np
 

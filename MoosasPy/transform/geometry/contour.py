@@ -6,7 +6,7 @@ from .element import MoosasEdge, MoosasWall, MoosasGlazing, MoosasContainer
 from . import triangulate2dFace
 from ...utils import searchBy, shapely, np, TopologyError
 from ...utils.constant import geom
-from .topology import TopoNode, TopoBound, TopoEdge, TopoNetwork
+from .planar_graph import TopoNode, TopoBound, TopoEdge, TopoNetwork
 
 
 def _findPathDepth(node: TopoNode, exitPoint: list[TopoNode],

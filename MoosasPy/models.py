@@ -39,10 +39,7 @@ class MoosasModel(MoosasContainer):
         """initialize the MoosasModel with default list, and apply type to these list"""
         super(MoosasModel, self).__init__()
 
-        self.weather = None
-        self.cumSky = None
         self.buildingTemplate = {}
-        self.idfZoneTemplate = {}
         self.schedulePath = None
         self.schedule = {}
         self.scheduleByType = {}

@@ -1,8 +1,6 @@
 """Geometry splitting operations used by the transformation pipeline."""
 from __future__ import annotations
 
-from collections.abc import Callable
-
 import shapely
 
 from ...models import MoosasModel
@@ -11,6 +9,7 @@ from ...utils.constant import geom
 from ..geometry.cleanse import cleanseInvalidWall, solveIntersectionVertical
 from ..geometry.element import MoosasGeometry
 from ..geometry.geos import GeometryError, Vector, splitOnZ
+from .air_boundary import copy_air_boundaries
 
 
 def split_vertical_walls(model: MoosasModel, excluded_face_ids=()) -> MoosasModel:
@@ -92,7 +91,6 @@ def split_wall_intersections(model: MoosasModel, enabled: bool) -> MoosasModel:
 def prepare_divided_zones(
     model: MoosasModel,
     enabled: bool,
-    copy_air_boundaries: Callable[[MoosasModel], MoosasModel],
 ) -> MoosasModel:
     """Prepare copied air boundaries before divided-zone space generation."""
     return copy_air_boundaries(model) if enabled else model

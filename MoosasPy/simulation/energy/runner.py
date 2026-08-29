@@ -11,6 +11,8 @@ This module serves as the Python-side interface for the unified
 MoosasEnergy Go executable, which supports both residential and
 public building types via the -t parameter.
 """
+from __future__ import annotations
+
 from ...utils.support import os
 from dataclasses import dataclass
 import re
@@ -202,6 +204,7 @@ class EnergyRunner(Runner):
     def __init__(
         self,
         model: MoosasModel | None = None,
+        weather: object | None = None,
         core=buildingType.RESIDENTIAL,
         require_radiation=False,
         export_daily=False,
@@ -217,6 +220,7 @@ class EnergyRunner(Runner):
     ):
         super().__init__(timeout_seconds=timeout_seconds, engine=engine)
         self.model = model
+        self.weather = weather
         self.core = core
         self.require_radiation = require_radiation
         self.export_daily = export_daily
@@ -234,6 +238,7 @@ class EnergyRunner(Runner):
         if not energy_input:
             energy_input = getEnergyInput(
                 self.model,
+                weather=self.weather,
                 core=self.core,
                 requireRadiation=self.require_radiation,
                 exportDaily=self.export_daily,
@@ -276,9 +281,8 @@ class EnergyRunner(Runner):
             return EnergyResult(data=data, commands=(command_result,), workspace=workspace.report)
 
     def _weather_temperature(self, arguments):
-        if self.model is not None:
-            if self.model.weather is not None:
-                return self.model.weather.temperature.tolist()
+        if self.weather is not None:
+            return self.weather.temperature.tolist()
         for index, argument in enumerate(arguments):
             if argument == "-w" and index + 1 < len(arguments):
                 weather_path = arguments[index + 1].strip('"')
@@ -288,6 +292,7 @@ class EnergyRunner(Runner):
 
 
 def energyAnalysis(model: MoosasModel = None,
+                   weather: object | None = None,
                    core=buildingType.RESIDENTIAL,
                    requireRadiation=False,
                    exportDaily=False,
@@ -362,6 +367,7 @@ def energyAnalysis(model: MoosasModel = None,
     """
     return EnergyRunner(
         model=model,
+        weather=weather,
         core=core,
         require_radiation=requireRadiation,
         export_daily=exportDaily,
@@ -559,6 +565,7 @@ def _parse_zone_energy_rows(section_data, num_zones, items_per_zone):
 
 
 def getEnergyInput(model: MoosasModel,
+                   weather: object,
                    core=buildingType.RESIDENTIAL,
                    requireRadiation=False,
                    exportDaily=False,
@@ -731,10 +738,6 @@ def getEnergyInput(model: MoosasModel,
 
         theZone.updateParams(**addSettings)
         zones.append(theZone)
-
-    if model.weather is None:
-        raise ValueError("model.weather must be prepared before energy input generation")
-    weather = model.weather
 
     # ── Build command-line arguments ──────────────────────
     # Determine the building type integer for the -t parameter.

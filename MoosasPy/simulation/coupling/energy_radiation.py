@@ -18,13 +18,12 @@ def run_energy_with_radiation(
     """Calculate radiation, then run energy analysis with those results."""
     if radiation_mode not in (1, 2):
         raise ValueError("radiation_mode must be 1 or 2")
-    if model.weather is None:
-        model.weather = load_station_weather(station_id)
-    if model.cumSky is None:
-        model.cumSky = load_cumulative_sky(station_id)
-    modelRadiation(model, reflection=reflection)
+    weather = load_station_weather(station_id)
+    cumulative_sky = load_cumulative_sky(station_id)
+    modelRadiation(model, cumulative_sky, reflection=reflection)
     return energyAnalysis(
         model,
+        weather=weather,
         requireRadiation=radiation_mode,
         **energy_options,
     )

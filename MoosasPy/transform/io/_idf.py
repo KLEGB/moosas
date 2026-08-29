@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import copy
 import math
 import re
 import shutil
@@ -16,7 +17,7 @@ from rdflib.namespace import RDF
 
 from ._rdf import MoosasRDF, encodeURI, decodeURI
 from ._xml import loadXml
-from .idf import construction, input, model, parser, schedule
+from .idf import IDFConversionResult, construction, input, model, parser, schedule
 from .idf.model import MoosasSettings, ZoneMixingDefault
 from .idf.version import (
     bundled_template_idf_path,
@@ -84,26 +85,9 @@ def _normalize_zone_name_to_space_dict(zoneNameToSpaceDict):
     return normalized
 
 
-def _idf_get_first_zone_name(idfTemplatePath=None) -> str:
-    """Return the first valid Zone name in template IDF, or empty string when unavailable."""
-    configure_idd()
-    idfTemplatePath = require_idf_version(idfTemplatePath or bundled_template_idf_path())
-
-    try:
-        idf = IDF(idfTemplatePath)
-    except Exception:
-        return ""
-
-    for zoneObj in idf.idfobjects['Zone']:
-        zoneName = str(zoneObj['Name']).strip()
-        if zoneName:
-            return zoneName
-    return ""
-
-
-def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zoneName: str = "") -> parser.ZoneTemplate:
+def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zoneName: str = "") -> dict[str, parser.ZoneTemplate]:
     """
-    Load one zone template from an IDF template file and inject it into target spaces.
+    Load one zone template and return independent templates keyed by space id.
 
     Parameters
     ----------
@@ -118,8 +102,8 @@ def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zon
 
     Returns
     -------
-    parser.ZoneTemplate
-        Loaded template for the requested zoneName.
+    dict[str, parser.ZoneTemplate]
+        Zone-specific templates keyed by target space id.
 
     """
     configure_idd()
@@ -129,7 +113,7 @@ def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zon
     zTemplate: parser.ZoneTemplate = parser.ZoneTemplate.fromIDF(idf, zoneName=zoneName)
     if zTemplate.isEmpty():
         print(f"\n******Warning: no valid zone template was found for Name='{zoneName}'")
-        return zTemplate
+        return {}
 
     if isinstance(spaceIds, str):
         spaceIds = [spaceIds]
@@ -142,12 +126,13 @@ def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zon
     else:
         targetSpaces = list(model.spaceList)
         
+    templates = {}
     for si, space in enumerate(targetSpaces):
         print(f"\rIDF: overwriting zonal settings: {si + 1}/{len(targetSpaces)}=>{space.id}", end='')
-        space.settings['idf_template'] = zTemplate.appliedToZone(space)
+        templates[str(space.id)] = copy.deepcopy(zTemplate).appliedToZone(space)
         if space.is_open():
             print(f'\n******Warring: EnergyPlus do not support void space: {space.id}')
-    return zTemplate
+    return templates
 
 
 def _idf_auto_zone_mapping(model: MoosasModel, idf_template_path: str) -> dict[str, list[str]]:
@@ -237,63 +222,51 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
 
     if zoneNameToSpaceDict is None and idfTemplatePath:
         zoneNameToSpaceDict = _idf_auto_zone_mapping(model, idfTemplatePath)
-    if zoneNameToSpaceDict is None and hasattr(model, 'idfZoneSettings'):
-        modelZoneMap = getattr(model, 'idfZoneSettings')
-        if isinstance(modelZoneMap, dict):
-            zoneNameToSpaceDict = modelZoneMap
-
     zoneMap = _normalize_zone_name_to_space_dict(zoneNameToSpaceDict)
+    idfSpaces = [space for space in model.spaceList if not space.is_open()]
+    idfSpaceById = {str(space.id): space for space in idfSpaces}
+    validSpaceIds = set(idfSpaceById)
+    zoneMap = {
+        zoneName: (
+            list(idfSpaceById)
+            if not spaceIds
+            else [spaceId for spaceId in spaceIds if spaceId in validSpaceIds]
+        )
+        for zoneName, spaceIds in zoneMap.items()
+    }
+    zoneMap = {zoneName: spaceIds for zoneName, spaceIds in zoneMap.items() if spaceIds}
     zTemplate: parser.ZoneTemplate = None
+    templatesBySpaceId: dict[str, parser.ZoneTemplate] = {}
     objectHints = set()
     assignedSpaceIds = set()
-    allSpaceIds = [str(space.id) for space in model.spaceList]
+    allSpaceIds = list(idfSpaceById)
 
     # Apply templates by zone->space mapping. When space list is empty, it means all spaces.
     for zoneName, targetSpaceIds in zoneMap.items():
-        mappedSpaceIds = list(targetSpaceIds) if len(targetSpaceIds) > 0 else list(allSpaceIds)
-        thisTemplate: parser.ZoneTemplate = loadIDFTemplate(
+        mappedSpaceIds = list(targetSpaceIds)
+        thisTemplates = loadIDFTemplate(
             model,
             idfTemplatePath=idfTemplatePath,
-            spaceIds=targetSpaceIds,
+            spaceIds=mappedSpaceIds,
             zoneName=zoneName,
         )
-        if thisTemplate.isEmpty():
+        if not thisTemplates:
             print(f"\n******Warning: skip empty template for zone '{zoneName}'")
             continue
 
+        templatesBySpaceId.update(thisTemplates)
+        thisTemplate = next(iter(thisTemplates.values()))
         if zTemplate is None:
             zTemplate = thisTemplate
         objectHints.update(list(thisTemplate.objectList.keys()))
         assignedSpaceIds.update(mappedSpaceIds)
 
-    unassignedSpaceIds = [spId for spId in allSpaceIds if spId not in assignedSpaceIds]
-
-    # Robust fallback: when zoneName is empty/invalid or mapping fails,
-    # apply the first available template zone to all unassigned spaces.
-    if zTemplate is None or len(unassignedSpaceIds) > 0:
-        fallbackZoneName = _idf_get_first_zone_name(idfTemplatePath)
-        fallbackTargets = list(allSpaceIds) if zTemplate is None else unassignedSpaceIds
-        if len(fallbackTargets) > 0:
-            print(
-                f"\n******Warning: fallback IDF template mapping activated. "
-                f"zone='{fallbackZoneName}', targets={len(fallbackTargets)}"
-            )
-            fallbackTemplate: parser.ZoneTemplate = loadIDFTemplate(
-                model,
-                idfTemplatePath=idfTemplatePath,
-                spaceIds=fallbackTargets,
-                zoneName=fallbackZoneName,
-            )
-            if not fallbackTemplate.isEmpty():
-                if zTemplate is None:
-                    zTemplate = fallbackTemplate
-                objectHints.update(list(fallbackTemplate.objectList.keys()))
-
     if zTemplate is None:
-        raise ValueError(
-            "No valid ZoneTemplate was loaded. Check zoneNameToSpaceDict and template IDF Zone names. "
-            "Fallback to first zone also failed."
-        )
+        raise ValueError("No valid ZoneTemplate was loaded for zoneNameToSpaceDict")
+
+    unassignedSpaceIds = [spId for spId in allSpaceIds if spId not in assignedSpaceIds]
+    if unassignedSpaceIds:
+        raise ValueError(f"No IDF template was assigned to spaces: {unassignedSpaceIds}")
 
     # remote existing zone-related objects
     removeHint = []
@@ -317,21 +290,13 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     airboundary = MoosasSettings(construction.airBoundaryDefault)
     airboundary.applyToIDF(idf)
 
-    # check space boundary condition
-    removeSpace = [space.id for space in model.spaceList if space.is_open()]
-    while len(removeSpace)>0:
-        for inValidSpaceId in removeSpace:
-            print(f"\rIDF: removing invalid space: {inValidSpaceId}", end='')
-            model.removeSpace(inValidSpaceId)
-        removeSpace = [space.id for space in model.spaceList if space.is_open()]
-    print()
-
     # encoding geometries
     for wi, wall in enumerate(moElements['MoosasWall']):
         try:
-            if len(wall.space) > 0:
+            spaceId = next((str(spaceId) for spaceId in wall.space if str(spaceId) in idfSpaceById), None)
+            if spaceId is not None:
                 print(f"\rIDF: encoding walls: {wi+1}/{len(moElements['MoosasWall'])}", end='')
-                space = model.spaceIdDict[wall.space[0]]
+                space = idfSpaceById[spaceId]
                 wallU, winU, SHGC = space.settings['zone_wallU'], space.settings['zone_winU'], space.settings[
                     'zone_win_SHGC']
                 wallConstruction = zTemplate.getConstruction('opaque', wallU)
@@ -352,13 +317,14 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     print()
     for fi, face in enumerate(moElements['MoosasFace']):
         try:
-            if len(face.space) > 0:
+            spaceId = next((str(spaceId) for spaceId in face.space if str(spaceId) in idfSpaceById), None)
+            if spaceId is not None:
                 print(f"\rIDF: encoding faces: {fi+1}/{len(moElements['MoosasFace'])}", end='')
                 faceType = 'Floor'
-                space = model.spaceIdDict[face.space[0]]
+                space = idfSpaceById[spaceId]
                 if len(face.space) == 1:
-                    if model.spaceIdDict[face.space[0]].ceiling:
-                        if face in model.spaceIdDict[face.space[0]].ceiling.face:
+                    if space.ceiling:
+                        if face in space.ceiling.face:
                             faceType = 'Roof'
                 wallU, winU, SHGC = space.settings['zone_wallU'], space.settings['zone_winU'], space.settings[
                     'zone_win_SHGC']
@@ -379,22 +345,15 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     print()
 
     # writing zonal settings
-    for si, space in enumerate(model.spaceList):
-        print(f"\rIDF: encoding zones: {si+1}/{len(model.spaceList)}", end='')
-        if 'idf_template' in space.settings:
-            space.settings['idf_template'].applyToIDF(idf)
-        else:
-            print(f"\n******Warning: no idf_template mapped for space '{space.id}', skipped")
-        # if space.is_void():
-        #     print('***Warring: EnergyPlus do not support void space')
-        # else:
-        #     space.settings['idf_template'].applyToIDF(idf)
+    for si, space in enumerate(idfSpaces):
+        print(f"\rIDF: encoding zones: {si+1}/{len(idfSpaces)}", end='')
+        templatesBySpaceId[str(space.id)].applyToIDF(idf)
 
     # writing zone mixing
     mixing = set()
-    for space in model.spaceList:
+    for space in idfSpaces:
         for moElement in space.getAllFaces(False):
-            if moElement.category == 2:
+            if moElement.category == 2 and all(str(spaceId) in validSpaceIds for spaceId in moElement.space):
                 mixing.add('~~'.join(moElement.space))
 
     for zoneTwins in mixing:
@@ -419,32 +378,15 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     if idfTemplatePath:
         _copy_idf_schedule_files(idfTemplatePath, outputPath)
     print()
+    return zoneMap, templatesBySpaceId
 
 
-def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None):
-    """Write IDF using the parallel IDF RDF graph when available.
-
-    First-time writes keep the existing stable IDF generation path, then read the
-    generated IDF back into ``model.idfGraph`` for future field-level edits.
-    """
-    from ..alignment import IDFtoOWL, OWLtoIDF, default_template_idf_path, idf, link_idf_graph_to_moosas
+def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None) -> IDFConversionResult:
+    """Write IDF and return its IDF-specific conversion state."""
+    from ..alignment import IDFtoOWL, default_template_idf_path, link_idf_graph_to_moosas
 
     resolved_template = default_template_idf_path(idfTemplatePath)
-    idf_graph = getattr(model, "idfGraph", None)
-
-    has_idf_objects = False
-    if idf_graph is not None:
-        has_idf_objects = (
-            len(list(idf_graph.subjects(RDF.type, idf.idfObject))) > 0
-            or len(list(idf_graph.subjects(RDF.type, idf.idfUniqueObject))) > 0
-            or len(list(idf_graph.subjects(RDF.type, encodeURI("OUTPUT:VARIABLE")))) > 0
-        )
-
-    if has_idf_objects:
-        OWLtoIDF(idf_graph, outputPath, template_idf_path=resolved_template)
-        return
-
-    _writeIDF_default(
+    zone_map, templates = _writeIDF_default(
         model,
         outputPath,
         idfTemplatePath=resolved_template,
@@ -452,9 +394,14 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneName
     )
     generated_graph = IDFtoOWL(outputPath)
     linked_graph, uri_map = link_idf_graph_to_moosas(generated_graph, model)
-    model.idfGraph = linked_graph
-    model.idfGraphSource = outputPath
-    model.idfUriMap = uri_map
+    return IDFConversionResult(
+        model=model,
+        zone_to_space_ids=zone_map,
+        templates_by_space_id=templates,
+        graph=linked_graph,
+        graph_source=os.path.abspath(outputPath),
+        uri_map=uri_map,
+    )
 
 
 def find_closest_field(field_list: list, target_field: str) -> str:
@@ -1278,51 +1225,47 @@ def _idf_collect_zone_to_space_mapping(model: MoosasModel) -> dict[str, list[str
     return _normalize_zone_name_to_space_dict(dict(zoneMap))
 
 
-def _idf_apply_zone_templates(model: MoosasModel, idfPath: str) -> None:
-    """Apply IDF zone templates to spaces and persist SpaceId->ZoneTemplate mapping."""
+def _idf_apply_zone_templates(model: MoosasModel, idfPath: str) -> tuple[dict[str, list[str]], dict[str, parser.ZoneTemplate]]:
+    """Build IDF zone mappings and templates without modifying the model."""
     zoneMap = _idf_collect_zone_to_space_mapping(model)
-    zoneIDFSettings = {}
+    templatesBySpaceId = {}
 
     for zoneName, spaceIds in zoneMap.items():
         if len(spaceIds) == 0:
             continue
-        try:
-            zTemplate = loadIDFTemplate(
-                model,
-                idfTemplatePath=idfPath,
-                spaceIds=spaceIds,
-                zoneName=zoneName,
-            )
-        except Exception as exc:
-            print(f"\n******Warning: failed to load IDF template for zone '{zoneName}': {exc}")
-            continue
-
-        if zTemplate.isEmpty():
-            print(f"\n******Warning: skip empty IDF template for zone '{zoneName}'")
-            continue
-
-        for spId in spaceIds:
-            space = model.spaceIdDict.get(spId)
-            if space is None:
-                continue
-            if hasattr(space, "settings") and isinstance(space.settings, dict):
-                if "idf_template" in space.settings:
-                    zoneIDFSettings[spId] = space.settings["idf_template"]
-
-    # Keep backward compatibility with existing consumers.
-    model.idfZoneSettings = dict(zoneMap)
-    model.zoneIDFSettings = zoneIDFSettings
-    model.idfZoneTemplate = dict(zoneIDFSettings)
+        templates = loadIDFTemplate(
+            model,
+            idfTemplatePath=idfPath,
+            spaceIds=spaceIds,
+            zoneName=zoneName,
+        )
+        if not templates:
+            raise ValueError(f"No IDF template was loaded for zone '{zoneName}'")
+        templatesBySpaceId.update(templates)
+    return dict(zoneMap), templatesBySpaceId
 
 
-def readIDF(idfPath: str, geoPath: str = None, xmlPath: str = None) -> MoosasModel:
-    """Convert IDF to GEO/XML and construct a MoosasModel through loadXml."""
+def readIDF(idfPath: str, geoPath: str = None, xmlPath: str = None) -> IDFConversionResult:
+    """Convert IDF to a model plus independent IDF-specific state."""
+    from ..alignment import IDFtoOWL, link_idf_graph_to_moosas
+
+    def build_result(model: MoosasModel) -> IDFConversionResult:
+        zone_map, templates = _idf_apply_zone_templates(model, idfPath)
+        linked_graph, uri_map = link_idf_graph_to_moosas(IDFtoOWL(idfPath), model)
+        return IDFConversionResult(
+            model=model,
+            zone_to_space_ids=zone_map,
+            templates_by_space_id=templates,
+            graph=linked_graph,
+            graph_source=os.path.abspath(idfPath),
+            uri_map=uri_map,
+        )
+
     if geoPath is not None and xmlPath is not None:
         IDFtoGeo(idfPath, geoPath)
         IDFtoXml(idfPath, xmlPath)
         model = loadXml(xmlPath, geoPath)
-        _idf_apply_zone_templates(model, idfPath)
-        return model
+        return build_result(model)
 
     with tempfile.TemporaryDirectory(prefix="moosas_idf_") as tmpdir:
         temp_geo = geoPath or os.path.join(tmpdir, "from_idf.geo")
@@ -1330,7 +1273,6 @@ def readIDF(idfPath: str, geoPath: str = None, xmlPath: str = None) -> MoosasMod
         IDFtoGeo(idfPath, temp_geo)
         IDFtoXml(idfPath, temp_xml)
         model = loadXml(temp_xml, temp_geo)
-        _idf_apply_zone_templates(model, idfPath)
-        return model
+        return build_result(model)
 
 

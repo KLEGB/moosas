@@ -109,17 +109,6 @@ def link_idf_graph_to_moosas(idf_graph: Graph, model) -> tuple[edGraph, dict[str
         if class_name in ("BUILDINGSURFACE:DETAILED", "FENESTRATIONSURFACE:DETAILED"):
             linked.add((obj_uri, idf.hasIDFObject, obj_uri))
 
-    for space in getattr(model, "spaceList", []):
-        space_uri = URIRef(f"Space_{space.id}")
-        space.idfObjectUris = [str(o) for o in linked.objects(space_uri, idf.hasIDFObject)]
-
-    for element in _iter_model_elements(model, dumpUseless=True):
-        element_uri = URIRef(f"element_{element.Uid}")
-        if (element_uri, RDF.type, idf.idfObject) in linked or (element_uri, RDF.type, idf.idfUniqueObject) in linked:
-            element.idfObjectUris = [str(element_uri)]
-        else:
-            element.idfObjectUris = [str(o) for o in linked.objects(element_uri, idf.hasIDFObject)]
-
     return linked, {str(k): str(v) for k, v in uri_map.items()}
 
 
@@ -167,18 +156,3 @@ def extract_idf_graph(combined_graph: Graph) -> edGraph | None:
                     changed = True
 
     return idf_triples if added_count > 0 else None
-
-
-def attach_idf_graph(model, idf_graph: Graph | None) -> None:
-    if idf_graph is None:
-        return
-    model.idfGraph = edGraph.from_graph(idf_graph)
-    for space in getattr(model, "spaceList", []):
-        space_uri = URIRef(f"Space_{space.id}")
-        space.idfObjectUris = [str(o) for o in model.idfGraph.objects(space_uri, idf.hasIDFObject)]
-    for element in _iter_model_elements(model, dumpUseless=True):
-        element_uri = URIRef(f"element_{element.Uid}")
-        if (element_uri, RDF.type, idf.idfObject) in model.idfGraph or (element_uri, RDF.type, idf.idfUniqueObject) in model.idfGraph:
-            element.idfObjectUris = [str(element_uri)]
-        else:
-            element.idfObjectUris = [str(o) for o in model.idfGraph.objects(element_uri, idf.hasIDFObject)]

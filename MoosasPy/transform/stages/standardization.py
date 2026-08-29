@@ -1,12 +1,13 @@
-"""Geometry representation standardization helpers."""
+"""Geometry representation standardization stage."""
 from __future__ import annotations
 
-from .element import MoosasFace, MoosasGlazing, MoosasSkylight
-from .geos import GeometryError
+from ...models import MoosasModel
 from ...utils import mixItemListToList, np
+from ..geometry.element import MoosasFace, MoosasGlazing, MoosasSkylight
+from ..geometry.geos import GeometryError
 
 
-def standardize_model(model):
+def standardize_model(model: MoosasModel) -> MoosasModel:
     """Replace active element geometry with simplified representations."""
     elements = model.getAllFaces()
     for index, element in enumerate(elements):
@@ -22,6 +23,6 @@ def standardize_model(model):
             element.replaceGeo(geometry_id)
             print(f"\rIO: standardizing faces {index}/{len(elements)}", end="")
         except GeometryError:
-            print("******Waring: GeometryError, this face would not be standardized")
+            print("******Warning: GeometryError, this face would not be standardized")
     print()
     return model

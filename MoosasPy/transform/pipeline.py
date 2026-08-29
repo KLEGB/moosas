@@ -10,36 +10,24 @@ import os.path
 import sys
 import time
 
-import shapely
-
-from .stages.assembly import assemble_model, pack_model
+from .stages.assembly import assemble_model
+from .stages.boundary import prepare_boundary_geometry
 from .stages.classification import classify_model
 from .stages.cleansing import cleanse_model
-from .stages.finalization import attach_shading_content, finalize_model
-from .stages.generation import generate_space_boundaries
-from .stages.glazing import attach_glazing_to_faces, match_face_glazing
+from .stages.convexification import convexify_model
+from .stages.finalization import finalize_model
+from .stages.generation import CCRSpaceGeneration
+from .stages.glazing import attach_glazing_to_faces
 from .stages.options import TransformOptions
 from .stages.splitting import prepare_divided_zones, split_wall_intersections
 from .stages.topology import build_face_topology, build_space_topology
-from .stages.validation import validate_model
-from .geometry.convexify import convexify_model
-from .geometry.boundary import prepare_boundary_geometry
-from .geometry.standardize import standardize_model
-from .geometry.air_boundary import copy_air_boundaries
 from .io import load, save
 from .io._geo import _readGeo, preClassified
 from .io._obj import _readObj
 from .io._stl import _readStl
-from .geometry.cleanse import *
-from .geometry.contour import packing_edges, outerBoundary
-from .geometry.element import MoosasEdge, MoosasFace, MoosasFloor, MoosasGeometry, MoosasSpace
-from .geometry.geos import *
-from .geometry.spaceGen import CCRSpaceGeneration
 from ..models import MoosasModel
 from ..model_resources import configure_model_resources
-from ..utils import mixItemListToList
-from ..utils.constant import geom
-from ..utils.tools import searchBy, path
+from ..utils import np
 
 
 def complete_topology(model: MoosasModel) -> MoosasModel:
@@ -124,13 +112,13 @@ def transform(input_path: str, input_type: str = None,
 
     Examples
     --------
-    >>> from MoosasPy.transform.geometry.spaceGen import CCRSpaceGeneration
+    >>> from MoosasPy.transform.stages.generation import CCRSpaceGeneration
     >>> model = transform('test.obj', method=CCRSpaceGeneration)
     >>> model.save('output.xml', fmt='xml')
 
     Energy analysis example:
     >>> from MoosasPy import energyAnalysis
-    >>> results = energyAnalysis(model)
+    >>> results = energyAnalysis(model, weather)
     >>> print(f"Total energy demand: {results['total']['cooling'] + results['total']['heating']} kWh")
 
     Notes
@@ -233,7 +221,6 @@ def structured(
             solve_duplicated=options.solve_duplicated,
             solve_redundant=options.solve_redundant,
             solve_overlap=options.solve_overlap,
-            match_glazing=attach_glazing_to_faces,
         )
         model = split_wall_intersections(model, options.break_wall_horizontal)
         t2 = time.time()
@@ -312,19 +299,18 @@ def structured(
     """
 
     """1nd level space boundaries topology"""
-    model = prepare_divided_zones(model, options.divided_zones, copy_air_boundaries)
+    model = prepare_divided_zones(model, options.divided_zones)
 
     # CCR method
 
     # # BTG method
-    model = generate_space_boundaries(model, generation_method)
+    model = generation_method(model)
     t4 = time.time()
 
     model = assemble_model(
         model,
         divided_zones=options.divided_zones,
         solve_overlap=options.solve_overlap,
-        pack_model=pack_model,
     )
     """
     Packaging Moosasspace:
@@ -342,10 +328,6 @@ def structured(
         break_wall_vertical=options.break_wall_vertical,
         attach_shading=options.attach_shading,
         standardize=options.standardize,
-        build_space_topology=build_space_topology,
-        build_face_topology=build_face_topology,
-        standardize_model=standardize_model,
-        validate=validate_model,
     )
     t6 = time.time()
     t7 = time.time()

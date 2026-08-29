@@ -1,11 +1,12 @@
 """Topology and optional finalization stage for transformations."""
 from __future__ import annotations
 
-from collections.abc import Callable
-
 from ...models import MoosasModel
 from ...utils import np, shapely
 from ...utils.tools import searchBy
+from .standardization import standardize_model
+from .topology import build_face_topology, build_space_topology
+from .validation import validate_model
 
 
 def finalize_model(
@@ -14,10 +15,6 @@ def finalize_model(
     break_wall_vertical: bool,
     attach_shading: bool,
     standardize: bool,
-    build_space_topology: Callable[[MoosasModel, bool], MoosasModel],
-    build_face_topology: Callable[[MoosasModel], MoosasModel],
-    standardize_model: Callable[[MoosasModel], MoosasModel],
-    validate: Callable[[MoosasModel], MoosasModel],
 ) -> MoosasModel:
     """Build topology, then apply optional content attachment and standardization."""
     model = build_space_topology(model, break_wall_vertical)
@@ -26,7 +23,7 @@ def finalize_model(
         model = attach_shading_content(model)
     if standardize:
         model = standardize_model(model)
-    return validate(model)
+    return validate_model(model)
 
 
 def attach_shading_content(model: MoosasModel) -> MoosasModel:

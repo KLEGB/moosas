@@ -25,7 +25,7 @@ def _default_sky_positions():
         ]
 
 
-def modelRadiation(model, reflection=1):
+def modelRadiation(model, cumulative_sky, reflection=1):
     """
     Calculate radiation for each space in the model using a fast single-call method via MoosasRad.exe.
     
@@ -43,8 +43,6 @@ def modelRadiation(model, reflection=1):
         The input model with updated space settings including 'zone_summerrad' and 'zone_winterrad'
         values representing the total solar radiation for summer and winter periods.
     """
-    if model.cumSky is None:
-        raise ValueError("model.cumSky must be prepared before radiation calculation")
     model.x = 1000
     """
          This method is faster than spaceRadiation since it only call MoosasRad.exe once.
@@ -71,13 +69,13 @@ def modelRadiation(model, reflection=1):
     """radiation calculation"""
     summerRad = positionRadiation(
         positionRay=rays,
-        sky=model.cumSky['summer'],
+        sky=cumulative_sky['summer'],
         geo_path=geo_path,
         reflection=reflection
     )
     winterRad = positionRadiation(
         positionRay=rays,
-        sky=model.cumSky['winter'],
+        sky=cumulative_sky['winter'],
         geo_path=geo_path,
         reflection=reflection
     )
@@ -93,7 +91,7 @@ def modelRadiation(model, reflection=1):
     return model
 
 
-def spaceRadiation(space: MoosasSpace, reflection=1) -> dict:
+def spaceRadiation(space: MoosasSpace, cumulative_sky, reflection=1) -> dict:
     """
     Calculate seasonal radiation for a space by aggregating aperture-level radiation contributions.
     
@@ -117,8 +115,6 @@ def spaceRadiation(space: MoosasSpace, reflection=1) -> dict:
     settings = space.settings
     model = space.parent
     geo_path = writeRadGeo(model)
-    if model.cumSky is None:
-        raise ValueError("model.cumSky must be prepared before radiation calculation")
     moFaces = space.getAllFaces(to_dict=False)
     rays = []
     windowArea = []
@@ -132,14 +128,14 @@ def spaceRadiation(space: MoosasSpace, reflection=1) -> dict:
     windowArea = np.array(windowArea)
     settings['zone_summerrad'] = np.sum(windowArea * positionRadiation(
         positionRay=rays,
-        sky=model.cumSky['summer'],
+        sky=cumulative_sky['summer'],
         geo_path=geo_path,
         reflection=reflection
     ))
 
     settings['zone_winterrad'] = np.sum(windowArea * positionRadiation(
         positionRay=rays,
-        sky=model.cumSky['winter'],
+        sky=cumulative_sky['winter'],
         geo_path=geo_path,
         reflection=reflection
     ))
