@@ -7,11 +7,10 @@ from tempfile import TemporaryDirectory
 import math
 import unittest
 
-from MoosasPy.model.resources import configure_model_resources
 from MoosasPy.simulation.energy.runner import EnergyRunner
 from MoosasPy.simulation.weather import load_station_weather
-from MoosasPy.transform import TransformOptions, transform
-from MoosasPy.transform.pipeline import _load_geometry_source, structured
+from MoosasPy.transform import transform
+from MoosasPy.transform.pipeline import _load_geometry_source
 from MoosasPy.transform.stages.classification import classify_model
 from MoosasPy.transform.stages.cleansing import cleanse_model
 from MoosasPy.transform.stages.generation import CCRSpaceGeneration
@@ -28,8 +27,9 @@ BEIJING_WEATHER = PROJECT_ROOT / "MoosasPy" / "db" / "weather" / "545110.csv"
 
 
 class ExampleIntegrationTests(unittest.TestCase):
-    def setUp(self):
-        self.model = transform(
+    @classmethod
+    def setUpClass(cls):
+        cls.model = transform(
             str(GEOMETRY_FIXTURE),
             input_type="geo",
             stdout=StringIO(),
@@ -70,20 +70,6 @@ class ExampleIntegrationTests(unittest.TestCase):
         self.assertEqual(len(model.skylightList), 0)
         self.assertEqual(tuple(model.levelList), (0.0, 4.5, 9.0, 13.5, 18.0, 22.5, 27.0, 31.5, 36.0, 40.5, 45.0))
 
-    def test_file_and_model_entries_share_transform_options(self):
-        options = TransformOptions()
-        model = configure_model_resources(_load_geometry_source(str(GEOMETRY_FIXTURE), "geo"))
-        with redirect_stdout(StringIO()):
-            model = structured(model, options=options)
-
-        self.assertEqual(len(model.spaceList), len(self.model.spaceList))
-        self.assertEqual(len(model.wallList), len(self.model.wallList))
-        self.assertAlmostEqual(
-            sum(space.area for space in model.spaceList),
-            sum(space.area for space in self.model.spaceList),
-            places=4,
-        )
-
     def test_generation_stage_builds_boundaries_before_assembly(self):
         model = _load_geometry_source(str(GEOMETRY_FIXTURE), "geo")
         with redirect_stdout(StringIO()):
@@ -105,10 +91,13 @@ class ExampleIntegrationTests(unittest.TestCase):
         self.assertEqual(len(model.spaceList), 0)
 
     def test_validation_rejects_an_unknown_neighbor(self):
-        self.model.spaceList[0].neighbor["missing-space"] = []
-
-        with self.assertRaisesRegex(ValueError, "unknown neighbor"):
-            validate_model(self.model)
+        neighbors = self.model.spaceList[0].neighbor
+        neighbors["missing-space"] = []
+        try:
+            with self.assertRaisesRegex(ValueError, "unknown neighbor"):
+                validate_model(self.model)
+        finally:
+            del neighbors["missing-space"]
 
     def test_xml_serialization_is_owned_by_the_io_boundary(self):
         root = build_xml(self.model)

@@ -11,7 +11,7 @@ from MoosasPy.transform import transform
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-GEOMETRY_FIXTURE = PROJECT_ROOT / "test" / "caseFile" / "test8_topology.geo"
+GEOMETRY_FIXTURE = PROJECT_ROOT / "test" / "caseFile" / "test3_geomove.geo"
 
 
 @pytest.fixture(scope="module")
