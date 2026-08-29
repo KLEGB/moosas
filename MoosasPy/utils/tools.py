@@ -187,11 +187,6 @@ def to_dictionary(etree):
         Nested elements are represented as nested dictionaries or lists if multiple
         elements with the same tag exist.
     """
-    """
-        3d objects are not support in shapely.to_geojson.
-        in this case we must write GeoJSON explicitly through the JSON I/O adapter
-        this method can reform the given elementTree (xml) into dictionary
-    """
     children = list(etree)
     if len(children) == 0:
         return etree.text

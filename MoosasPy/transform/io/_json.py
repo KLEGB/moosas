@@ -2,39 +2,7 @@
 import tempfile
 
 from ...utils import ET, json
-from ...utils import mixItemListToList, to_dictionary, path, parseFile
-import shapely
-from ..geometry.element import MoosasGeometry
-
-
-def build_geojson(model, mask=None) -> dict:
-    """Build a GeoJSON feature collection from a model's active geometry."""
-    if mask is not None:
-        valid_geometry = model.findFace(mask)
-    else:
-        geometry_ids = set()
-        for element in model.getAllFaces():
-            geometry_ids.update(mixItemListToList(element.faceId))
-        valid_geometry = model.findFace(list(geometry_ids))
-
-    return {
-        "type": "FeatureCollection",
-        "features": [
-            {
-                "type": "Feature",
-                "properties": {
-                    "normal": shapely.get_coordinates(geometry.normal, include_z=True).tolist(),
-                    "id": geometry.faceId,
-                    "is_glazing": geometry.category,
-                },
-                "geometries": {
-                    "type": "Polygon",
-                    "coordinates": shapely.get_coordinates(geometry.face, include_z=True).tolist(),
-                },
-            }
-            for geometry in valid_geometry
-        ],
-    }
+from ...utils import to_dictionary, path
 
 def writeJson(file_path, model) -> str:
     """Get a json file describe the space topology.
@@ -138,59 +106,3 @@ def loadJson(file_path: str, geo_path: str):
     finally:
         if os.path.exists(handle.name):
             os.remove(handle.name)
-
-
-def writeGeojson(file_path, model) -> str:
-    """Get a geojson file for the geometry library in the model
-
-    features = [
-        {
-            "type": "Feature",
-            "properties": {
-                "normal": geometries' normal,
-                "id": geometries' faceId,
-                "is_glazing": geo.category
-            },
-
-            "geometries": {
-                "type": "Polygon",
-                "coordinates": coordinates for each polygon
-            }
-        }
-    ]
-
-    Args:
-        file_path(str): output geojson file path
-        model(MoosasModel): model to export
-
-    Returns:
-        json file string
-    """
-    path.checkBuildDir(file_path)
-    dictionary = build_geojson(model)
-
-    # Serializing json
-    json_object = json.dumps(dictionary, indent=4)
-
-    # Writing to sample.json
-    with open(file_path, "w") as outfile:
-        outfile.write(json_object)
-
-    return json_object
-
-
-def _readGeojson(file_path) -> list[MoosasGeometry]:
-    """
-    Read a GeoJSON file and return a list of MoosasGeometry objects.
-    
-    Parameters
-    ----------
-    file_path : str
-        Path to the GeoJSON file to be read.
-    
-    Returns
-    -------
-    list[MoosasGeometry]
-        A list of MoosasGeometry objects parsed from the GeoJSON file.
-    """
-    raise NotImplementedError("geojson reader has not been implemented")

@@ -15,7 +15,6 @@ from MoosasPy.transform.pipeline import _load_geometry_source
 from MoosasPy.transform.stages.classification import classify_model
 from MoosasPy.transform.stages.cleansing import cleanse_model
 from MoosasPy.transform.stages.generation import CCRSpaceGeneration
-from MoosasPy.transform.io._json import build_geojson
 from MoosasPy.transform.io._xml import build_xml
 from MoosasPy.transform.stages.splitting import split_wall_intersections
 from MoosasPy.transform.stages.validation import validate_model
@@ -118,15 +117,6 @@ class ExampleIntegrationTests(unittest.TestCase):
         self.assertEqual(root.tag, "model")
         self.assertEqual(len(root.findall("space")), len(self.model.spaceList))
         self.assertEqual(root.findtext("level"), " ".join(str(level) for level in self.model.levelList))
-
-    def test_geojson_serialization_is_owned_by_the_io_boundary(self):
-        geojson = build_geojson(self.model)
-        first_geometry_id = geojson["features"][0]["properties"]["id"]
-
-        self.assertFalse(hasattr(self.model, "buildGeojson"))
-        self.assertEqual(geojson["type"], "FeatureCollection")
-        self.assertEqual(len(geojson["features"]), 443)
-        self.assertEqual(len(build_geojson(self.model, [first_geometry_id])["features"]), 1)
 
     @unittest.skipUnless(
         ENERGY_ENGINE.is_file() and BEIJING_WEATHER.is_file(),
