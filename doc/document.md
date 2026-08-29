@@ -1,203 +1,586 @@
-# MoosasPy Documentation
+# MoosasPy
 
-## Overview
+MoosasPy is the Python core of MOOSAS, a building-performance analysis and
+optimization toolkit for the early design stage. It converts geometry into a
+structured building model and provides model exchange, weather preparation,
+energy analysis, solar-radiation and daylight calculation, airflow simulation,
+and coupled analysis workflows.
 
-MoosasPy is a Python toolkit for building geometry processing and building-performance analysis. It provides geometry transformation, model I/O, weather and sky models, radiation and sunlight calculations, simplified energy analysis, and airflow-network preparation.
+This repository contains the Python package and its native runtime resources.
+It does not contain the former SketchUp plug-in, Ruby code, browser interface,
+or a portable Python distribution.
 
-This repository is Python-only. It does not contain the previous SketchUp plugin, Ruby sources, or browser UI compatibility layer.
+## Package Structure
 
-## Architecture
-
-```mermaid
-flowchart TB
-	User[User code] --> API[MoosasPy public API]
-
-	API --> Transform[Transform pipeline]
-	API --> IO[Model I/O]
-	API --> Simulation[Simulation workflows]
-
-	Transform --> Geometry[Geometry and topology]
-	Transform --> Model[MoosasModel]
-	IO --> Model
-
-	Simulation --> Energy[Energy]
-	Simulation --> Radiation[Radiation and sunlight]
-	Simulation --> Weather[Weather and sky]
-	Simulation --> Airflow[Airflow and CONTAM]
-	Simulation --> Coupling[Energy-airflow coupling]
-
-	Energy --> Model
-	Radiation --> Model
-	Airflow --> Model
-	Coupling --> Energy
-	Coupling --> Airflow
-	Weather --> Energy
-	Weather --> Radiation
-
-	Model --> Utils[Shared utilities]
-	Transform --> Utils
-	Simulation --> Utils
-	Energy --> Resources[Runtime resources: data, db, libs]
-	Radiation --> Resources
-	Airflow --> Resources
+```text
+MoosasPy/
+|-- model/                 Building model and model-file I/O
+|   `-- io/                RDF, XML, JSON, IDF, graph, gbXML, and IFC adapters
+|-- transform/             Geometry-to-model transformation pipeline
+|   |-- importers/         GEO, OBJ, and STL readers
+|   |-- stages/            Explicit transformation stages and options
+|   |-- geometry/          Geometry, topology, contours, and space generation
+|   `-- alignment/         Ontology and geometry alignment helpers
+|-- simulation/
+|   |-- energy/            Rapid energy analysis and PV conversion
+|   |-- radiation/         Radiation, sunlight, and Radiance daylight analysis
+|   |-- airflow/           Airflow networks and CONTAM execution
+|   |-- weather/           Weather records, EPW preparation, and sky models
+|   `-- coupling/          Cross-domain workflows
+|-- utils/                 Shared constants, paths, errors, and utilities
+|-- db/                    Templates, schedules, weather, and EnergyPlus data
+|-- libs/                  Packaged native executables and support files
+|-- data/                  Legacy runtime examples
+`-- __temp__/              Runtime workspace; not included in distributions
 ```
+
+The three main public API areas are:
+
+| API | Purpose |
+| --- | --- |
+| `MoosasPy.transform` | Convert GEO, OBJ, or STL geometry into a `MoosasModel`. |
+| `MoosasPy.MoosasModel` | Load, inspect, edit, and save complete building models. |
+| `MoosasPy.simulation` | Run energy, radiation, weather, airflow, and coupled workflows. |
 
 ## Requirements and Installation
 
-MoosasPy requires Python 3.10 or newer. Install the package from the repository root:
+MoosasPy requires Python 3.10 or newer. From the repository root, install the
+package with:
 
 ```bash
 python -m pip install .
 ```
 
-For tests and release tooling, install the development extras:
+For development, tests, and package validation, install the development extras:
 
 ```bash
 python -m pip install -e ".[dev]"
 ```
 
-Verify the package import:
+Verify the installation:
 
 ```bash
 python -c "import MoosasPy; print(MoosasPy.__version__)"
 ```
 
-## Quick Start
+Package versions are derived from Git tags matching
+`moosaspy-vMAJOR.MINOR.PATCH`.
 
-Convert a supported geometry file into a structured `MoosasModel`:
+## Usage
 
-```python
-from MoosasPy.transform import transform
+### Quick Start
 
-model = transform("example.obj", stdout=None)
-model.save("model.rdf")
-```
-
-`transform()` accepts only GEO, OBJ, and STL geometry sources. It constructs a complete model but does not write model files.
-
-## Public API
-
-The top-level `MoosasPy` package has three operational API areas:
-
-| API | Purpose |
-| --- | --- |
-| `transform` | Transform source geometry into a structured building model. |
-| `MoosasModel.load` / `model.save` | Load and save model formats. |
-| `simulation` | Access energy, radiation, airflow, weather, and coupled simulation domains. |
+Transform a geometry source and save the resulting model:
 
 ```python
-from MoosasPy import MoosasModel, simulation, transform
+from MoosasPy.transform import TransformOptions, transform
 
-model = transform.transform("example.obj", stdout=None)
-energy = simulation.energy.EnergyRunner(model=model).run()
-model.save("model.rdf")
-restored = MoosasModel.load("model.rdf")
+options = TransformOptions(attach_shading=True)
+model = transform("building.geo", options=options, stdout=None)
+
+print(len(model.spaceList))
+model.save("building.ttl")
 ```
 
-Domain-level APIs are accessed from `simulation`, for example
-`simulation.radiation.positionRadiation` and `simulation.weather.prepare_epw`.
-
-## Package Layout
-
-| Path | Contents |
-| --- | --- |
-| `MoosasPy/model/` | `MoosasModel` and its model-file I/O boundary. |
-| `MoosasPy/model/io/` | RDF, XML, JSON, IDF, Graph, and gbXML model adapters. |
-| `MoosasPy/transform/` | GEO/OBJ/STL transformation pipeline. |
-| `MoosasPy/transform/importers/` | Geometry-source readers used only by transform. |
-| `MoosasPy/transform/alignment/` | Geometric alignment and coordinate-processing helpers. |
-| `MoosasPy/transform/geometry/` | Geometry primitives, topology cleansing, contours, and space generation. |
-| `MoosasPy/simulation/airflow/` | Airflow-network and CONTAM project preparation, execution, and iteration. |
-| `MoosasPy/simulation/coupling/` | Cross-domain workflows for energy-airflow, energy-radiation, sunlight, and photovoltaic analysis. |
-| `MoosasPy/simulation/energy/` | Simplified energy analysis, photovoltaic energy conversion, and thermal-load helpers. |
-| `MoosasPy/simulation/radiation/` | Radiation geometry export, ray tests, sunlight, and Radiance daylight workflows. |
-| `MoosasPy/simulation/weather/` | Typed weather data, station access, downloads, and explicit EPW preparation. |
-| `MoosasPy/simulation/weather/sky/` | Direct-sun geometry and cumulative Tregenza sky models. |
-| `MoosasPy/utils/` | Shared paths, constants, errors, date utilities, and support functions. |
-| `MoosasPy/data/` | Legacy runtime example data. New test fixtures belong under `test/`. |
-| `MoosasPy/db/` | Building templates, material libraries, schedules, weather data, and EnergyPlus resources. |
-| `MoosasPy/libs/` | Native executables and resources used by simulation providers. |
-| `MoosasPy/__temp__/` | Runtime workspace excluded from distributions. |
-
-## Model I/O
-
-Model-file I/O is exposed by `MoosasModel`:
+Load the saved model without rerunning geometry transformation:
 
 ```python
 from MoosasPy import MoosasModel
 
-model = MoosasModel.load("model.xml")
-model.save("model.rdf")
-model.save("model.idf")
-model.save("model.graph.json")
+model = MoosasModel.load("building.ttl")
+model.summary()
 ```
 
-GEO, OBJ, and STL must enter through `transform()`. `MoosasModel.load()` accepts RDF/TTL, XML, JSON, and IDF. XML and JSON use a same-named `.geo` companion as an internal sidecar. `model.save()` additionally supports Graph JSON and gbXML.
-
-## Analysis Modules
-
-### Energy
-
-`MoosasPy.simulation.energy.energyAnalysis` performs rapid energy analysis using the native tools under `MoosasPy/libs/energy`. `EnergyRunner` returns structured command diagnostics; `getEnergyInput` and `parseEnergyOutput` remain available for lower-level input and result handling.
-
-### Radiation and Sunlight
-
-`MoosasPy.simulation.radiation` provides `modelRadiation`, `spaceRadiation`, `faceRadiation`, `positionRadiation`, `writeRadGeo`, and `rayTest`. `RadianceRunner` performs isolated Radiance daylight calculations from a model and `RadianceSky`; each run uses a temporary work directory and returns structured daylight metrics and command diagnostics. `positionSunHour` calculates direct sunlight duration from an explicit `DirectSky`-compatible object and either a model or a GEO scene.
-
-### Weather
-
-`MoosasPy.simulation.weather` is organized around immutable `Location` and
-`WeatherData` records. `station.py` reads the packaged station catalog and
-hourly CSV data; `downloader.py` handles explicit external catalog lookup and
-EPW download; `epw.py` converts an EPW into weather, WEA, and cumulative-sky
-assets; and `weather.sky` owns both direct-sun geometry and cumulative Tregenza
-sky models. EPW-generated assets are written only to a caller-provided output
-directory and are returned together as `PreparedWeather`.
+At the package root, `transform` is the transformation module rather than the
+function itself:
 
 ```python
-from MoosasPy.simulation.weather import load_station_weather, prepare_epw
+from MoosasPy import transform
 
-weather = load_station_weather("545110")
-prepared = prepare_epw("custom.epw", "simulation-input/weather")
-model.weather = prepared.weather
-model.cumSky = prepared.cumulative_skies
+model = transform.transform("building.obj", stdout=None)
 ```
 
-Energy, radiation, and airflow do not import each other. Cross-domain workflows
-load and attach weather through `MoosasPy.simulation.coupling`.
+Importing the function directly from `MoosasPy.transform` is recommended for
+application code.
 
-### Ventilation
+### Geometry Transformation
 
-`MoosasPy.simulation.airflow` provides functions to construct airflow-network and CONTAM project files: `buildPrj`, `buildNetworkFile`, `buildZoneInfoFile`, `iterateFile`, `iterateProjects`, `contam_iteration`, and `sensible_heat_iteration`. `MoosasPy.simulation.coupling.EnergyAirflowCoupler` coordinates cross-domain workflows.
+Geometry transformation is the required entry point for raw geometry:
+
+```python
+transform(
+    input_path: str,
+    input_type: str | None = None,
+    *,
+    method=CCRSpaceGeneration,
+    options: TransformOptions | None = None,
+    stdout=sys.stdout,
+) -> MoosasModel
+```
+
+Parameters:
+
+- `input_path`: path to a GEO, OBJ, or STL source.
+- `input_type`: optional explicit `"geo"`, `"obj"`, or `"stl"` override.
+- `method`: space-generation callable. The default is `CCRSpaceGeneration`.
+- `options`: immutable `TransformOptions` shared by all pipeline stages.
+- `stdout`: transformation log stream. Pass `None` to suppress log output.
+
+`transform()` returns a complete `MoosasModel`. It does not write an output
+model automatically; call `model.save()` explicitly.
+
+The current transformation options are:
+
+| Option | Default | Effect |
+| --- | ---: | --- |
+| `solve_duplicated` | `True` | Remove duplicated geometry. |
+| `solve_redundant` | `True` | Merge redundant coplanar geometry. |
+| `solve_overlap` | `True` | Resolve overlapping faces. |
+| `triangulate_faces` | `True` | Triangulate horizontal faces where required. |
+| `break_wall_vertical` | `True` | Split walls at building levels. |
+| `break_wall_horizontal` | `True` | Split walls at horizontal intersections. |
+| `attach_shading` | `False` | Retain unused faces as shading or thermal mass. |
+| `divided_zones` | `False` | Convexify complex zones. |
+| `simplify_boundary` | `False` | Simplify source boundaries before generation. |
+| `insert_core` | `False` | Insert a minimal core into eligible boundaries. |
+| `standardize` | `False` | Standardize the finalized model geometry. |
+
+Example with explicit processing choices:
+
+```python
+from MoosasPy.transform import TransformOptions, transform
+
+options = TransformOptions(
+    attach_shading=True,
+    divided_zones=True,
+    standardize=True,
+)
+model = transform("massing.obj", options=options)
+```
+
+Do not use model-file formats such as RDF, XML, JSON, or IDF as transformation
+inputs. Those formats enter through `MoosasModel.load()`.
+
+### Building Model
+
+`MoosasModel` stores geometry, spaces, topology, thermal settings, schedules,
+weather references, and resources required by downstream analyses. Common
+collections include:
+
+- `spaceList`: conditioned and unconditioned spatial units.
+- `wallList`: vertical opaque faces.
+- `faceList`: horizontal faces, including floors and ceilings.
+- `glazingList`: window elements.
+- `skylightList`: skylight elements.
+- `levelList`: detected building levels.
+- `buildingTemplate`: available thermal-setting templates.
+- `schedule` and `scheduleByType`: loaded schedule definitions.
+
+Use `model.summary()` for a level-by-level element and area summary.
+
+### Model I/O
+
+Complete model I/O is exposed through the model itself:
+
+```python
+from MoosasPy import MoosasModel
+
+model = MoosasModel.load("building.rdf")
+result = model.save("building.xml")
+
+print(result.primary_path)
+print(result.generated_paths)
+```
+
+Supported formats:
+
+| Format | Load | Save | Notes |
+| --- | :---: | :---: | --- |
+| RDF / Turtle (`.rdf`, `.ttl`) | Yes | Yes | Turtle serialization is used. |
+| XML (`.xml`) | Yes | Yes | Uses a same-named `.geo` geometry sidecar. |
+| JSON (`.json`) | Yes | Yes | Uses a same-named `.geo` geometry sidecar. |
+| EnergyPlus IDF (`.idf`) | Yes | Yes | Requires EnergyPlus 26.1 format. |
+| Graph JSON (`.graph.json`) | No | Yes | Graph-oriented export. |
+| gbXML (`.gbxml`) | No | Yes | Exported through the RDF-to-gbXML adapter. |
+
+GEO, OBJ, and STL are geometry sources, not complete serialized models. Load
+them with `transform()`.
+
+IFC conversion and inspection functions are available from
+`MoosasPy.model.io.ifc`, including `writeIfc`, `loadIfc`, `rdf_to_ifc`,
+`ifc_to_rdf`, and `inspect_ifc`. IFC is intentionally not dispatched through
+`MoosasModel.load()` or `model.save()` because its conversion contract is
+different from the complete-model formats above.
+
+#### EnergyPlus IDF Contract
+
+MoosasPy reads and writes EnergyPlus 26.1 IDF files using the bundled 26.1
+`Energy+.idd`. Older IDFs must first be migrated with the official EnergyPlus
+Transition chain. MoosasPy does not provide an automatic legacy-IDF fallback.
+
+### Apply Thermal Settings
+
+Each `MoosasSpace` receives a default residential template during model
+construction. Apply another packaged or user-provided template with
+`space.applySettings()`:
+
+```python
+for space in model.spaceList:
+    space.applySettings("climatezone3_GB/T51350-2019_RESIDENTIAL")
+
+model.spaceList[0].settings["zone_equipment"] = 8.8
+```
+
+The argument can be an exact template key, a regular-expression hint matching
+a key in `model.buildingTemplate`, or a template dictionary already present in
+that mapping. Applying a template also updates face U-values and glazing SHGC.
+
+Important energy-setting fields include:
+
+| Field | Meaning |
+| --- | --- |
+| `zone_wallU` | Opaque-envelope U-value in W/(m²·K). |
+| `zone_winU` | Window U-value in W/(m²·K). |
+| `zone_win_SHGC` | Window solar heat-gain coefficient. |
+| `zone_c_temp`, `zone_h_temp` | Cooling and heating set points in °C. |
+| `zone_collingEER`, `zone_HeatingEER` | Cooling and heating efficiency values. |
+| `zone_ppsm` | Occupant density in people/m². |
+| `zone_pfav` | Outdoor-air requirement per person. |
+| `zone_popheat` | Sensible heat per person in W/person. |
+| `zone_equipment`, `zone_lighting` | Equipment and lighting loads in W/m². |
+| `zone_infiltration`, `zone_nightACH` | Infiltration and night ventilation rates. |
+| `zone_template` | Applied template identifier. |
+
+Building templates are stored in `MoosasPy/db/building_template.csv`; schedule
+libraries are stored under `MoosasPy/db/schedule/`.
+
+### Weather Data
+
+Weather APIs use immutable `Location` and `WeatherData` records. Packaged
+station data can be loaded explicitly:
+
+```python
+from MoosasPy.simulation.weather import (
+    load_station_catalog,
+    load_station_weather,
+)
+
+stations = load_station_catalog()
+weather = load_station_weather("545110")
+
+print(weather.location)
+print(weather.temperature.shape)
+```
+
+Prepare an EPW file in a caller-owned output directory:
+
+```python
+from MoosasPy.simulation.weather import prepare_epw
+
+prepared = prepare_epw("custom.epw", "analysis-input/weather")
+
+weather = prepared.weather
+cumulative_skies = prepared.cumulative_skies
+```
+
+`prepare_epw()` creates the converted weather CSV, WEA data, and cumulative-sky
+assets together. It does not silently modify the packaged weather database.
+
+The weather package also provides station catalog search and explicit EPW
+download functions: `load_download_catalog`, `find_station_by_id`,
+`find_nearest_station`, and `download_epw`.
+
+## Building-Performance Analysis
+
+Simulation domains are available under `MoosasPy.simulation`:
+
+```python
+from MoosasPy import simulation
+```
+
+Native runners share a common contract. A runner returns a frozen
+`SimulationResult` subclass containing domain results, command diagnostics,
+warnings, and a workspace report.
+
+### Energy Analysis
+
+`energyAnalysis()` is the direct convenience interface to the packaged
+`MoosasEnergy` executable:
+
+```python
+from MoosasPy.simulation.energy import energyAnalysis
+from MoosasPy.simulation.weather import load_station_weather
+
+weather = load_station_weather("545110")
+data = energyAnalysis(
+    model,
+    weather=weather,
+    exportDaily=True,
+    exportByZone=True,
+)
+
+print(data["total"])
+```
+
+Use `EnergyRunner` when command diagnostics and workspace information are
+required:
+
+```python
+from MoosasPy.simulation.energy import EnergyRunner
+
+result = EnergyRunner(model=model, weather=weather).run()
+
+print(result.successful)
+print(result.data)
+print(result.commands)
+```
+
+Energy options include the building type (`core`), radiation mode,
+daily/hourly/by-zone exports, schedule path, explicit input and result paths,
+workspace parent, timeout, and a custom native engine.
+
+Radiation modes are:
+
+- `0` or `False`: fast geometry-based estimate.
+- `1` or `True`: consume precomputed seasonal radiation totals.
+- `2`: consume precomputed radiation schedules.
+
+Use `getEnergyInput()` and `parseEnergyOutput()` only when direct access to the
+native input and result formats is necessary.
+
+### Radiation Calculation
+
+The fast radiation API uses the packaged Moosas radiation engine:
+
+```python
+from MoosasPy.simulation.radiation import modelRadiation
+from MoosasPy.simulation.weather import load_cumulative_sky
+
+sky = load_cumulative_sky("545110")
+modelRadiation(model, sky, reflection=0)
+```
+
+The radiation package exposes calculations at several scales:
+
+| Function | Purpose |
+| --- | --- |
+| `modelRadiation` | Update seasonal radiation values for every space. |
+| `spaceRadiation` | Calculate seasonal radiation for one space. |
+| `faceRadiation` | Calculate sky-patch visibility or radiation for a face grid. |
+| `positionRadiation` | Calculate cumulative radiation at directed positions. |
+| `rayTest` | Test ray intersections and reflections against a model or GEO scene. |
+| `positionSunHour` | Calculate direct sunlight duration. |
+
+`positionRadiation()` and `rayTest()` require either a model or an explicit GEO
+scene path. Batch rays into one call when possible to reduce native-process
+overhead.
+
+### Radiance Daylight Analysis
+
+`RadianceRunner` performs a daylight calculation in an isolated workspace:
+
+```python
+from datetime import datetime
+
+from MoosasPy.simulation.radiation import RadianceRunner, RadianceSky
+
+sky = RadianceSky(
+    date=datetime(2026, 6, 21, 12),
+    sky_type="+s",
+    latitude=39.93,
+    longitude=116.28,
+    diffuse_illuminance=15000.0,
+)
+result = RadianceRunner(model, sky).run()
+
+for floor in result.floors:
+    print(floor.uid, floor.daylight_factor, floor.satisfied_fraction)
+```
+
+Each floor result contains grid illuminances, daylight factor, and the fraction
+of points exceeding 300 lux. The runner reports the `oconv` and `rtrace`
+commands used by the calculation.
+
+### Ventilation Analysis
+
+`MoosasPy.simulation.airflow` constructs airflow networks, generates CONTAM
+projects, executes CONTAM, and performs buoyancy/sensible-heat iterations.
+
+Generate project and zone-information files from a model:
+
+```python
+from MoosasPy.simulation.airflow import buildPrj, buildZoneInfoFile, iterateFile
+
+project_file = buildPrj(model=model, split=False)
+zone_info_file = buildZoneInfoFile(
+    model=model,
+    zoneInfoFilePath="building.info",
+)
+zones = iterateFile(project_file, zone_info_file)
+
+for zone in zones:
+    print(zone.userName, zone.temperature, zone.ACH)
+```
+
+Core airflow functions include:
+
+- `buildNetworkFile()`: serialize zones and paths for the native AFN tool.
+- `buildPrj()`: build one or more CONTAM `.prj` files.
+- `buildZoneInfoFile()`: write heat-load and zone-name metadata.
+- `AirflowRunner`: execute CONTAM and return a structured airflow matrix.
+- `iterateFile()` / `iterateProjects()`: iterate zone temperature and airflow.
+- `contam_iteration()` and `sensible_heat_iteration()`: lower-level iteration
+  steps.
+
+Bundled CONTAM executables support Windows x86-64 and Linux x86-64. Other
+architectures fail explicitly.
+
+### Coupled Workflows
+
+Cross-domain orchestration belongs to `MoosasPy.simulation.coupling`; energy,
+radiation, airflow, and weather modules do not import one another directly.
+
+Energy with packaged weather:
+
+```python
+from MoosasPy.simulation.coupling import run_energy_with_weather
+
+data = run_energy_with_weather(model, station_id="545110")
+```
+
+Energy with calculated radiation:
+
+```python
+from MoosasPy.simulation.coupling import run_energy_with_radiation
+
+data = run_energy_with_radiation(
+    model,
+    station_id="545110",
+    radiation_mode=1,
+    reflection=0,
+)
+```
+
+The coupling package also provides:
+
+- `EnergyAirflowCoupler` for coupled thermal-load and airflow workflows.
+- `run_position_sun_hours` for weather-aware direct sunlight calculation.
+- `run_roof_pv` and `run_facade_pv` for hourly photovoltaic generation.
+- `calculate_face_incident_energy` for face-level incident solar energy.
+
+Example photovoltaic calculation:
+
+```python
+from MoosasPy.simulation.coupling import run_roof_pv
+
+hourly_generation = run_roof_pv(
+    model,
+    station_id="545110",
+    useful_area_ratio=0.7,
+    efficiency=0.17,
+)
+```
+
+## Native Engines and Workspaces
+
+Energy, Radiance, and airflow runners execute native commands through the
+`NativeEngine` protocol. `SubprocessEngine` is the default local
+implementation; tests and integrations can provide another engine explicitly.
+
+Each calculation uses `SimulationWorkspace` to isolate intermediate files:
+
+- Temporary workspaces are cleaned automatically.
+- A caller-provided root or a retained workspace remains available after the
+  calculation.
+- `WorkspaceReport.path` identifies the workspace.
+- `WorkspaceReport.retained` states whether it remains on disk.
+
+Native resources must remain in their packaged locations under `MoosasPy/libs`.
+Do not move individual executables away from their support files.
+
+## File Formats Used by Native Tools
+
+The stable public interfaces generate native input files automatically. The
+main internal formats are:
+
+| File | Consumer | Contents |
+| --- | --- | --- |
+| `.geo` | Geometry transform and radiation engine | Categorized polygon faces, normals, and vertices. |
+| `Energy.i` | `MoosasEnergy` | Per-zone geometry, solar, and thermal parameters. |
+| `Energy.o` | Energy result parser | Total, zone, and optional time-series loads. |
+| `.net` | Native AFN project builder | Zones, openings, topology, pressure, and boundary data. |
+| `.prj` | CONTAM | Multizone airflow project. |
+| `.info` | Airflow iteration | CONTAM zone name, heat load, and user zone name. |
+| `.rad` / `.oct` | Radiance | Scene description and compiled octree. |
+
+These are internal execution contracts. Prefer the Python builders and runners
+unless another tool must exchange one of these files directly.
 
 ## Runtime Resources
 
-Native execution is separated from domain runners by the `NativeEngine`
-protocol, with `SubprocessEngine` as the local default. Energy, Radiance, and
-airflow runners use `SimulationWorkspace` for isolated run files and attach a
-`WorkspaceReport` to their `SimulationResult`. Temporary workspaces are cleaned
-automatically; retained airflow and coupling workspaces remain available for
-follow-up processing and diagnostics.
+The installed package expects the following directories to remain adjacent to
+the Python modules:
 
-The package expects `libs`, `db`, `data`, and `__temp__` to remain adjacent to the Python modules in an installed distribution. Native executables are platform-specific; validate target-platform support before deploying to a non-Windows environment.
+- `db/`: building templates, schedules, weather records, material data, the
+  EnergyPlus 26.1 IDD, and the default IDF template.
+- `libs/energy/`: the unified Moosas energy executable and support files.
+- `libs/rad/`: the Moosas radiation engine and Radiance executables/resources.
+- `libs/vent/`: AFN tools and platform-specific CONTAM distributions.
+- `libs/weather/`: EPW-to-WEA and cumulative-sky executables/resources.
+
+The Python distribution includes these resources through `pyproject.toml` and
+`MANIFEST.in`.
 
 ## Testing
 
-Keep tests and fixtures under the repository-level `test/` directory. Example data currently located in `MoosasPy/data` is legacy content and should be moved into the relevant test fixture directory when it is no longer needed at runtime.
-
-Run validation from the repository root:
+Tests and fixtures belong under the repository-level `test/` directory. Run the
+full suite from the repository root:
 
 ```bash
 python -m pytest -q
 ```
 
+The suite covers geometry regressions, model I/O, resource packaging,
+EnergyPlus version enforcement, native runners, simulation workspaces, weather
+architecture, and domain boundaries.
+
 ## Packaging and Release
 
-Package metadata is defined in the repository-level `pyproject.toml`. Build distributions from the repository root:
+Build and validate distributions from the repository root:
 
 ```bash
 python -m build
 python -m twine check dist/*
 ```
 
-The version is derived from tags in the form `moosaspy-vMAJOR.MINOR.PATCH`. The GitHub Actions release workflow builds distributions, checks package metadata, and publishes release assets when such a tag is pushed.
+The accepted release tag format is:
+
+```text
+moosaspy-vX.Y.Z
+```
+
+On Windows, the release helper can validate and publish a tag:
+
+```powershell
+.\scripts\release_moosaspy.ps1 1.2.2
+```
+
+The GitHub Actions release workflow builds the wheel and source distribution,
+creates a GitHub Release, and uploads both artifacts. GitHub Packages does not
+provide the PyPI-compatible registry used by this project; install a release
+wheel through its GitHub Release URL or publish the same distributions to PyPI.
+
+Use the release helper's `-DryRun` option to preview tag operations. Replacing
+an existing release requires `GH_TOKEN` or `GITHUB_TOKEN` with repository
+contents permission so the helper can remove the previous GitHub Release before
+the workflow uploads artifacts with the same names.
+
+## Credits and Acknowledgements
+
+Developed by the research team directed by **Prof. Borong Lin** at the Key
+Laboratory of Eco Planning & Green Building, Ministry of Education, Tsinghua
+University.
+
+For collaboration: linbr@tsinghua.edu.cn
+
+For technical questions: junx026@gmail.com, liyihui23@mails.tsinghua.edu.cn
