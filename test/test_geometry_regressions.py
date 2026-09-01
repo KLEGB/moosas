@@ -10,6 +10,7 @@ from MoosasPy.transform.geometry.convexify import GeometryConvexifier
 from MoosasPy.model import MoosasModel
 from MoosasPy.transform.geometry.element import MoosasGeometry, MoosasSpace, MoosasWall
 from MoosasPy.transform.geometry.geos import simplify
+from MoosasPy.transform.geometry.planar_graph import TopoNetwork
 from MoosasPy.utils import shapely
 
 
@@ -93,6 +94,49 @@ def test_negative_45_degree_wall_projects_to_a_line():
 
     assert shapely.get_type_id(projection) == shapely.GeometryType.LINESTRING
     assert shapely.length(projection) == pytest.approx(np.sqrt(50.0))
+
+
+def test_rotated_rectangle_merges_half_grid_corner_rounding():
+    model = MoosasModel()
+    model.levelList = [0.0, 3.0]
+    p0 = np.array([3.93, -8.98])
+    p1 = np.array([9.0, -3.92])
+    p2 = np.array([-3.87, 8.95])
+    p3_from_first_wall = np.array([-8.934999999999999, 3.8850000000000007])
+    p3_from_second_wall = np.array([-8.935000000000002, 3.8849999999999962])
+    segments = (
+        (p0, p1),
+        (p1, p2),
+        (p2, p3_from_first_wall),
+        (p3_from_second_wall, p0),
+    )
+
+    walls = []
+    for index, (start, end) in enumerate(segments):
+        direction = end - start
+        normal = np.array([direction[1], -direction[0], 0.0])
+        normal /= np.linalg.norm(normal)
+        geometry = MoosasGeometry(
+            np.array([
+                [start[0], start[1], 0.0],
+                [start[0], start[1], 3.0],
+                [end[0], end[1], 3.0],
+                [end[0], end[1], 0.0],
+            ]),
+            f"rotated_wall_{index}",
+            normal,
+            0,
+        )
+        model.geometryList.append(geometry)
+        model.geoId.append(geometry.faceId)
+        walls.append(MoosasWall(model, geometry))
+    model.wallList = np.array(walls)
+
+    network = TopoNetwork.inLevel(0.0, model)
+
+    assert len(network.edges) == 4
+    assert len(network.nodes) == 4
+    assert len(network.outerBoundary()) == 1
 
 
 def test_template_application_keeps_load_intensities_numeric():

@@ -326,10 +326,17 @@ class TopoNetwork(object):
 
         """blur match existing locations and the edge nodes"""
         locations = []
+        node_tolerance = 1.01 * geom.POINT_PRECISION
+
+        def same_grid_node(first, second):
+            first_xy = shapely.get_coordinates(first)[0]
+            second_xy = shapely.get_coordinates(second)[0]
+            return np.all(np.abs(first_xy - second_xy) <= node_tolerance)
+
         for edge in edges:
             if edge.fromLocation not in locations:
                 for poi in locations:
-                    if shapely.dwithin(edge.fromLocation, poi, 1.1 * geom.POINT_PRECISION):
+                    if same_grid_node(edge.fromLocation, poi):
                         edge.fromLocation = poi
                         break
                 else:
@@ -337,7 +344,7 @@ class TopoNetwork(object):
 
             if edge.toLocation not in locations:
                 for poi in locations:
-                    if shapely.dwithin(edge.toLocation, poi, 1.1 * geom.POINT_PRECISION):
+                    if same_grid_node(edge.toLocation, poi):
                         edge.toLocation = poi
                         break
                 else:
