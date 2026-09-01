@@ -137,6 +137,17 @@ def test_simplify_boundary_builds_one_obb_per_story(insert_core, expected_faces)
     assert sum(geometry.faceId.startswith('core_wall_') for geometry in model.geometryList) == (
         12 if insert_core else 0
     )
+    if insert_core:
+        core_walls = [
+            geometry for geometry in model.geometryList
+            if geometry.faceId.startswith('core_wall_')
+        ]
+        horizontal_faces = [
+            geometry for geometry in model.geometryList
+            if abs(shapely.get_coordinates(geometry.normal, include_z=True)[0][2]) > 0.99
+        ]
+        assert all(geometry.category == 0 for geometry in core_walls)
+        assert all(not geometry.holes for geometry in horizontal_faces)
 
 
 def test_insert_core_operates_on_unsimplified_boundary():
@@ -148,6 +159,11 @@ def test_insert_core_operates_on_unsimplified_boundary():
 
     assert len(model.geometryList) == 20
     assert sum(geometry.faceId.startswith('core_wall_') for geometry in model.geometryList) == 12
+    assert all(
+        geometry.category == 0
+        for geometry in model.geometryList
+        if geometry.faceId.startswith('core_wall_')
+    )
 
 
 def test_simplify_boundary_rejects_single_level_geometry():

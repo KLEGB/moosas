@@ -7,7 +7,8 @@ import pytest
 
 from MoosasPy.simulation.energy.runner import _resolve_schedule_ref
 from MoosasPy.transform.geometry.convexify import GeometryConvexifier
-from MoosasPy.transform.geometry.element import MoosasSpace
+from MoosasPy.model import MoosasModel
+from MoosasPy.transform.geometry.element import MoosasGeometry, MoosasSpace, MoosasWall
 from MoosasPy.transform.geometry.geos import simplify
 from MoosasPy.utils import shapely
 
@@ -69,6 +70,29 @@ def test_convexification_does_not_infer_vertical_air_walls():
 
     assert divide_lines
     assert all(int(category) != 2 for category in categories)
+
+
+def test_negative_45_degree_wall_projects_to_a_line():
+    model = MoosasModel()
+    model.levelList = [0.0, 3.0]
+    geometry = MoosasGeometry(
+        np.array([
+            [0.0, 5.0, 0.0],
+            [0.0, 5.0, 3.0],
+            [5.0, 0.0, 3.0],
+            [5.0, 0.0, 0.0],
+        ]),
+        "negative_45_wall",
+        np.array([1.0, 1.0, 0.0]),
+        0,
+    )
+    model.geometryList = [geometry]
+    model.geoId = [geometry.faceId]
+
+    projection = MoosasWall(model, geometry).force_2d()
+
+    assert shapely.get_type_id(projection) == shapely.GeometryType.LINESTRING
+    assert shapely.length(projection) == pytest.approx(np.sqrt(50.0))
 
 
 def test_template_application_keeps_load_intensities_numeric():

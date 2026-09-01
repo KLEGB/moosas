@@ -431,6 +431,12 @@ class ZoneTemplate():
             This function return a new Zone object containing settings to the zone.
         """
 
+        if not zone.conditioned:
+            self.zoneObject.updateParams(
+                **{'Name': zone.id, 'Floor_Area': zone.area, 'Volume': zone.area * zone.height}
+            )
+            return ZoneTemplate(self.idf, self.zoneObject, {}, self.constructionList, {})
+
         # rename and update Schedule
         for objHint in self.scheduleList:
             for field in self.scheduleList[objHint]:

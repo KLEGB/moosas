@@ -24,6 +24,7 @@ SPACE_PARAM_TEMPLATE = {
     "r": None,
     "l": 0,
     "space_type": "room",
+    "conditioned": True,
 }
 
 
@@ -232,6 +233,7 @@ class CugerGraph:
             is_void = space.findtext("is_void") == "True"
             space_params = SPACE_PARAM_TEMPLATE.copy()
             space_params["space_type"] = space.findtext("space_type") or "room"
+            space_params["conditioned"] = space.findtext("conditioned") != "False"
             self.graph.add_node(
                 sid,
                 node_type="void" if is_void else "space",

@@ -747,6 +747,8 @@ class MoosasRDF(Graph):
         # Semantic type must be restored before ``is_void`` validates inclined roofs.
         self.add((URIRef(f"Space_{space.id}"), self.moosas.spaceType,
                   Literal(getattr(space, "space_type", "room"))))
+        self.add((URIRef(f"Space_{space.id}"), self.moosas.conditioned,
+                  Literal(space.conditioned)))
 
         def _add_interface(interface_name: str, linked_element_uri: str, surface_type_uri, opaque_surface_uri=None):
             interface_uri = URIRef(interface_name)
@@ -1167,6 +1169,12 @@ def _decode_space_type(rdfGraph: MoosasRDF, spaceUri) -> str:
     return str(value).strip().lower() if value is not None else "room"
 
 
+def _decode_conditioned(rdfGraph: MoosasRDF, spaceUri) -> bool:
+    raw_value = _first_or_none(rdfGraph.getObject(spaceUri, rdfGraph.moosas.conditioned))
+    value = _literal_to_python(raw_value)
+    return True if value is None else bool(value)
+
+
 def writeRDF(model: MoosasModel, out_path: str, fileFormat="turtle", dumpUseless=True, ExportIFC=False):
     """
     Serialize a MoosasModel to an RDF file in the specified format.
@@ -1356,6 +1364,7 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
             _edge=edgeTopo,
             Uid=Uid,
             space_type=_decode_space_type(rdfGraph, spaceUri),
+            conditioned=_decode_conditioned(rdfGraph, spaceUri),
         )
         _decode_space_settings(rdfGraph, spaceUri, spc)
 

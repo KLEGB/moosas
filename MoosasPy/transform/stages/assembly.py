@@ -211,6 +211,20 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
     model.face_remain = list(remaining_faces)
     model.shadingList = np.append(model.shadingList, list(remaining_faces))
     spaces = [MoosasSpace(item["floor"], edge, item["ceiling"]) for item, edge in zip(topology, model.edgeList)]
+    for space in spaces:
+        if space.edge.wall and all(
+            any(str(face_id).startswith("core_wall_") for face_id in mixItemListToList(wall.faceId))
+            for wall in space.edge.wall
+        ):
+            space.space_type = "core"
+            space.conditioned = False
+            space.settings.update({
+                "zone_ppsm": 0.0,
+                "zone_lighting": 0.0,
+                "zone_equipment": 0.0,
+                "zone_pfav": 0.0,
+                "zone_infiltration": 0.0,
+            })
     print()
     progress = 0
     for level in model.levelList:

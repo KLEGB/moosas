@@ -113,16 +113,6 @@ def _intersect_projected_bounds(bounds):
     )
 
 
-def _append_face_hole(face_holes, hole_face):
-    hole_face = np.asarray(hole_face, dtype=float)
-    if face_holes is None:
-        return {0: hole_face}
-
-    ordered_holes = [np.asarray(face_holes[key], dtype=float) for key in sorted(face_holes)]
-    ordered_holes.append(hole_face)
-    return {idx: hole for idx, hole in enumerate(ordered_holes)}
-
-
 def _build_core_wall_faces(bottom_face, top_face, core_center_xy):
     wall_faces = []
     wall_normals = []
@@ -162,7 +152,7 @@ def _build_core_wall_faces(bottom_face, top_face, core_center_xy):
 
 
 def inject_minimal_core(cat, idd, normal, faces, holes, core_area_ratio=0.2):
-    """Inject a simple rectangular core shaft for simplified low/medium LOD inputs."""
+    """Inject ordinary opaque walls that enclose one core room per story."""
     level_groups = _group_horizontal_face_levels(faces, normal)
     if len(level_groups) < 2:
         print("--Minimal core skipped: insufficient horizontal levels--")
@@ -255,13 +245,6 @@ def inject_minimal_core(cat, idd, normal, faces, holes, core_area_ratio=0.2):
     core_holes = list(holes)
 
     selected_levels = level_info[best_range[0] : best_range[1] + 1]
-    selected_indices = [idx for level in selected_levels for idx in level["indices"]]
-
-    for idx in selected_indices:
-        z_value = float(np.mean(core_faces[idx][:, 2]))
-        hole_face = _build_rect_face(center_xy, x_axis, y_axis, rect_span_x, rect_span_y, z_value)
-        core_holes[idx] = _append_face_hole(core_holes[idx], hole_face)
-
     level_z = [level["z"] for level in selected_levels]
     for story_idx in range(len(level_z) - 1):
         bottom_z = level_z[story_idx]
@@ -275,7 +258,7 @@ def inject_minimal_core(cat, idd, normal, faces, holes, core_area_ratio=0.2):
         story_label = best_range[0] + story_idx + 1
 
         for wall_idx, wall_face in enumerate(wall_faces):
-            core_cat.append("2")
+            core_cat.append("0")
             core_idd.append(f"core_wall_{story_label}_{wall_idx}")
             core_normal.append(np.asarray(wall_normals[wall_idx], dtype=float))
             core_faces.append(wall_face)

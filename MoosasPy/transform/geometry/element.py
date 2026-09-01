@@ -1671,7 +1671,7 @@ class MoosasWall(MoosasElement):
             else:
                 p1 = np.array([botx[np.argmin(botx)], boty[np.argmin(botx)]])
                 p2 = np.array([botx[np.argmax(botx)], boty[np.argmax(botx)]])
-            if np.sum(np.array(p1 - p2)) != 0:
+            if np.linalg.norm(p1 - p2) >= geom.POINT_PRECISION:
                 return shapely.linestrings([p1, p2])
             else:
                 return shapely.points(p1)
@@ -2634,10 +2634,11 @@ class MoosasSpace(object):
 
     """
     __slots__ = ['floor', 'edge', 'ceiling', '__void', '__id','__uniqueId', '__neighbor', 'internalMass', 'settings',
-                 'description', 'space_type']
+                 'description', 'space_type', 'conditioned']
 
     def __init__(self, _floor: MoosasFloor | None, _edge: MoosasEdge, _ceiling: MoosasFloor | None,
-                 void: list[MoosasSpace] = None, Uid: str = None, space_type: str = "room"):
+                 void: list[MoosasSpace] = None, Uid: str = None, space_type: str = "room",
+                 conditioned: bool = True):
         """
         Initialize a new instance with floor, edge, ceiling, and optional void spaces.
         
@@ -2661,6 +2662,7 @@ class MoosasSpace(object):
         self.ceiling: MoosasFloor | None = _ceiling
         self.description = ""
         self.space_type = space_type
+        self.conditioned = bool(conditioned)
 
         self.__neighbor = {}
         self.internalMass: list[MoosasElement] = _edge.internalMass
@@ -2704,6 +2706,8 @@ class MoosasSpace(object):
         floor = _getElement('floor', dictionary=spaceDict, strict=False)[0]
         Uid = _getElement('id', dictionary=spaceDict, strict=False)[0]
         space_type = _getElement('space_type', dictionary=spaceDict, strict=False)[0]
+        conditioned_value = _getElement('conditioned', dictionary=spaceDict, strict=False)[0]
+        conditioned = True if conditioned_value is None else str(conditioned_value).strip().lower() == "true"
 
         internalMass = _getElement('internalMass', dictionary=spaceDict, strict=False)
         void = _getElement('void', dictionary=spaceDict, strict=False)
@@ -2716,9 +2720,11 @@ class MoosasSpace(object):
             floor = MoosasFloor.fromDict(ceiling, model)
         
         if Uid:
-            space = cls(floor, edge, ceiling, Uid=Uid, space_type=space_type or "room")
+            space = cls(
+                floor, edge, ceiling, Uid=Uid, space_type=space_type or "room", conditioned=conditioned
+            )
         else:
-            space = cls(floor, edge, ceiling, space_type=space_type or "room")
+            space = cls(floor, edge, ceiling, space_type=space_type or "room", conditioned=conditioned)
 
         if internalMass[0]:
             for _intWall in internalMass:
@@ -3346,6 +3352,7 @@ class MoosasSpace(object):
         root = ET.Element(xml_tag)
         ET.SubElement(root, "id").text = self.id
         ET.SubElement(root, "space_type").text = self.space_type
+        ET.SubElement(root, "conditioned").text = str(self.conditioned)
         ET.SubElement(root, "area").text = str(self.area)
         if self.ceiling and self.floor:
             height = (self.edge.toplevel - self.edge.level) / INCH_METER_MULTIPLIER

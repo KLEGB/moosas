@@ -92,6 +92,51 @@ def test_idf_air_boundaries_use_native_simple_mixing(semantic_model: MoosasModel
     assert len(idf.idfobjects["ZONEMIXING"]) == 0
 
 
+def test_unconditioned_space_exports_only_zone_and_surfaces(semantic_model: MoosasModel):
+    core = semantic_model.spaceList[0]
+    original_conditioned = core.conditioned
+    core.conditioned = False
+    prohibited = (
+        "ZONEINFILTRATION:DESIGNFLOWRATE",
+        "ZONEVENTILATION:DESIGNFLOWRATE",
+        "ZONEVENTILATION:WINDANDSTACKOPENAREA",
+        "OTHEREQUIPMENT",
+        "ELECTRICEQUIPMENT",
+        "PEOPLE",
+        "LIGHTS",
+        "SIZING:ZONE",
+        "DESIGNSPECIFICATION:OUTDOORAIR",
+        "DESIGNSPECIFICATION:ZONEAIRDISTRIBUTION",
+        "ZONECONTROL:THERMOSTAT",
+        "THERMOSTATSETPOINT:DUALSETPOINT",
+        "ZONEHVAC:EQUIPMENTCONNECTIONS",
+        "ZONEHVAC:EQUIPMENTLIST",
+        "ZONEHVAC:IDEALLOADSAIRSYSTEM",
+        "NODELIST",
+    )
+    try:
+        with TemporaryDirectory() as directory:
+            file_path = Path(directory) / "unconditioned-core.idf"
+            semantic_model.save(file_path)
+            configure_idd()
+            idf = IDF(str(file_path))
+    finally:
+        core.conditioned = original_conditioned
+
+    assert any(zone.Name == core.id for zone in idf.idfobjects["ZONE"])
+    assert any(
+        surface.Zone_Name == core.id
+        for surface in idf.idfobjects["BUILDINGSURFACE:DETAILED"]
+    )
+    zone_names = {zone.Name for zone in idf.idfobjects["ZONE"]}
+    assert all(
+        sizing.Zone_or_ZoneList_Name in zone_names
+        for sizing in idf.idfobjects["SIZING:ZONE"]
+    )
+    for object_type in prohibited:
+        assert all(core.id not in map(str, obj.fieldvalues) for obj in idf.idfobjects[object_type])
+
+
 @pytest.mark.parametrize("suffix", (".graph.json", ".gbxml"))
 def test_save_only_model_projections(semantic_model: MoosasModel, suffix: str):
     with TemporaryDirectory() as directory:

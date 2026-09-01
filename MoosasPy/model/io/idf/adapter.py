@@ -258,7 +258,8 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
         thisTemplate = next(iter(thisTemplates.values()))
         if zTemplate is None:
             zTemplate = thisTemplate
-        objectHints.update(list(thisTemplate.objectList.keys()))
+        for template in thisTemplates.values():
+            objectHints.update(template.objectList.keys())
         assignedSpaceIds.update(mappedSpaceIds)
 
     if zTemplate is None:
