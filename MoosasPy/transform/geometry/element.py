@@ -1437,7 +1437,7 @@ class MoosasWall(MoosasElement):
         model : MoosasContainer
             The model container to which the geometry will be added.
         airBoundary : bool, optional
-            If True, creates an air boundary with glazing; if False, creates a standard wall. Default is False.
+            If True, creates a category-2 air-boundary wall; otherwise creates an opaque wall.
         
         Returns
         -------
@@ -1453,16 +1453,13 @@ class MoosasWall(MoosasElement):
             np.append(stPoint, bottom),
         ]
 
-        if airBoundary:
-            idx = model.includeGeo(shapely.polygons(airBound), cat=2)
-            wall = cls(model, idx)
-            gls = MoosasGlazing(model, idx)
-            model.glazingList = np.append(model.glazingList, gls)
-            wall.add_glazing(gls)
-        else:
-            idx = model.includeGeo(shapely.polygons(airBound), cat=0)
-            wall = cls(model, idx)
-        return wall
+        idx = model.includeGeo(shapely.polygons(airBound), cat=2 if airBoundary else 0)
+        return cls(model, idx)
+
+    @property
+    def is_air_boundary(self) -> bool:
+        """Whether this wall is a virtual air boundary instead of an opaque wall."""
+        return self.category == 2
 
     @classmethod
     def break_(cls, wall: MoosasWall, breakPoints: list[shapely.Geometry] | shapely.Geometry):
@@ -3045,6 +3042,8 @@ class MoosasSpace(object):
                 False otherwise.
         """
         for moElement in self.getAllFaces(to_dict=False):
+            if isinstance(moElement, MoosasWall) and moElement.is_air_boundary and moElement.isOuter:
+                return True
             # moElement:MoosasElement = moElement
             for glazing in moElement.glazingElement:
                 if glazing.category == 2 and moElement.isOuter:

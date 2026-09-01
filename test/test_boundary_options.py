@@ -5,8 +5,10 @@ import pytest
 from MoosasPy.model import MoosasModel
 from MoosasPy.transform import TransformOptions
 from MoosasPy.transform.stages.boundary import prepare_boundary_geometry
-from MoosasPy.transform.geometry.element import MoosasGeometry
-from MoosasPy.utils import np
+from MoosasPy.transform.geometry.element import MoosasGeometry, MoosasWall
+from MoosasPy.transform.stages.classification import classify_model
+from MoosasPy.transform.stages.validation import validate_model
+from MoosasPy.utils import np, shapely
 
 
 def _three_story_box() -> MoosasModel:
@@ -43,6 +45,65 @@ def test_boundary_options_default_to_disabled():
     options = TransformOptions()
     assert options.simplify_boundary is False
     assert options.insert_core is False
+
+
+def test_air_boundary_projection_creates_only_a_wall():
+    model = MoosasModel()
+    model.levelList = [0.0, 3.0]
+
+    wall = MoosasWall.fromProjection(
+        shapely.linestrings([[0.0, 0.0], [5.0, 0.0]]),
+        bottom=0.0,
+        top=3.0,
+        model=model,
+        airBoundary=True,
+    )
+
+    assert wall.is_air_boundary
+    assert wall.glazingElement == []
+    assert len(model.glazingList) == 0
+
+
+def test_air_boundary_requires_two_model_spaces():
+    model = MoosasModel()
+    model.levelList = [0.0, 3.0]
+    wall = MoosasWall.fromProjection(
+        shapely.linestrings([[0.0, 0.0], [5.0, 0.0]]),
+        bottom=0.0,
+        top=3.0,
+        model=model,
+        airBoundary=True,
+    )
+    model.wallList = [wall]
+
+    with pytest.raises(ValueError, match="must connect exactly two model spaces"):
+        validate_model(model)
+
+
+def test_category_two_vertical_geometry_is_classified_as_air_boundary_wall():
+    model = _three_story_box()
+    for geometry in model.geometryList[:4]:
+        geometry.setCategory(4)
+    air_geometry = MoosasGeometry(
+        np.array([
+            [2.0, 0.0, 0.0],
+            [2.0, 0.0, 3.0],
+            [2.0, 8.0, 3.0],
+            [2.0, 8.0, 0.0],
+        ]),
+        "air_boundary",
+        np.array([1.0, 0.0, 0.0]),
+        2,
+    )
+    model.geometryList.append(air_geometry)
+    model.geoId.append(air_geometry.faceId)
+
+    classified = classify_model(model, triangulate_faces=False, break_wall_vertical=False)
+    air_walls = [wall for wall in classified.wallList if wall.is_air_boundary]
+
+    assert len(air_walls) == 1
+    assert air_walls[0].glazingElement == []
+    assert all(glazing.category != 2 for glazing in classified.glazingList)
 
 
 def test_disabled_boundary_operations_preserve_geometry_objects():

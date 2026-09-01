@@ -274,12 +274,9 @@ class MoosasRDF(Graph):
         for face in mElements['MoosasFace']:
             self.encodeElement(face, "Face", uidSet, ExportIFC)
         for face in mElements['MoosasWall']:
-            self.encodeElement(face, "Wall", uidSet, ExportIFC)
+            self.encodeElement(face, "AirWall" if face.category == 2 else "Wall", uidSet, ExportIFC)
         for face in mElements['MoosasGlazing']:
-            if face.category == 2:
-                self.encodeElement(face, "AirWall", uidSet, ExportIFC)
-            else:
-                self.encodeElement(face, "Glazing", uidSet, ExportIFC)
+            self.encodeElement(face, "Glazing", uidSet, ExportIFC)
         for face in mElements['MoosasSkylight']:
             if face.category == 2:
                 self.encodeElement(face, "AirSkylight", uidSet, ExportIFC)
@@ -619,11 +616,10 @@ class MoosasRDF(Graph):
                         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.hasNeighborElement,
                                   URIRef(f"element_{neiElement}")))
 
-        if len(Element.space) > 1:
-            if len(Element.glazingElement) > 0:
-                self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasAirFlow, URIRef(f"Space_{Element.space[0]}")))
-                self.add(
-                    (URIRef(f"element_{Element.Uid}"), self.pgd.hasAirFlow, URIRef(f"Space_{Element.space[1]}")))
+        if len(Element.space) > 1 and Element.category == 2:
+            self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasAirFlow, URIRef(f"Space_{Element.space[0]}")))
+            self.add(
+                (URIRef(f"element_{Element.Uid}"), self.pgd.hasAirFlow, URIRef(f"Space_{Element.space[1]}")))
         if typeName in ("Glazing", "Skylight"):
             shgc = getattr(Element, "SHGC", None)
             if shgc is not None:
@@ -903,9 +899,9 @@ class MoosasRDF(Graph):
 
         if surfaceType == self.moosas.Face:
             element = searchBy('Uid', Uid, model.faceList, earlyEnd=True, asObject=True)
-        elif surfaceType == self.moosas.Wall:
+        elif surfaceType == self.moosas.Wall or surfaceType == self.moosas.AirWall:
             element = searchBy('Uid', Uid, model.wallList, earlyEnd=True, asObject=True)
-        elif surfaceType == self.moosas.Glazing or surfaceType == self.moosas.AirWall:
+        elif surfaceType == self.moosas.Glazing:
             element = searchBy('Uid', Uid, model.glazingList, earlyEnd=True, asObject=True)
         elif surfaceType == self.moosas.Skylight or surfaceType == self.moosas.AirSkylight:
             element = searchBy('Uid', Uid, model.skylightList, earlyEnd=True, asObject=True)
@@ -941,9 +937,9 @@ class MoosasRDF(Graph):
         geoId = mixItemListToObject([str(self.getObject(URIRef(gi), self.moosas.faceId)) for gi in geoId])
         if surfaceType == self.moosas.Face:
             element = MoosasFace(model, geoId, level=level, uid=Uid, offset=offset)
-        elif surfaceType == self.moosas.Wall:
+        elif surfaceType == self.moosas.Wall or surfaceType == self.moosas.AirWall:
             element = MoosasWall(model, geoId, level=level, uid=Uid, offset=offset)
-        elif surfaceType == self.moosas.Glazing or surfaceType == self.moosas.AirWall:
+        elif surfaceType == self.moosas.Glazing:
             element = MoosasGlazing(model, geoId, level=level, uid=Uid, offset=offset)
         elif surfaceType == self.moosas.Skylight or surfaceType == self.moosas.AirSkylight:
             element = MoosasSkylight(model, geoId, level=level, uid=Uid, offset=offset)
@@ -1230,11 +1226,11 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     moFaceList = mixItemListToList(moFaceList)
     moWallList = rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.Wall)
     moWallList = mixItemListToList(moWallList)
-    glsList = rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.Glazing)
-    glsList = mixItemListToList(glsList)
     AirWalls = rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.AirWall)
     if AirWalls is not None:
-        glsList = np.append(glsList, AirWalls)
+        moWallList = np.append(moWallList, AirWalls)
+    glsList = rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.Glazing)
+    glsList = mixItemListToList(glsList)
     
     skyList = rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.Skylight)
     skyList = mixItemListToList(skyList)

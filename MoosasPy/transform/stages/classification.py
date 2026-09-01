@@ -114,10 +114,10 @@ def classify_model(
             continue
         print(f"\rLOADING: Filtering vertical faces {index + 1}/{len(model.geoId)}", end="")
         if np.abs(Vector.dot(geometry.normal, shapely.points([0, 0, 1]))) < geom.HORIZONTAL_ANGLE_THRESHOLD:
-            if geometry.category != 0:
-                model.glazingList.append(MoosasGlazing(model, geometry))
-            else:
+            if geometry.category in (0, 2):
                 model.wallList.append(MoosasWall(model, geometry))
+            else:
+                model.glazingList.append(MoosasGlazing(model, geometry))
 
     print(f"\t\ttotal vertical faces: {len(model.wallList)} glazings: {len(model.glazingList)}")
     return model

@@ -371,7 +371,11 @@ def cleanseDuplicatedWall(model: MoosasContainer) -> MoosasContainer:
     for wl, task in enumerate(duplicateCheckList):
         print(f'\rCLEANSE: Duplicated wall checking: {wl}/{len(duplicateCheckList)}', end='')
         for i in range(1, len(task)):
-            if equals(edge2d[task[0]], edge2d[task[i]]):
+            if (
+                equals(edge2d[task[0]], edge2d[task[i]])
+                and model.wallList[task[0]].is_air_boundary
+                == model.wallList[task[i]].is_air_boundary
+            ):
                 model.wallList[task[i]].dissolve(model.wallList[task[0]])
                 duplicatedWall.append(task[0])
                 break

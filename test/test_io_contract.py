@@ -52,6 +52,20 @@ def test_semantic_model_formats_round_trip(semantic_model: MoosasModel, suffix: 
     assert len(restored.wallList) == len(semantic_model.wallList)
 
 
+def test_rdf_round_trip_preserves_air_boundaries_as_walls(semantic_model: MoosasModel):
+    source_air_walls = [wall for wall in semantic_model.wallList if wall.is_air_boundary]
+    assert source_air_walls
+
+    with TemporaryDirectory() as directory:
+        file_path = Path(directory) / "air-boundaries.rdf"
+        semantic_model.save(file_path)
+        restored = MoosasModel.load(file_path)
+
+    restored_air_walls = [wall for wall in restored.wallList if wall.is_air_boundary]
+    assert len(restored_air_walls) == len(source_air_walls)
+    assert all(glazing.category != 2 for glazing in restored.glazingList)
+
+
 @pytest.mark.parametrize("suffix", (".graph.json", ".gbxml"))
 def test_save_only_model_projections(semantic_model: MoosasModel, suffix: str):
     with TemporaryDirectory() as directory:
