@@ -4,9 +4,11 @@ from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from eppy.modeleditor import IDF
 import pytest
 
 from MoosasPy.model import MoosasModel
+from MoosasPy.model.io.idf.version import configure_idd
 from MoosasPy.transform import transform
 
 
@@ -64,6 +66,30 @@ def test_rdf_round_trip_preserves_air_boundaries_as_walls(semantic_model: Moosas
     restored_air_walls = [wall for wall in restored.wallList if wall.is_air_boundary]
     assert len(restored_air_walls) == len(source_air_walls)
     assert all(glazing.category != 2 for glazing in restored.glazingList)
+
+
+def test_idf_air_boundaries_use_native_simple_mixing(semantic_model: MoosasModel):
+    with TemporaryDirectory() as directory:
+        file_path = Path(directory) / "air-boundaries.idf"
+        semantic_model.save(file_path)
+        configure_idd()
+        idf = IDF(str(file_path))
+
+    air_boundaries = list(idf.idfobjects["CONSTRUCTION:AIRBOUNDARY"])
+    air_boundary = air_boundaries[0]
+    air_surfaces = [
+        surface
+        for surface in idf.idfobjects["BUILDINGSURFACE:DETAILED"]
+        if surface.Construction_Name == "Moosas Air Boundary"
+    ]
+
+    assert len(air_boundaries) == 1
+    assert air_boundary.Name == "Moosas Air Boundary"
+    assert air_boundary.Air_Exchange_Method == "SimpleMixing"
+    assert air_boundary.Simple_Mixing_Air_Changes_per_Hour == pytest.approx(0.5)
+    assert air_boundary.Simple_Mixing_Schedule_Name == "Always On"
+    assert air_surfaces
+    assert len(idf.idfobjects["ZONEMIXING"]) == 0
 
 
 @pytest.mark.parametrize("suffix", (".graph.json", ".gbxml"))

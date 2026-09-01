@@ -18,7 +18,7 @@ from rdflib.namespace import RDF
 from ..rdf import MoosasRDF, encodeURI, decodeURI
 from ..xml import loadXml
 from . import IDFConversionResult, construction, input, model, parser, schedule
-from .model import MoosasSettings, ZoneMixingDefault
+from .model import MoosasSettings
 from .version import (
     bundled_template_idf_path,
     configure_idd,
@@ -273,7 +273,7 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     removeHint += list(objectHints) + ['Zone', 'WaterUse:Equipment', 'BuildingSurface:Detailed',
                                        'FenestrationSurface:Detailed', 'Shading:Zone:Detailed', 'InternalMass',
                                        'SurfaceProperty:ExposedFoundationPerimeter',
-                                       'Space', 'SpaceList', 'ZoneMixing',
+                                       'Space', 'SpaceList', 'ZoneMixing', 'Construction:AirBoundary',
                                        'DesignSpecification:OutdoorAir:SpaceList']
     idf = zTemplate.idf
     for h in removeHint:
@@ -302,7 +302,7 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
                 wallConstruction = zTemplate.getConstruction('opaque', wallU)
                 windowConstruction = zTemplate.getConstruction('window', winU, SHGC)
                 if wall.category == 2:
-                    input.createThermalSurface(idf, wall, 'Wall', "Generic Air Boundary",
+                    input.createThermalSurface(idf, wall, 'Wall', "Moosas Air Boundary",
                                                      None,encodeWindow=False)
                 else:
                     input.createThermalSurface(idf, wall, 'Wall', wallConstruction.params['Name'],
@@ -348,29 +348,6 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     for si, space in enumerate(idfSpaces):
         print(f"\rIDF: encoding zones: {si+1}/{len(idfSpaces)}", end='')
         templatesBySpaceId[str(space.id)].applyToIDF(idf)
-
-    # writing zone mixing
-    mixing = set()
-    for space in idfSpaces:
-        for moElement in space.getAllFaces(False):
-            if moElement.category == 2 and all(str(spaceId) in validSpaceIds for spaceId in moElement.space):
-                mixing.add('~~'.join(moElement.space))
-
-    for zoneTwins in mixing:
-        zoneTwins = zoneTwins.split("~~")
-        zoneMixing = MoosasSettings(ZoneMixingDefault)
-        zoneMixing.updateParams(**{
-            'Name':zoneTwins[0]+"_"+zoneTwins[1],
-            'Zone_or_Space_Name': zoneTwins[0],
-            'Source_Zone_or_Space_Name': zoneTwins[1],
-        })
-        zoneMixing.applyToIDF(idf)
-        zoneMixing.updateParams(**{
-            'Name':zoneTwins[1]+"_"+zoneTwins[0],
-            'Zone_or_Space_Name': zoneTwins[1],
-            'Source_Zone_or_Space_Name': zoneTwins[0],
-        })
-        zoneMixing.applyToIDF(idf)
 
     if idfTemplatePath:
         _idf_apply_attic_mixing(idf, model, idfTemplatePath)

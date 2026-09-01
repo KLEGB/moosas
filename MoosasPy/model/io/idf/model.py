@@ -196,16 +196,6 @@ ZoneNodeListDefault = {
     'Node_1_Name': "", # Node Block1:Zone3 In
 }
 
-ZoneMixingDefault = {
-    "key": "ZoneMixing",
-    'Name': "",  # designed name
-    'Zone_or_Space_Name': "",  # Block1:Zone3
-    'Schedule_Name':"Always On",
-    'Source_Zone_or_Space_Name': "",  # Block1:Zone3, two-side with 2 mixing objects
-    'Design_Flow_Rate_Calculation_Method': 'Flow/Area',
-    'Flow_Rate_per_Floor_Area':'1',
-}
-
 'Office_MainRoom_HeatingSetPoint'
 'Office_MainRoom_CoolingSetPoint'
 'Office_MainRoom_Occ'
