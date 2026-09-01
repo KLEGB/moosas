@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from MoosasPy.simulation.energy.runner import _resolve_schedule_ref
+from MoosasPy.transform.geometry.convexify import GeometryConvexifier
 from MoosasPy.transform.geometry.element import MoosasSpace
 from MoosasPy.transform.geometry.geos import simplify
 from MoosasPy.utils import shapely
@@ -41,6 +42,33 @@ def test_simplify_keeps_three_vertices_for_a_2d_triangle():
 
     assert shapely.is_valid(result)
     assert len(shapely.get_coordinates(result)) == 4
+
+
+def test_convexification_does_not_infer_vertical_air_walls():
+    """Zone air walls are created from final contours, not stacked face diagonals."""
+    footprint = np.array([
+        [0.0, 0.0],
+        [8.0, 0.0],
+        [8.0, 3.0],
+        [3.0, 3.0],
+        [3.0, 8.0],
+        [0.0, 8.0],
+    ])
+    faces = [
+        np.column_stack((footprint, np.full(len(footprint), elevation)))
+        for elevation in (0.0, 3.0)
+    ]
+
+    categories, _, _, _, divide_lines = GeometryConvexifier.convexify_faces(
+        [0, 0],
+        ["floor", "roof"],
+        [np.array([0.0, 0.0, 1.0])] * 2,
+        faces,
+        [None, None],
+    )
+
+    assert divide_lines
+    assert all(int(category) != 2 for category in categories)
 
 
 def test_template_application_keeps_load_intensities_numeric():

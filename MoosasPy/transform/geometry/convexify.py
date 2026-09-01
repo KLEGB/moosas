@@ -378,13 +378,6 @@ def convexify_faces(cat, idd, normal, faces, holes, valid_face=True, clean_quad=
 
     print("--Faces splitting done--")
 
-    quad_faces, quad_normals = GeometryOperator.create_airwalls(divide_lines)
-    for i, face in enumerate(quad_faces):
-        convex_cat.append("2")
-        convex_idd.append(f"a_{i}")
-        convex_normal.append(quad_normals[i])
-        convex_faces.append(face)
-
     return convex_cat, convex_idd, convex_normal, convex_faces, divide_lines
 
 

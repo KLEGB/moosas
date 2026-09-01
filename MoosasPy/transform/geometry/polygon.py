@@ -2,7 +2,6 @@
 Geometry utilities for convexification and simplification in Moosas.
 """
 
-from collections import defaultdict
 from typing import List, Tuple, Union
 
 from scipy.spatial.transform import Rotation as R
@@ -428,49 +427,6 @@ class GeometryOperator:
             ret_diag.append(((diag[0] + i_break) % n, (diag[1] + i_break) % n))
 
         return i1 + i2, ret_diag
-
-    @staticmethod
-    def create_airwalls(divide_lines):
-        line_groups = defaultdict(list)
-        quad_faces = []
-        quad_normals = []
-
-        projected_lines = [line[:, :2] for line in divide_lines]
-        z_lines = [(line[0, 2] + line[1, 2]) / 2 for line in divide_lines]
-
-        for i in range(len(projected_lines)):
-            found_group = False
-            for j in range(i):
-                if np.array_equal(projected_lines[i], projected_lines[j]) or np.array_equal(
-                    projected_lines[i], projected_lines[j][::-1]
-                ):
-                    line_groups[j].append((divide_lines[i], z_lines[i]))
-                    found_group = True
-                    break
-            if not found_group:
-                line_groups[i].append((divide_lines[i], z_lines[i]))
-
-        for group in line_groups.values():
-            if len(group) < 2:
-                continue
-
-            group.sort(key=lambda x: x[1])
-            for k in range(len(group) - 1):
-                line1, _ = group[k]
-                line2, _ = group[k + 1]
-
-                quad = np.array([line1[0], line1[1], line2[1], line2[0]])
-                quad_faces.append(quad)
-
-                v1 = quad[1] - quad[0]
-                v2 = quad[3] - quad[0]
-                normal = np.cross(v1, v2)
-                norm = np.linalg.norm(normal)
-                if norm > 0:
-                    normal = normal / norm
-                quad_normals.append(normal)
-
-        return quad_faces, quad_normals
 
 
 def create_obb(points, normal, min_scale=0.1):
