@@ -515,6 +515,26 @@ def _is_core_boundary(edge):
     )
 
 
+def _direct_child_holes(edge, edges):
+    """Return only the immediately nested boundaries inside an edge."""
+    boundary = edge.force_2d()
+    contained = [
+        candidate.force_2d()
+        for candidate in edges
+        if candidate is not edge
+        and shapely.contains_properly(boundary, candidate.force_2d())
+    ]
+    return [
+        candidate
+        for candidate in contained
+        if not any(
+            other is not candidate
+            and shapely.contains_properly(other, candidate)
+            for other in contained
+        )
+    ]
+
+
 def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
     """
     Packs edges into a MoosasContainer by validating and processing boundary lists, and optionally subdividing complex faces into simpler polygons.
@@ -567,8 +587,7 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
                 # concave footprint was passed to the convexifier with its
                 # exterior removed and could not be divided.  A hole must lie
                 # strictly inside the boundary instead.
-                holes = [subEdge.force_2d() for subEdge in edges if
-                         shapely.contains_properly(edge.force_2d(), subEdge.force_2d())]
+                holes = _direct_child_holes(edge, edges)
                 newEdges, _ = triangulate2dFace(edge.force_2d(), holes)
                 newEdges = _merge_tiny_partitions(newEdges)
                 if len(newEdges) > 1:
