@@ -22,7 +22,17 @@ def assemble_model(
     if solve_overlap:
         model = solveIntersectionHorizontal(model)
     model = pack_model(model, solve_overlap)
-    return pack_attic_spaces(model)
+    model = pack_attic_spaces(model)
+    return identify_basement_spaces(model)
+
+
+def identify_basement_spaces(model: MoosasModel) -> MoosasModel:
+    """Mark spaces whose floor is below the z=0 plane as basements."""
+    for space in model.spaceList:
+        floor_elevation = space.floor.level + space.floor.offset
+        if floor_elevation < -0.5:
+            space.space_type = "basement"
+    return model
 
 
 def order_connected_walls(walls: list) -> list | None:

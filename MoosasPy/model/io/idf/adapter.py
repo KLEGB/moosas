@@ -136,17 +136,25 @@ def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zon
 
 
 def _idf_auto_zone_mapping(model: MoosasModel, idf_template_path: str) -> dict[str, list[str]]:
-    """Map detected attic spaces to an attic-named template Zone automatically."""
+    """Map detected attic and basement spaces to matching template Zones."""
     try:
         idf = IDF(idf_template_path)
         names = [str(zone['Name']).strip() for zone in idf.idfobjects['ZONE'] if str(zone['Name']).strip()]
     except Exception:
         return {"": []}
     attic_zone = next((name for name in names if re.search(r'\battic\b', name, re.I)), "")
-    room_zone = next((name for name in names if name != attic_zone), attic_zone)
+    basement_zone = next((name for name in names if re.search(r'\bbasement\b', name, re.I)), "")
+    room_zone = next((name for name in names if name not in {attic_zone, basement_zone}), basement_zone or attic_zone)
     mapping = defaultdict(list)
     for space in model.spaceList:
-        mapping[attic_zone if getattr(space, 'space_type', 'room') == 'attic' and attic_zone else room_zone].append(str(space.id))
+        space_type = getattr(space, 'space_type', 'room')
+        if space_type == 'attic' and attic_zone:
+            zone_name = attic_zone
+        elif space_type == 'basement' and basement_zone:
+            zone_name = basement_zone
+        else:
+            zone_name = room_zone
+        mapping[zone_name].append(str(space.id))
     return _normalize_zone_name_to_space_dict(dict(mapping))
 def _idf_apply_attic_mixing(idf, model, template_path):
     """Copy reference-attic ZoneMixing objects to each geometrically adjacent room."""
