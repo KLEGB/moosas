@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from ...model import MoosasModel
 from ..geometry.boundary import geometry_arrays, simplify_to_layered_obb
-from ..geometry.convexify import inject_minimal_core
+from ..geometry.core import inject_minimal_core
 from ..geometry.element import MoosasGeometry
 from ..geometry.geos import Vector
 

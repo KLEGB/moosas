@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from .geos import *
 from .element import MoosasEdge, MoosasWall, MoosasGlazing, MoosasContainer
-from . import triangulate2dFace
+from .triangulation import triangulate2dFace
 from ...utils import searchBy, shapely, np, TopologyError, mixItemListToList
 from ...utils.constant import geom
 from .planar_graph import TopoNode, TopoBound, TopoEdge, TopoNetwork

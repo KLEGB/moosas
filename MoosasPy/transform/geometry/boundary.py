@@ -1,9 +1,139 @@
-'''Pure geometry helpers for boundary simplification and core insertion.'''
+'''Building-boundary simplification and window reconstruction.'''
 from __future__ import annotations
+
+from scipy.spatial.transform import Rotation as R
 
 from ...utils import np, shapely
 from .geos import Vector
-from .polygon import GeometryBasic, calculate_wwr, create_obb, obb_to_face_vertices
+from .polygon import GeometryBasic
+
+
+def create_obb(points, normal, min_scale=0.1):
+    """Create an oriented bounding box (OBB) for a set of points."""
+    geometry = shapely.multipoints(points)
+    z_axis = np.array([0, 0, 1])
+    z_r = normal
+
+    if np.abs(z_r[0]) <= 1e-3 and np.abs(z_r[1]) <= 1e-3:
+        z_r = z_axis
+        min_rotated_rectangle = shapely.minimum_rotated_rectangle(geometry)
+        obb_coords = np.array(shapely.get_coordinates(min_rotated_rectangle, include_z=True))[:-1]
+        obb_coords = np.nan_to_num(obb_coords, nan=points[0, 2])
+        obb_coords[:, 2] = (np.min(points[:, 2]) + np.max(points[:, 2])) / 2
+
+        if len(obb_coords) <= 2:
+            centroid = np.mean(points, axis=0)
+            x_r, y_r = np.array([1, 0, 0]), np.array([0, 1, 0])
+            rotation = np.array([x_r, y_r, z_r])
+            rotation_matrix = R.from_matrix(rotation).as_matrix()
+            l = max(np.ptp(points[:, 0]), min_scale)
+            w = max(np.ptp(points[:, 1]), min_scale)
+            h = max(np.ptp(points[:, 2]), min_scale)
+            original_obb_centroid = centroid
+        else:
+            x_vec = obb_coords[1] - obb_coords[0]
+
+            x_norm = np.linalg.norm(x_vec)
+
+            x_r = x_vec / x_norm if x_norm > 1e-6 else np.array([1, 0, 0])
+            y_r = np.cross(z_r, x_r)
+
+            rotation = np.array([x_r, y_r, z_r])
+            rotation_matrix = R.from_matrix(rotation).as_matrix()
+
+            l = np.linalg.norm(obb_coords[1] - obb_coords[0])
+            w = np.linalg.norm(obb_coords[3] - obb_coords[0])
+            h = max(np.max(points[:, 2]) - np.min(points[:, 2]), min_scale)
+            original_obb_centroid = np.mean(obb_coords, axis=0)
+    else:
+        x_r = np.cross(z_r, z_axis)
+        y_r = np.cross(z_r, x_r)
+
+        rotation = np.array([x_r, y_r, z_r])
+        rotation_matrix = R.from_matrix(rotation).as_matrix()
+
+        rotated_points = points.dot(rotation_matrix.T)
+        l = max(np.ptp(rotated_points[:, 0]), min_scale)
+        w = max(np.ptp(rotated_points[:, 1]), min_scale)
+        h = max(np.ptp(rotated_points[:, 2]), min_scale)
+
+        centroid = np.mean(
+            [
+                [np.min(rotated_points[:, 0]), np.min(rotated_points[:, 1]), np.min(rotated_points[:, 2])],
+                [np.max(rotated_points[:, 0]), np.max(rotated_points[:, 1]), np.max(rotated_points[:, 2])],
+            ],
+            axis=0,
+        )
+        original_obb_centroid = np.dot(centroid, rotation_matrix)
+
+    return {
+        "center": original_obb_centroid,
+        "scale": np.array([l, w, h]),
+        "rotation": rotation_matrix,
+    }
+
+
+def obb_to_face_vertices(obb_params):
+    """Convert OBB parameters to face vertices and normals."""
+    center = obb_params["center"]
+    l, w, h = obb_params["scale"]
+    rotation_matrix = obb_params["rotation"]
+
+    offsets = np.array(
+        [
+            [-l / 2, -w / 2, -h / 2],
+            [l / 2, -w / 2, -h / 2],
+            [l / 2, w / 2, -h / 2],
+            [-l / 2, w / 2, -h / 2],
+            [-l / 2, -w / 2, h / 2],
+            [l / 2, -w / 2, h / 2],
+            [l / 2, w / 2, h / 2],
+            [-l / 2, w / 2, h / 2],
+        ]
+    )
+
+    corners = offsets.dot(rotation_matrix) + center
+    faces = [
+        [corners[0], corners[1], corners[2], corners[3]],
+        [corners[4], corners[7], corners[6], corners[5]],
+        [corners[0], corners[4], corners[5], corners[1]],
+        [corners[2], corners[6], corners[7], corners[3]],
+        [corners[0], corners[3], corners[7], corners[4]],
+        [corners[1], corners[5], corners[6], corners[2]],
+    ]
+
+    faces = [np.array(face) for face in faces]
+    normals = []
+    for face in faces:
+        v1 = face[1] - face[0]
+        v2 = face[3] - face[0]
+        normal = np.cross(v1, v2)
+        normal = np.round(normal / (np.linalg.norm(normal) + 1e-6), 3)
+        normals.append(normal)
+
+    return faces, normals
+
+
+def calculate_wwr(cats, faces, normals):
+    """Calculate the window-to-wall ratio."""
+    total_wall_area = 0.0
+    total_window_area = 0.0
+
+    for cat, face, normal in zip(cats, faces, normals):
+        area = GeometryBasic.polygon_area_3d(face)
+        if area < 1e-6:
+            continue
+
+        if abs(normal[2]) < 1e-3:
+            if int(cat) == 1:
+                total_window_area += area
+            else:
+                total_wall_area += area
+
+    if total_wall_area + total_window_area == 0:
+        return 0.0
+
+    return total_window_area / (total_wall_area + total_window_area)
 
 
 def geometry_arrays(geometries):

@@ -10,7 +10,7 @@ from .element import *
 from ...utils.tools import searchBy
 from ...utils.constant import geom
 from .geos import equals, overlapEdge, Vector
-from . import triangulate2dFace
+from .triangulation import triangulate2dFace
 
 
 def _groupByNormal(listToGroup: list, listOfNormal: list[shapely.Geometry | np.ndarray]) -> list[list]:

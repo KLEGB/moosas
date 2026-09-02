@@ -5,7 +5,7 @@ from eppy.modeleditor import IDF
 
 from .construction import Construction
 from .model import *
-from ....transform.geometry import triangulate2dFace
+from ....transform.geometry.triangulation import triangulate2dFace
 from ....transform.geometry.element import MoosasSpace, MoosasElement
 from ....transform.geometry.geos import ccwNormal, Vector, offset, trim, projectTo
 from ....utils import shapely, path

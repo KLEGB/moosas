@@ -6,7 +6,7 @@ import shapely
 from ...model import MoosasModel
 from ...utils import np
 from ...utils.constant import geom
-from ..geometry import triangulate2dFace
+from ..geometry.triangulation import triangulate2dFace
 from ..geometry.cleanse import cleanseDuplicatedLevel
 from ..geometry.element import MoosasElement, MoosasFace, MoosasGlazing, MoosasSkylight, MoosasWall
 from ..geometry.geos import GeometryError, Projection, Vector

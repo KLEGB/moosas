@@ -10,7 +10,7 @@ import os
 import re
 
 from .geos import Projection, Vector, faceNormal, simplify, overlapArea, equals, selfIntersect, makeValid, bBox
-from . import triangulate2dFace
+from .triangulation import triangulate2dFace
 from ...utils import generate_code, searchBy, mixItemListToObject, mixItemListToList, encodeParams, GeometryError
 from ...utils import shapely, np, ET
 from ...utils.tools import path
