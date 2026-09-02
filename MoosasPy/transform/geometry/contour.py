@@ -535,6 +535,36 @@ def _direct_child_holes(edge, edges):
     ]
 
 
+def _replace_one_sided_air_boundaries(boundaries, walls):
+    """Use a coincident opaque wall when an air wall bounds only one contour."""
+    occurrence_count = {}
+    for boundary in boundaries:
+        for wall in boundary:
+            occurrence_count[wall] = occurrence_count.get(wall, 0) + 1
+
+    replacements = {}
+    opaque_walls = [wall for wall in walls if not wall.is_air_boundary]
+    for wall, count in occurrence_count.items():
+        if not wall.is_air_boundary or count != 1:
+            continue
+        replacement = next(
+            (
+                candidate
+                for candidate in opaque_walls
+                if candidate.level == wall.level
+                and equals(candidate.force_2d(), wall.force_2d())
+            ),
+            None,
+        )
+        if replacement is not None:
+            replacements[wall] = replacement
+
+    return [
+        [replacements.get(wall, wall) for wall in boundary]
+        for boundary in boundaries
+    ]
+
+
 def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
     """
     Packs edges into a MoosasContainer by validating and processing boundary lists, and optionally subdividing complex faces into simpler polygons.
@@ -555,7 +585,11 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
         and remaining unassigned walls marked in `wall_remain`.
     """
 
-    faceSet = set([member for member in model.wallList])
+    model.boundaryList = _replace_one_sided_air_boundaries(
+        model.boundaryList,
+        model.wallList,
+    )
+    faceSet = set(model.wallList)
     for edge in model.boundaryList:
         # print(edge)
         if len(edge) < 3:
@@ -565,7 +599,7 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
             the_edge = MoosasEdge(edge)
             if the_edge.is_valid():
                 model.edgeList.append(the_edge)
-                faceSet.difference(set(edge))
+                faceSet.difference_update(edge)
             # else:
             #     print([e.force_2d() for e in edge])
 

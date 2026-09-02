@@ -3056,8 +3056,6 @@ class MoosasSpace(object):
                 False otherwise.
         """
         for moElement in self.getAllFaces(to_dict=False):
-            if isinstance(moElement, MoosasWall) and moElement.is_air_boundary and moElement.isOuter:
-                return True
             # moElement:MoosasElement = moElement
             for glazing in moElement.glazingElement:
                 if glazing.category == 2 and moElement.isOuter:
@@ -3455,6 +3453,8 @@ class MoosasContainer(object):
         self.faceList: list[MoosasFace] = []
         self.wallList: list[MoosasWall] = []
         self.shadingList: list[MoosasElement] = []
+        self.wall_remain: list[MoosasWall] = []
+        self.face_remain: list[MoosasFace] = []
 
         # Identify the result set
         self.levelList: list[float] = []

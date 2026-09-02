@@ -12,8 +12,9 @@ def validate_model(model: MoosasModel) -> MoosasModel:
         issues.append("space IDs must be unique")
 
     known_ids = set(space_ids)
+    residual_walls = set(model.wall_remain)
     for wall in model.wallList:
-        if not wall.is_air_boundary:
+        if not wall.is_air_boundary or wall in residual_walls:
             continue
         adjacent_ids = {str(space_id) for space_id in wall.space}
         if len(adjacent_ids) != 2 or not adjacent_ids.issubset(known_ids):

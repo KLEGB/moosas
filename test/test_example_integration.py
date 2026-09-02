@@ -39,9 +39,9 @@ class ExampleIntegrationTests(unittest.TestCase):
         self.assertGreaterEqual(len(self.model.geometryList), 450)
         self.assertEqual(len(self.model.spaceList), 70)
         self.assertEqual(len(self.model.voidList), 0)
-        self.assertEqual(len(self.model.wallList), 249)
+        self.assertEqual(len(self.model.wallList), 257)
         self.assertEqual(len(self.model.faceList), 153)
-        self.assertEqual(len(self.model.glazingList), 91)
+        self.assertEqual(len(self.model.glazingList), 33)
         self.assertEqual(len(self.model.skylightList), 0)
         self.assertEqual(
             tuple(self.model.levelList),
@@ -59,14 +59,28 @@ class ExampleIntegrationTests(unittest.TestCase):
         self.assertEqual(len(neighbor_pairs), 122)
         self.assertTrue(all(space.neighbor for space in self.model.spaceList))
 
+        residual_walls = set(self.model.wall_remain)
+        active_air_walls = [
+            wall
+            for wall in self.model.wallList
+            if wall.is_air_boundary and wall not in residual_walls
+        ]
+        self.assertEqual(len(active_air_walls), 36)
+        self.assertEqual(
+            sum(wall.is_air_boundary for wall in self.model.wall_remain),
+            22,
+        )
+        self.assertTrue(all(len(set(wall.space)) == 2 for wall in active_air_walls))
+
     def test_classification_stage_builds_elements_before_topology(self):
         model = _load_geometry_source(str(GEOMETRY_FIXTURE), "geo")
         classified_model = classify_model(model)
 
         self.assertIs(classified_model, model)
         self.assertEqual(len(model.faceList), 144)
-        self.assertEqual(len(model.wallList), 193)
-        self.assertEqual(len(model.glazingList), 91)
+        self.assertEqual(len(model.wallList), 251)
+        self.assertEqual(sum(wall.is_air_boundary for wall in model.wallList), 58)
+        self.assertEqual(len(model.glazingList), 33)
         self.assertEqual(len(model.skylightList), 0)
         self.assertEqual(tuple(model.levelList), (0.0, 4.5, 9.0, 13.5, 18.0, 22.5, 27.0, 31.5, 36.0, 40.5, 45.0))
 
@@ -134,10 +148,10 @@ class ExampleIntegrationTests(unittest.TestCase):
             self.assertGreaterEqual(value, 0.0)
             component_total += value
         self.assertGreater(component_total, 0.0)
-        self.assertAlmostEqual(float(total["cooling"]), 3.54, places=2)
-        self.assertAlmostEqual(float(total["heating"]), 11.59, places=2)
+        self.assertAlmostEqual(float(total["cooling"]), 3.48, places=2)
+        self.assertAlmostEqual(float(total["heating"]), 11.42, places=2)
         self.assertAlmostEqual(float(total["lighting"]), 2.63, places=2)
-        self.assertAlmostEqual(float(total["total"]), 17.76, places=2)
+        self.assertAlmostEqual(float(total["total"]), 17.53, places=2)
         self.assertAlmostEqual(float(total["total"]), component_total, places=6)
 
 
