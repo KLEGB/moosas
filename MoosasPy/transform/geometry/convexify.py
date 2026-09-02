@@ -113,6 +113,119 @@ def _intersect_projected_bounds(bounds):
     )
 
 
+def _append_face_hole(face_holes, hole_face):
+    """Return the face holes with one independent ring appended."""
+    if not face_holes:
+        return {0: np.asarray(hole_face, dtype=float)}
+    if isinstance(face_holes, dict):
+        rings = [face_holes[index] for index in sorted(face_holes)]
+    else:
+        rings = list(face_holes)
+    rings.append(np.asarray(hole_face, dtype=float))
+    return {index: ring for index, ring in enumerate(rings)}
+
+
+def _face_polygon_xy(face, holes):
+    """Build a 2-D polygon for strict core containment checks."""
+    shell = np.asarray(face, dtype=float)[:, :2]
+    if not holes:
+        return shapely.polygons(shell)
+    if isinstance(holes, dict):
+        rings = [holes[index] for index in sorted(holes)]
+    else:
+        rings = list(holes)
+    return shapely.polygons(shell, holes=[np.asarray(ring, dtype=float)[:, :2] for ring in rings])
+
+
+def _shared_level_footprint(levels, faces, holes):
+    """Return the area shared by one primary horizontal face on every level."""
+    shared = None
+    for level in levels:
+        level_faces = [
+            _face_polygon_xy(faces[index], holes[index]) for index in level["indices"]
+        ]
+        footprint = max(
+            level_faces,
+            key=shapely.area,
+        )
+        shared = footprint if shared is None else shapely.intersection(shared, footprint)
+    parts = [part for part in shapely.get_parts(shared) if shapely.area(part) > 1e-6]
+    if not parts:
+        raise ValueError("Core insertion found no horizontal area shared by all selected levels.")
+    return max(parts, key=shapely.area)
+
+
+def _fit_core_rectangle(footprint, x_axis, y_axis, span_x, span_y):
+    """Place and scale the oriented core rectangle strictly inside a footprint."""
+    radius_line = shapely.maximum_inscribed_circle(footprint, tolerance=1e-4)
+    center_xy = shapely.get_coordinates(radius_line)[0]
+
+    def candidate(scale):
+        return _build_rect_face(center_xy, x_axis, y_axis, span_x * scale, span_y * scale, 0.0)
+
+    if shapely.contains_properly(footprint, shapely.polygons(candidate(1.0)[:, :2])):
+        return center_xy, span_x, span_y
+
+    lower = 0.0
+    upper = 1.0
+    for _ in range(50):
+        scale = 0.5 * (lower + upper)
+        rectangle = shapely.polygons(candidate(scale)[:, :2])
+        if shapely.contains_properly(footprint, rectangle):
+            lower = scale
+        else:
+            upper = scale
+    if lower * lower * span_x * span_y <= 1e-6:
+        raise ValueError("Core insertion could not fit a rectangular core inside the shared footprint.")
+    strict_scale = lower * 0.999
+    return center_xy, span_x * strict_scale, span_y * strict_scale
+
+
+def _convex_parts_with_holes(face, holes):
+    """Triangulate a polygon with holes and merge adjacent triangles when convex."""
+    face = np.asarray(face, dtype=float)
+    polygon = shapely.polygons(
+        face[:, :2],
+        holes=[np.asarray(hole, dtype=float)[:, :2] for hole in holes],
+    )
+    pieces = [
+        part
+        for part in shapely.get_parts(shapely.constrained_delaunay_triangles(polygon))
+        if shapely.area(part) > 1e-6
+    ]
+
+    merged = True
+    while merged:
+        merged = False
+        for first_idx in range(len(pieces) - 1):
+            for second_idx in range(first_idx + 1, len(pieces)):
+                if shapely.length(
+                    shapely.intersection(
+                        shapely.boundary(pieces[first_idx]),
+                        shapely.boundary(pieces[second_idx]),
+                    )
+                ) <= 1e-6:
+                    continue
+                union = shapely.union(pieces[first_idx], pieces[second_idx])
+                if len(shapely.get_parts(union)) != 1:
+                    continue
+                if shapely.area(shapely.convex_hull(union)) - shapely.area(union) > 1e-6:
+                    continue
+                pieces[first_idx] = union
+                pieces.pop(second_idx)
+                merged = True
+                break
+            if merged:
+                break
+
+    z_value = float(np.mean(face[:, 2])) if face.shape[1] > 2 else 0.0
+    result = []
+    for piece in pieces:
+        coordinates = shapely.get_coordinates(piece)[:-1]
+        result.append(np.column_stack((coordinates, np.full(len(coordinates), z_value))))
+    return result
+
+
 def _build_core_wall_faces(bottom_face, top_face, core_center_xy):
     wall_faces = []
     wall_normals = []
@@ -152,7 +265,7 @@ def _build_core_wall_faces(bottom_face, top_face, core_center_xy):
 
 
 def inject_minimal_core(cat, idd, normal, faces, holes, core_area_ratio=0.2):
-    """Inject ordinary opaque walls that enclose one core room per story."""
+    """Cut a core opening from each slab and insert one closed core per story."""
     level_groups = _group_horizontal_face_levels(faces, normal)
     if len(level_groups) < 2:
         print("--Minimal core skipped: insufficient horizontal levels--")
@@ -230,12 +343,14 @@ def inject_minimal_core(cat, idd, normal, faces, holes, core_area_ratio=0.2):
     rect_span_x *= scale
     rect_span_y *= scale
 
-    center_xy = np.array(
-        [
-            0.5 * (common_min_x + common_max_x),
-            0.5 * (common_min_y + common_max_y),
-        ],
-        dtype=float,
+    selected_levels = level_info[best_range[0] : best_range[1] + 1]
+    shared_footprint = _shared_level_footprint(selected_levels, faces, holes)
+    center_xy, rect_span_x, rect_span_y = _fit_core_rectangle(
+        shared_footprint,
+        x_axis,
+        y_axis,
+        rect_span_x,
+        rect_span_y,
     )
 
     core_cat = list(cat)
@@ -244,8 +359,45 @@ def inject_minimal_core(cat, idd, normal, faces, holes, core_area_ratio=0.2):
     core_faces = [np.asarray(face, dtype=float) for face in faces]
     core_holes = list(holes)
 
-    selected_levels = level_info[best_range[0] : best_range[1] + 1]
     level_z = [level["z"] for level in selected_levels]
+
+    for level_idx, level in enumerate(selected_levels):
+        core_face = _build_rect_face(
+            center_xy,
+            x_axis,
+            y_axis,
+            rect_span_x,
+            rect_span_y,
+            level["z"],
+        )
+        core_polygon = shapely.polygons(core_face[:, :2])
+        parent_indices = [
+            face_idx
+            for face_idx in level["indices"]
+            if shapely.contains(
+                _face_polygon_xy(core_faces[face_idx], core_holes[face_idx]),
+                core_polygon,
+            )
+        ]
+        if not parent_indices:
+            raise ValueError(
+                "Core plane must lie strictly inside a horizontal face at "
+                f"z={level['z']:.6g}."
+            )
+
+        for parent_order, parent_idx in enumerate(parent_indices):
+            core_holes[parent_idx] = _append_face_hole(core_holes[parent_idx], core_face)
+            oriented_core_face = core_face
+            if core_normal[parent_idx][2] < 0:
+                oriented_core_face = core_face[::-1]
+            core_cat.append(core_cat[parent_idx])
+            core_idd.append(
+                f"core_face_{best_range[0] + level_idx + 1}_{parent_order}"
+            )
+            core_normal.append(np.asarray(core_normal[parent_idx], dtype=float))
+            core_faces.append(oriented_core_face)
+            core_holes.append(None)
+
     for story_idx in range(len(level_z) - 1):
         bottom_z = level_z[story_idx]
         top_z = level_z[story_idx + 1]
@@ -311,31 +463,30 @@ def convexify_faces(cat, idd, normal, faces, holes, valid_face=True, clean_quad=
                         continue
                     poly_in[i] = hole
 
-                verts, mergelines = GeometryOperator.merge_holes(poly_ex, poly_in)
-                if mergelines:
-                    divide_lines.extend(mergelines)
+            if poly_in:
+                subfaces = _convex_parts_with_holes(poly_ex, list(poly_in.values()))
+                diags = []
             else:
                 verts = poly_ex
+                indices = list(range(len(verts)))
+                polys, diags = GeometryOperator.split_poly(verts, indices)
 
-            indices = list(range(len(verts)))
-            polys, diags = GeometryOperator.split_poly(verts, indices)
+                subfaces = []
+                for poly in polys:
+                    candidate_face = verts[poly]
 
-            subfaces = []
-            for poly in polys:
-                candidate_face = verts[poly]
-
-                if valid_face and not GeometryValidator._is_valid_face(candidate_face):
-                    print(f"    Skipping invalid sub-face in face {idd[idx]}")
-                    continue
-
-                if clean_quad and len(poly) > 4:
-                    quad_poly = GeometryOperator.compute_max_inscribed_quadrilateral(candidate_face)
-                    if valid_face and not GeometryValidator._is_valid_face(quad_poly):
-                        print(f"    Skipping invalid quadrilateral sub-face in face {idd[idx]}")
+                    if valid_face and not GeometryValidator._is_valid_face(candidate_face):
+                        print(f"    Skipping invalid sub-face in face {idd[idx]}")
                         continue
-                    candidate_face = np.array(quad_poly)
 
-                subfaces.append(candidate_face)
+                    if clean_quad and len(poly) > 4:
+                        quad_poly = GeometryOperator.compute_max_inscribed_quadrilateral(candidate_face)
+                        if valid_face and not GeometryValidator._is_valid_face(quad_poly):
+                            print(f"    Skipping invalid quadrilateral sub-face in face {idd[idx]}")
+                            continue
+                        candidate_face = np.array(quad_poly)
+
+                    subfaces.append(candidate_face)
 
             if len(subfaces) == 1:
                 for subface in subfaces:
@@ -397,9 +548,8 @@ class GeometryConvexifier:
                     hole_dict[i] = hole
 
             if hole_dict:
-                verts, mergelines = GeometryOperator.merge_holes(face, hole_dict)
-                if mergelines:
-                    divide_lines.extend(mergelines)
+                convex_faces.extend(_convex_parts_with_holes(face, list(hole_dict.values())))
+                continue
             else:
                 verts = face
 

@@ -19,7 +19,7 @@ from .stages.finalization import finalize_model
 from .stages.generation import CCRSpaceGeneration
 from .stages.glazing import attach_glazing_to_faces
 from .stages.options import TransformOptions
-from .stages.splitting import prepare_divided_zones, split_wall_intersections
+from .stages.splitting import split_wall_intersections
 from .stages.topology import build_face_topology, build_space_topology
 from .importers.geo import _readGeo, preClassified
 from .importers.obj import _readObj
@@ -289,8 +289,6 @@ def structured(
     """
 
     """1nd level space boundaries topology"""
-    model = prepare_divided_zones(model, options.divided_zones)
-
     # CCR method
 
     # # BTG method

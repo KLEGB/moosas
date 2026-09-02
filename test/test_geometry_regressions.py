@@ -8,10 +8,12 @@ import pytest
 from MoosasPy.simulation.energy.runner import _resolve_schedule_ref
 from MoosasPy.transform.geometry.convexify import GeometryConvexifier
 from MoosasPy.model import MoosasModel
-from MoosasPy.transform.geometry.element import MoosasGeometry, MoosasSpace, MoosasWall
+from MoosasPy.transform.geometry.element import MoosasEdge, MoosasGeometry, MoosasSpace, MoosasWall
 from MoosasPy.transform.geometry.geos import simplify
 from MoosasPy.transform.geometry.planar_graph import TopoNetwork
-from MoosasPy.utils import shapely
+from MoosasPy.transform.geometry.contour import _merge_tiny_partitions
+from MoosasPy.transform.stages.convexification import convexify_model
+from MoosasPy.utils import GeometryError, shapely
 
 
 def test_simplify_keeps_a_narrow_valid_triangle_closed():
@@ -71,6 +73,50 @@ def test_convexification_does_not_infer_vertical_air_walls():
 
     assert divide_lines
     assert all(int(category) != 2 for category in categories)
+
+
+def test_convexified_model_preserves_the_next_geometry_id():
+    model = MoosasModel()
+    model.levelList = [0.0, 3.0]
+    geometry = MoosasGeometry(
+        np.array([
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 3.0],
+            [5.0, 0.0, 3.0],
+            [5.0, 0.0, 0.0],
+        ]),
+        "n40",
+        np.array([0.0, -1.0, 0.0]),
+        0,
+    )
+    model.geometryList = [geometry]
+    model.geoId = [geometry.faceId]
+    model.wallList = [MoosasWall(model, geometry)]
+    model.newIndex = 41
+
+    result = convexify_model(model)
+    generated_id = result.includeGeo(
+        shapely.polygons([
+            [0.0, 1.0, 0.0],
+            [0.0, 1.0, 3.0],
+            [5.0, 1.0, 3.0],
+            [5.0, 1.0, 0.0],
+        ]),
+        cat=2,
+    )
+
+    assert generated_id == "n41"
+    assert len(result.geoId) == len(set(result.geoId))
+
+
+def test_tiny_partition_is_merged_into_its_neighbor():
+    tiny = shapely.box(0.0, 0.0, 0.01, 5.0)
+    room = shapely.box(0.01, 0.0, 10.0, 5.0)
+
+    result = _merge_tiny_partitions([tiny, room])
+
+    assert len(result) == 1
+    assert shapely.area(result[0]) == pytest.approx(50.0)
 
 
 def test_negative_45_degree_wall_projects_to_a_line():
@@ -137,6 +183,33 @@ def test_rotated_rectangle_merges_half_grid_corner_rounding():
     assert len(network.edges) == 4
     assert len(network.nodes) == 4
     assert len(network.outerBoundary()) == 1
+
+
+def test_select_wall_does_not_create_missing_air_boundaries():
+    model = MoosasModel()
+    model.levelList = [0.0, 3.0]
+    geometry = MoosasGeometry(
+        np.array([
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 3.0],
+            [5.0, 0.0, 3.0],
+            [5.0, 0.0, 0.0],
+        ]),
+        "only_existing_wall",
+        np.array([0.0, -1.0, 0.0]),
+        0,
+    )
+    model.geometryList = [geometry]
+    model.geoId = [geometry.faceId]
+    wall = MoosasWall(model, geometry)
+    model.wallList = np.array([wall])
+    wall_count = len(model.wallList)
+    boundary = shapely.polygons([[0.0, 0.0], [5.0, 0.0], [5.0, 5.0], [0.0, 0.0]])
+
+    with pytest.raises(GeometryError, match="no existing wall matches boundary segment"):
+        MoosasEdge.selectWall(boundary, model.wallList)
+
+    assert len(model.wallList) == wall_count
 
 
 def test_template_application_keeps_load_intensities_numeric():

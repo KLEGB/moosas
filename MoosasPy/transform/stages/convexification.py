@@ -59,5 +59,5 @@ def convexify_model(model: MoosasModel) -> MoosasModel:
         )
     ]
     convex_model.geoId = [geometry.faceId for geometry in convex_model.geometryList]
-    convex_model.newIndex = len(convex_model.geometryList)
+    convex_model.newIndex = model.newIndex
     return convex_model

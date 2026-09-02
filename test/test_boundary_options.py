@@ -120,7 +120,7 @@ def test_disabled_boundary_operations_preserve_geometry_objects():
     assert result.geometryList is original_geometry
 
 
-@pytest.mark.parametrize('insert_core, expected_faces', ((False, 18), (True, 30)))
+@pytest.mark.parametrize('insert_core, expected_faces', ((False, 18), (True, 36)))
 def test_simplify_boundary_builds_one_obb_per_story(insert_core, expected_faces):
     model = prepare_boundary_geometry(
         _three_story_box(),
@@ -146,8 +146,18 @@ def test_simplify_boundary_builds_one_obb_per_story(insert_core, expected_faces)
             geometry for geometry in model.geometryList
             if abs(shapely.get_coordinates(geometry.normal, include_z=True)[0][2]) > 0.99
         ]
+        core_faces = [
+            geometry for geometry in model.geometryList
+            if geometry.faceId.startswith('core_face_')
+        ]
+        perimeter_faces = [
+            geometry for geometry in horizontal_faces
+            if not geometry.faceId.startswith('core_face_')
+        ]
         assert all(geometry.category == 0 for geometry in core_walls)
-        assert all(not geometry.holes for geometry in horizontal_faces)
+        assert len(core_faces) == 6
+        assert all(not geometry.holes for geometry in core_faces)
+        assert sum(bool(geometry.holes) for geometry in perimeter_faces) == 6
 
 
 def test_insert_core_operates_on_unsimplified_boundary():
@@ -157,8 +167,9 @@ def test_insert_core_operates_on_unsimplified_boundary():
         insert_core=True,
     )
 
-    assert len(model.geometryList) == 20
+    assert len(model.geometryList) == 24
     assert sum(geometry.faceId.startswith('core_wall_') for geometry in model.geometryList) == 12
+    assert sum(geometry.faceId.startswith('core_face_') for geometry in model.geometryList) == 4
     assert all(
         geometry.category == 0
         for geometry in model.geometryList

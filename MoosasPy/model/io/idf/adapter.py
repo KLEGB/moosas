@@ -270,8 +270,24 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
         raise ValueError(f"No IDF template was assigned to spaces: {unassignedSpaceIds}")
 
     # remote existing zone-related objects
-    removeHint = []
-    removeHint += list(objectHints) + ['Zone', 'WaterUse:Equipment', 'BuildingSurface:Detailed',
+    removeHint = list(objectHints) + [
+        'ZoneInfiltration:DesignFlowRate',
+        'ZoneVentilation:DesignFlowRate',
+        'ZoneVentilation:WindandStackOpenArea',
+        'OtherEquipment',
+        'ElectricEquipment',
+        'People',
+        'Lights',
+        'Sizing:Zone',
+        'DesignSpecification:OutdoorAir',
+        'DesignSpecification:ZoneAirDistribution',
+        'ZoneControl:Thermostat',
+        'ThermostatSetpoint:DualSetpoint',
+        'ZoneHVAC:EquipmentConnections',
+        'ZoneHVAC:EquipmentList',
+        'ZoneHVAC:IdealLoadsAirSystem',
+        'NodeList',
+        'Zone', 'WaterUse:Equipment', 'BuildingSurface:Detailed',
                                        'FenestrationSurface:Detailed', 'Shading:Zone:Detailed', 'InternalMass',
                                        'SurfaceProperty:ExposedFoundationPerimeter',
                                        'Space', 'SpaceList', 'ZoneMixing', 'Construction:AirBoundary',

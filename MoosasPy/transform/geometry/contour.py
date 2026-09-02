@@ -4,7 +4,7 @@ from __future__ import annotations
 from .geos import *
 from .element import MoosasEdge, MoosasWall, MoosasGlazing, MoosasContainer
 from . import triangulate2dFace
-from ...utils import searchBy, shapely, np, TopologyError
+from ...utils import searchBy, shapely, np, TopologyError, mixItemListToList
 from ...utils.constant import geom
 from .planar_graph import TopoNode, TopoBound, TopoEdge, TopoNetwork
 
@@ -396,7 +396,6 @@ def outerBoundary(model: MoosasContainer, bld_level: float) -> list[shapely.Geom
     """calculate the outer boundaries (the biggest boundaries) of each network"""
     boundaries = [network.outerBoundary() for network in networks]
     return [bound.geometry for boundList in boundaries for bound in boundList]
-    # plot_TopoObject(*list(np.array(boundaries).flatten()),show=True)
 
 
 def closed_contour_calculation(model: MoosasContainer, bld_level: float) -> MoosasContainer:
@@ -437,27 +436,17 @@ def closed_contour_calculation(model: MoosasContainer, bld_level: float) -> Moos
     print(f'\rTOPOLOGY: in {bld_level}: Calculate outer Boundary', end='')
     """calculate the outer boundaries (the biggest boundaries) of each network"""
     boundaries: list[list[TopoBound]] = [network.outerBoundary() for network in networks]
-    # plot_TopoObject(*list(np.array(boundaries).flatten()),show=True)
 
     print(f'\rTOPOLOGY: in {bld_level}: Dividing boundary', end='')
     boundariesNew = []
 
     for boundGroup, network in zip(boundaries, networks):
         """divide the boundaries by node or edges inside"""
-        # plot_TopoObject(*network.edges)
-        # plot_TopoObject(*boundGroup)
-        # boundGroup = _divideBoundaryByNode(boundGroup, network.nodes)
-        # plot_TopoObject(*boundGroup)
-        # boundGroup = _divideBoundaryByEdge(boundGroup, network.edges)
-        # plot_TopoObject(*boundGroup)
         boundGroup = _divideBoundary(boundGroup, network.edges)
-        # plot_TopoObject(*boundGroup)
         boundariesNew += boundGroup
-        # plot_TopoObject(*boundariesNew, show=True)
 
     # 2.5 展平 boundary_list，检查是否顺时针并转换为 edge。
     print(f'\rTOPOLOGY: in {bld_level}: find {len(boundariesNew)} boundaries')
-    # plot_plan_in_node(node_list, [bound for group in boundary_coordinates for bound in group], location_list, False, True)
     model = _documentBoundary(np.array(boundariesNew).flatten(), model)
 
     return model
@@ -484,6 +473,46 @@ def _documentBoundary(boundaries: Iterable[TopoBound], model: MoosasContainer) -
             bound.reverse()
         model.boundaryList.append([model.wallList[edge.modelId] for edge in bound.edgeLoop])
     return model
+
+
+def _merge_tiny_partitions(partitions):
+    """Merge sub-room slivers into the neighbor sharing their longest edge."""
+    partitions = list(partitions)
+    while True:
+        tiny_index = next(
+            (index for index, part in enumerate(partitions) if shapely.area(part) < geom.ROOM_MIN_AREA),
+            None,
+        )
+        if tiny_index is None:
+            return partitions
+
+        tiny = partitions[tiny_index]
+        neighbors = []
+        for index, part in enumerate(partitions):
+            if index == tiny_index:
+                continue
+            shared_length = shapely.length(
+                shapely.intersection(shapely.boundary(tiny), shapely.boundary(part))
+            )
+            if shared_length > geom.POINT_PRECISION:
+                neighbors.append((shared_length, index))
+        if not neighbors:
+            return partitions
+
+        neighbor_index = max(neighbors)[1]
+        merged = shapely.union(tiny, partitions[neighbor_index])
+        keep = [
+            part for index, part in enumerate(partitions)
+            if index not in (tiny_index, neighbor_index)
+        ]
+        partitions = keep + [merged]
+
+
+def _is_core_boundary(edge):
+    return bool(edge.wall) and all(
+        any(str(face_id).startswith("core_wall_") for face_id in mixItemListToList(wall.faceId))
+        for wall in edge.wall
+    )
 
 
 def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
@@ -526,6 +555,10 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
 
     """Divide the boundaries into simple polygons"""
     if divided_zones:
+        model.edgeList = [
+            edge for edge in model.edgeList
+            if edge.area >= geom.ROOM_MIN_AREA or _is_core_boundary(edge)
+        ]
         for levelIdx, bldLevel in enumerate(model.levelList):
             edges = np.array(model.edgeList)[searchBy('level', bldLevel, model.edgeList)]
             for edgeIdx, edge in enumerate(edges):
@@ -536,22 +569,31 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
                 # strictly inside the boundary instead.
                 holes = [subEdge.force_2d() for subEdge in edges if
                          shapely.contains_properly(edge.force_2d(), subEdge.force_2d())]
-                newEdges, dividedLines = triangulate2dFace(edge.force_2d(), holes)
+                newEdges, _ = triangulate2dFace(edge.force_2d(), holes)
+                newEdges = _merge_tiny_partitions(newEdges)
                 if len(newEdges) > 1:
-                    for li in dividedLines:
-                        if shapely.length(li) > geom.POINT_PRECISION:
-                            try:
-
-                                airWall = MoosasWall.fromProjection(li,
-                                                                    bottom=bldLevel,
-                                                                    top=model.levelList[levelIdx + 1],
-                                                                    model=model,
-                                                                    airBoundary=True)
-
-                                model.wallList = np.append(model.wallList, airWall)
-                            except Exception as e:
-                                print(f"Air Boundary Error: {e}")
-                    walls = np.array(model.wallList)[searchBy('level', bldLevel, model.wallList)]
+                    walls = list(np.array(model.wallList)[searchBy('level', bldLevel, model.wallList)])
+                    source_boundary = shapely.boundary(edge.force_2d())
+                    for new_edge in newEdges:
+                        coordinates = shapely.get_coordinates(new_edge)
+                        for start, end in zip(coordinates[:-1], coordinates[1:]):
+                            segment = shapely.linestrings([start, end])
+                            if shapely.length(segment) <= geom.POINT_PRECISION:
+                                continue
+                            if MoosasEdge.matchWall(segment, walls) is None:
+                                is_internal_partition = not shapely.covered_by(
+                                    segment,
+                                    shapely.buffer(source_boundary, geom.POINT_PRECISION),
+                                )
+                                air_wall = MoosasWall.fromProjection(
+                                    segment,
+                                    bottom=bldLevel,
+                                    top=model.levelList[levelIdx + 1],
+                                    model=model,
+                                    airBoundary=is_internal_partition,
+                                )
+                                model.wallList = np.append(model.wallList, air_wall)
+                                walls.append(air_wall)
                     newConstructEdges = []
                     for ed in newEdges:
                         try:
@@ -568,68 +610,3 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
     print()
     print('PACKING: Identified boundaries', len(model.edgeList))
     return model
-
-
-def plot_TopoObject(*collection: TopoNode | TopoNetwork | TopoEdge | TopoBound, color='', show=True,
-                    filled=False):
-    """
-    Plot TopoObject instances such as TopoNode, TopoEdge, TopoBound, or TopoNetwork.
-    
-    Parameters
-    ----------
-    *collection : TopoNode or TopoNetwork or TopoEdge or TopoBound
-        Variable number of topology objects to plot. Supported types include TopoNode (points),
-        TopoEdge (lines), TopoBound (areas), and TopoNetwork (collections of nodes and edges).
-    color : str, optional
-        Color string to use for plotting the objects (e.g., 'r', 'b', '#FF5733'). If empty string (''),
-        default color is used. Default is ''.
-    show : bool, optional
-        If True, display the plot immediately using plt.show(). Default is True.
-    filled : bool, optional
-        If True and the object is a TopoBound (area), fill the area with the same color. Default is False.
-    
-    Returns
-    -------
-    None
-        This function does not return any value. It generates a matplotlib plot as a side effect.
-    """
-    import matplotlib.pyplot as plt
-    plotPoint, plotEdge, plotArea = [], [], []
-    for obj in collection:
-        if isinstance(obj, TopoNode):
-            plotPoint.append(shapely.get_coordinates(obj.location)[0])
-        if isinstance(obj, TopoEdge):
-            plotEdge.append(shapely.get_coordinates([obj.fromLocation, obj.toLocation]))
-        if isinstance(obj, TopoBound):
-            plotArea.append(shapely.get_coordinates(obj.geometry))
-        if isinstance(obj, TopoNetwork):
-            for poi in obj.nodes:
-                plotPoint.append(shapely.get_coordinates(poi.location)[0])
-            for edge in obj.edges:
-                plotEdge.append(shapely.get_coordinates([edge.fromLocation, edge.toLocation]))
-
-    if len(plotPoint) > 0:
-        if color == '':
-            plt.plot(np.array(plotPoint).T[0], np.array(plotPoint).T[1])
-        else:
-            plt.plot(np.array(plotPoint).T[0], np.array(plotPoint).T[1], color=color)
-
-    if len(plotEdge) > 0:
-        for fig in plotEdge:
-            if color == '':
-                plt.plot([fig[0][0], fig[1][0]], [fig[0][1], fig[1][1]])
-            else:
-                plt.plot([fig[0][0], fig[1][0]], [fig[0][1], fig[1][1]], color=color)
-
-    if len(plotArea) > 0:
-        for area in plotArea:
-            if color == '':
-                plt.plot(np.array(area).T[0], np.array(area).T[1])
-            else:
-                plt.plot(np.array(area).T[0], np.array(area).T[1], color=color)
-
-            if filled:
-                plt.fill(np.array(area).T[0], np.array(area).T[1])
-
-    if show:
-        plt.show(block=True)

@@ -2261,22 +2261,37 @@ class MoosasEdge:
             raise GeometryError(subBoundary, "invalid subBoundary in boundary divided:{}")
 
     @classmethod
+    def matchWall(cls, segment: shapely.Geometry, walls: list[MoosasWall]):
+        """Return the existing wall matching a boundary segment, or ``None``."""
+        segment_coordinates = shapely.get_coordinates(segment)
+        tolerance = 1.01 * geom.POINT_PRECISION
+        for wall in np.array(walls).flatten():
+            wall_coordinates = shapely.get_coordinates(wall.force_2d())
+            if len(segment_coordinates) != len(wall_coordinates):
+                continue
+            if (
+                np.all(np.abs(segment_coordinates - wall_coordinates) <= tolerance)
+                or np.all(np.abs(segment_coordinates - wall_coordinates[::-1]) <= tolerance)
+            ):
+                return wall
+        return None
+
+    @classmethod
     def selectWall(cls, boundary: shapely.Geometry, walls: list[MoosasWall]):
         """
-        Select walls that match the edges of a given boundary or create new ones if no match is found.
+        Select existing walls that match every edge of a boundary.
         
         Parameters
         ----------
         boundary : shapely.Geometry
-            A geometry object representing the boundary whose edges are used to select or create walls.
+            A geometry object whose edges must match existing walls.
         walls : list of MoosasWall
             A list of wall objects to be matched against the boundary edges. Must not be empty.
         
         Returns
         -------
         cls
-            An instance of the class (typically a collection of walls) constructed from the valid walls 
-            that match the boundary edges or newly created walls where no match was found.
+            An instance constructed from the walls matching every boundary edge.
         """
         walls = np.array(walls).flatten()
         boundary = shapely.get_coordinates(boundary)
@@ -2285,17 +2300,10 @@ class MoosasEdge:
         edges = [shapely.linestrings([poi1, poi2]) for poi1, poi2 in zip(boundary[:-1], boundary[1:])]
         validWalls = []
         for edg in edges:
-            matched = False
-            for w in walls:
-                # print(edg, w.force_2d())
-                if equals(edg, w.force_2d()):
-                    validWalls.append(w)
-                    matched = True
-                    break
-            if not matched:
-                newWall = MoosasWall.fromProjection(edg, walls[0].level, walls[0].toplevel, walls[0].parent, True)
-                walls[0].parent.wallList = list(np.append(walls[0].parent.wallList, newWall))
-                validWalls.append(newWall)
+            matched_wall = cls.matchWall(edg, walls)
+            if matched_wall is None:
+                raise GeometryError(edg, "no existing wall matches boundary segment")
+            validWalls.append(matched_wall)
 
         # print(edges,validWalls)
         # edge = cls(validWalls)
@@ -2533,7 +2541,7 @@ class MoosasEdge:
         polyg = shapely.polygons(poly_coordinates)
         if str(shapely.is_valid_reason(polyg)).find('Self-intersection') != -1:
             polyg_ori = polyg
-            polyg = makeValid(polyg)[0]
+            polyg = max(makeValid(polyg), key=shapely.area)
             print(f"******Warning: GeometryError, self-intersection:{polyg_ori.__repr__()}fix to {polyg.__repr__()}")
         return polyg
 

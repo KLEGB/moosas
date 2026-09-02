@@ -137,6 +137,32 @@ def test_unconditioned_space_exports_only_zone_and_surfaces(semantic_model: Moos
         assert all(core.id not in map(str, obj.fieldvalues) for obj in idf.idfobjects[object_type])
 
 
+def test_all_unconditioned_spaces_remove_template_hvac(semantic_model: MoosasModel):
+    original = [space.conditioned for space in semantic_model.spaceList]
+    prohibited = (
+        "SIZING:ZONE",
+        "ZONECONTROL:THERMOSTAT",
+        "ZONEHVAC:EQUIPMENTCONNECTIONS",
+        "ZONEHVAC:EQUIPMENTLIST",
+        "ZONEHVAC:IDEALLOADSAIRSYSTEM",
+        "NODELIST",
+    )
+    try:
+        for space in semantic_model.spaceList:
+            space.conditioned = False
+        with TemporaryDirectory() as directory:
+            file_path = Path(directory) / "all-unconditioned.idf"
+            semantic_model.save(file_path)
+            configure_idd()
+            idf = IDF(str(file_path))
+    finally:
+        for space, conditioned in zip(semantic_model.spaceList, original):
+            space.conditioned = conditioned
+
+    assert len(idf.idfobjects["ZONE"]) == len(semantic_model.spaceList)
+    assert all(not idf.idfobjects[object_type] for object_type in prohibited)
+
+
 @pytest.mark.parametrize("suffix", (".graph.json", ".gbxml"))
 def test_save_only_model_projections(semantic_model: MoosasModel, suffix: str):
     with TemporaryDirectory() as directory:
