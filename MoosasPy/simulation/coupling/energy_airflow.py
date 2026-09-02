@@ -4,7 +4,7 @@ from ..energy.runner import getEnergyInput, ThermalSettings, energyAnalysis
 from ...transform.geometry.geos import Vector, Ray
 from ...model import MoosasModel
 from ...model.resources import get_schedule_name, load_schedule, write_schedule
-from ..weather import CumulativeSky, load_cumulative_sky, load_cumulative_sky_matrix, load_station_weather
+from ..weather import CumulativeSky, WeatherData, build_cumulative_skies
 from ..radiation import modelRadiation, writeRadGeo, rayTest
 from ...utils import np, path, os
 from ...utils.date import DateTime
@@ -75,8 +75,8 @@ class EnergyAirflowCoupler(object):
     LPG_ZONE_FIELDS = ("zone_wallU", "zone_winU", "zone_win_SHGC")
     LPG_PATH_FIELDS = ("pathHeight", "pathWidth", "pressure")
 
-    def __init__(self, model: MoosasModel, stationid=None,
-                 schedulePath=None):
+    def __init__(self, model: MoosasModel, weather: WeatherData,
+                 cumulative_sky_matrix, schedulePath=None):
         print("-----------------------\nPrepareing network...\n-----------------------")
         import time
         t0 = time.time()
@@ -90,13 +90,9 @@ class EnergyAirflowCoupler(object):
         elif getattr(self.model, "schedule", None):
             self.schedulePath = write_schedule(self.model)
         self._parse_schedule_file()
-        self.weather = load_station_weather(stationid or '545110')
-        stationid = str(
-            getattr(getattr(self.weather, "location", None), "station_id", "")
-            or stationid
-            or '545110'
-        )
-        cumulative_sky = load_cumulative_sky(stationid)
+        self.weather = weather
+        cumulative_sky_matrix = np.asarray(cumulative_sky_matrix, dtype=float)
+        cumulative_sky = build_cumulative_skies(cumulative_sky_matrix)
         modelRadiation(self.model, cumulative_sky, reflection=0)
         network = AfnNetwork(self.model)
         self.zones = network.zones
@@ -108,7 +104,6 @@ class EnergyAirflowCoupler(object):
         print(time.time() - t0)
         t0 = time.time()
         self.skySeries = []
-        cumulative_sky_matrix = load_cumulative_sky_matrix(stationid)
         for i in range(8760):
             self.skySeries.append(
                 CumulativeSky(cumulative_sky_matrix[:, i] / CumulativeSky.RADIATION_SCALE)

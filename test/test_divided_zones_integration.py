@@ -7,7 +7,8 @@ from tempfile import TemporaryDirectory
 import pytest
 
 from MoosasPy.simulation.energy.runner import EnergyRunner
-from MoosasPy.simulation.weather import load_station_weather
+from MoosasPy.simulation.weather import Location
+from MoosasPy.simulation.weather.epw import read_weather_csv
 from MoosasPy.transform import TransformOptions, transform
 
 
@@ -68,7 +69,10 @@ def test_divided_zone_model_runs_energy_simulation():
     with TemporaryDirectory() as work_dir:
         result = EnergyRunner(
             model=model,
-            weather=load_station_weather("545110"),
+            weather=read_weather_csv(
+                BEIJING_WEATHER,
+                Location("545110", "BEIJING/PEKING", "-", 39.93, 116.28, 55.0, 100962.17),
+            ),
             work_dir=work_dir,
             timeout_seconds=60,
         ).run()

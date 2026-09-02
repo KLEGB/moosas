@@ -256,17 +256,13 @@ libraries are stored under `MoosasPy/db/schedule/`.
 
 ### Weather Data
 
-Weather APIs use immutable `Location` and `WeatherData` records. Packaged
-station data can be loaded explicitly:
+Weather APIs use immutable `Location` and `WeatherData` records. Convert a
+user-provided EPW file in a caller-owned output directory:
 
 ```python
-from MoosasPy.simulation.weather import (
-    load_station_catalog,
-    load_station_weather,
-)
+from MoosasPy.simulation.weather import load_epw
 
-stations = load_station_catalog()
-weather = load_station_weather("545110")
+weather = load_epw("custom.epw", "analysis-input/weather")
 
 print(weather.location)
 print(weather.temperature.shape)
@@ -283,12 +279,9 @@ weather = prepared.weather
 cumulative_skies = prepared.cumulative_skies
 ```
 
-`prepare_epw()` creates the converted weather CSV, WEA data, and cumulative-sky
-assets together. It does not silently modify the packaged weather database.
-
-The weather package also provides station catalog search and explicit EPW
-download functions: `load_download_catalog`, `find_station_by_id`,
-`find_nearest_station`, and `download_epw`.
+`load_epw()` creates the converted weather CSV needed by the native energy
+engine. `prepare_epw()` additionally creates WEA and cumulative-sky assets.
+Neither function performs station lookup or modifies a packaged database.
 
 ## Building-Performance Analysis
 
@@ -309,9 +302,9 @@ warnings, and a workspace report.
 
 ```python
 from MoosasPy.simulation.energy import energyAnalysis
-from MoosasPy.simulation.weather import load_station_weather
+from MoosasPy.simulation.weather import load_epw
 
-weather = load_station_weather("545110")
+weather = load_epw("custom.epw", "analysis-input/weather")
 data = energyAnalysis(
     model,
     weather=weather,
@@ -354,10 +347,10 @@ The fast radiation API uses the packaged Moosas radiation engine:
 
 ```python
 from MoosasPy.simulation.radiation import modelRadiation
-from MoosasPy.simulation.weather import load_cumulative_sky
+from MoosasPy.simulation.weather import prepare_epw
 
-sky = load_cumulative_sky("545110")
-modelRadiation(model, sky, reflection=0)
+prepared = prepare_epw("custom.epw", "analysis-input/weather")
+modelRadiation(model, prepared.cumulative_skies, reflection=0)
 ```
 
 The radiation package exposes calculations at several scales:
@@ -440,22 +433,27 @@ architectures fail explicitly.
 Cross-domain orchestration belongs to `MoosasPy.simulation.coupling`; energy,
 radiation, airflow, and weather modules do not import one another directly.
 
-Energy with packaged weather:
+Energy with prepared weather:
 
 ```python
 from MoosasPy.simulation.coupling import run_energy_with_weather
+from MoosasPy.simulation.weather import load_epw
 
-data = run_energy_with_weather(model, station_id="545110")
+weather = load_epw("custom.epw", "analysis-input/weather")
+data = run_energy_with_weather(model, weather=weather)
 ```
 
 Energy with calculated radiation:
 
 ```python
 from MoosasPy.simulation.coupling import run_energy_with_radiation
+from MoosasPy.simulation.weather import prepare_epw
 
+prepared = prepare_epw("custom.epw", "analysis-input/weather")
 data = run_energy_with_radiation(
     model,
-    station_id="545110",
+    weather=prepared.weather,
+    cumulative_skies=prepared.cumulative_skies,
     radiation_mode=1,
     reflection=0,
 )
@@ -472,10 +470,12 @@ Example photovoltaic calculation:
 
 ```python
 from MoosasPy.simulation.coupling import run_roof_pv
+from MoosasPy.simulation.weather import prepare_epw
 
+prepared = prepare_epw("custom.epw", "analysis-input/weather")
 hourly_generation = run_roof_pv(
     model,
-    station_id="545110",
+    prepared.cumulative_sky_matrix,
     useful_area_ratio=0.7,
     efficiency=0.17,
 )

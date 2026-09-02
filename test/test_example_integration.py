@@ -8,7 +8,8 @@ import math
 import unittest
 
 from MoosasPy.simulation.energy.runner import EnergyRunner
-from MoosasPy.simulation.weather import load_station_weather
+from MoosasPy.simulation.weather import Location
+from MoosasPy.simulation.weather.epw import read_weather_csv
 from MoosasPy.transform import transform
 from MoosasPy.transform.pipeline import _load_geometry_source
 from MoosasPy.transform.stages.classification import classify_model
@@ -126,7 +127,10 @@ class ExampleIntegrationTests(unittest.TestCase):
         "requires the bundled MoosasEnergy engine and Beijing 545110 weather data",
     )
     def test_energy_engine_returns_real_results_for_geometry_fixture(self):
-        weather = load_station_weather("545110")
+        weather = read_weather_csv(
+            BEIJING_WEATHER,
+            Location("545110", "BEIJING/PEKING", "-", 39.93, 116.28, 55.0, 100962.17),
+        )
 
         with TemporaryDirectory() as work_dir:
             result = EnergyRunner(

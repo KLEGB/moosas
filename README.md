@@ -10,8 +10,7 @@ simulation workflows.
 - Transform GEO, OBJ, and STL geometry into a structured `MoosasModel`.
 - Load and save RDF/Turtle, XML, JSON, and EnergyPlus IDF models.
 - Export graph JSON and gbXML, with dedicated IFC conversion utilities.
-- Prepare weather data and cumulative sky models from packaged stations or EPW
-  files.
+- Prepare weather data and cumulative sky models from user-provided EPW files.
 - Run rapid energy, solar-radiation, sunlight, Radiance daylight, and CONTAM
   airflow analyses.
 - Coordinate weather, radiation, photovoltaic, energy, and airflow domains
@@ -71,12 +70,14 @@ model = MoosasModel.load("building.ttl")
 model.summary()
 ```
 
-Run energy analysis with packaged station weather:
+Prepare an EPW file, then run energy analysis with the resulting weather object:
 
 ```python
 from MoosasPy.simulation.coupling import run_energy_with_weather
+from MoosasPy.simulation.weather import load_epw
 
-energy = run_energy_with_weather(model, station_id="545110")
+weather = load_epw("custom.epw", "analysis-input/weather")
+energy = run_energy_with_weather(model, weather=weather)
 print(energy["total"])
 ```
 

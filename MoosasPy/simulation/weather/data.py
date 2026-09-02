@@ -9,7 +9,7 @@ import numpy as np
 
 @dataclass(frozen=True, slots=True)
 class Location:
-    """Geographic and atmospheric metadata for a weather station."""
+    """Geographic and atmospheric metadata read from an EPW file."""
 
     station_id: str
     city: str
@@ -25,24 +25,6 @@ class Location:
         object.__setattr__(self, "state", str(self.state))
         for name in ("latitude", "longitude", "altitude", "pressure"):
             object.__setattr__(self, name, round(float(getattr(self, name)), 2))
-
-    @classmethod
-    def from_csv_row(cls, row: list[str]) -> "Location":
-        if len(row) != 7:
-            raise ValueError(f"Station row must contain 7 fields, got {len(row)}")
-        return cls(*row)
-
-    def to_csv_row(self) -> list[str]:
-        return [
-            self.station_id,
-            self.city,
-            self.state,
-            str(self.latitude),
-            str(self.longitude),
-            str(self.altitude),
-            str(self.pressure),
-        ]
-
 
 @dataclass(frozen=True, slots=True)
 class WeatherData:

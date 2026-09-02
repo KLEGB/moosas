@@ -7,14 +7,14 @@ from ...transform.geometry.element import MoosasElement
 from ...utils import np
 from ..energy.pv import calculate_pv_generation
 from ..radiation import faceRadiation, writeRadGeo
-from ..weather import CumulativeSky, load_cumulative_sky_matrix
+from ..weather import CumulativeSky
 
 
 def run_roof_pv(
     model: MoosasModel,
+    cumulative_sky_matrix,
     useful_area_ratio: float = 0.7,
     efficiency: float = 0.17,
-    station_id: str = "545110",
     grid_size: float = 1.0,
     grid_offset: float = 0.2,
     reflection: int = 0,
@@ -30,7 +30,7 @@ def run_roof_pv(
         faces,
         useful_area_ratio=useful_area_ratio,
         efficiency=efficiency,
-        station_id=station_id,
+        cumulative_sky_matrix=cumulative_sky_matrix,
         grid_size=grid_size,
         grid_offset=grid_offset,
         reflection=reflection,
@@ -39,9 +39,9 @@ def run_roof_pv(
 
 def run_facade_pv(
     model: MoosasModel,
+    cumulative_sky_matrix,
     useful_area_ratio: float = 0.4,
     efficiency: float = 0.17,
-    station_id: str = "545110",
     grid_size: float | None = None,
     grid_offset: float = 0.2,
     reflection: int = 0,
@@ -57,7 +57,7 @@ def run_facade_pv(
         faces,
         useful_area_ratio=useful_area_ratio,
         efficiency=efficiency,
-        station_id=station_id,
+        cumulative_sky_matrix=cumulative_sky_matrix,
         grid_size=grid_size,
         grid_offset=grid_offset,
         reflection=reflection,
@@ -110,12 +110,12 @@ def _run_pv(
     *,
     useful_area_ratio,
     efficiency,
-    station_id,
+    cumulative_sky_matrix,
     grid_size,
     grid_offset,
     reflection,
 ):
-    sky_values = load_cumulative_sky_matrix(station_id)
+    sky_values = np.asarray(cumulative_sky_matrix, dtype=float)
     incident_energy = calculate_face_incident_energy(
         faces,
         sky_values,

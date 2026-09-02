@@ -1,5 +1,6 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
+import importlib
 import unittest
 
 import numpy as np
@@ -9,20 +10,21 @@ from MoosasPy.simulation.weather import (
     DirectSky,
     WeatherData,
     build_cumulative_skies,
-    find_nearest_station,
-    find_station_by_id,
-    load_download_catalog,
-    load_station_weather,
+    load_epw,
 )
 from MoosasPy.utils.date import DateTime
 
 
 class WeatherArchitectureTests(unittest.TestCase):
-    def test_packaged_station_loads_as_typed_immutable_weather(self):
-        weather = load_station_weather("545110")
+    def test_epw_loads_as_typed_immutable_weather(self):
+        with TemporaryDirectory() as temporary_dir:
+            epw_path = Path(temporary_dir) / "weather.epw"
+            self._write_epw_fixture(epw_path)
+            weather = load_epw(epw_path, Path(temporary_dir) / "prepared")
 
         self.assertIsInstance(weather, WeatherData)
-        self.assertEqual(weather.location.station_id, "545110")
+        self.assertEqual(weather.location.station_id, "12345")
+        self.assertEqual(Path(weather.weather_file).name, "weather.csv")
         self.assertEqual(weather.temperature.shape, (8760,))
         self.assertTrue(np.issubdtype(weather.temperature.dtype, np.floating))
         self.assertFalse(weather.temperature.flags.writeable)
@@ -44,26 +46,43 @@ class WeatherArchitectureTests(unittest.TestCase):
 
         self.assertGreater(sun.z, 0.99)
 
-    def test_download_catalog_lookup_is_explicit(self):
-        catalog = (
-            "stationId,name,lat,lon,sources,fileType,site,download_url\n"
-            "A,Alpha,0,0,other,TMY,2020,https://example.com/a.zip\n"
-            "A,Alpha,1,1,onebuilding,TMYx,2024,https://example.com/a-new.zip\n"
-            "B,Beta,10,10,onebuilding,TMYx,2024,https://example.com/b.zip\n"
-        )
-        with TemporaryDirectory() as temporary_dir:
-            catalog_path = Path(temporary_dir) / "stations.csv"
-            catalog_path.write_text(catalog, encoding="utf-8")
-            stations = load_download_catalog(str(catalog_path))
-
-        self.assertEqual(find_station_by_id(stations, "A").download_url, "https://example.com/a-new.zip")
-        self.assertEqual(find_nearest_station(stations, 0, 0).station_id, "A")
+    def test_station_matching_modules_are_removed(self):
+        for module_name in (
+            "MoosasPy.simulation.weather.station",
+            "MoosasPy.simulation.weather.downloader",
+        ):
+            with self.assertRaises(ModuleNotFoundError):
+                importlib.import_module(module_name)
 
     def test_legacy_weather_modules_are_removed(self):
         weather_directory = Path(__file__).parents[1] / "MoosasPy" / "simulation" / "weather"
 
         self.assertFalse((weather_directory / "directsky.py").exists())
         self.assertFalse((weather_directory / "cumsky.py").exists())
+
+    @staticmethod
+    def _write_epw_fixture(epw_path: Path) -> None:
+        ground_temperatures = ["GROUND", "0", "0", "0", "0", "0"] + ["10"] * 12
+        hourly_record = ["0"] * 22
+        hourly_record[6] = "20.125"
+        hourly_record[7] = "10"
+        hourly_record[9] = "101325"
+        hourly_record[12] = "300"
+        hourly_record[13] = "100"
+        hourly_record[15] = "50"
+        hourly_record[20] = "0"
+        hourly_record[21] = "1"
+        lines = [
+            "LOCATION,City,State,Country,Source,12345;,1,2,3,4",
+            "header",
+            "header",
+            ",".join(ground_temperatures),
+            "header",
+            "header",
+            "header",
+            "header",
+        ] + [",".join(hourly_record)] * 8760
+        epw_path.write_text("\n".join(lines), encoding="utf-8")
 
 
 if __name__ == "__main__":

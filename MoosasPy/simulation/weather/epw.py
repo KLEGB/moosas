@@ -15,7 +15,6 @@ from ...utils.tools import path
 from ..runner import Runner
 from .data import Location, WeatherData
 from .sky.cumulative import CumulativeSky, build_cumulative_skies
-from .station import read_weather_csv
 
 
 _EXECUTABLE_SUFFIX = ".exe" if platform.system().lower() == "windows" else ""
@@ -40,6 +39,31 @@ class PreparedWeather:
     cumulative_skies: dict[str, CumulativeSky]
     cumulative_sky_file: str
     wea_file: str
+
+
+def read_weather_csv(weather_file: str, location: Location) -> WeatherData:
+    """Read the internal 8760-row MOOSAS/DeST weather CSV format."""
+    weather_file = os.path.abspath(weather_file)
+    values = np.loadtxt(weather_file, delimiter=",", dtype=float)
+    if values.shape != (WeatherData.HOURS_PER_YEAR, 13):
+        raise ValueError(
+            "Weather CSV must contain 8760 rows and 13 columns, "
+            f"got {values.shape}"
+        )
+    return WeatherData(
+        location=location,
+        weather_file=weather_file,
+        hour_of_year=values[:, 2],
+        temperature=values[:, 3],
+        humidity_ratio=values[:, 4],
+        global_radiation=values[:, 5],
+        diffuse_radiation=values[:, 6],
+        ground_temperature=values[:, 7],
+        sky_temperature=values[:, 8],
+        wind_speed=values[:, 9],
+        wind_direction=values[:, 10],
+        pressure=values[:, 11],
+    )
 
 
 def _round_dest(values):
@@ -151,6 +175,17 @@ def write_epw_csv(epw_file: str, output_path: str) -> str:
     return output_path
 
 
+def load_epw(epw_file: str, output_dir: str) -> WeatherData:
+    """Convert one user-provided EPW file into a ``WeatherData`` object."""
+    if not str(epw_file).lower().endswith(".epw"):
+        raise ValueError(f"Expected an EPW file: {epw_file}")
+    output_dir = os.path.abspath(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    location = read_epw_location(epw_file)
+    weather_csv = write_epw_csv(epw_file, os.path.join(output_dir, "weather.csv"))
+    return read_weather_csv(weather_csv, location)
+
+
 def convert_epw_to_wea(
     epw_file: str,
     output_path: str,
@@ -233,16 +268,11 @@ def prepare_epw(
     timeout_seconds: float = 300.0,
 ) -> PreparedWeather:
     """Create weather CSV, WEA, and cumulative-sky assets in ``output_dir``."""
-    if not str(epw_file).lower().endswith(".epw"):
-        raise ValueError(f"Expected an EPW file: {epw_file}")
     output_dir = os.path.abspath(output_dir)
-    os.makedirs(output_dir, exist_ok=True)
-    location = read_epw_location(epw_file)
-    weather_csv = write_epw_csv(epw_file, os.path.join(output_dir, f"{location.station_id}.csv"))
-    weather = read_weather_csv(weather_csv, location)
+    weather = load_epw(epw_file, output_dir)
     wea_file = convert_epw_to_wea(
         epw_file,
-        os.path.join(output_dir, f"{location.station_id}.wea"),
+        os.path.join(output_dir, "weather.wea"),
         timeout_seconds=timeout_seconds,
     )
     sky_matrix = generate_cumulative_sky(
@@ -251,7 +281,7 @@ def prepare_epw(
         timeout_seconds=timeout_seconds,
     )
     sky_matrix = calibrate_sky_radiation(sky_matrix, weather.global_radiation)
-    sky_file = os.path.join(output_dir, f"cumsky_{location.station_id}.csv")
+    sky_file = os.path.join(output_dir, "cumulative_sky.csv")
     np.savetxt(sky_file, sky_matrix, delimiter=",")
     return PreparedWeather(
         weather,

@@ -73,30 +73,6 @@ def read_cumulative_sky_matrix(matrix_file: str) -> np.ndarray:
     return matrix
 
 
-def load_cumulative_sky_matrix(
-    station_id: str,
-    *,
-    sky_directory: str | None = None,
-) -> np.ndarray:
-    """Load the hourly sky matrix for a packaged station."""
-    if sky_directory is None:
-        sky_directory = os.path.join(path.dataBaseDir, "cum_sky")
-    matrix_file = os.path.join(sky_directory, f"cumsky_{station_id}.csv")
-    if not os.path.isfile(matrix_file):
-        raise FileNotFoundError(f"Cumulative sky file not found: {matrix_file}")
-    return read_cumulative_sky_matrix(matrix_file)
-
-
-def load_cumulative_sky(
-    station_id: str,
-    *,
-    sky_directory: str | None = None,
-) -> dict[str, CumulativeSky]:
-    """Load annual, summer, and winter skies for a packaged station."""
-    matrix = load_cumulative_sky_matrix(station_id, sky_directory=sky_directory)
-    return build_cumulative_skies(matrix)
-
-
 def build_cumulative_skies(matrix) -> dict[str, CumulativeSky]:
     """Aggregate an hourly sky matrix into annual and seasonal sky objects."""
     return {
