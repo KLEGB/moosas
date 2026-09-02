@@ -30,11 +30,6 @@ class MoosasPath(object):
         self.dataDir = os.path.join(MoosasPlusDirectory, 'data')
         self.tempDir = os.path.join(MoosasPlusDirectory, '__temp__')
 
-        for thisDir in [self.libDir, self.dataDir, self.dataBaseDir, self.tempDir]:
-            if not os.path.exists(thisDir):
-                print(thisDir)
-                os.mkdir(thisDir)
-
     @staticmethod
     def clean(dir):
         """
