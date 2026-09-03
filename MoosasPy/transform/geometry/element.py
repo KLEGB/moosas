@@ -15,7 +15,6 @@ from ...utils import generate_code, searchBy, mixItemListToObject, mixItemListTo
 from ...utils import shapely, np, ET
 from ...utils.tools import path
 from ...utils.constant import geom
-from ...model.resources import load_schedule
 
 # 不做inch meter转换
 INCH_METER_MULTIPLIER = 1
@@ -3122,6 +3121,7 @@ class MoosasSpace(object):
         if templateType and templateType not in getattr(self.parent, "scheduleByType", {}):
             schedule_path = os.path.join(path.dataBaseDir, 'schedule', f"{templateType.lower()}.sch")
             if os.path.isfile(schedule_path):
+                from ...model.resources import load_schedule
                 load_schedule(self.parent, schedule_path)
         
 
