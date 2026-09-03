@@ -36,6 +36,39 @@ jobs:
       - name: Build distributions
         run: python -m build
 
+      - name: Verify native executable permissions
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          executables = (
+              "MoosasPy/libs/energy/MoosasEnergy",
+              "MoosasPy/libs/rad/MoosasRad",
+              "MoosasPy/libs/rad/gensky",
+              "MoosasPy/libs/rad/oconv",
+              "MoosasPy/libs/rad/rcalc",
+              "MoosasPy/libs/rad/rtrace",
+              "MoosasPy/libs/vent/MoosasAFN",
+              "MoosasPy/libs/vent/contam/linux-x86_64/contamx3",
+              "MoosasPy/libs/vent/contam/linux-x86_64/simread",
+              "MoosasPy/libs/weather/epw2wea",
+              "MoosasPy/libs/weather/gendaymtx",
+          )
+          wheel = next(Path("dist").glob("*.whl"))
+          with ZipFile(wheel) as archive:
+              missing_permissions = [
+                  name for name in executables
+                  if archive.getinfo(name).external_attr >> 16 & 0o111 == 0
+              ]
+          if missing_permissions:
+              raise SystemExit(
+                  "Wheel contains non-executable native binaries: "
+                  + ", ".join(missing_permissions)
+              )
+          PY
+
       - name: Check distributions
         run: python -m twine check dist/*
 
