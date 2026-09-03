@@ -214,7 +214,7 @@ def generate_cumulative_sky(
         matrix_output = os.path.join(temporary_dir, "sky.mtx")
         with open(matrix_output, "w", encoding="utf-8") as output_file:
             Runner(timeout_seconds=timeout_seconds).run_command(
-                [GENDAYMTX_EXECUTABLE, "-m", "1", "-n", "-O1", os.path.abspath(wea_file)],
+                [GENDAYMTX_EXECUTABLE, "-m", "1", "-O1", os.path.abspath(wea_file)],
                 stdout=output_file,
             )
         rgb_rows = []
@@ -228,14 +228,11 @@ def generate_cumulative_sky(
                         continue
 
     rgb = np.asarray(rgb_rows, dtype=float)
-    patch_count = rgb.shape[0] // WeatherData.HOURS_PER_YEAR
-    if rgb.shape not in (
-        (145 * WeatherData.HOURS_PER_YEAR, 3),
-        (146 * WeatherData.HOURS_PER_YEAR, 3),
-    ):
+    expected_shape = (146 * WeatherData.HOURS_PER_YEAR, 3)
+    if rgb.shape != expected_shape:
         raise ValueError(f"Unexpected gendaymtx data shape: {rgb.shape}")
     broadband = 0.265074126 * rgb[:, 0] + 0.670114631 * rgb[:, 1] + 0.064811243 * rgb[:, 2]
-    matrix = broadband.reshape(patch_count, WeatherData.HOURS_PER_YEAR)[:145]
+    matrix = broadband.reshape(146, WeatherData.HOURS_PER_YEAR)[:145]
     coefficients = np.repeat(TREGENZA_COEFFICIENTS, TREGENZA_PATCHES_PER_ROW).reshape(145, 1)
     return matrix * coefficients * 8760 / 1000
 

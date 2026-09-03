@@ -2,6 +2,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import importlib
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 
@@ -10,6 +11,7 @@ from MoosasPy.simulation.weather import (
     DirectSky,
     WeatherData,
     build_cumulative_skies,
+    generate_cumulative_sky,
     load_epw,
 )
 from MoosasPy.utils.date import DateTime
@@ -40,6 +42,25 @@ class WeatherArchitectureTests(unittest.TestCase):
         np.testing.assert_allclose(skies["annual"].values, 8.76)
         np.testing.assert_allclose(skies["summer"].values, 2.208)
         np.testing.assert_allclose(skies["winter"].values, 2.16)
+
+    def test_generate_cumulative_sky_requests_matrix_output(self):
+        with TemporaryDirectory() as temporary_dir, patch.object(
+            WeatherData, "HOURS_PER_YEAR", 2
+        ), patch(
+            "MoosasPy.simulation.weather.epw.Runner.run_command"
+        ) as run_command:
+            wea_path = Path(temporary_dir) / "weather.wea"
+            wea_path.write_text("weather", encoding="utf-8")
+            run_command.side_effect = lambda command, stdout: stdout.write(
+                "1 1 1\n" * (146 * WeatherData.HOURS_PER_YEAR)
+            )
+
+            matrix = generate_cumulative_sky(wea_path)
+
+        command = run_command.call_args.args[0]
+        self.assertEqual(command[1:-1], ["-m", "1", "-O1"])
+        self.assertEqual(command[-1], str(wea_path.resolve()))
+        self.assertEqual(matrix.shape, (145, 2))
 
     def test_direct_sky_uses_degree_based_location_coordinates(self):
         sun = DirectSky(0, 0, time_zone=0).sun_at_datetime(DateTime(3, 20, 12))
