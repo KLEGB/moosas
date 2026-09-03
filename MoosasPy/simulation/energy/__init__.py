@@ -1,11 +1,10 @@
 from .pv import calculate_pv_generation
-from .runner import EnergyResult, EnergyRunner, energyAnalysis, getEnergyInput, parseEnergyOutput
+from .runner import EnergyResult, EnergyRunner, build_energy_input, parse_energy_output
 
 __all__ = [
     "EnergyResult",
     "EnergyRunner",
+    "build_energy_input",
     "calculate_pv_generation",
-    "energyAnalysis",
-    "getEnergyInput",
-    "parseEnergyOutput",
+    "parse_energy_output",
 ]

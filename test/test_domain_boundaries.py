@@ -7,7 +7,7 @@ import numpy as np
 
 from MoosasPy.simulation.airflow.network import AfnZone
 from MoosasPy.simulation.energy.pv import calculate_pv_generation
-from MoosasPy.simulation.energy.runner import getEnergyInput
+from MoosasPy.simulation.energy.runner import build_energy_input
 
 
 class DomainBoundaryTests(unittest.TestCase):
@@ -69,13 +69,13 @@ class DomainBoundaryTests(unittest.TestCase):
         weather = SimpleNamespace()
 
         with self.assertRaisesRegex(ValueError, "Precomputed"):
-            getEnergyInput(model, weather, requireRadiation=True)
+            build_energy_input(model, weather, require_radiation=True)
 
     def test_energy_requires_explicit_weather(self):
         model = SimpleNamespace(spaceList=[], schedule=None)
 
         with self.assertRaises(TypeError):
-            getEnergyInput(model)
+            build_energy_input(model)
 
     def test_airflow_requires_precomputed_radiation(self):
         space = SimpleNamespace(id="zone-1", settings={})

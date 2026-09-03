@@ -1,6 +1,6 @@
 ﻿"""Coupled energy and airflow simulation workflows."""
 
-from ..energy.runner import getEnergyInput, ThermalSettings, energyAnalysis
+from ..energy.runner import EnergyRunner, ThermalSettings, build_energy_input
 from ...transform.geometry.geos import Vector, Ray
 from ...model import MoosasModel
 from ...model.resources import get_schedule_name, load_schedule, write_schedule
@@ -278,7 +278,7 @@ class EnergyAirflowCoupler(object):
         #     print(z.printHeatLoad())
         zoneDict = {z.userName: z.toDict() for z in network.zones}
         pathDict = {p.userName: p.toDict() for p in network.paths}
-        energyDict = getEnergyInput(self.model, self.weather, requireRadiation=True)
+        energyDict = build_energy_input(self.model, self.weather, require_radiation=True)
         for z in energyDict['zones']:
             for key in z.params.keys():
                 zone_name = z.params.get('zone_name')
@@ -376,12 +376,12 @@ class EnergyAirflowCoupler(object):
         Returns
         -------
         dict
-            Energy input structure for `energyAnalysis`.
+            Energy input structure for `EnergyRunner`.
         """
         if energyDict:
             self.networkDict = self._normalize_energy_schedule_fields_in_dict(energyDict)
         energyDict = self.networkDict
-        base_args = list(getEnergyInput(self.model, self.weather, requireRadiation=False).get("args", []))
+        base_args = list(build_energy_input(self.model, self.weather, require_radiation=False).get("args", []))
         energyInput = {
             "zones": [],
             "args": [self._normalize_energy_cli_arg(arg) for arg in base_args],
@@ -623,20 +623,12 @@ class EnergyAirflowCoupler(object):
         
         energyDict = self.networkDict
         energyInput = self.reconstructEnergyInputs(energyDict)
-        energyInput['args'] = list(energyInput.get('args', []))
-        if '-d' not in energyInput['args']:
-            energyInput['args'] += ['-d', '1']
-        if '-r' not in energyInput['args']:
-            energyInput['args'] += ['-r', '1']
-        if '-z' not in energyInput['args']:
-            energyInput['args'] += ['-z', '1']
-        e_data = energyAnalysis(
+        e_data = EnergyRunner(
             weather=self.weather,
-            energyInput=energyInput,
-            exportDaily=True,
-            exportHourly=True,
-            exportByZone=True,
-        )
+            energy_input=energyInput,
+            temporal_scale="hourly",
+            spatial_scale="zone",
+        ).run().data
         return self._format_energy_result(energyInput, e_data)
 
     @staticmethod
@@ -653,8 +645,14 @@ class EnergyAirflowCoupler(object):
         for i, z in enumerate(energyInput["zones"]):
             zone_name = z.params.get("zone_name", f"zone_{i}")
             zone_area = float(z.params.get("zone_area", 0.0))
-            days = zone_days[i] if i < len(zone_days) else []
             hours = zone_hours[i] if i < len(zone_hours) else []
+            days = zone_days[i] if i < len(zone_days) else [
+                {
+                    key: sum(float(hour[key]) for hour in hours[start:start + 24])
+                    for key in ("heating", "cooling", "lighting")
+                }
+                for start in range(0, len(hours), 24)
+            ]
             heating = self._fit_series([float(d["heating"]) for d in days], 365)
             cooling = self._fit_series([float(d["cooling"]) for d in days], 365)
             lighting = self._fit_series([float(d["lighting"]) for d in days], 365)

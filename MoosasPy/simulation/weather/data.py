@@ -6,25 +6,7 @@ from dataclasses import dataclass, fields
 
 import numpy as np
 
-
-@dataclass(frozen=True, slots=True)
-class Location:
-    """Geographic and atmospheric metadata read from an EPW file."""
-
-    station_id: str
-    city: str
-    state: str
-    latitude: float
-    longitude: float
-    altitude: float
-    pressure: float
-
-    def __post_init__(self):
-        object.__setattr__(self, "station_id", str(self.station_id))
-        object.__setattr__(self, "city", str(self.city))
-        object.__setattr__(self, "state", str(self.state))
-        for name in ("latitude", "longitude", "altitude", "pressure"):
-            object.__setattr__(self, name, round(float(getattr(self, name)), 2))
+from ..contracts import Location
 
 @dataclass(frozen=True, slots=True)
 class WeatherData:

@@ -109,9 +109,10 @@ def transform(
     >>> model.save('output.xml')
 
     Energy analysis example:
-    >>> from MoosasPy import energyAnalysis
-    >>> results = energyAnalysis(model, weather)
-    >>> print(f"Total energy demand: {results['total']['cooling'] + results['total']['heating']} kWh")
+    >>> from MoosasPy.simulation.energy import EnergyRunner
+    >>> result = EnergyRunner(model=model, weather=weather).run()
+    >>> data = result.data
+    >>> print(f"Total energy demand: {data['total']['cooling'] + data['total']['heating']} kWh")
 
     Notes
     -----

@@ -67,13 +67,16 @@ class WeatherArchitectureTests(unittest.TestCase):
 
         self.assertGreater(sun.z, 0.99)
 
-    def test_station_matching_modules_are_removed(self):
+    def test_weather_accepts_only_explicit_epw_inputs(self):
         for module_name in (
             "MoosasPy.simulation.weather.station",
             "MoosasPy.simulation.weather.downloader",
         ):
             with self.assertRaises(ModuleNotFoundError):
                 importlib.import_module(module_name)
+
+        station_database = Path(__file__).parents[1] / "MoosasPy" / "db" / "dest_station.csv"
+        self.assertFalse(station_database.exists())
 
     def test_legacy_weather_modules_are_removed(self):
         weather_directory = Path(__file__).parents[1] / "MoosasPy" / "simulation" / "weather"

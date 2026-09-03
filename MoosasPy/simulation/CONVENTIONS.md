@@ -1,7 +1,7 @@
 # Simulation Conventions
 
-New public simulation APIs follow these rules. Existing public APIs remain
-available until a documented deprecation cycle replaces them.
+Public simulation APIs follow these rules. When a public API is replaced,
+remove the legacy interface in the same change without a transition period.
 
 - Use `snake_case` for modules, functions, parameters, local variables, and
   result fields.

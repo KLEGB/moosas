@@ -12,8 +12,7 @@ def simModel(
     model: MoosasModel,
     date: datetime,
     skyType,
-    lat=39.93,
-    lon=116.28,
+    location,
     diff=15000,
     radPath=None,
     gridPath=None,
@@ -34,10 +33,8 @@ def simModel(
             the date to generate the sky
         skyType : str
             the skyType hint for radiance, -c means the cloudy sky
-        lat : float
-            latitude of the location
-        lon : float
-            longitude of the location
+        location : Location
+            Geographic metadata read from an EPW file.
         diff : float , optional
             diffuse illuminance for the cloudy sky (Default : 15000)
         work_dir : str or pathlib.Path, optional
@@ -63,7 +60,7 @@ def simModel(
 
     result = RadianceRunner(
         model=model,
-        sky=RadianceSky(date, skyType, lat, lon, diff),
+        sky=RadianceSky(date, skyType, location, diff),
         work_dir=work_dir,
         timeout_seconds=timeout_seconds,
         engine=engine,

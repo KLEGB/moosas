@@ -105,7 +105,7 @@ Notes:
 - Each data row must contain at least 27 comma-separated fields.
 - Field order is fixed.
 
-The field order below matches the actual order written by `MoosasPy.simulation.energy.runner.energyAnalysis()` through `ThermalSettings.paramToString()`.
+The field order below matches the actual order written by `MoosasPy.simulation.energy.runner.EnergyRunner` through `ThermalSettings.paramToString()`.
 
 ### Field Definitions
 
@@ -264,11 +264,11 @@ Matching `.i` row fragment:
 
 ### MoosasPy Generation Note
 
-When calling through `MoosasPy.simulation.energy.runner.energyAnalysis()`:
+When calling through `MoosasPy.simulation.energy.runner.EnergyRunner`:
 
-- `requireRadiation=False` or `0`: keep the fast geometric estimate
-- `requireRadiation=True` or `1`: write numeric seasonal solar totals into fields `8` and `9`
-- `requireRadiation=2`: generate summer/winter solar schedules in `model.schedule`, write them to `-sch`, and place the generated weekly schedule names into fields `8` and `9`
+- `require_radiation=False` or `0`: keep the fast geometric estimate
+- `require_radiation=True` or `1`: write numeric seasonal solar totals into fields `8` and `9`
+- `require_radiation=2`: generate summer/winter solar schedules in `model.schedule`, write them to `-sch`, and place the generated weekly schedule names into fields `8` and `9`
 
 In mode `2`, `MoosasPy` currently builds a simplified typical-day profile:
 

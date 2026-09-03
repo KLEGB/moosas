@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from MoosasPy.simulation.energy.runner import energyAnalysis
+from MoosasPy.simulation.energy.runner import EnergyRunner
 from MoosasPy.simulation.radiation.calculation import writeRadGeo
 from MoosasPy.simulation.airflow.runner import VentPaths, _contam_platform
 from MoosasPy.simulation.weather.epw import convert_epw_to_wea
@@ -32,11 +32,11 @@ class SimulationWorkspaceTests(unittest.TestCase):
             recorded_paths.append(output_path)
 
         with patch("MoosasPy.simulation.energy.runner.Runner.run_command", side_effect=run_command), patch(
-            "MoosasPy.simulation.energy.runner.parseEnergyOutput", return_value={"total": {}}
+            "MoosasPy.simulation.energy.runner.parse_energy_output", return_value={"total": {}}
         ):
-            result = energyAnalysis(energyInput=energy_input)
+            result = EnergyRunner(energy_input=energy_input).run()
 
-        self.assertEqual(result, {"total": {}})
+        self.assertEqual(result.data, {"total": {}})
         self.assertEqual(len(recorded_paths), 1)
         self.assertFalse(recorded_paths[0].parent.exists())
 

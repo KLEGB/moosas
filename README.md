@@ -73,12 +73,12 @@ model.summary()
 Prepare an EPW file, then run energy analysis with the resulting weather object:
 
 ```python
-from MoosasPy.simulation.coupling import run_energy_with_weather
+from MoosasPy.simulation.energy import EnergyRunner
 from MoosasPy.simulation.weather import load_epw
 
 weather = load_epw("custom.epw", "analysis-input/weather")
-energy = run_energy_with_weather(model, weather=weather)
-print(energy["total"])
+result = EnergyRunner(model=model, weather=weather).run()
+print(result.data["total"])
 ```
 
 ## Model and Simulation Domains

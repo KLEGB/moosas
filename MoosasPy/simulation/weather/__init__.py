@@ -1,6 +1,7 @@
 """EPW weather conversion and sky models."""
 
-from .data import Location, WeatherData
+from ..contracts import Location
+from .data import WeatherData
 from .epw import (
     PreparedWeather,
     calibrate_sky_radiation,

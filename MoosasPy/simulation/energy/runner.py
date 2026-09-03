@@ -49,41 +49,29 @@ MONTH_NAMES = [
 ]
 
 
-def _read_weather_temperature_from_file(weather_file):
-    with open(weather_file, "r") as f:
-        data = np.array([line.strip('\n').split(',') for line in f.readlines()]).T
-    return np.array(data[3]).astype(float).tolist()
+TEMPORAL_SCALES = frozenset({"monthly", "daily", "hourly"})
+SPATIAL_SCALES = frozenset({"building", "zone"})
 
 
-def _interpolate_daily_to_hourly(daily_rows, t_out_hourly, zone_h_temp, zone_c_temp):
-    """Temporary interpolation path for hourly loads from daily totals."""
-    t_out = np.array(t_out_hourly, dtype=float)
-    if t_out.size < 8760:
-        raise ValueError("weather temperature series must have at least 8760 points.")
-    zone_h_temp = float(zone_h_temp)
-    zone_c_temp = float(zone_c_temp)
-    rows = []
-    for day in range(365):
-        day_vals = daily_rows[day]
-        day_t = t_out[day * 24:(day + 1) * 24]
-        h_weight = np.maximum(zone_h_temp - day_t, 0.0)
-        c_weight = np.maximum(day_t - zone_c_temp, 0.0)
-        h_sum = float(np.sum(h_weight))
-        c_sum = float(np.sum(c_weight))
-        h_day = float(day_vals["heating"])
-        c_day = float(day_vals["cooling"])
-        l_day = float(day_vals["lighting"])
-        h_hour = h_day * (h_weight / h_sum) if h_sum > 0 else np.zeros(24, dtype=float)
-        c_hour = c_day * (c_weight / c_sum) if c_sum > 0 else np.zeros(24, dtype=float)
-        l_hour = np.full(24, l_day / 24.0, dtype=float)
-        for i in range(24):
-            rows.append({
-                "cooling": float(c_hour[i]),
-                "heating": float(h_hour[i]),
-                "lighting": float(l_hour[i]),
-                "total": float(c_hour[i] + h_hour[i] + l_hour[i]),
-            })
-    return rows
+def _validate_scales(temporal_scale: str, spatial_scale: str) -> tuple[str, str]:
+    temporal_scale = str(temporal_scale).strip().lower()
+    spatial_scale = str(spatial_scale).strip().lower()
+    if temporal_scale not in TEMPORAL_SCALES:
+        raise ValueError(f"temporal_scale must be one of {sorted(TEMPORAL_SCALES)}")
+    if spatial_scale not in SPATIAL_SCALES:
+        raise ValueError(f"spatial_scale must be one of {sorted(SPATIAL_SCALES)}")
+    return temporal_scale, spatial_scale
+
+
+def _scale_arguments(temporal_scale: str, spatial_scale: str) -> list[str]:
+    arguments = []
+    if temporal_scale == "daily":
+        arguments += ["-d", "1"]
+    elif temporal_scale == "hourly":
+        arguments += ["-r", "1"]
+    if spatial_scale == "zone":
+        arguments += ["-z", "1"]
+    return arguments
 
 
 def _space_template_type(space):
@@ -193,10 +181,6 @@ class EnergyResult(SimulationResult):
 
     data: dict | None = None
 
-    def as_legacy(self) -> dict:
-        """Return the dictionary payload historically produced by ``energyAnalysis``."""
-        return self.data or {}
-
 
 class EnergyRunner(Runner):
     """Prepare inputs, run MoosasEnergy, and return structured energy results."""
@@ -207,9 +191,8 @@ class EnergyRunner(Runner):
         weather: object | None = None,
         core=buildingType.RESIDENTIAL,
         require_radiation=False,
-        export_daily=False,
-        export_hourly=False,
-        export_by_zone=False,
+        temporal_scale="monthly",
+        spatial_scale="building",
         schedule_path=None,
         energy_input=None,
         input_path=None,
@@ -223,9 +206,10 @@ class EnergyRunner(Runner):
         self.weather = weather
         self.core = core
         self.require_radiation = require_radiation
-        self.export_daily = export_daily
-        self.export_hourly = export_hourly
-        self.export_by_zone = export_by_zone
+        self.temporal_scale, self.spatial_scale = _validate_scales(
+            temporal_scale,
+            spatial_scale,
+        )
         self.schedule_path = schedule_path
         self.energy_input = energy_input
         self.input_path = input_path
@@ -236,19 +220,20 @@ class EnergyRunner(Runner):
         """Execute MoosasEnergy and return the parsed result with diagnostics."""
         energy_input = self.energy_input
         if not energy_input:
-            energy_input = getEnergyInput(
+            energy_input = build_energy_input(
                 self.model,
                 weather=self.weather,
                 core=self.core,
-                requireRadiation=self.require_radiation,
-                exportDaily=self.export_daily,
-                exportHourly=self.export_hourly,
-                exportByZone=self.export_by_zone,
-                schedulePath=self.schedule_path,
+                require_radiation=self.require_radiation,
+                temporal_scale=self.temporal_scale,
+                spatial_scale=self.spatial_scale,
+                schedule_path=self.schedule_path,
             )
-        elif isinstance(energy_input, dict) and energy_input.get("schedulePath"):
-            if "-sch" not in energy_input.get("args", []):
-                energy_input["args"] += ["-sch", os.path.abspath(energy_input["schedulePath"])]
+        else:
+            energy_input["args"] = list(energy_input.get("args", []))
+            energy_input["args"] += _scale_arguments(self.temporal_scale, self.spatial_scale)
+            if energy_input.get("schedule_path") and "-sch" not in energy_input["args"]:
+                energy_input["args"] += ["-sch", os.path.abspath(energy_input["schedule_path"])]
 
         with SimulationWorkspace(parent=self.work_dir, prefix="moosas-energy-") as workspace:
             input_path = self.input_path or str(workspace.child("Energy.i"))
@@ -269,126 +254,18 @@ class EnergyRunner(Runner):
                 *arguments,
             )
             command_result = self.run_command(command, cwd=os.path.abspath(energyScriptDir))
-            weather_temperature = self._weather_temperature(arguments)
-            data = parseEnergyOutput(
+            data = parse_energy_output(
                 result_path,
                 energy_input["zones"],
-                exportDaily=self.export_daily,
-                exportHourly=self.export_hourly,
-                exportByZone=self.export_by_zone,
-                weather_temperature=weather_temperature,
+                temporal_scale=self.temporal_scale,
+                spatial_scale=self.spatial_scale,
             )
             return EnergyResult(data=data, commands=(command_result,), workspace=workspace.report)
 
-    def _weather_temperature(self, arguments):
-        if self.weather is not None:
-            return self.weather.temperature.tolist()
-        for index, argument in enumerate(arguments):
-            if argument == "-w" and index + 1 < len(arguments):
-                weather_path = arguments[index + 1].strip('"')
-                if os.path.isfile(weather_path):
-                    return _read_weather_temperature_from_file(weather_path)
-        return None
-
-
-def energyAnalysis(model: MoosasModel = None,
-                   weather: object | None = None,
-                   core=buildingType.RESIDENTIAL,
-                   requireRadiation=False,
-                   exportDaily=False,
-                   exportHourly=False,
-                   exportByZone=False,
-                   schedulePath=None,
-                   energyInput=None,
-                   inputPath=None,
-                   resultPath=None,
-                   work_dir=None,
-                   timeout_seconds=300.0,
-                   engine: NativeEngine | None = None) -> dict:
-    """Quick energy analysis function.
-
-    This function prepares the input file, invokes the unified MoosasEnergy
-    executable, and parses the output. It supports both residential and public
-    building types, and can export results at multiple granularities.
-
-    Args:
-        model (MoosasModel): The model to analyze.
-        core: Building type selector. Use buildingType.RESIDENTIAL for
-            residential buildings (type=0), or any other buildingType value
-            for public buildings (type=1~6). (default: buildingType.RESIDENTIAL)
-        requireRadiation (bool | int): 0/False keeps the fast geometric
-            estimate, 1/True consumes precomputed seasonal radiation totals,
-            and 2 consumes those totals to write schedule-driven solar gains.
-        exportDaily (bool): If True, include daily (365-row) results in output.
-            (default: False)
-        exportHourly (bool): If True, include hourly (8760-row) results in
-            output. (default: False)
-        exportByZone (bool): If True, include per-zone results in output.
-            (default: False)
-        schedulePath (str or None): Path to the schedule CSV file. If None,
-            schedule functionality is disabled. (default: None)
-        energyInput (dict or None): Pre-built energy input dict. If provided,
-            skips getEnergyInput(). Must contain 'zones' and 'args' keys.
-            (default: None)
-        inputPath (str or None): Path to save the input .i file. If None, a
-            per-call temporary path is used.
-        resultPath (str or None): Path to save the output .o file. If None, a
-            per-call temporary path is used.
-        work_dir (str or None): Optional parent directory for temporary files.
-        timeout_seconds (float): Native executable timeout in seconds.
-
-    Returns:
-        dict: A dictionary containing the parsed energy results:
-            - 'total': dict with 'cooling', 'heating', 'lighting', 'total'
-            - 'spaces': list of ThermalSettings with load attributes set
-            - 'months': dict mapping month names to energy demand dicts
-            - 'days': list of dicts (365 items), only if exportDaily=True
-            - 'hours': list of dicts (8760 items), only if exportHourly=True
-            - 'zone_months': list of list of dicts, only if exportByZone=True
-            - 'zone_days': list of list of dicts, only if exportByZone=True
-                and exportDaily=True
-            - 'zone_hours': list of list of dicts, only if exportByZone=True
-                and exportHourly=True
-
-    Raises:
-        ShellError: Error occurred in MoosasEnergy executable.
-
-    Examples:
-        >>> # With daily and hourly output
-        >>> e_data = energyAnalysis(model, exportDaily=True, exportHourly=True)
-        >>> print(len(e_data['days']))   # 365
-        >>> print(len(e_data['hours']))  # 8760
-
-        >>> # With schedule file
-        >>> e_data = energyAnalysis(model, schedulePath='office_schedule.csv')
-
-    References:
-        https://doi.org/10.1016/j.buildenv.2021.107929.
-    """
-    return EnergyRunner(
-        model=model,
-        weather=weather,
-        core=core,
-        require_radiation=requireRadiation,
-        export_daily=exportDaily,
-        export_hourly=exportHourly,
-        export_by_zone=exportByZone,
-        schedule_path=schedulePath,
-        energy_input=energyInput,
-        input_path=inputPath,
-        result_path=resultPath,
-        work_dir=work_dir,
-        timeout_seconds=timeout_seconds,
-        engine=engine,
-    ).run().as_legacy()
-
-
-def parseEnergyOutput(resultPath,
-                      zoneList: list[ThermalSettings] = None,
-                      exportDaily=False,
-                      exportHourly=False,
-                      exportByZone=False,
-                      weather_temperature=None):
+def parse_energy_output(result_path,
+                      zone_list: list[ThermalSettings] | None = None,
+                      temporal_scale="monthly",
+                      spatial_scale="building"):
     """Parse the output file from MoosasEnergy executable.
 
     The output file contains multiple sections separated by ';', each
@@ -396,40 +273,31 @@ def parseEnergyOutput(resultPath,
     and returns a structured dictionary.
 
     Args:
-        resultPath (str): Path to the result .o file to parse.
-        zoneList (list[ThermalSettings], optional): List of ThermalSettings
+        result_path (str): Path to the result .o file to parse.
+        zone_list (list[ThermalSettings], optional): List of ThermalSettings
             objects to record per-space results. If None, results are returned
             as plain dictionaries. (default: None)
-        exportDaily (bool): Whether daily results are expected in the output.
-            (default: False)
-        exportHourly (bool): Whether hourly results are expected in the output.
-            (default: False)
-        exportByZone (bool): Whether per-zone results are expected in the
-            output. (default: False)
+        temporal_scale (str): One of ``monthly``, ``daily``, or ``hourly``.
+        spatial_scale (str): Either ``building`` or ``zone``.
 
     Returns:
         dict: A dictionary containing the parsed energy results with keys:
             - 'total': dict with 'cooling', 'heating', 'lighting', 'total'
             - 'spaces': list of ThermalSettings or list of dicts
-            - 'months': dict mapping month names to energy demand dicts
-            - 'days': list of 365 dicts (only if exportDaily=True)
-            - 'hours': list of 8760 dicts (only if exportHourly=True)
-            - 'zone_months': list[list[dict]], per-zone monthly
-                (only if exportByZone=True)
-            - 'zone_days': list[list[dict]], per-zone daily
-                (only if exportByZone=True and exportDaily=True)
-            - 'zone_hours': list[list[dict]], per-zone hourly
-                (only if exportByZone=True and exportHourly=True)
+            The selected building-scale result is stored under ``months``,
+            ``days``, or ``hours``. Zone results use the corresponding
+            ``zone_months``, ``zone_days``, or ``zone_hours`` key.
 
     Raises:
         FileError: The output file cannot be parsed.
 
     Examples:
-        >>> e_data = parseEnergyOutput('Energy.o', exportDaily=True)
+        >>> e_data = parse_energy_output('Energy.o', temporal_scale='daily')
         >>> print(len(e_data['days']))  # 365
     """
+    temporal_scale, spatial_scale = _validate_scales(temporal_scale, spatial_scale)
     try:
-        output = parseFile(resultPath)
+        output = parseFile(result_path)
 
         # ── Section 0: TOTAL (1 row) ──────────────────────
         total_row = output[0][0]
@@ -441,16 +309,16 @@ def parseEnergyOutput(resultPath,
         }
 
         # ── Section 1: SPACE RESULT (N rows) ─────────────
-        if zoneList:
-            for i in range(len(zoneList)):
-                zoneList[i].load = {
+        if zone_list:
+            for i in range(len(zone_list)):
+                zone_list[i].load = {
                     'cooling': output[1][i][0],
                     'heating': output[1][i][1],
                     'lighting': output[1][i][2],
                     'total': np.array(output[1][i]).astype(float).sum(),
                 }
         else:
-            zoneList = [{
+            zone_list = [{
                 'cooling': res[0],
                 'heating': res[1],
                 'lighting': res[2],
@@ -467,11 +335,7 @@ def parseEnergyOutput(resultPath,
                 "total": np.array(result).astype(float).sum(),
             }
 
-        e_data = {
-            "total": total,
-            "spaces": zoneList,
-            "months": months_result,
-        }
+        e_data = {"total": total, "spaces": zone_list}
 
         # ── Track the next section index ─────────────────
         # Sections 0, 1, 2 are always present (TOTAL, SPACE, MONTH).
@@ -479,42 +343,36 @@ def parseEnergyOutput(resultPath,
         # Go executable: DAY, HOUR, ZONE MONTH, ZONE DAY, ZONE HOUR.
         section_idx = 3
 
-        # ── Section 3 (optional): DAY RESULT (365 rows) ──
-        if exportDaily:
+        if temporal_scale == "monthly":
+            e_data["months"] = months_result
+        elif temporal_scale == "daily":
             e_data["days"] = _parse_energy_rows(output[section_idx])
             section_idx += 1
-
-        # ── Section 4 (optional): HOUR RESULT (8760 rows) ─
-        if exportHourly:
+        else:
             e_data["hours"] = _parse_energy_rows(output[section_idx])
             section_idx += 1
 
-        # ── Section 5 (optional): ZONE MONTH RESULT ──────
-        if exportByZone:
+        if spatial_scale == "zone":
             num_zones = len(output[1])  # number of spaces
-            e_data["zone_months"] = _parse_zone_energy_rows(
+            zone_months = _parse_zone_energy_rows(
                 output[section_idx], num_zones, 12
             )
             section_idx += 1
-
-            # ── Section 6 (optional): ZONE DAY RESULT ────
-            if exportDaily:
+            if temporal_scale == "monthly":
+                e_data["zone_months"] = zone_months
+            elif temporal_scale == "daily":
                 e_data["zone_days"] = _parse_zone_energy_rows(
                     output[section_idx], num_zones, 365
                 )
-                section_idx += 1
-
-            # ── Section 7 (optional): ZONE HOUR RESULT ───
-            if exportHourly:
+            else:
                 e_data["zone_hours"] = _parse_zone_energy_rows(
                     output[section_idx], num_zones, 8760
                 )
-                section_idx += 1
 
         return e_data
 
     except Exception:
-        raise FileError(resultPath)
+        raise FileError(result_path)
 
 
 def _parse_energy_rows(section_data):
@@ -564,14 +422,13 @@ def _parse_zone_energy_rows(section_data, num_zones, items_per_zone):
     return zone_results
 
 
-def getEnergyInput(model: MoosasModel,
+def build_energy_input(model: MoosasModel,
                    weather: object,
                    core=buildingType.RESIDENTIAL,
-                   requireRadiation=False,
-                   exportDaily=False,
-                   exportHourly=False,
-                   exportByZone=False,
-                   schedulePath=None):
+                   require_radiation=False,
+                   temporal_scale="monthly",
+                   spatial_scale="building",
+                   schedule_path=None):
     """Get the energy input configuration for a given MoosasModel.
 
     This function computes geometry-derived parameters for each space,
@@ -583,16 +440,12 @@ def getEnergyInput(model: MoosasModel,
         core: Building type selector. Use buildingType.RESIDENTIAL for
             residential buildings, or any other buildingType value for public
             buildings. (default: buildingType.RESIDENTIAL)
-        requireRadiation (bool | int): 0/False keeps the fast geometric
+        require_radiation (bool | int): 0/False keeps the fast geometric
             estimate, 1/True consumes precomputed seasonal radiation totals,
             and 2 consumes those totals to write schedule-driven solar gains.
-        exportDaily (bool): If True, adds '-d 1' to command-line args.
-            (default: False)
-        exportHourly (bool): If True, adds '-r 1' to command-line args.
-            (default: False)
-        exportByZone (bool): If True, adds '-z 1' to command-line args.
-            (default: False)
-        schedulePath (str or None): Path to the schedule CSV file. If
+        temporal_scale (str): One of ``monthly``, ``daily``, or ``hourly``.
+        spatial_scale (str): Either ``building`` or ``zone``.
+        schedule_path (str or None): Path to the schedule CSV file. If
             provided, adds '-sch <path>' to command-line args. (default: None)
 
     Returns:
@@ -601,19 +454,19 @@ def getEnergyInput(model: MoosasModel,
             - 'args': list of command-line argument strings
 
     Examples:
-        >>> energyInput = getEnergyInput(model, core=buildingType.OFFICE)
-        >>> for z in energyInput['zones']:
+        >>> energy_input = build_energy_input(model, core=buildingType.OFFICE)
+        >>> for z in energy_input['zones']:
         ...     print(z)
 
-        >>> # With all export options
-        >>> energyInput = getEnergyInput(
+        >>> # Hourly output by zone
+        >>> energy_input = build_energy_input(
         ...     model,
-        ...     exportDaily=True,
-        ...     exportHourly=True,
-        ...     exportByZone=True,
-        ...     schedulePath='office_schedule.csv',
+        ...     temporal_scale='hourly',
+        ...     spatial_scale='zone',
+        ...     schedule_path='office_schedule.csv',
         ... )
     """
+    temporal_scale, spatial_scale = _validate_scales(temporal_scale, spatial_scale)
     def calculate_orientation(n):
         """Calculate the orientation angle in degrees from a 2D normal vector.
 
@@ -636,10 +489,10 @@ def getEnergyInput(model: MoosasModel,
         """Return x if positive, otherwise 0."""
         return x if x > 0 else 0
 
-    if schedulePath is not None:
-        load_schedule(model, schedulePath)
+    if schedule_path is not None:
+        load_schedule(model, schedule_path)
 
-    radiation_mode = _normalize_radiation_mode(requireRadiation)
+    radiation_mode = _normalize_radiation_mode(require_radiation)
 
     if radiation_mode in (1, 2):
         missing_space_ids = [
@@ -753,15 +606,7 @@ def getEnergyInput(model: MoosasModel,
         '-s', str(round(total_outside_area / total_volume, 2)),
     ]
 
-    # Append optional export flags
-    if exportDaily:
-        args += ['-d', '1']
-    # temporary interpolation path:
-    # keep old logic as comment, do not request engine hourly output.
-    # if exportHourly:
-    #     args += ['-r', '1']
-    if exportByZone:
-        args += ['-z', '1']
+    args += _scale_arguments(temporal_scale, spatial_scale)
 
     schedule_out_path = None
     if getattr(model, "schedule", None):
@@ -770,4 +615,4 @@ def getEnergyInput(model: MoosasModel,
         schedule_out_path = write_schedule(model)
         args += ['-sch', schedule_out_path]
 
-    return {'zones': zones, 'args': args, 'schedulePath': schedule_out_path}
+    return {'zones': zones, 'args': args, 'schedule_path': schedule_out_path}

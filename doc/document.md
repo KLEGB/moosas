@@ -297,40 +297,34 @@ warnings, and a workspace report.
 
 ### Energy Analysis
 
-`energyAnalysis()` is the direct convenience interface to the packaged
-`MoosasEnergy` executable:
-
-```python
-from MoosasPy.simulation.energy import energyAnalysis
-from MoosasPy.simulation.weather import load_epw
-
-weather = load_epw("custom.epw", "analysis-input/weather")
-data = energyAnalysis(
-    model,
-    weather=weather,
-    exportDaily=True,
-    exportByZone=True,
-)
-
-print(data["total"])
-```
-
-Use `EnergyRunner` when command diagnostics and workspace information are
-required:
+`EnergyRunner` is the formal interface to the packaged `MoosasEnergy`
+executable. It returns an `EnergyResult` with energy data, command diagnostics,
+and workspace information:
 
 ```python
 from MoosasPy.simulation.energy import EnergyRunner
+from MoosasPy.simulation.weather import load_epw
 
-result = EnergyRunner(model=model, weather=weather).run()
+weather = load_epw("custom.epw", "analysis-input/weather")
+result = EnergyRunner(
+    model=model,
+    weather=weather,
+    temporal_scale="daily",
+    spatial_scale="zone",
+).run()
 
-print(result.successful)
-print(result.data)
-print(result.commands)
+print(result.data["total"])
 ```
 
-Energy options include the building type (`core`), radiation mode,
-daily/hourly/by-zone exports, schedule path, explicit input and result paths,
-workspace parent, timeout, and a custom native engine.
+`temporal_scale` accepts exactly one of `"monthly"`, `"daily"`, or
+`"hourly"`; its default is `"monthly"`. `spatial_scale` accepts
+`"building"` or `"zone"` and defaults to `"building"`. Results expose only
+the requested temporal scale, with an additional zone-scale field when zone
+output is requested.
+
+Other energy options include the building type (`core`), radiation mode,
+schedule path, explicit input and result paths, workspace parent, timeout, and
+a custom native engine.
 
 Radiation modes are:
 
@@ -338,8 +332,8 @@ Radiation modes are:
 - `1` or `True`: consume precomputed seasonal radiation totals.
 - `2`: consume precomputed radiation schedules.
 
-Use `getEnergyInput()` and `parseEnergyOutput()` only when direct access to the
-native input and result formats is necessary.
+Use `build_energy_input()` and `parse_energy_output()` only when direct access
+to the native input and result formats is necessary.
 
 ### Radiation Calculation
 
@@ -376,12 +370,13 @@ overhead.
 from datetime import datetime
 
 from MoosasPy.simulation.radiation import RadianceRunner, RadianceSky
+from MoosasPy.simulation.weather import load_epw
 
+weather = load_epw("custom.epw", "analysis-input/weather")
 sky = RadianceSky(
     date=datetime(2026, 6, 21, 12),
     sky_type="+s",
-    latitude=39.93,
-    longitude=116.28,
+    location=weather.location,
     diffuse_illuminance=15000.0,
 )
 result = RadianceRunner(model, sky).run()
@@ -389,6 +384,9 @@ result = RadianceRunner(model, sky).run()
 for floor in result.floors:
     print(floor.uid, floor.daylight_factor, floor.satisfied_fraction)
 ```
+
+`RadianceSky` takes its location from the EPW metadata; latitude and longitude
+are not separate simulation inputs.
 
 Each floor result contains grid illuminances, daylight factor, and the fraction
 of points exceeding 300 lux. The runner reports the `oconv` and `rtrace`
@@ -430,16 +428,6 @@ architectures fail explicitly.
 Cross-domain orchestration belongs to `MoosasPy.simulation.coupling`; energy,
 radiation, airflow, and weather modules do not import one another directly.
 
-Energy with prepared weather:
-
-```python
-from MoosasPy.simulation.coupling import run_energy_with_weather
-from MoosasPy.simulation.weather import load_epw
-
-weather = load_epw("custom.epw", "analysis-input/weather")
-data = run_energy_with_weather(model, weather=weather)
-```
-
 Energy with calculated radiation:
 
 ```python
@@ -459,7 +447,6 @@ data = run_energy_with_radiation(
 The coupling package also provides:
 
 - `EnergyAirflowCoupler` for coupled thermal-load and airflow workflows.
-- `run_position_sun_hours` for weather-aware direct sunlight calculation.
 - `run_roof_pv` and `run_facade_pv` for hourly photovoltaic generation.
 - `calculate_face_incident_energy` for face-level incident solar energy.
 

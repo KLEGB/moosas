@@ -12,11 +12,13 @@ from MoosasPy.simulation.radiation.runner import (
     RadianceSky,
     RadianceTimeoutError,
 )
+from MoosasPy.simulation.weather import Location
 
 
 class RadianceRunnerTests(unittest.TestCase):
     def setUp(self):
-        self.sky = RadianceSky(datetime(2026, 1, 1, 12), "-c", diffuse_illuminance=15000)
+        location = Location("12345", "City", "State", 39.93, 116.28, 50, 101325)
+        self.sky = RadianceSky(datetime(2026, 1, 1, 12), "-c", location, 15000)
 
     def test_run_uses_an_isolated_temporary_directory(self):
         floor = SimpleNamespace(Uid="floor-1")
@@ -36,7 +38,7 @@ class RadianceRunnerTests(unittest.TestCase):
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
         with tempfile.TemporaryDirectory() as parent_dir:
-            with patch("MoosasPy.simulation.radiation.runner.modelToRad"), patch(
+            with patch("MoosasPy.simulation.radiation.runner.modelToRad") as model_to_rad, patch(
                 "MoosasPy.simulation.radiation.runner.writeGrid", side_effect=write_grid
             ), patch("MoosasPy.simulation.runner.subprocess.run", side_effect=run_command):
                 result = RadianceRunner(model, self.sky, work_dir=parent_dir).run()
@@ -44,6 +46,7 @@ class RadianceRunnerTests(unittest.TestCase):
         self.assertEqual(len(result.floors), 1)
         self.assertAlmostEqual(result.floors[0].illuminances[0], 179.0)
         self.assertAlmostEqual(result.floors[0].daylight_factor, 179.0 / 15000)
+        self.assertEqual(model_to_rad.call_args.args[3:5], (39.93, 116.28))
         self.assertTrue(recorded_work_dirs)
         self.assertFalse(recorded_work_dirs[0].exists())
 

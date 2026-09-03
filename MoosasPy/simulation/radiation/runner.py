@@ -9,7 +9,7 @@ import os
 from typing import TYPE_CHECKING, TextIO
 
 from ...utils import path
-from ..contracts import SimulationResult
+from ..contracts import Location, SimulationResult
 from ..engine import NativeEngine
 from ..runner import CommandError, CommandResult, CommandTimeoutError, Runner
 from ..workspace import SimulationWorkspace
@@ -26,8 +26,7 @@ class RadianceSky:
 
     date: datetime
     sky_type: str
-    latitude: float = 39.93
-    longitude: float = 116.28
+    location: Location
     diffuse_illuminance: float = 15000.0
 
 
@@ -127,8 +126,8 @@ class RadianceRunner(Runner):
             self.model,
             self.sky.date,
             self.sky.sky_type,
-            self.sky.latitude,
-            self.sky.longitude,
+            self.sky.location.latitude,
+            self.sky.location.longitude,
             self.sky.diffuse_illuminance,
             str(rad_path),
         )

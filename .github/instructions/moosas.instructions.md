@@ -28,3 +28,8 @@ applyTo: "**"
 
 - If details are unclear, ask a targeted clarification question.
 - Do not resolve uncertainty by adding extra fallback logic.
+
+## Python Validation Environment
+
+- Run Python validation in the `moosas` Conda environment.
+- On this workspace, invoke it explicitly with `D:\miniconda3\Scripts\conda.exe run -n moosas python ...`; do not use an unqualified system Python.

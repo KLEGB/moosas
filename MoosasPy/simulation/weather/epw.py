@@ -12,8 +12,9 @@ import tempfile
 import numpy as np
 
 from ...utils.tools import path
+from ..contracts import Location
 from ..runner import Runner
-from .data import Location, WeatherData
+from .data import WeatherData
 from .sky.cumulative import CumulativeSky, build_cumulative_skies
 
 
