@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,19 +31,17 @@ type face struct {
 	factor vec
 }
 
-// IO
 func loadRay(path string) []ray {
 	input0, _ := os.ReadFile(path)
 	seq := "\n"
 	if strings.Contains(string(input0), "\r") {
 		seq = "\r\n"
-		fmt.Println(seq)
 	}
 	input1 := strings.Split(string(input0), seq)
-	rays := make([]ray, 0)
+	rays := make([]ray, 0, len(input1))
 	for i := 0; i < len(input1); i++ {
 		input2 := strings.Split(input1[i], ",")
-		if len(input2) < 3 {
+		if len(input2) < 6 {
 			continue
 		}
 		ox, _ := strconv.ParseFloat(input2[0], 64)
@@ -63,7 +61,7 @@ func loadRay(path string) []ray {
 func loadgeo(path string) []face {
 	input0, _ := os.ReadFile(path)
 	blocks := strings.Split(string(input0), ";")
-	faces := make([]face, 0)
+	faces := make([]face, 0, len(blocks))
 
 	for j := 0; j < len(blocks); j++ {
 		seq := "\n"
@@ -75,7 +73,6 @@ func loadgeo(path string) []face {
 		theLoop := make([]vec, 0)
 
 		for _, li := range lines {
-
 			if !strings.HasPrefix(li, "!") && len(li) > 0 {
 				if strings.Contains(li, "fn") {
 					norString := strings.Split(li, ",")
@@ -85,25 +82,21 @@ func loadgeo(path string) []face {
 					theFactor = unit(vec{vx, vy, vz})
 				}
 				if strings.Contains(li, "fv") {
-					//fmt.Println(lines[i])
 					poiString := strings.Split(li, ",")
 					px, _ := strconv.ParseFloat(poiString[1], 64)
 					py, _ := strconv.ParseFloat(poiString[2], 64)
 					pz, _ := strconv.ParseFloat(poiString[3], 64)
 					theLoop = append(theLoop, vec{px, py, pz})
 				}
-				//fmt.Println(theLoop)
 			}
 		}
 		if len(theLoop) > 0 {
 			faces = append(faces, face{theLoop, theFactor})
 		}
-
 	}
 	return faces
 }
 
-// 向量运算相关函数
 func dot(vec1 vec, vec2 vec) float64 {
 	return vec1.x*vec2.x + vec1.y*vec2.y + vec1.z*vec2.z
 }
@@ -141,17 +134,14 @@ func containBy(p1 vec, p2 vec) bool {
 	return dcmp(p1.x-p2.x) == 0 && dcmp(p1.y-p2.y) == 0 && dcmp(p1.z-p2.z) == 0
 }
 
-// 三态函数
 func dcmp(x float64) int {
 	if math.Abs(x) < eps {
 		return 0
-	} else {
-		if x < 0 {
-			return -1
-		} else {
-			return 1
-		}
 	}
+	if x < 0 {
+		return -1
+	}
+	return 1
 }
 
 func onSegment(point vec, segStart vec, segEnd vec) bool {
@@ -162,12 +152,7 @@ func onSegment(point vec, segStart vec, segEnd vec) bool {
 	return false
 }
 
-// 顶层运算函数
 func intersection(rayline ray, mesh face) ray {
-	//平面参数方程: (P - p0).n = 0
-	//射线参数方程: P(t) = p1 + tu
-	//相交点方程：(P(t) - p0).n = (p1 + tu - p0).n = 0
-	//解得： P(t) = p1 + t*u = p1 + ((p0 - p1).n/u.n) * u
 	p0 := mesh.loop[0]
 	p1 := rayline.origin
 	if dot(mesh.factor, rayline.direction) < 0 {
@@ -186,7 +171,6 @@ func intersection(rayline ray, mesh face) ray {
 }
 
 func pointInFace(point vec, mesh face) bool {
-	//射线法判断点是否在多边形内，兼容非凸
 	flag := false
 	planarFace := force2d(mesh)
 	for i := 1; i < len(planarFace.loop); i++ {
@@ -196,8 +180,6 @@ func pointInFace(point vec, mesh face) bool {
 		if onSegment(point, P1, P2) {
 			return true
 		}
-		//前一个判断min(P1.y,P2.y)<P.y<=max(P1.y,P2.y)
-		//后一个判断被测点 在 射线与边交点 的左边
 		if ((dcmp(P1.y-point.y) > 0) != (dcmp(P2.y-point.y) > 0)) && dcmp(point.x-(point.y-P1.y)/(P1.y-P2.y)*(P1.x-P2.x)-P1.x) < 0 {
 			flag = !flag
 		}
@@ -232,6 +214,37 @@ func help() {
 	fmt.Println("-o / -output : output file path (default: .\\MoosasEnergy.o)")
 }
 
+func formatRayOutput(ray ray) string {
+	var intersect strings.Builder
+	intersect.Grow(48)
+	intersect.WriteString(strconv.FormatFloat(ray.origin.x, 'f', 2, 64))
+	intersect.WriteString(",")
+	intersect.WriteString(strconv.FormatFloat(ray.origin.y, 'f', 2, 64))
+	intersect.WriteString(",")
+	intersect.WriteString(strconv.FormatFloat(ray.origin.z, 'f', 2, 64))
+	intersect.WriteString(",")
+	intersect.WriteString(strconv.FormatFloat(ray.direction.x, 'f', 2, 64))
+	intersect.WriteString(",")
+	intersect.WriteString(strconv.FormatFloat(ray.direction.y, 'f', 2, 64))
+	intersect.WriteString(",")
+	intersect.WriteString(strconv.FormatFloat(ray.direction.z, 'f', 2, 64))
+	return intersect.String()
+}
+
+func workerCount(totalJobs int) int {
+	if totalJobs <= 0 {
+		return 1
+	}
+	count := runtime.GOMAXPROCS(0)
+	if count < 1 {
+		count = 1
+	}
+	if count > totalJobs {
+		return totalJobs
+	}
+	return count
+}
+
 func main() {
 	info := simulationInfo{
 		outputFile:   "MoosasRad.o",
@@ -258,7 +271,6 @@ func main() {
 		fmt.Println("invalid inputFile. Please check:", info.inputFile)
 	} else {
 		mode := fileInfo.Mode()
-		//fmt.Println(info)
 		if mode.IsRegular() {
 			simulation(info)
 		} else {
@@ -267,60 +279,46 @@ func main() {
 	}
 }
 
-// 主函数
 func simulation(inputInfo simulationInfo) {
 	rays := loadRay(inputInfo.inputFile)
 	meshes := loadgeo(inputInfo.geometryFile)
-	ch,wg,res:= make(chan string,256),sync.WaitGroup{},strings.Builder{}
-	for i := 0; i < len(rays); i++ {
-		go func(rayline ray) {
-			ray := rayFaceTest(rayline, meshes)
-			intersect:=strings.Builder{}
-			intersect.WriteString(strconv.FormatFloat(ray.origin.x, 'f', 2, 64))
-			intersect.WriteString(",")
-			intersect.WriteString(strconv.FormatFloat(ray.origin.y, 'f', 2, 64))
-			intersect.WriteString(",")
-			intersect.WriteString(strconv.FormatFloat(ray.origin.z, 'f', 2, 64))
-			intersect.WriteString(",")
-			intersect.WriteString(strconv.FormatFloat(ray.direction.x, 'f', 2, 64))
-			intersect.WriteString(",")
-			intersect.WriteString(strconv.FormatFloat(ray.direction.y, 'f', 2, 64))
-			intersect.WriteString(",")
-			intersect.WriteString(strconv.FormatFloat(ray.direction.z, 'f', 2, 64))
-			intersect.WriteString("\n")
-			ch<-intersect.String()
-		}(rays[i])
-		wg.Add(1)
+	if len(rays) == 0 {
+		_ = os.Remove(inputInfo.outputFile)
+		_, _ = os.Create(inputInfo.outputFile)
+		return
 	}
 
-	go func() {
-		for i:=0;i<len(rays);i++ {
-			res.WriteString(<-ch)
-			wg.Done()
-		}
-	}()
+	results := make([]string, len(rays))
+	jobs := make(chan int, workerCount(len(rays))*2)
+	var wg sync.WaitGroup
+
+	for workerIdx := 0; workerIdx < workerCount(len(rays)); workerIdx++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for rayIdx := range jobs {
+				results[rayIdx] = formatRayOutput(rayFaceTest(rays[rayIdx], meshes))
+			}
+		}()
+	}
+
+	for rayIdx := 0; rayIdx < len(rays); rayIdx++ {
+		jobs <- rayIdx
+	}
+	close(jobs)
 	wg.Wait()
-	
-	os.Remove(inputInfo.outputFile)
+
+	var res strings.Builder
+	res.Grow(len(results) * 48)
+	for idx, line := range results {
+		if idx > 0 {
+			res.WriteString("\n")
+		}
+		res.WriteString(line)
+	}
+
+	_ = os.Remove(inputInfo.outputFile)
 	file, _ := os.Create(inputInfo.outputFile)
-	io.WriteString(file, res.String()[:len(res.String())-1])
-}
-
-// 测试函数
-func test() {
-	rays := ray{vec{0.5, 0.5, 0}, unit(vec{0.1, 0.5, 1})}
-	loop := make([]vec, 5)
-	loop[0] = vec{0, 0, 1}
-	loop[1] = vec{1, 0, 1}
-	loop[2] = vec{1, 1, 0}
-	loop[3] = vec{0, 1, 0}
-	loop[4] = vec{0, 0, 1}
-	faces := face{loop, unit(vec{0, 1, 1})}
-	//meshes := make([]face, 1)
-	//meshes[0] = faces
-	meshes := loadgeo("rad/faceGeometries.geo")
-	fmt.Println(meshes)
-	fmt.Println(intersection(rays, faces))
-	fmt.Println(rayFaceTest(rays, meshes))
-
+	defer file.Close()
+	_, _ = file.WriteString(res.String())
 }
