@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -15,33 +16,63 @@ import (
 )
 
 type airFlowNetwork struct {
-	zones []zone
-	paths []flowPath
+	SchemaVersion int
+	Levels        []levelData
+	Zones         []zone
+	Paths         []flowPath
+}
+
+type levelData struct {
+	Nr    int     `json:"nr"`
+	RefHt float64 `json:"refht"`
+	DelHt float64 `json:"delht"`
+	Name  string  `json:"name"`
 }
 
 type zone struct {
-	volume      float64
-	row         int
-	col         int
-	hei         int
-	points      [][]int
-	prjname     string
-	username    string
-	heat        float64
-	temperature float64
+	Volume      float64        `json:"volume"`
+	Row         int            `json:"-"`
+	Col         int            `json:"-"`
+	Hei         int            `json:"-"`
+	Points      [][]int        `json:"-"`
+	PrjName     string         `json:"prjName"`
+	UserName    string         `json:"userName"`
+	Heat        float64        `json:"heatLoad"`
+	Temperature float64        `json:"temperature"`
+	Level       float64        `json:"level"`
+	LevelIndex  int            `json:"levelIndex"`
+	RelHt       float64        `json:"relHt"`
+	Contam      map[string]any `json:"contam"`
+	PositionX   float64        `json:"position_x"`
+	PositionY   float64        `json:"position_y"`
+	PositionZ   float64        `json:"position_z"`
+	Boundary    string         `json:"boundary"`
+	PrjIndex    int            `json:"prjIndex"`
 }
 
 type flowPath struct {
-	username string
-	height   float64
-	width    float64
-	row      int
-	col      int
-	hei      int
-	from     int
-	to       int
-	pressure float64
-	winType  int
+	UserName   string         `json:"userName"`
+	PathType   string         `json:"pathType"`
+	Height     float64        `json:"pathHeight"`
+	Width      float64        `json:"pathWidth"`
+	Row        int            `json:"-"`
+	Col        int            `json:"-"`
+	Hei        int            `json:"-"`
+	From       int            `json:"-"`
+	To         int            `json:"-"`
+	Pressure   float64        `json:"pressure"`
+	WinType    int            `json:"winType"`
+	Level      float64        `json:"level"`
+	LevelIndex int            `json:"levelIndex"`
+	RelHt      float64        `json:"relHt"`
+	Contam     map[string]any `json:"contam"`
+	PositionX  float64        `json:"position_x"`
+	PositionY  float64        `json:"position_y"`
+	PositionZ  float64        `json:"position_z"`
+	PrjIndex   int            `json:"prjIndex"`
+	FromZone   int            `json:"fromZone"`
+	ToZone     int            `json:"toZone"`
+	Element    map[string]any `json:"element"`
 }
 
 type globalInfo struct {
@@ -54,9 +85,53 @@ type globalInfo struct {
 	t0          string
 }
 
+type networkPayload struct {
+	SchemaVersion int                        `json:"schemaVersion"`
+	Levels        []levelData                `json:"levels"`
+	Zones         map[string]json.RawMessage `json:"zones"`
+	Paths         map[string]json.RawMessage `json:"paths"`
+}
+
+type zonePayload struct {
+	UserName    string         `json:"userName"`
+	Temperature float64        `json:"temperature"`
+	PrjIndex    int            `json:"prjIndex"`
+	PrjName     string         `json:"prjName"`
+	HeatLoad    float64        `json:"heatLoad"`
+	Volume      float64        `json:"volume"`
+	PositionX   float64        `json:"position_x"`
+	PositionY   float64        `json:"position_y"`
+	PositionZ   float64        `json:"position_z"`
+	Boundary    string         `json:"boundary"`
+	Level       float64        `json:"level"`
+	LevelIndex  int            `json:"levelIndex"`
+	RelHt       float64        `json:"relHt"`
+	Contam      map[string]any `json:"contam"`
+}
+
+type pathPayload struct {
+	UserName   string         `json:"userName"`
+	PathType   string         `json:"pathType"`
+	PrjIndex   int            `json:"prjIndex"`
+	PathHeight float64        `json:"pathHeight"`
+	PathWidth  float64        `json:"pathWidth"`
+	PositionX  float64        `json:"position_x"`
+	PositionY  float64        `json:"position_y"`
+	PositionZ  float64        `json:"position_z"`
+	FromZone   int            `json:"fromZone"`
+	ToZone     int            `json:"toZone"`
+	Pressure   float64        `json:"pressure"`
+	WinType    int            `json:"winType"`
+	Level      float64        `json:"level"`
+	LevelIndex int            `json:"levelIndex"`
+	RelHt      float64        `json:"relHt"`
+	Contam     map[string]any `json:"contam"`
+	Element    map[string]any `json:"element"`
+}
+
 func help() {
 	fmt.Println("Moosas ContamX Builder and reader.")
-	fmt.Println("Command line should be: MoosasAFN [-h,-p...] inputNetworkFile.net")
+	fmt.Println("Command line should be: MoosasAFN [-h,-p...] inputNetworkFile.json")
 	fmt.Println("Optional command:")
 	fmt.Println("-h / -help : reprint the help information")
 	fmt.Println("-p / -project : base name of the prj file  (default: network)")
@@ -118,194 +193,208 @@ func main() {
 	fileInfo, err := os.Lstat(info.networkFile)
 	if err != nil {
 		fmt.Println("invalid inputFile. Please check:", info.networkFile)
-	} else {
-		mode := fileInfo.Mode()
-		if mode.IsRegular() {
+		return
+	}
+	if !fileInfo.Mode().IsRegular() {
+		fmt.Println("inputFile flowPath is not a file. Please check:", info.networkFile)
+		return
+	}
 
-			//Working here
-			prjFilePath := make([]string, 0)
-			networks := []airFlowNetwork{readFile(info.networkFile)}
-			if info.split {
-				networks = splitPaths(networks[0])
-				for i, network := range networks {
-					zoneFile := networkToFile(info.prjName+strconv.Itoa(i)+".net", info, network)
-					fmt.Println("create such networkFile:", zoneFile)
-					prjFile := generatePrj(info.prjName+strconv.Itoa(i)+".prj", info, network)
-					prjFilePath = append(prjFilePath, prjFile)
-					fmt.Println("create such prjFile:", prjFile)
-				}
-			} else {
-				prjFile := generatePrj(info.prjName+".prj", info, networks[0])
-				prjFilePath = append(prjFilePath, prjFile)
-				fmt.Println("create such prjFile:", prjFile)
-			}
-
-			if info.simulation {
-				runContamX(prjFilePath, networks, info.resultFile)
-				fmt.Println("create such result:", info.resultFile)
-			}
-
-		} else {
-			fmt.Println("inputFile flowPath is not a file. Please check:", info.networkFile)
+	prjFilePath := make([]string, 0)
+	networks := []airFlowNetwork{readFile(info.networkFile)}
+	if info.split {
+		networks = splitPaths(networks[0])
+		for i, network := range networks {
+			zoneFile := networkToFile(info.prjName+strconv.Itoa(i)+".json", info, network)
+			fmt.Println("create such networkFile:", zoneFile)
+			prjFile := generatePrj(info.prjName+strconv.Itoa(i)+".prj", info, network)
+			prjFilePath = append(prjFilePath, prjFile)
+			fmt.Println("create such prjFile:", prjFile)
 		}
+	} else {
+		prjFile := generatePrj(info.prjName+".prj", info, networks[0])
+		prjFilePath = append(prjFilePath, prjFile)
+		fmt.Println("create such prjFile:", prjFile)
+	}
+
+	if info.simulation {
+		runContamX(prjFilePath, networks, info.resultFile)
+		fmt.Println("create such result:", info.resultFile)
 	}
 }
 
-// top Func
 func runContamX(prjFilePath []string, networks []airFlowNetwork, resultFile string) {
 	resultStr := ""
-
-	// run simulation
 	for i := 0; i < len(networks); i++ {
 		lfrFile := callContam(networks[i], prjFilePath[i])
 		resultStr += outputResults(networks[i], lfrFile)
 	}
-
-	// export result
 	os.Remove(resultFile)
 	file, _ := os.Create(resultFile)
 	io.WriteString(file, resultStr)
 }
 
-// top Func
-func readFile(zoneFile string) airFlowNetwork {
-	//------------------------------------------------------
-
-	//The network file can be decoded like this:
-	//! All line with the prefix "!" are annotations and will be ignored.
-	//! Zone Data or Path Data are identified be the length of the line, so dont worry about that.
-	//! zoneName,zonePrjName,heatLoad,temperature,volume,positionX,positionY,positionZ,boundaryPolygon (len==9)
-	//Bedroom0, z01, 1760, 27, 180, 16.2, 18.5, 3.0, 16.2 18.5 20.2 18.5 20.2 23.5 16.2 23.5
-	//....
-	//! pathName,pathIndex,height,width,positionX,positionY,positionZ,fromZone,toZone,pressure (len==10)
-	//BedroomWin0, p01, 1.8, 1.2, 17.4, 19.1, 3.6, -1, 2, 12.5
-	//....
-	//------------------------------------------------------
-	input0, _ := os.ReadFile(zoneFile)
-	input1 := strings.Split(string(input0), "\r\n")
-	zoneStrList, pathStrList := make([][]string, 0), make([][]string, 0)
-	for i := 0; i < len(input1); i++ {
-		if !strings.HasPrefix(input1[i], "!") {
-			arr := strings.Split(input1[i], ",")
-			if len(arr) == 9 {
-				zoneStrList = append(zoneStrList, arr)
-			}
-			if len(arr) >= 10 {
-				pathStrList = append(pathStrList, arr)
-			}
-		}
-
-	}
-
-	// read zone
-	// ! zoneName,zonePrjName,heatLoad,temperature,volume,positionX,positionY,positionZ,boundaryPolygon (len==9)
-	zones := make([]zone, len(zoneStrList))
-	for i := 0; i < len(zoneStrList); i++ {
-		heatload, _ := strconv.ParseFloat(zoneStrList[i][2], 64)
-		temperature, _ := strconv.ParseFloat(zoneStrList[i][3], 64)
-		if temperature < 273.15 {
-			temperature += 273.15
-		}
-		volume, _ := strconv.ParseFloat(zoneStrList[i][4], 64)
-		points := [][]int{}
-		pointstring := strings.Split(zoneStrList[i][8], " ")
-		for i := 0; i < len(pointstring)/2; i++ {
-			pointRow := _MtoCM(pointstring[i*2+0])
-			pointCol := _MtoCM(pointstring[i*2+1])
-			points = append(points, []int{pointRow, pointCol})
-		}
-		zones[i] = zone{
-			username:    zoneStrList[i][0],
-			prjname:     zoneStrList[i][1],
-			volume:      volume,
-			temperature: temperature,
-			heat:        heatload,
-			row:         _MtoCM(zoneStrList[i][5]),
-			col:         _MtoCM(zoneStrList[i][6]),
-			hei:         _MtoCM(zoneStrList[i][7]),
-			points:      points,
-		}
-	}
-
-	// read flowPath
-	// ! pathName,pathIndex,height,width,positionX,positionY,positionZ,fromZone,toZone,pressure,pathType (optional) (len==11)
-	paths := make([]flowPath, len(pathStrList))
-	for i := 0; i < len(pathStrList); i++ {
-		//pathIndex, _ := strconv.ParseFloat(pathStrList[i][1], 64)
-		height, _ := strconv.ParseFloat(pathStrList[i][2], 64)
-		width, _ := strconv.ParseFloat(pathStrList[i][3], 64)
-		from, _ := strconv.Atoi(pathStrList[i][7])
-		to, _ := strconv.Atoi(pathStrList[i][8])
-		pressure, _ := strconv.ParseFloat(pathStrList[i][9], 64)
-		winType := 1
-		if len(pathStrList[i]) == 11 {
-			winType, _ = strconv.Atoi(pathStrList[i][10])
-		}
-		paths[i] = flowPath{
-			pathStrList[i][0],
-			height,
-			width,
-			_MtoCM(pathStrList[i][4]),
-			_MtoCM(pathStrList[i][5]),
-			_MtoCM(pathStrList[i][6]),
-			from,
-			to,
-			pressure,
-			winType,
-		}
-	}
-
-	return airFlowNetwork{zones, paths}
+func readFile(networkFile string) airFlowNetwork {
+	input0, _ := os.ReadFile(networkFile)
+	return readJSONNetwork(string(input0))
 }
 
-func networkToFile(zonFileBaseMame string, info globalInfo, network airFlowNetwork) string {
-	networkStr := "! All annotations has prefix as !\n"
-	networkStr += "! ZONE DATA\n"
-	networkStr += "! zoneName,zonePrjName,heatLoad,temperature,volume,positionX,positionY,positionZ,boundaryPolygon (len==9)\n"
-	for _, z := range network.zones {
-		networkStr += z.username + "," +
-			z.prjname + "," +
-			fmt.Sprintf("%.2f", z.heat) + "," +
-			fmt.Sprintf("%.2f", z.temperature) + "," +
-			fmt.Sprintf("%.2f", z.volume) + "," +
-			fmt.Sprintf("%.2f", float64(z.row)/100.0) + "," +
-			fmt.Sprintf("%.2f", float64(z.col)/100) + "," +
-			fmt.Sprintf("%.2f", float64(z.hei)/100) + ","
-		pointStr := ""
-		for _, p := range z.points {
-			pointStr += fmt.Sprintf("%.2f", float64(p[0])/100) + " " + fmt.Sprintf("%.2f", float64(p[1])/100) + " "
+func readJSONNetwork(content string) airFlowNetwork {
+	payload := map[string]any{}
+	if err := json.Unmarshal([]byte(content), &payload); err != nil {
+		log.Fatal(err)
+	}
+	schemaVersion := mapInt(payload, []string{"schemaVersion"}, 1)
+	levels := decodeLevels(payload["levels"])
+	zonePayloads := decodeZonePayloads(payload["zones"])
+	pathPayloads := decodePathPayloads(payload["paths"])
+	network := airFlowNetwork{
+		SchemaVersion: schemaVersion,
+		Levels:        completeLevels(levels, zonePayloads),
+		Zones:         make([]zone, len(zonePayloads)),
+		Paths:         make([]flowPath, len(pathPayloads)),
+	}
+	for i, item := range zonePayloads {
+		points := parseBoundaryPoints(item.Boundary)
+		levelIndex := item.LevelIndex
+		if levelIndex <= 0 {
+			levelIndex = inferLevelIndex(item.Level, network.Levels)
 		}
-		networkStr += pointStr[0:len(pointStr)-1] + "\n"
+		prjIndex := item.PrjIndex
+		if prjIndex <= 0 {
+			prjIndex = i + 1
+		}
+		prjName := item.PrjName
+		if strings.TrimSpace(prjName) == "" {
+			prjName = fmt.Sprintf("z%03d", prjIndex)
+		}
+		network.Zones[i] = zone{
+			Volume:      item.Volume,
+			Row:         mToCM(item.PositionX),
+			Col:         mToCM(item.PositionY),
+			Hei:         mToCM(item.PositionZ),
+			Points:      points,
+			PrjName:     prjName,
+			UserName:    item.UserName,
+			Heat:        item.HeatLoad,
+			Temperature: toKelvin(item.Temperature),
+			Level:       item.Level,
+			LevelIndex:  levelIndex,
+			RelHt:       item.RelHt,
+			Contam:      ensureMap(item.Contam),
+			PositionX:   item.PositionX,
+			PositionY:   item.PositionY,
+			PositionZ:   item.PositionZ,
+			Boundary:    item.Boundary,
+			PrjIndex:    prjIndex,
+		}
 	}
-	networkStr += "! PATH DATA\n"
-	networkStr += "! pathName,pathIndex,height,width,positionX,positionY,positionZ,fromZone,toZone,pressure,pathType (optional) (len==11)\n"
-	for i, p := range network.paths {
-		networkStr += p.username + "," +
-			"p" + strconv.Itoa(i) + "," +
-			fmt.Sprintf("%.2f", p.height) + "," +
-			fmt.Sprintf("%.2f", p.width) + "," +
-			fmt.Sprintf("%.2f", float64(p.row)/100.0) + "," +
-			fmt.Sprintf("%.2f", float64(p.col)/100.0) + "," +
-			fmt.Sprintf("%.2f", float64(p.hei)/100.0) + "," +
-			strconv.Itoa(p.from) + "," +
-			strconv.Itoa(p.to) + "," +
-			fmt.Sprintf("%.2f", p.pressure) +
-			fmt.Sprintf("%.2f", p.winType) + "\n"
+	for i, item := range pathPayloads {
+		levelIndex := item.LevelIndex
+		if levelIndex <= 0 {
+			levelIndex = inferLevelIndex(item.Level, network.Levels)
+		}
+		prjIndex := item.PrjIndex
+		if prjIndex <= 0 {
+			prjIndex = i + 1
+		}
+		pathType := strings.TrimSpace(item.PathType)
+		if pathType == "" {
+			if dtype, ok := ensureMap(item.Element)["dtype"].(string); ok && strings.TrimSpace(strings.ToLower(dtype)) == "plr_leak3" {
+				pathType = "leakage"
+			} else {
+				pathType = "opening"
+			}
+		}
+		network.Paths[i] = flowPath{
+			UserName:   item.UserName,
+			PathType:   pathType,
+			Height:     item.PathHeight,
+			Width:      item.PathWidth,
+			Row:        mToCM(item.PositionX),
+			Col:        mToCM(item.PositionY),
+			Hei:        mToCM(item.PositionZ),
+			From:       oneBasedToZero(item.FromZone),
+			To:         oneBasedToZero(item.ToZone),
+			Pressure:   item.Pressure,
+			WinType:    item.WinType,
+			Level:      item.Level,
+			LevelIndex: levelIndex,
+			RelHt:      item.RelHt,
+			Contam:     ensureMap(item.Contam),
+			PositionX:  item.PositionX,
+			PositionY:  item.PositionY,
+			PositionZ:  item.PositionZ,
+			PrjIndex:   prjIndex,
+			FromZone:   item.FromZone,
+			ToZone:     item.ToZone,
+			Element:    ensureMap(item.Element),
+		}
 	}
-
-	os.Remove(path.Join(info.directory, zonFileBaseMame))
-	// os.RemoveAll(prjDictionary)
-	// os.Mkdir(prjDictionary, os.ModePerm)
-	file, _ := os.Create(path.Join(info.directory, zonFileBaseMame))
-	io.WriteString(file, networkStr)
-	//return pathList
-	return path.Join(info.directory, zonFileBaseMame)
+	return network
 }
 
-// top Func
+func networkToFile(zonFileBaseName string, info globalInfo, network airFlowNetwork) string {
+	payload := networkPayload{
+		SchemaVersion: network.SchemaVersion,
+		Levels:        network.Levels,
+		Zones:         map[string]json.RawMessage{},
+		Paths:         map[string]json.RawMessage{},
+	}
+	for _, z := range network.Zones {
+		item := zonePayload{
+			UserName:    z.UserName,
+			Temperature: z.Temperature,
+			PrjIndex:    z.PrjIndex,
+			PrjName:     z.PrjName,
+			HeatLoad:    z.Heat,
+			Volume:      z.Volume,
+			PositionX:   z.PositionX,
+			PositionY:   z.PositionY,
+			PositionZ:   z.PositionZ,
+			Boundary:    z.Boundary,
+			Level:       z.Level,
+			LevelIndex:  z.LevelIndex,
+			RelHt:       z.RelHt,
+			Contam:      ensureMap(z.Contam),
+		}
+		raw, _ := json.Marshal(item)
+		payload.Zones[z.UserName] = raw
+	}
+	for _, p := range network.Paths {
+		item := pathPayload{
+			UserName:   p.UserName,
+			PathType:   p.PathType,
+			PrjIndex:   p.PrjIndex,
+			PathHeight: p.Height,
+			PathWidth:  p.Width,
+			PositionX:  p.PositionX,
+			PositionY:  p.PositionY,
+			PositionZ:  p.PositionZ,
+			FromZone:   ifZeroBasedToOneBased(p.From),
+			ToZone:     ifZeroBasedToOneBased(p.To),
+			Pressure:   p.Pressure,
+			WinType:    p.WinType,
+			Level:      p.Level,
+			LevelIndex: p.LevelIndex,
+			RelHt:      p.RelHt,
+			Contam:     ensureMap(p.Contam),
+			Element:    ensureMap(p.Element),
+		}
+		raw, _ := json.Marshal(item)
+		payload.Paths[p.UserName] = raw
+	}
+	fullPath := path.Join(info.directory, zonFileBaseName)
+	os.Remove(fullPath)
+	file, _ := os.Create(fullPath)
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	_ = encoder.Encode(payload)
+	file.Close()
+	return fullPath
+}
+
 func generatePrj(prjBaseName string, info globalInfo, network airFlowNetwork) string {
-	iconList := getIconList(network)
-	zones := network.zones
 	lines := []string{
 		"ContamW 3.4.0.4 0",
 		"afn",
@@ -369,14 +458,12 @@ func generatePrj(prjBaseName string, info globalInfo, network airFlowNetwork) st
 		"0 ! contaminants:",
 		"0 ! species:",
 		"-999",
-		"1 ! levels plus icon data:",
+		fmt.Sprintf("%d ! levels plus icon data:", len(network.Levels)),
 		"! #  refHt   delHt  ni  u  name",
-		"  1   0.000   3.000 " + strconv.Itoa(len(iconList)) + " 0 0 <1>",
-		"!icn col row  #",
 	}
-	for _, icon := range iconList {
-		icn, col, row, index := strconv.Itoa(icon[0]), strconv.Itoa(icon[1]), strconv.Itoa(icon[2]), strconv.Itoa(icon[3])
-		lines = append(lines, "  "+icn+"  "+col+"  "+row+"  "+index)
+	for _, level := range network.Levels {
+		lines = append(lines, fmt.Sprintf("  %d   %.0f   %.0f 0 0 0 %s",
+			level.Nr, level.RefHt, level.DelHt, defaultLevelName(level.Name, level.Nr)))
 	}
 
 	lines = append(lines, []string{
@@ -395,34 +482,13 @@ func generatePrj(prjBaseName string, info globalInfo, network airFlowNetwork) st
 		"-999",
 		"0 ! source/sink elements:",
 		"-999",
-		strconv.Itoa(len(network.paths)) + " ! flow elements:",
+		strconv.Itoa(len(network.Paths)) + " ! flow elements:",
 	}...)
 
-	for i, p := range network.paths {
-		h, w := p.height, p.width
-		expt := strconv.FormatFloat(0.5, 'f', 2, 64)
-		lam := fmt.Sprintf("%.6f", h*w*h*w/(h+w)*0.02028)
-		turb := fmt.Sprintf("%.6f", h*w*0.551543)
-		dh := fmt.Sprintf("%.6f", h*0.222222)
-		hd := strconv.FormatFloat(h, 'f', 2, 64)
-		wd := strconv.FormatFloat(w, 'f', 2, 64)
-
-		if p.winType == 1 {
-			lines = append(lines, []string{
-				strconv.Itoa(i+1) + " 27 dor_pl2 p" + strconv.Itoa(i+1),
-				"",
-				" " + lam + " " + turb + " " + expt + " " + dh + " " + hd + " " + wd + " 0.78 0 0",
-			}...)
-		} else {
-			A := strconv.FormatFloat(w*h, 'f', 2, 64)
-			coef := strconv.FormatFloat(0.65, 'f', 2, 64)
-			lines = append(lines, []string{
-				strconv.Itoa(i+1) + " 27 plr_conn p" + strconv.Itoa(i+1),
-				"",
-				" " + lam + " " + turb + " " + expt + " " + A + " " + coef + " 0",
-			}...)
-		}
+	for i, p := range network.Paths {
+		lines = append(lines, buildFlowElementLines(i+1, p)...)
 	}
+
 	lines = append(lines, []string{
 		"-999",
 		"0 ! duct elements:",
@@ -433,35 +499,128 @@ func generatePrj(prjBaseName string, info globalInfo, network airFlowNetwork) st
 		"-999",
 		"0 ! simple AHS:",
 		"-999",
-		strconv.Itoa(len(network.zones)) + " ! zones:",
-		"! Z#  f  s#  c#  k#  l#  relHt    Vol  T0  P0  name  clr uH uT uP uV axs cdvf <cdvfName> cfd <cfdName> <1dData:>",
+		strconv.Itoa(len(network.Zones)) + " ! zones:",
+		"! Z#  f  s#  c#  k#  l#  relHt    Vol  T0  P0  name  clr uH uV uT uP axs cdvf <cdvfName> cfd <cfdName> <1dData:>",
 	}...)
-	for i, z := range network.zones {
-		vol := strconv.FormatFloat(z.volume, 'f', 2, 64)
-		ta := strconv.FormatFloat(z.temperature, 'f', 2, 64)
-		nr := strconv.Itoa(i + 1)
-		lines = append(lines, "   "+nr+"  3   0   0   0   1   0.000    "+vol+" "+ta+" 0 "+z.prjname+" -1 0 2 0 0 0 0 0")
+	for i, z := range network.Zones {
+		nr := i + 1
+		contam := ensureMap(z.Contam)
+		flags := mapInt(contam, []string{"flags"}, 3)
+		ps := mapInt(contam, []string{"ps"}, 0)
+		pc := mapInt(contam, []string{"pc"}, 0)
+		pk := mapInt(contam, []string{"pk"}, 0)
+		pl := mapInt(contam, []string{"pl"}, z.LevelIndex)
+		relHt := mapFloat(contam, []string{"relHt"}, z.RelHt)
+		vol := mapFloat(contam, []string{"Vol", "volume"}, z.Volume)
+		t0 := toKelvin(mapFloat(contam, []string{"T0", "temperature"}, z.Temperature))
+		p0 := mapFloat(contam, []string{"P0"}, 0.0)
+		name := mapString(contam, []string{"name"}, z.PrjName)
+		color := mapInt(contam, []string{"color"}, -1)
+		uHt := mapInt(contam, []string{"u_Ht"}, 0)
+		uV := mapInt(contam, []string{"u_V"}, 2)
+		uT := mapInt(contam, []string{"u_T"}, 0)
+		uP := mapInt(contam, []string{"u_P"}, 0)
+		cdaxis := mapInt(contam, []string{"cdaxis"}, 0)
+		vfType := mapInt(contam, []string{"vf_type"}, 0)
+		vfNodeName := mapString(contam, []string{"vf_node_name"}, "")
+		cfd := mapInt(contam, []string{"cfd"}, 0)
+		cfdName := mapString(contam, []string{"cfdName", "cfd_name"}, "")
+		line := fmt.Sprintf("   %d  %d   %d   %d   %d   %d   %.3f    %.2f %.2f %.2f %s %d %d %d %d %d %d %d",
+			nr, flags, ps, pc, pk, pl, relHt, vol, t0, p0, name, color, uHt, uV, uT, uP, cdaxis, vfType)
+		if vfType != 0 {
+			line += " " + defaultOptionalName(vfNodeName)
+		}
+		line += fmt.Sprintf(" %d", cfd)
+		if cfd != 0 {
+			line += " " + defaultOptionalName(cfdName)
+		}
+		lines = append(lines, line)
 	}
+
 	lines = append(lines, []string{
 		"-999",
 		"0 ! initial zone concentrations:",
 		"-999",
-		strconv.Itoa(len(network.paths)) + " ! flow paths:",
-		"! P#    f  n#  m#  e#  f#  w#  a#  s#  c#  l#    X       Y      relHt  mult wPset wPmod wazm Fahs Xmax Xmin icn dir u[4] cdvf <cdvfName> cfd <cfdData[4]>",
+		strconv.Itoa(len(network.Paths)) + " ! flow paths:",
+		"! P#    f  n#  m#  e#  f#  w#  a#  s#  c#  l#    X       Y      relHt  mult wPset wPmod wazm Fahs Xmax Xmin icn dir clr uH uXY udP uF cdvf <cdvfName> cfd <cfdData>",
 	}...)
-	for i, p := range network.paths {
-		nr, pset := strconv.Itoa(i+1), strconv.FormatFloat(p.pressure, 'f', 2, 64)
-		line := "   " + nr + "    "
-		if p.from == -1 {
-			line += "1  -1   " + _getZoneIndex(zones[p.to], network.zones)
-		} else if p.to == -1 {
-			line += "1  -1   " + _getZoneIndex(zones[p.from], network.zones)
-		} else {
-			line += "0   " + _getZoneIndex(zones[p.from], network.zones) + "   " + _getZoneIndex(zones[p.to], network.zones)
+	for i, p := range network.Paths {
+		nr := i + 1
+		contam := ensureMap(p.Contam)
+		flags := mapInt(contam, []string{"flags"}, pathDefaultFlags(p))
+		pzn, pzm := pathZoneRefs(p)
+		if hasMapValue(contam, "pzn") {
+			pzn = mapInt(contam, []string{"pzn"}, pzn)
 		}
-		line += "   " + nr + "   0   0   0   0   0   1   0.000   0.000   0.000 1 " + pset + " 0 -1 0 0 0  27  1 -1 0 0 0 0 0 0"
+		if hasMapValue(contam, "pzm") {
+			pzm = mapInt(contam, []string{"pzm"}, pzm)
+		}
+		pe := mapInt(contam, []string{"pe"}, nr)
+		pf := mapInt(contam, []string{"pf"}, 0)
+		pw := mapInt(contam, []string{"pw"}, 0)
+		pa := mapInt(contam, []string{"pa"}, 0)
+		ps := mapInt(contam, []string{"ps"}, 0)
+		pc := mapInt(contam, []string{"pc"}, 0)
+		pld := mapInt(contam, []string{"pld"}, p.LevelIndex)
+		x := mapFloat(contam, []string{"X"}, p.PositionX)
+		y := mapFloat(contam, []string{"Y"}, p.PositionY)
+		relHt := mapFloat(contam, []string{"relHt"}, p.RelHt)
+		mult := mapFloat(contam, []string{"mult"}, 1.0)
+		wPset := mapFloat(contam, []string{"wPset"}, p.Pressure)
+		wPmod := mapInt(contam, []string{"wPmod"}, 0)
+		wazm := mapInt(contam, []string{"wazm"}, -1)
+		fahs := mapInt(contam, []string{"Fahs"}, 0)
+		xMax := mapFloat(contam, []string{"Xmax"}, 0.0)
+		xMin := mapFloat(contam, []string{"Xmin"}, 0.0)
+		icon := mapInt(contam, []string{"icon"}, 27)
+		dir := mapInt(contam, []string{"dir"}, 1)
+		color := mapInt(contam, []string{"color"}, -1)
+		uHt := mapInt(contam, []string{"u_Ht"}, 0)
+		uXY := mapInt(contam, []string{"u_XY"}, 0)
+		udP := mapInt(contam, []string{"u_dP"}, 0)
+		uF := mapInt(contam, []string{"u_F"}, 0)
+		vfType := mapInt(contam, []string{"vf_type"}, 0)
+		vfNodeName := mapString(contam, []string{"vf_node_name"}, "")
+		cfd := mapInt(contam, []string{"cfd"}, 0)
+		lineParts := []string{
+			strconv.Itoa(nr),
+			strconv.Itoa(flags),
+			strconv.Itoa(pzn),
+			strconv.Itoa(pzm),
+			strconv.Itoa(pe),
+			strconv.Itoa(pf),
+			strconv.Itoa(pw),
+			strconv.Itoa(pa),
+			strconv.Itoa(ps),
+			strconv.Itoa(pc),
+			strconv.Itoa(pld),
+			fmt.Sprintf("%.3f", x),
+			fmt.Sprintf("%.3f", y),
+			fmt.Sprintf("%.3f", relHt),
+			fmt.Sprintf("%.3f", mult),
+			fmt.Sprintf("%.3f", wPset),
+			strconv.Itoa(wPmod),
+			strconv.Itoa(wazm),
+			strconv.Itoa(fahs),
+			fmt.Sprintf("%.3f", xMax),
+			fmt.Sprintf("%.3f", xMin),
+			strconv.Itoa(icon),
+			strconv.Itoa(dir),
+			strconv.Itoa(color),
+			strconv.Itoa(uHt),
+			strconv.Itoa(uXY),
+			strconv.Itoa(udP),
+			strconv.Itoa(uF),
+			strconv.Itoa(vfType),
+		}
+		line := "   " + strings.Join(lineParts, "   ")
+		if vfType != 0 {
+			line += " " + defaultOptionalName(vfNodeName)
+		}
+		line += fmt.Sprintf(" %d", cfd)
 		lines = append(lines, line)
 	}
+
 	lines = append(lines, []string{
 		"-999",
 		"0 ! duct junctions:",
@@ -480,95 +639,91 @@ func generatePrj(prjBaseName string, info globalInfo, network airFlowNetwork) st
 		"-999",
 		"* end project file.",
 	}...)
+
 	var builder strings.Builder
-	for i := 0; i < len(lines); i++ {
-		builder.WriteString(lines[i] + "\n")
+	for _, line := range lines {
+		builder.WriteString(line + "\n")
 	}
-	os.Remove(path.Join(info.directory, prjBaseName))
-	// os.RemoveAll(prjDictionary)
-	// os.Mkdir(prjDictionary, os.ModePerm)
-	file, _ := os.Create(path.Join(info.directory, prjBaseName))
+	fullPath := path.Join(info.directory, prjBaseName)
+	os.Remove(fullPath)
+	file, _ := os.Create(fullPath)
 	io.WriteString(file, builder.String())
-	//return pathList
-	return path.Join(info.directory, prjBaseName)
+	file.Close()
+	return fullPath
 }
 
-// top Func
 func splitPaths(networkInput airFlowNetwork) []airFlowNetwork {
-	paths := networkInput.paths
+	paths := networkInput.Paths
 	used, networks := make([]bool, len(paths)), []airFlowNetwork{}
-	for _getUnusedIndex(used) < len(paths) {
-		// Find an unused flowPath to start
-		startPoint := _getUnusedIndex(used)
-		zoneInNetwork := make([]bool, len(networkInput.zones))
-		subPath := []flowPath{networkInput.paths[startPoint]}
+	for getUnusedIndex(used) < len(paths) {
+		startPoint := getUnusedIndex(used)
+		zoneInNetwork := make([]bool, len(networkInput.Zones))
+		subPath := []flowPath{networkInput.Paths[startPoint]}
 		subZone := make([]zone, 0)
 
-		// Mark startPoint as used
 		used[startPoint] = true
-		if networkInput.paths[startPoint].from >= 0 {
-			zoneInNetwork[networkInput.paths[startPoint].from] = true
+		if networkInput.Paths[startPoint].From >= 0 {
+			zoneInNetwork[networkInput.Paths[startPoint].From] = true
 		}
-		if networkInput.paths[startPoint].to >= 0 {
-			zoneInNetwork[networkInput.paths[startPoint].to] = true
+		if networkInput.Paths[startPoint].To >= 0 {
+			zoneInNetwork[networkInput.Paths[startPoint].To] = true
 		}
 
-		// Iterate until subPath is unchanged
 		for count := 0; count < len(subPath); {
 			count = len(subPath)
-			for i := 0; i < len(networkInput.paths); i++ {
-				if !used[i] {
-					// Test whether this flowPath is connected to a zone in zoneInNetwork
-					fromConnected := networkInput.paths[i].from >= 0 && zoneInNetwork[networkInput.paths[i].from]
-					toConnected := networkInput.paths[i].to >= 0 && zoneInNetwork[networkInput.paths[i].to]
-					if fromConnected || toConnected {
-						// Mark flowPath[i] as used
-						used[i] = true
-						if networkInput.paths[i].to >= 0 {
-							zoneInNetwork[networkInput.paths[i].to] = true
-						}
-						if networkInput.paths[i].from >= 0 {
-							zoneInNetwork[networkInput.paths[i].from] = true
-						}
-						subPath = append(subPath, networkInput.paths[i])
+			for i := 0; i < len(networkInput.Paths); i++ {
+				if used[i] {
+					continue
+				}
+				fromConnected := networkInput.Paths[i].From >= 0 && zoneInNetwork[networkInput.Paths[i].From]
+				toConnected := networkInput.Paths[i].To >= 0 && zoneInNetwork[networkInput.Paths[i].To]
+				if fromConnected || toConnected {
+					used[i] = true
+					if networkInput.Paths[i].To >= 0 {
+						zoneInNetwork[networkInput.Paths[i].To] = true
 					}
+					if networkInput.Paths[i].From >= 0 {
+						zoneInNetwork[networkInput.Paths[i].From] = true
+					}
+					subPath = append(subPath, networkInput.Paths[i])
 				}
 			}
 		}
 
-		// Transform the topology of flowPath according to the new zone index
 		transform := make(map[int]int)
-		for i, _ := range zoneInNetwork {
+		for i := range zoneInNetwork {
 			if zoneInNetwork[i] {
-				subZone = append(subZone, networkInput.zones[i])
+				subZone = append(subZone, networkInput.Zones[i])
 				transform[i] = len(subZone) - 1
 			}
 		}
-		for i, _ := range subPath {
-			if subPath[i].from >= 0 {
-				if v, ok := transform[subPath[i].from]; ok {
-					subPath[i].from = v
+		for i := range subPath {
+			if subPath[i].From >= 0 {
+				if v, ok := transform[subPath[i].From]; ok {
+					subPath[i].From = v
 				} else {
-					subPath[i].from = -1
+					subPath[i].From = -1
 				}
 			}
-			if subPath[i].to >= 0 {
-				if v, ok := transform[subPath[i].to]; ok {
-					subPath[i].to = v
+			if subPath[i].To >= 0 {
+				if v, ok := transform[subPath[i].To]; ok {
+					subPath[i].To = v
 				} else {
-					subPath[i].to = -1
+					subPath[i].To = -1
 				}
 			}
 		}
 
-		// New network
-		networks = append(networks, airFlowNetwork{subZone, subPath})
+		networks = append(networks, airFlowNetwork{
+			SchemaVersion: networkInput.SchemaVersion,
+			Levels:        cloneLevels(networkInput.Levels),
+			Zones:         subZone,
+			Paths:         subPath,
+		})
 	}
-
 	return networks
 }
 
-// assist Func
 func callContam(network airFlowNetwork, prjFile string) string {
 	exePath, err := os.Executable()
 	if err != nil {
@@ -577,99 +732,91 @@ func callContam(network airFlowNetwork, prjFile string) string {
 	exeDir, _ := filepath.EvalSymlinks(filepath.Dir(exePath))
 	simFile := path.Join(filepath.Dir(prjFile), strings.TrimSuffix(path.Base(prjFile), ".prj")+".sim")
 	batFile := path.Join(filepath.Dir(prjFile), strings.TrimSuffix(path.Base(prjFile), ".prj")+".bat")
-	// construct *.bat
 	lines := "cd " + exeDir + "\n"
 	lines += "contam\\contamx3 " + prjFile + "\n"
-	lines += "(echo n && echo y && echo 1-" + strconv.Itoa(len(network.paths)) + ") | simread " + simFile + "\n"
+	lines += "(echo n && echo y && echo 1-" + strconv.Itoa(len(network.Paths)) + ") | simread " + simFile + "\n"
 	os.Remove(batFile)
 	file, _ := os.Create(batFile)
 	io.WriteString(file, lines)
 	file.Close()
-	// 执行bat文件
 	exec.Command(batFile).Run()
 	return path.Join(filepath.Dir(prjFile), strings.TrimSuffix(path.Base(prjFile), ".prj")+".lfr")
 }
 
-// assist Func
-func getIconList(network airFlowNetwork) [][]int {
-	pathCount, zoneCount, iconList, rec := 0, 0, [][]int{}, make(map[string]struct{})
-	for _, p := range network.paths {
-		pathCount++
-		iconList = append(iconList, []int{27, p.row, p.col, pathCount, p.hei})
-		for _, i := range []int{p.from, p.to} {
-			if i == -1 {
+func getLevelIcons(network airFlowNetwork) map[int][][]int {
+	levelIcons := make(map[int][][]int)
+	rec := make(map[string]struct{})
+	for _, p := range network.Paths {
+		level := safeLevelIndex(p.LevelIndex)
+		levelIcons[level] = append(levelIcons[level], []int{27, p.Col, p.Row, pathIconIndex(p)})
+		for _, i := range []int{p.From, p.To} {
+			if i == -1 || i >= len(network.Zones) {
 				continue
 			}
-			z := network.zones[i]
-			c := strconv.Itoa(z.row) + "," + strconv.Itoa(z.col)
-			if _, ok := rec[c]; ok {
-				continue
+			z := network.Zones[i]
+			zoneLevel := safeLevelIndex(z.LevelIndex)
+			c := strconv.Itoa(z.Row) + "," + strconv.Itoa(z.Col) + "," + strconv.Itoa(zoneLevel)
+			if _, ok := rec[c]; !ok {
+				levelIcons[zoneLevel] = append(levelIcons[zoneLevel], []int{5, z.Col, z.Row, i + 1})
+				rec[c] = struct{}{}
 			}
-			zoneCount++
-			iconList = append(iconList, []int{5, z.row, z.col, zoneCount, z.hei})
-			rec[c] = struct{}{}
-			for _, point := range z.points {
-				c = strconv.Itoa(point[0]) + "," + strconv.Itoa(point[1])
+			for _, point := range z.Points {
+				c = strconv.Itoa(point[0]) + "," + strconv.Itoa(point[1]) + "," + strconv.Itoa(zoneLevel)
 				if _, ok := rec[c]; ok {
 					continue
 				}
-				iconList = append(iconList, []int{16, point[0], point[1], 0})
+				levelIcons[zoneLevel] = append(levelIcons[zoneLevel], []int{16, point[1], point[0], 0})
 				rec[c] = struct{}{}
 			}
 		}
 	}
-	sort.Slice(iconList, func(i, j int) bool {
-		if iconList[i][2] < iconList[j][2] {
-			return true
-		} else if iconList[i][2] == iconList[j][2] && iconList[i][1] < iconList[j][1] {
-			return true
-		} else {
-			return false
-		}
-	})
-	return iconList
+	for level := range levelIcons {
+		sort.Slice(levelIcons[level], func(i, j int) bool {
+			if levelIcons[level][i][2] < levelIcons[level][j][2] {
+				return true
+			}
+			return levelIcons[level][i][1] < levelIcons[level][j][1]
+		})
+	}
+	return levelIcons
 }
 
-// assist Func
 func outputResults(network airFlowNetwork, lfrFilePath string) string {
 	airVol := float64(0)
 	airVel := ""
-	airNetwork := make([][]float64, len(network.zones)+1)
-	outdoor := len(network.zones)
+	airNetwork := make([][]float64, len(network.Zones)+1)
+	outdoor := len(network.Zones)
 	isValidZone := func(i int) bool {
-		return i >= 0 && i < len(network.zones)
+		return i >= 0 && i < len(network.Zones)
 	}
-	for i, _ := range airNetwork {
-		airNetwork[i] = make([]float64, len(network.zones)+1)
-		for j, _ := range airNetwork[i] {
-			airNetwork[i][j] = 0
-		}
+	for i := range airNetwork {
+		airNetwork[i] = make([]float64, len(network.Zones)+1)
 	}
 
 	lfrFile, _ := os.ReadFile(lfrFilePath)
 	lfrData := strings.Split(string(lfrFile), "\r\n")
-	for i, p := range network.paths {
+	for i, p := range network.Paths {
 		if i+1 >= len(lfrData) {
 			continue
 		}
-		lfrRow := _getLfrRow(strings.Split(lfrData[i+1], " "))
+		lfrRow := getLfrRow(strings.Split(lfrData[i+1], " "))
 		if len(lfrRow) < 3 || len(lfrRow[2]) == 0 {
 			continue
 		}
 		flow, _ := strconv.ParseFloat(lfrRow[2][:len(lfrRow[2])-1], 64)
-		if p.from == -1 && isValidZone(p.to) {
+		if p.From == -1 && isValidZone(p.To) {
 			if flow > 0 {
 				airVol += flow / 1.205 * 3600
 			}
-			airNetwork[outdoor][p.to] += flow / 1.205 * 3600
-			airNetwork[p.to][outdoor] -= flow / 1.205 * 3600
-		} else if p.to == -1 && isValidZone(p.from) {
-			airNetwork[p.from][outdoor] += flow / 1.205 * 3600
-			airNetwork[outdoor][p.from] -= flow / 1.205 * 3600
-		} else if isValidZone(p.from) && isValidZone(p.to) {
-			airVel += p.username + "," + network.zones[p.from].username + "," + network.zones[p.to].username + "," + fmt.Sprintf("%.2f", p.height*p.width) + "," + fmt.Sprintf("%.2f", flow/(1.205*p.height*p.width)) + "\n"
-			airNetwork[p.from][p.to] += flow / 1.205 * 3600
-			airNetwork[p.to][p.from] -= flow / 1.205 * 3600
+			airNetwork[outdoor][p.To] += flow / 1.205 * 3600
+			airNetwork[p.To][outdoor] -= flow / 1.205 * 3600
+		} else if p.To == -1 && isValidZone(p.From) {
+			airNetwork[p.From][outdoor] += flow / 1.205 * 3600
+			airNetwork[outdoor][p.From] -= flow / 1.205 * 3600
+		} else if isValidZone(p.From) && isValidZone(p.To) {
+			airVel += p.UserName + "," + network.Zones[p.From].UserName + "," + network.Zones[p.To].UserName + "," + fmt.Sprintf("%.2f", p.Height*p.Width) + "," + fmt.Sprintf("%.2f", flow/(1.205*p.Height*p.Width)) + "\n"
+			airNetwork[p.From][p.To] += flow / 1.205 * 3600
+			airNetwork[p.To][p.From] -= flow / 1.205 * 3600
 		}
 	}
 	resultStr := ""
@@ -681,40 +828,48 @@ func outputResults(network airFlowNetwork, lfrFilePath string) string {
 		resultStr += airVel[:len(airVel)-1]
 	}
 	resultStr += "!ZONE AIR FLOW NETWORK (AIR CHANGE PER HOUR, ACH)\n"
-
 	resultStr += "!ZONE NAME,\t"
-	for _, z := range network.zones {
-		resultStr += "," + z.username
+	for _, z := range network.Zones {
+		resultStr += "," + z.UserName
 	}
 	resultStr += ",outdoor(amt)\n"
-
 	resultStr += "!\t,FROM\\TO"
-	for _, z := range network.zones {
-		resultStr += "," + z.prjname
+	for _, z := range network.Zones {
+		resultStr += "," + z.PrjName
 	}
 	resultStr += ",outdoor(amt)\n"
-
-	for i, _ := range network.zones {
-		resultStr += network.zones[i].username + "," + network.zones[i].prjname
-		for j, _ := range airNetwork[i] {
+	for i := range network.Zones {
+		resultStr += network.Zones[i].UserName + "," + network.Zones[i].PrjName
+		for j := range airNetwork[i] {
 			resultStr += "," + fmt.Sprintf("%.2f", airNetwork[i][j])
 		}
 		resultStr += "\n"
 	}
 	resultStr += "\t,outdoor(amt)"
-	for j, _ := range airNetwork[len(network.zones)] {
-		resultStr += "," + fmt.Sprintf("%.2f", airNetwork[len(network.zones)][j])
+	for j := range airNetwork[len(network.Zones)] {
+		resultStr += "," + fmt.Sprintf("%.2f", airNetwork[len(network.Zones)][j])
 	}
 	resultStr += "\n"
 	return resultStr
 }
 
-// nested Func
-func _MtoCM(char string) int {
+func mToCMString(char string) int {
 	data, _ := strconv.ParseFloat(char, 64)
 	return int(math.Floor(data * 100))
 }
-func _getUnusedIndex(used []bool) int {
+
+func mToCM(value float64) int {
+	return int(math.Floor(value * 100))
+}
+
+func toKelvin(value float64) float64 {
+	if value < 273.15 {
+		return value + 273.15
+	}
+	return value
+}
+
+func getUnusedIndex(used []bool) int {
 	for i := 0; i < len(used); i++ {
 		if !used[i] {
 			return i
@@ -722,15 +877,8 @@ func _getUnusedIndex(used []bool) int {
 	}
 	return len(used)
 }
-func _getZoneIndex(to zone, zoneList []zone) string {
-	for i, z := range zoneList {
-		if z.row == to.row && z.col == to.col && z.hei == to.hei {
-			return strconv.Itoa(i + 1)
-		}
-	}
-	return ""
-}
-func _getLfrRow(strs []string) []string {
+
+func getLfrRow(strs []string) []string {
 	res := []string{}
 	for _, v := range strs {
 		if len(v) > 4 {
@@ -738,4 +886,733 @@ func _getLfrRow(strs []string) []string {
 		}
 	}
 	return res
+}
+
+func parseBoundaryPoints(boundary string) [][]int {
+	points := [][]int{}
+	pointstring := strings.Fields(boundary)
+	for i := 0; i+1 < len(pointstring); i += 2 {
+		points = append(points, []int{mToCMString(pointstring[i]), mToCMString(pointstring[i+1])})
+	}
+	return points
+}
+
+func ensureMap(value map[string]any) map[string]any {
+	if value == nil {
+		return map[string]any{}
+	}
+	return value
+}
+
+func cloneMap(src map[string]any) map[string]any {
+	if src == nil {
+		return map[string]any{}
+	}
+	dst := make(map[string]any, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
+func toFloat(value any) (float64, bool) {
+	switch v := value.(type) {
+	case float64:
+		return v, true
+	case float32:
+		return float64(v), true
+	case int:
+		return float64(v), true
+	case int64:
+		return float64(v), true
+	case int32:
+		return float64(v), true
+	case json.Number:
+		f, err := v.Float64()
+		if err == nil {
+			return f, true
+		}
+		return 0, false
+	default:
+		return 0, false
+	}
+}
+
+func decodeLevels(raw any) []levelData {
+	if raw == nil {
+		return nil
+	}
+	levelRows, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	levels := make([]levelData, 0, len(levelRows))
+	for idx, row := range levelRows {
+		item, ok := row.(map[string]any)
+		if !ok {
+			continue
+		}
+		nr := mapInt(item, []string{"nr"}, idx+1)
+		levels = append(levels, levelData{
+			Nr:    nr,
+			RefHt: mapFloat(item, []string{"refht"}, 0.0),
+			DelHt: mapFloat(item, []string{"delht"}, 3.0),
+			Name:  defaultLevelName(mapString(item, []string{"name"}, ""), nr),
+		})
+	}
+	return levels
+}
+
+func decodeZonePayloads(raw any) []zonePayload {
+	items := make([]zonePayload, 0)
+	switch typed := raw.(type) {
+	case map[string]any:
+		for key, value := range typed {
+			item, ok := value.(map[string]any)
+			if !ok {
+				continue
+			}
+			userName := mapString(item, []string{"userName"}, key)
+			items = append(items, zonePayload{
+				UserName:    userName,
+				Temperature: mapFloat(item, []string{"temperature"}, 27.0),
+				PrjIndex:    mapInt(item, []string{"prjIndex"}, 0),
+				PrjName:     mapString(item, []string{"prjName"}, ""),
+				HeatLoad:    mapFloat(item, []string{"heatLoad"}, 0.0),
+				Volume:      mapFloat(item, []string{"volume"}, 0.0),
+				PositionX:   mapFloat(item, []string{"position_x"}, 0.0),
+				PositionY:   mapFloat(item, []string{"position_y"}, 0.0),
+				PositionZ:   mapFloat(item, []string{"position_z"}, 0.0),
+				Boundary:    mapString(item, []string{"boundary"}, ""),
+				Level:       mapFloat(item, []string{"level"}, 0.0),
+				LevelIndex:  mapInt(item, []string{"levelIndex"}, 1),
+				RelHt:       mapFloat(item, []string{"relHt"}, 0.0),
+				Contam:      mapAny(item, []string{"contam"}),
+			})
+		}
+	case []any:
+		for _, value := range typed {
+			item, ok := value.(map[string]any)
+			if !ok {
+				continue
+			}
+			items = append(items, zonePayload{
+				UserName:    mapString(item, []string{"userName"}, ""),
+				Temperature: mapFloat(item, []string{"temperature"}, 27.0),
+				PrjIndex:    mapInt(item, []string{"prjIndex"}, 0),
+				PrjName:     mapString(item, []string{"prjName"}, ""),
+				HeatLoad:    mapFloat(item, []string{"heatLoad"}, 0.0),
+				Volume:      mapFloat(item, []string{"volume"}, 0.0),
+				PositionX:   mapFloat(item, []string{"position_x"}, 0.0),
+				PositionY:   mapFloat(item, []string{"position_y"}, 0.0),
+				PositionZ:   mapFloat(item, []string{"position_z"}, 0.0),
+				Boundary:    mapString(item, []string{"boundary"}, ""),
+				Level:       mapFloat(item, []string{"level"}, 0.0),
+				LevelIndex:  mapInt(item, []string{"levelIndex"}, 1),
+				RelHt:       mapFloat(item, []string{"relHt"}, 0.0),
+				Contam:      mapAny(item, []string{"contam"}),
+			})
+		}
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		left := items[i].PrjIndex
+		right := items[j].PrjIndex
+		if left == right {
+			return items[i].UserName < items[j].UserName
+		}
+		if left <= 0 {
+			return false
+		}
+		if right <= 0 {
+			return true
+		}
+		return left < right
+	})
+	return items
+}
+
+func decodePathPayloads(raw any) []pathPayload {
+	items := make([]pathPayload, 0)
+	switch typed := raw.(type) {
+	case map[string]any:
+		for key, value := range typed {
+			item, ok := value.(map[string]any)
+			if !ok {
+				continue
+			}
+			userName := mapString(item, []string{"userName"}, key)
+			items = append(items, pathPayload{
+				UserName:   userName,
+				PathType:   mapString(item, []string{"pathType"}, ""),
+				PrjIndex:   mapInt(item, []string{"prjIndex"}, 0),
+				PathHeight: mapFloat(item, []string{"pathHeight"}, 0.0),
+				PathWidth:  mapFloat(item, []string{"pathWidth"}, 0.0),
+				PositionX:  mapFloat(item, []string{"position_x"}, 0.0),
+				PositionY:  mapFloat(item, []string{"position_y"}, 0.0),
+				PositionZ:  mapFloat(item, []string{"position_z"}, 0.0),
+				FromZone:   mapInt(item, []string{"fromZone"}, -1),
+				ToZone:     mapInt(item, []string{"toZone"}, -1),
+				Pressure:   mapFloat(item, []string{"pressure"}, 0.0),
+				WinType:    mapInt(item, []string{"winType"}, 1),
+				Level:      mapFloat(item, []string{"level"}, 0.0),
+				LevelIndex: mapInt(item, []string{"levelIndex"}, 1),
+				RelHt:      mapFloat(item, []string{"relHt"}, 0.0),
+				Contam:     mapAny(item, []string{"contam"}),
+				Element:    mapAny(item, []string{"element"}),
+			})
+		}
+	case []any:
+		for _, value := range typed {
+			item, ok := value.(map[string]any)
+			if !ok {
+				continue
+			}
+			items = append(items, pathPayload{
+				UserName:   mapString(item, []string{"userName"}, ""),
+				PathType:   mapString(item, []string{"pathType"}, ""),
+				PrjIndex:   mapInt(item, []string{"prjIndex"}, 0),
+				PathHeight: mapFloat(item, []string{"pathHeight"}, 0.0),
+				PathWidth:  mapFloat(item, []string{"pathWidth"}, 0.0),
+				PositionX:  mapFloat(item, []string{"position_x"}, 0.0),
+				PositionY:  mapFloat(item, []string{"position_y"}, 0.0),
+				PositionZ:  mapFloat(item, []string{"position_z"}, 0.0),
+				FromZone:   mapInt(item, []string{"fromZone"}, -1),
+				ToZone:     mapInt(item, []string{"toZone"}, -1),
+				Pressure:   mapFloat(item, []string{"pressure"}, 0.0),
+				WinType:    mapInt(item, []string{"winType"}, 1),
+				Level:      mapFloat(item, []string{"level"}, 0.0),
+				LevelIndex: mapInt(item, []string{"levelIndex"}, 1),
+				RelHt:      mapFloat(item, []string{"relHt"}, 0.0),
+				Contam:     mapAny(item, []string{"contam"}),
+				Element:    mapAny(item, []string{"element"}),
+			})
+		}
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		left := items[i].PrjIndex
+		right := items[j].PrjIndex
+		if left == right {
+			return items[i].UserName < items[j].UserName
+		}
+		if left <= 0 {
+			return false
+		}
+		if right <= 0 {
+			return true
+		}
+		return left < right
+	})
+	return items
+}
+
+func completeLevels(levels []levelData, zones []zonePayload) []levelData {
+	if len(levels) == 0 {
+		values := make([]float64, 0, len(zones))
+		for _, z := range zones {
+			values = append(values, z.Level)
+		}
+		return buildLevels(values)
+	}
+	out := cloneLevels(levels)
+	sort.Slice(out, func(i, j int) bool { return out[i].RefHt < out[j].RefHt })
+	for i := range out {
+		if out[i].Nr <= 0 {
+			out[i].Nr = i + 1
+		}
+		if strings.TrimSpace(out[i].Name) == "" {
+			out[i].Name = fmt.Sprintf("<%d>", out[i].Nr)
+		}
+		if i < len(out)-1 {
+			out[i].DelHt = out[i+1].RefHt - out[i].RefHt
+		} else if len(out) > 1 && out[i].DelHt == 0 {
+			out[i].DelHt = out[i-1].DelHt
+		} else if out[i].DelHt == 0 {
+			out[i].DelHt = 3.0
+		}
+	}
+	return out
+}
+
+func buildLevels(values []float64) []levelData {
+	if len(values) == 0 {
+		return []levelData{{Nr: 1, RefHt: 0.0, DelHt: 3.0, Name: "<1>"}}
+	}
+	uniqMap := make(map[string]float64)
+	for _, value := range values {
+		key := fmt.Sprintf("%.6f", value)
+		uniqMap[key] = value
+	}
+	uniq := make([]float64, 0, len(uniqMap))
+	for _, value := range uniqMap {
+		uniq = append(uniq, value)
+	}
+	sort.Float64s(uniq)
+	levels := make([]levelData, len(uniq))
+	for i, ref := range uniq {
+		del := 3.0
+		if i < len(uniq)-1 {
+			del = uniq[i+1] - ref
+		} else if len(uniq) > 1 {
+			del = uniq[len(uniq)-1] - uniq[len(uniq)-2]
+		}
+		if del == 0 {
+			del = 3.0
+		}
+		levels[i] = levelData{Nr: i + 1, RefHt: ref, DelHt: del, Name: fmt.Sprintf("<%d>", i+1)}
+	}
+	return levels
+}
+
+func inferLevelIndex(level float64, levels []levelData) int {
+	for _, item := range levels {
+		if math.Abs(item.RefHt-level) < 1e-6 {
+			return item.Nr
+		}
+	}
+	return 1
+}
+
+func oneBasedToZero(value int) int {
+	if value <= -1 {
+		return -1
+	}
+	return value - 1
+}
+
+func ifZeroBasedToOneBased(value int) int {
+	if value <= -1 {
+		return -1
+	}
+	return value + 1
+}
+
+func pathOperable(element map[string]any) float64 {
+	return math.Max(0.0, mapFloat(element, []string{"operable"}, 1.0))
+}
+
+func defaultPathElement(p flowPath, nr int) map[string]any {
+	element := ensureMap(p.Element)
+	op := pathOperable(element)
+	h := math.Max(0.0, p.Height)
+	w := math.Max(0.0, p.Width)
+	isLeakage := strings.EqualFold(strings.TrimSpace(p.PathType), "leakage")
+	_, autoGenerated := element["_autoGenerated"].(bool)
+	scaleOperable := !isLeakage && autoGenerated
+	if scaleOperable {
+		h *= op
+		w *= op
+	}
+	denom := h + w
+	lam := 0.0
+	if denom > 1e-12 {
+		lam = h * w * h * w / denom * 0.02028
+	}
+	turb := h * w * 0.551543
+	dtype := mapString(element, []string{"dtype"}, "")
+	if strings.TrimSpace(dtype) == "" {
+		if strings.EqualFold(strings.TrimSpace(p.PathType), "leakage") {
+			dtype = "plr_leak3"
+		} else if p.WinType == 1 {
+			dtype = "dor_pl2"
+		} else {
+			dtype = "plr_conn"
+		}
+	}
+	name := mapString(element, []string{"name"}, "")
+	if strings.TrimSpace(name) == "" {
+		name = fmt.Sprintf("p%d", nr)
+	}
+	result := map[string]any{
+		"icon":     mapInt(element, []string{"icon"}, 27),
+		"dtype":    strings.TrimSpace(dtype),
+		"name":     name,
+		"desc":     mapString(element, []string{"desc"}, ""),
+		"operable": op,
+		"lam":      mapFloat(element, []string{"lam"}, lam),
+		"turb":     mapFloat(element, []string{"turb"}, turb),
+		"expt": mapFloat(element, []string{"expt"}, func() float64 {
+			if strings.EqualFold(strings.TrimSpace(dtype), "plr_leak3") {
+				return 0.65
+			}
+			return 0.5
+		}()),
+	}
+	switch result["dtype"] {
+	case "dor_pl2":
+		result["dH"] = mapFloat(element, []string{"dH"}, h*0.222222)
+		result["ht"] = mapFloat(element, []string{"ht"}, h)
+		result["wd"] = mapFloat(element, []string{"wd"}, w)
+		result["cd"] = mapFloat(element, []string{"cd"}, 0.78)
+		result["u_H"] = mapInt(element, []string{"u_H"}, 0)
+		result["u_W"] = mapInt(element, []string{"u_W"}, 0)
+	case "plr_leak1", "plr_leak2", "plr_leak3":
+		result["coef"] = mapFloat(element, []string{"coef"}, 1.0)
+		result["pres"] = mapFloat(element, []string{"pres"}, 4.0)
+		result["area1"] = mapFloat(element, []string{"area1"}, 0.0)
+		result["area2"] = mapFloat(element, []string{"area2"}, 0.0)
+		defaultArea := mapFloat(element, []string{"area3"}, 1e-5)
+		result["area3"] = defaultArea
+		result["u_A1"] = mapInt(element, []string{"u_A1"}, 0)
+		result["u_A2"] = mapInt(element, []string{"u_A2"}, 0)
+		result["u_A3"] = mapInt(element, []string{"u_A3"}, 0)
+		result["u_dP"] = mapInt(element, []string{"u_dP"}, 0)
+	case "plr_conn":
+		result["area"] = mapFloat(element, []string{"area"}, h*w)
+		result["coef"] = mapFloat(element, []string{"coef"}, 0.65)
+		result["u_A"] = mapInt(element, []string{"u_A"}, 0)
+	}
+	for key, value := range element {
+		result[key] = value
+	}
+	if scaleOperable {
+		switch result["dtype"] {
+		case "dor_pl2":
+			result["dH"] = h * 0.222222
+			result["ht"] = h
+			result["wd"] = w
+			result["cd"] = mapFloat(element, []string{"cd"}, 0.78)
+			result["lam"] = lam
+			result["turb"] = turb
+		case "plr_conn":
+			result["area"] = h * w
+			result["lam"] = lam
+			result["turb"] = turb
+		}
+	}
+	return result
+}
+
+func buildFlowElementLines(nr int, p flowPath) []string {
+	element := defaultPathElement(p, nr)
+	dtype := strings.TrimSpace(mapString(element, []string{"dtype"}, "plr_conn"))
+	icon := mapInt(element, []string{"icon"}, 27)
+	name := mapString(element, []string{"name"}, fmt.Sprintf("p%d", nr))
+	desc := mapString(element, []string{"desc"}, "")
+	lines := []string{
+		fmt.Sprintf("%d %d %s %s", nr, icon, dtype, name),
+		desc,
+	}
+	switch dtype {
+	case "plr_orfc":
+		lines = append(lines, formatElementLine(element, []string{"lam", "turb", "expt", "area", "dia", "coef", "Re", "u_A", "u_D"}))
+	case "plr_leak1", "plr_leak2", "plr_leak3":
+		lineElement := cloneMap(element)
+		h := math.Max(0.0, p.Height)
+		w := math.Max(0.0, p.Width)
+		if area3, ok := lineElement["area3"]; ok {
+			if v, ok := toFloat(area3); ok {
+				lineElement["area3"] = v * h * w
+			}
+		}
+		if area1, ok := lineElement["area1"]; ok {
+			if v, ok := toFloat(area1); ok {
+				lineElement["area1"] = v * h * w
+			}
+		}
+		if area2, ok := lineElement["area2"]; ok {
+			if v, ok := toFloat(area2); ok {
+				lineElement["area2"] = v * h * w
+			}
+		}
+		lines = append(lines, formatElementLine(lineElement, []string{"lam", "turb", "expt", "coef", "pres", "area1", "area2", "area3", "u_A1", "u_A2", "u_A3", "u_dP"}))
+	case "plr_conn":
+		lines = append(lines, formatElementLine(element, []string{"lam", "turb", "expt", "area", "coef", "u_A"}))
+	case "plr_qcn", "plr_fcn":
+		lines = append(lines, formatElementLine(element, []string{"lam", "turb", "expt"}))
+	case "plr_test1":
+		lines = append(lines, formatElementLine(element, []string{"lam", "turb", "expt", "dP", "Flow", "u_P", "u_F"}))
+	case "plr_test2":
+		lines = append(lines, formatElementLine(element, []string{"lam", "turb", "expt", "dP1", "F1", "dP2", "F2", "u_P1", "u_F1", "u_P2", "u_F2"}))
+	case "plr_crack":
+		lines = append(lines, formatElementLine(element, []string{"lam", "turb", "expt", "length", "width", "u_L", "u_W"}))
+	case "plr_stair":
+		lines = append(lines, formatElementLine(element, []string{"lam", "turb", "expt", "Ht", "Area", "peo", "tread", "u_A", "u_D"}))
+	case "plr_shaft":
+		lines = append(lines, formatElementLine(element, []string{"lam", "turb", "expt", "Ht", "area", "perim", "rough", "u_A", "u_D", "u_P", "u_R"}))
+	case "plr_bdq", "plr_bdf":
+		lines = append(lines, formatElementLine(element, []string{"lam", "Cp", "xp", "Cn", "xn"}))
+	case "qfr_qab", "qfr_fab":
+		lines = append(lines, formatElementLine(element, []string{"a", "b"}))
+	case "qfr_crack":
+		lines = append(lines, formatElementLine(element, []string{"a", "b", "length", "width", "depth", "nB", "u_L", "u_W", "u_D"}))
+	case "qfr_test2":
+		lines = append(lines, formatElementLine(element, []string{"a", "b", "dP1", "F1", "dP2", "F2", "u_P1", "u_F1", "u_P2", "u_F2"}))
+	case "dor_door":
+		lines = append(lines, formatElementLine(element, []string{"lam", "turb", "expt", "dTmin", "ht", "wd", "cd", "u_T", "u_H", "u_W"}))
+	case "dor_pl2":
+		lines = append(lines, formatElementLine(element, []string{"lam", "turb", "expt", "dH", "ht", "wd", "cd", "u_H", "u_W"}))
+	case "fan_cmf", "fan_cvf":
+		lines = append(lines, formatElementLine(element, []string{"Flow", "u_F"}))
+	case "fan_fan":
+		lines = append(lines, formatElementLine(element, []string{"lam", "turb", "expt", "rdens", "fdf", "sop", "off"}))
+		fpc := mapFloatSlice(element, []string{"fpc"}, 4)
+		npts := len(mapSliceOfMap(element, []string{"points"}))
+		line2 := []string{
+			formatFloat(fpc[0]), formatFloat(fpc[1]), formatFloat(fpc[2]), formatFloat(fpc[3]),
+			strconv.Itoa(mapInt(element, []string{"npts"}, npts)),
+			formatFloat(mapFloat(element, []string{"Sarea"}, 0.0)),
+			strconv.Itoa(mapInt(element, []string{"u_Sa"}, 0)),
+		}
+		lines = append(lines, " "+strings.Join(line2, " "))
+		for _, point := range mapSliceOfMap(element, []string{"points"}) {
+			lines = append(lines, formatElementLine(point, []string{"mF", "u_mF", "dP", "u_dP", "rP", "u_rP"}))
+		}
+	case "csf_fsp", "csf_qsp", "csf_psf", "csf_psq":
+		points := mapSliceOfMap(element, []string{"points"})
+		lines = append(lines, fmt.Sprintf(" %d %d %d",
+			mapInt(element, []string{"npts"}, len(points)),
+			mapInt(element, []string{"u_x"}, 0),
+			mapInt(element, []string{"u_y"}, 0),
+		))
+		for _, point := range points {
+			lines = append(lines, formatElementLine(point, []string{"x", "y"}))
+		}
+	case "sup_afe":
+		subElements := mapSliceOfMap(element, []string{"subElements"})
+		lines = append(lines, fmt.Sprintf(" %d %d %d",
+			mapInt(element, []string{"nse"}, len(subElements)),
+			mapInt(element, []string{"sched"}, 0),
+			mapInt(element, []string{"u_H"}, 0),
+		))
+		for _, sub := range subElements {
+			lines = append(lines, formatElementLine(sub, []string{"nr", "relHt", "filt"}))
+		}
+	default:
+		lines = append(lines, formatElementLine(element, []string{"lam", "turb", "expt"}))
+	}
+	return lines
+}
+
+func formatElementLine(data map[string]any, keys []string) string {
+	values := make([]string, 0, len(keys))
+	for _, key := range keys {
+		if looksLikeIntField(key) {
+			values = append(values, strconv.Itoa(mapInt(data, []string{key}, 0)))
+		} else {
+			values = append(values, formatFloat(mapFloat(data, []string{key}, 0.0)))
+		}
+	}
+	return " " + strings.Join(values, " ")
+}
+
+func looksLikeIntField(key string) bool {
+	switch key {
+	case "u_A", "u_D", "u_A1", "u_A2", "u_A3", "u_dP", "u_P", "u_F", "u_L", "u_W", "u_R",
+		"u_T", "u_H", "u_P1", "u_F1", "u_P2", "u_F2", "u_Sa", "u_x", "u_y",
+		"npts", "nB", "tread", "nse", "sched", "nr", "filt":
+		return true
+	}
+	return false
+}
+
+func formatFloat(value float64) string {
+	return strconv.FormatFloat(value, 'f', 6, 64)
+}
+
+func cloneLevels(levels []levelData) []levelData {
+	out := make([]levelData, len(levels))
+	copy(out, levels)
+	return out
+}
+
+func pathDefaultFlags(p flowPath) int {
+	if p.From == -1 || p.To == -1 {
+		return 1
+	}
+	return 0
+}
+
+func pathZoneRefs(p flowPath) (int, int) {
+	if p.From == -1 {
+		return -1, p.To + 1
+	}
+	if p.To == -1 {
+		return -1, p.From + 1
+	}
+	return p.From + 1, p.To + 1
+}
+
+func hasMapValue(data map[string]any, key string) bool {
+	if data == nil {
+		return false
+	}
+	value, ok := data[key]
+	if !ok {
+		return false
+	}
+	if text, ok := value.(string); ok {
+		return strings.TrimSpace(text) != ""
+	}
+	return true
+}
+
+func mapInt(data map[string]any, keys []string, defaultValue int) int {
+	for _, key := range keys {
+		if data == nil {
+			break
+		}
+		value, ok := data[key]
+		if !ok || value == nil {
+			continue
+		}
+		switch v := value.(type) {
+		case float64:
+			return int(math.Round(v))
+		case int:
+			return v
+		case string:
+			if strings.TrimSpace(v) == "" {
+				continue
+			}
+			if parsed, err := strconv.Atoi(v); err == nil {
+				return parsed
+			}
+			if parsed, err := strconv.ParseFloat(v, 64); err == nil {
+				return int(math.Round(parsed))
+			}
+		}
+	}
+	return defaultValue
+}
+
+func mapFloat(data map[string]any, keys []string, defaultValue float64) float64 {
+	for _, key := range keys {
+		if data == nil {
+			break
+		}
+		value, ok := data[key]
+		if !ok || value == nil {
+			continue
+		}
+		switch v := value.(type) {
+		case float64:
+			return v
+		case int:
+			return float64(v)
+		case string:
+			if strings.TrimSpace(v) == "" {
+				continue
+			}
+			if parsed, err := strconv.ParseFloat(v, 64); err == nil {
+				return parsed
+			}
+		}
+	}
+	return defaultValue
+}
+
+func mapAny(data map[string]any, keys []string) map[string]any {
+	for _, key := range keys {
+		if data == nil {
+			break
+		}
+		value, ok := data[key]
+		if !ok || value == nil {
+			continue
+		}
+		if result, ok := value.(map[string]any); ok {
+			return result
+		}
+	}
+	return map[string]any{}
+}
+
+func mapSliceOfMap(data map[string]any, keys []string) []map[string]any {
+	for _, key := range keys {
+		if data == nil {
+			break
+		}
+		value, ok := data[key]
+		if !ok || value == nil {
+			continue
+		}
+		rows, ok := value.([]any)
+		if !ok {
+			continue
+		}
+		result := make([]map[string]any, 0, len(rows))
+		for _, row := range rows {
+			if item, ok := row.(map[string]any); ok {
+				result = append(result, item)
+			}
+		}
+		return result
+	}
+	return []map[string]any{}
+}
+
+func mapFloatSlice(data map[string]any, keys []string, size int) []float64 {
+	result := make([]float64, size)
+	for _, key := range keys {
+		if data == nil {
+			break
+		}
+		value, ok := data[key]
+		if !ok || value == nil {
+			continue
+		}
+		rows, ok := value.([]any)
+		if !ok {
+			continue
+		}
+		for i := 0; i < size && i < len(rows); i++ {
+			switch v := rows[i].(type) {
+			case float64:
+				result[i] = v
+			case int:
+				result[i] = float64(v)
+			case string:
+				if parsed, err := strconv.ParseFloat(strings.TrimSpace(v), 64); err == nil {
+					result[i] = parsed
+				}
+			}
+		}
+		break
+	}
+	return result
+}
+
+func mapString(data map[string]any, keys []string, defaultValue string) string {
+	for _, key := range keys {
+		if data == nil {
+			break
+		}
+		value, ok := data[key]
+		if !ok || value == nil {
+			continue
+		}
+		text := fmt.Sprintf("%v", value)
+		if strings.TrimSpace(text) != "" {
+			return text
+		}
+	}
+	return defaultValue
+}
+
+func defaultLevelName(name string, nr int) string {
+	if strings.TrimSpace(name) == "" {
+		return fmt.Sprintf("<%d>", nr)
+	}
+	return name
+}
+
+func defaultOptionalName(name string) string {
+	if strings.TrimSpace(name) == "" {
+		return "<null>"
+	}
+	return name
+}
+
+func safeLevelIndex(value int) int {
+	if value <= 0 {
+		return 1
+	}
+	return value
+}
+
+func pathIconIndex(p flowPath) int {
+	if p.PrjIndex > 0 {
+		return p.PrjIndex
+	}
+	return 0
 }

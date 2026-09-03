@@ -9,7 +9,14 @@ from ..radiation import modelRadiation, writeRadGeo, rayTest
 from ...utils import np, path, os
 from ...utils.date import DateTime
 from numpy.linalg import LinAlgError
-from ..airflow.network import AfnNetwork, buildPrj, buildZoneInfoFile, AfnPath, AfnZone
+from ..airflow.network import (
+    NETWORK_SCHEMA_VERSION,
+    AfnNetwork,
+    buildPrj,
+    buildZoneInfoFile,
+    AfnPath,
+    AfnZone,
+)
 from ..airflow.runner import (
     VentPaths,
     iterateFile,
@@ -69,11 +76,11 @@ class EnergyAirflowCoupler(object):
                     "zone_equipment", "zone_lighting", "zone_infiltration", "zone_nightACH", "zone_name",
                     "zone_summerrad", "zone_winterrad", "zone_template"
                     ]
-    AFN_INDEX = ['userName', 'temperature', 'prjIndex', 'heatLoad', 'volume', 'position_x', 'position_y', 'position_z',
-                 'boundary']
+    AFN_INDEX = ['userName', 'temperature', 'prjIndex', 'prjName', 'heatLoad', 'volume', 'position_x', 'position_y',
+                 'position_z', 'boundary', 'level', 'levelIndex', 'relHt', 'contam']
     LPG_OUTSIDE_NODE = "OUTSIDE"
     LPG_ZONE_FIELDS = ("zone_wallU", "zone_winU", "zone_win_SHGC")
-    LPG_PATH_FIELDS = ("pathHeight", "pathWidth", "pressure")
+    LPG_PATH_FIELDS = ("pathHeight", "pathWidth", "pressure", "pathType")
 
     def __init__(self, model: MoosasModel, weather: WeatherData,
                  cumulative_sky_matrix, schedulePath=None):
@@ -114,18 +121,24 @@ class EnergyAirflowCoupler(object):
         t0 = time.time()
         rays = []
         fixMatrix = []
+        ray_paths = []
         for ps in self.paths:
+            if self._is_leakage_path_dict(ps.toDict()):
+                self.pathRadIntensity[ps.userName] = [0.0] * 8760
+                continue
             origin = Vector(ps.position_x, ps.position_y, ps.position_z)
             thisRays = [Ray(origin, pos) for pos in self.skySeries[0].positions]
             rays += thisRays
-            fixMatrix.append(np.array([abs(Vector.dot(ps.element.normal, r.direction)) for r in thisRays]))
-        rays = np.array(rays)
-        geo_path = writeRadGeo(model)
-        resRay = rayTest(rays, geo_path=geo_path)
-        resRay = np.array([1.0 if r is not None else 0 for r in resRay])
-        resRay = resRay.reshape(len(self.paths), int(len(resRay) / len(self.paths)))
+            fixMatrix.append(np.array([abs(Vector.dot(ps.geometry.normal, r.direction)) for r in thisRays]))
+            ray_paths.append(ps)
+        if ray_paths:
+            rays = np.array(rays)
+            geo_path = writeRadGeo(model)
+            resRay = rayTest(rays, geo_path=geo_path)
+            resRay = np.array([1.0 if r is not None else 0 for r in resRay])
+            resRay = resRay.reshape(len(ray_paths), int(len(resRay) / len(ray_paths)))
 
-        for i, ps in enumerate(self.paths):
+        for i, ps in enumerate(ray_paths):
             for sky in self.skySeries:
                 self.pathRadIntensity[ps.userName].append(np.sum(resRay[i] * sky.values * fixMatrix[i]) * 1000)
         print("-----------------------\nNetwork Ready...\n-----------------------")
@@ -248,18 +261,22 @@ class EnergyAirflowCoupler(object):
             prjDict[str(idx)] = zUserName
 
         for ps in self.networkDict['paths'].values():
+            if self._is_leakage_path_dict(ps):
+                continue
             # Keep AFN heatload power baseline fixed at the initial hour.
             pid = ps["userName"]
             if pid not in self.pathRadIntensity:
                 self.pathRadIntensity[pid] = [0.0] * 8760
             radHeat = self.pathRadIntensity[pid][hoy] * float(ps['pathHeight']) * float(ps['pathWidth'])
-            if ps["fromZone"] != "-1":
-                zUserName = prjDict.get(ps["fromZone"])
+            from_zone = self._coerce_zone_ref(ps.get("fromZone"))
+            to_zone = self._coerce_zone_ref(ps.get("toZone"))
+            if from_zone != -1:
+                zUserName = prjDict.get(from_zone)
                 if zUserName is not None:
                     self.networkDict['zones'][zUserName]['zone_radHeat'] += radHeat
                     self.networkDict['zones'][zUserName]['heatLoad'] += radHeat
-            elif ps["toZone"] != "-1":
-                zUserName = prjDict.get(ps["toZone"])
+            elif to_zone != -1:
+                zUserName = prjDict.get(to_zone)
                 if zUserName is not None:
                     self.networkDict['zones'][zUserName]['zone_radHeat'] += radHeat
                     self.networkDict['zones'][zUserName]['heatLoad'] += radHeat
@@ -298,7 +315,48 @@ class EnergyAirflowCoupler(object):
                     zoneDict[zone_id][key] = z.params[key]
         energyDict['paths'] = pathDict
         energyDict['zones'] = zoneDict
+        energyDict['schemaVersion'] = NETWORK_SCHEMA_VERSION
+        energyDict['levels'] = [dict(level) for level in network.levels]
         return energyDict
+
+    @staticmethod
+    def _coerce_zone_ref(value):
+        if value is None:
+            return -1
+        return int(round(float(value)))
+
+    def prj(self, networkDict=None, prjFilePath=None, networkFilePath=None, split=False,
+            t0=25, windVector=None, airDensity=1.205, alpha=0.22,
+            simulate=False, resultFile=None):
+        if networkDict is not None:
+            self.networkDict = self._normalize_energy_schedule_fields_in_dict(networkDict)
+        else:
+            self._normalize_energy_schedule_fields_in_dict(self.networkDict)
+        return buildPrj(
+            model=self.model,
+            prjFilePath=prjFilePath,
+            networkFilePath=networkFilePath,
+            split=split,
+            t0=t0,
+            windVector=windVector,
+            airDensity=airDensity,
+            alpha=alpha,
+            simulate=simulate,
+            resultFile=resultFile,
+            networkDict=self.networkDict,
+        )
+
+    def zoneInfo(self, networkDict=None, zoneInfoFilePath=None, networkFilePath=None):
+        if networkDict is not None:
+            self.networkDict = self._normalize_energy_schedule_fields_in_dict(networkDict)
+        else:
+            self._normalize_energy_schedule_fields_in_dict(self.networkDict)
+        return buildZoneInfoFile(
+            model=self.model,
+            networkDict=self.networkDict,
+            zoneInfoFilePath=zoneInfoFilePath,
+            networkFilePath=networkFilePath,
+        )
 
     @staticmethod
     def _energy_zone_template_type(zone_dict: dict) -> str:
@@ -450,6 +508,8 @@ class EnergyAirflowCoupler(object):
             )
 
         for path_key, path_value in paths.items():
+            if self._is_leakage_path_dict(path_value):
+                continue
             from_zone = str(path_value.get("fromZone"))
             to_zone = str(path_value.get("toZone"))
             if from_zone == "-1":
@@ -476,6 +536,7 @@ class EnergyAirflowCoupler(object):
                 pathHeight=path_value.get("pathHeight"),
                 pathWidth=path_value.get("pathWidth"),
                 pressure=path_value.get("pressure"),
+                pathType=path_value.get("pathType"),
             )
         return graph
 
@@ -544,6 +605,8 @@ class EnergyAirflowCoupler(object):
             )
 
         for path_value in paths.values():
+            if self._is_leakage_path_dict(path_value):
+                continue
             from_zone = str(path_value.get("fromZone", ""))
             to_zone = str(path_value.get("toZone", ""))
             is_outside_link = (from_zone == "-1" and to_zone != "-1") or (to_zone == "-1" and from_zone != "-1")
@@ -594,6 +657,8 @@ class EnergyAirflowCoupler(object):
             zoneIndexDict[self.networkDict['zones'][z]['prjIndex']] = z
 
         for ps in self.networkDict['paths'].values():
+            if self._is_leakage_path_dict(ps):
+                continue
             pid = ps["userName"]
             if pid not in self.pathRadIntensity:
                 self.pathRadIntensity[pid] = [0.0] * 8760
@@ -602,13 +667,15 @@ class EnergyAirflowCoupler(object):
                                np.sum(self.pathRadIntensity[pid][:CumulativeSky.WINTER_END_HOUR])
             summerradHeat = summer_intensity * float(ps['pathHeight']) * float(ps['pathWidth'])
             winterradHeat = winter_intensity * float(ps['pathHeight']) * float(ps['pathWidth'])
-            if ps["fromZone"] != "-1":
-                zUserName = zoneIndexDict.get(ps["fromZone"])
+            from_zone = self._coerce_zone_ref(ps.get("fromZone"))
+            to_zone = self._coerce_zone_ref(ps.get("toZone"))
+            if from_zone != -1:
+                zUserName = zoneIndexDict.get(from_zone)
                 if zUserName is not None:
                     self.networkDict['zones'][zUserName]['zone_summerrad'] += summerradHeat
                     self.networkDict['zones'][zUserName]['zone_winterrad'] += winterradHeat
-            if ps["toZone"] != "-1":
-                zUserName = zoneIndexDict.get(ps["toZone"])
+            if to_zone != -1:
+                zUserName = zoneIndexDict.get(to_zone)
                 if zUserName is not None:
                     self.networkDict['zones'][zUserName]['zone_summerrad'] += summerradHeat
                     self.networkDict['zones'][zUserName]['zone_winterrad'] += winterradHeat
@@ -687,6 +754,8 @@ class EnergyAirflowCoupler(object):
     def _mechanical_candidate_paths(self):
         candidates = []
         for path_key, p in self.networkDict.get("paths", {}).items():
+            if self._is_leakage_path_dict(p):
+                continue
             from_zone = str(p.get("fromZone", ""))
             to_zone = str(p.get("toZone", ""))
             is_outside_edge = (from_zone == "-1" and to_zone != "-1") or (to_zone == "-1" and from_zone != "-1")
@@ -996,13 +1065,8 @@ class EnergyAirflowCoupler(object):
                 peak_hoy = hoy
 
         self.updateHeatLoad(peak_hoy, energyDict=energyDict)
-        venNetwork = self.reconstructVentilationInputs()
-        zone_info = buildZoneInfoFile(zoneList=venNetwork['zones'], pathList=venNetwork['paths'])
-        prj_file = buildPrj(
-            zoneList=venNetwork['zones'],
-            pathList=venNetwork['paths'],
-            prjFilePath=self._next_workspace_prj_path("preheat")
-        )
+        zone_info = self.zoneInfo()
+        prj_file = self.prj(prjFilePath=self._next_workspace_prj_path("preheat"))
         peak_t = outdoor_series[hoys.index(peak_hoy)]
         for _ in range(max(int(preheat), 0)):
             AFN = contam_iteration(prj_file, paths=self.runtime['vent_paths'])
@@ -1041,23 +1105,14 @@ class EnergyAirflowCoupler(object):
         if energyDict:
             self.networkDict = energyDict
         self.updateHeatLoad(hoy, energyDict=energyDict)
-        venNetwork = self.reconstructVentilationInputs(self.networkDict)
-        zText = buildZoneInfoFile(zoneList=venNetwork['zones'], pathList=venNetwork['paths'])
+        zText = self.zoneInfo(self.networkDict)
 
         if mode == "onions":
             zoneInfoFilePath = os.path.join(self.runtime['workspace']['root'], f"zoneinfo_{hoy}.info")
-            zFile = buildZoneInfoFile(
-                zoneList=venNetwork['zones'],
-                pathList=venNetwork['paths'],
-                zoneInfoFilePath=zoneInfoFilePath
-            )
+            zFile = self.zoneInfo(self.networkDict, zoneInfoFilePath=zoneInfoFilePath)
             prjFile = self.runtime.pop('onions_prj', None)
             if prjFile is None:
-                prjFile = buildPrj(
-                    zoneList=venNetwork['zones'],
-                    pathList=venNetwork['paths'],
-                    prjFilePath=self._next_workspace_prj_path("onions")
-                )
+                prjFile = self.prj(prjFilePath=self._next_workspace_prj_path("onions"))
             self.runtime['last_prj_file'] = prjFile
             return iterateFile(
                 prjFile,
@@ -1086,11 +1141,7 @@ class EnergyAirflowCoupler(object):
         if mode == "ping-pong":
             current_prj = self.runtime.get('current_prj')
             if current_prj is None:
-                current_prj = buildPrj(
-                    zoneList=venNetwork['zones'],
-                    pathList=venNetwork['paths'],
-                    prjFilePath=self._next_workspace_prj_path("pingpong")
-                )
+                current_prj = self.prj(prjFilePath=self._next_workspace_prj_path("pingpong"))
             last_AFN = None
             last_t = None
             for _ in range(max(int(iteration), 1)):
@@ -1116,11 +1167,15 @@ class EnergyAirflowCoupler(object):
         try:
             h = float(path_obj.get("pathHeight", 0.0))
             w = float(path_obj.get("pathWidth", 0.0))
-            op_raw = path_obj.get("operable", 1.0)
-            op = 1.0 if op_raw is None else float(op_raw)
-            return (h > eps) and (w > eps) and (op > eps)
+            return (h > eps) and (w > eps)
         except Exception:
             return False
+
+    @staticmethod
+    def _is_leakage_path_dict(path_obj: dict) -> bool:
+        path_type = str(path_obj.get("pathType", "")).strip().lower()
+        dtype = str((path_obj.get("element") or {}).get("dtype", "")).strip().lower()
+        return path_type == "leakage" or dtype == "plr_leak3"
 
     def _remove_non_ambient_connected_from_dict(self, energyDict: dict) -> dict:
         zones = dict(energyDict.get("zones", {}))
@@ -1194,6 +1249,8 @@ class EnergyAirflowCoupler(object):
         valid_prj = {str(z.get("prjIndex")) for z in zones.values()}
         kept_paths = {}
         for path_key, p in paths.items():
+            if self._is_leakage_path_dict(p):
+                continue
             from_zone = str(p.get("fromZone", ""))
             to_zone = str(p.get("toZone", ""))
             if (from_zone in remove_zone_prj) or (to_zone in remove_zone_prj):
