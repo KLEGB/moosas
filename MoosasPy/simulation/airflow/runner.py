@@ -275,8 +275,8 @@ def _write_project_temperatures(temperature, project_file):
 
 
 def _calculate_temperature(airflow_matrix, heat_loads, outdoor_temperature):
-    airflow_matrix = np.asmatrix(airflow_matrix)
-    heat_loads = np.asmatrix(heat_loads)
+    airflow_matrix = np.array(airflow_matrix, dtype=float, copy=True)
+    heat_loads = np.asarray(heat_loads, dtype=float).reshape(-1)
     for column in range(len(airflow_matrix)):
         airflow_matrix[column, column] = -np.sum(airflow_matrix[:, column])
         for row in range(len(airflow_matrix) - 1):
@@ -288,7 +288,7 @@ def _calculate_temperature(airflow_matrix, heat_loads, outdoor_temperature):
     outdoor_heat = airflow_matrix[-1, :-1] * (outdoor_temperature * 1.2 / 3600 * 1005)
     enthalpy = heat_loads + outdoor_heat
     airflow_matrix *= 1.2 / 3600 * 1005
-    return 273.15 - enthalpy * airflow_matrix[:-1, :-1].I
+    return 273.15 - np.linalg.solve(airflow_matrix[:-1, :-1].T, enthalpy)
 
 
 def read_path_result(project_file):

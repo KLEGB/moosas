@@ -4,6 +4,7 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import numpy as np
 import MoosasPy
 from MoosasPy.simulation import CommandResult, SimulationResult, WorkspaceReport
 from MoosasPy.simulation.energy.runner import (
@@ -14,7 +15,13 @@ from MoosasPy.simulation.energy.runner import (
 )
 from MoosasPy.simulation.coupling import EnergyAirflowCoupler
 from MoosasPy.simulation.radiation.runner import RadianceDaylightResult
-from MoosasPy.simulation.airflow.runner import AirflowResult, AirflowRunner, AirflowZoneResult, VentPaths
+from MoosasPy.simulation.airflow.runner import (
+    AirflowResult,
+    AirflowRunner,
+    AirflowZoneResult,
+    VentPaths,
+    _calculate_temperature,
+)
 
 
 class SimulationContractTests(unittest.TestCase):
@@ -224,6 +231,20 @@ class SimulationContractTests(unittest.TestCase):
             run_command.call_args_list[1].args[0],
             (paths.contamx, str(Path(paths.project_dir) / "model.prj")),
         )
+
+    def test_airflow_temperature_solver_uses_ndarrays(self):
+        airflow_matrix = np.array([[0.0, 2.0], [3.0, 0.0]])
+        conversion = 1.2 / 3600 * 1005
+
+        with patch(
+            "MoosasPy.simulation.airflow.runner.random.randrange", return_value=0
+        ):
+            temperature = _calculate_temperature(airflow_matrix, [100.0], 25.0)
+
+        expected = 273.15 + (100.0 + 3.0 * 25.0 * conversion) / (3.0 * conversion)
+        self.assertIsInstance(temperature, np.ndarray)
+        self.assertEqual(temperature.shape, (1,))
+        np.testing.assert_allclose(temperature, [expected])
 
     def test_energy_airflow_coupler_is_exposed_by_coupling_package(self):
         self.assertEqual(EnergyAirflowCoupler.__module__, "MoosasPy.simulation.coupling.energy_airflow")
