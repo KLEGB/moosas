@@ -12,19 +12,13 @@ from numpy.linalg import LinAlgError
 from ..airflow.network import (
     NETWORK_SCHEMA_VERSION,
     AfnNetwork,
-    buildPrj,
-    buildZoneInfoFile,
     AfnPath,
     AfnZone,
 )
 from ..airflow.runner import (
+    AirflowRunner,
     VentPaths,
-    iterateFile,
-    contam_iteration,
-    sensible_heat_iteration,
-    write_contam,
-    readPathResult,
-    ZoneResult,
+    read_path_result,
 )
 import networkx as nx
 from copy import deepcopy
@@ -40,26 +34,6 @@ def _linear_interpolate_nan_series(values):
     if not mask.any() or mask.all():
         return arr.tolist()
     return np.interp(x, x[mask], arr[mask]).tolist()
-
-
-def postprocess_zone_results_linear(zones: list[ZoneResult]) -> list[ZoneResult]:
-    """
-    Linearly interpolate NaN values for each zone time series.
-
-    Parameters
-    ----------
-    zones : list[ZoneResult]
-        Zone results containing `temperature` and `ACH` histories.
-
-    Returns
-    -------
-    list[ZoneResult]
-        Same objects with NaN values interpolated in-place.
-    """
-    for z in zones:
-        z.temperature = _linear_interpolate_nan_series(z.temperature)
-        z.ACH = _linear_interpolate_nan_series(z.ACH)
-    return zones
 
 
 class EnergyAirflowCoupler(object):
@@ -324,39 +298,6 @@ class EnergyAirflowCoupler(object):
         if value is None:
             return -1
         return int(round(float(value)))
-
-    def prj(self, networkDict=None, prjFilePath=None, networkFilePath=None, split=False,
-            t0=25, windVector=None, airDensity=1.205, alpha=0.22,
-            simulate=False, resultFile=None):
-        if networkDict is not None:
-            self.networkDict = self._normalize_energy_schedule_fields_in_dict(networkDict)
-        else:
-            self._normalize_energy_schedule_fields_in_dict(self.networkDict)
-        return buildPrj(
-            model=self.model,
-            prjFilePath=prjFilePath,
-            networkFilePath=networkFilePath,
-            split=split,
-            t0=t0,
-            windVector=windVector,
-            airDensity=airDensity,
-            alpha=alpha,
-            simulate=simulate,
-            resultFile=resultFile,
-            networkDict=self.networkDict,
-        )
-
-    def zoneInfo(self, networkDict=None, zoneInfoFilePath=None, networkFilePath=None):
-        if networkDict is not None:
-            self.networkDict = self._normalize_energy_schedule_fields_in_dict(networkDict)
-        else:
-            self._normalize_energy_schedule_fields_in_dict(self.networkDict)
-        return buildZoneInfoFile(
-            model=self.model,
-            networkDict=self.networkDict,
-            zoneInfoFilePath=zoneInfoFilePath,
-            networkFilePath=networkFilePath,
-        )
 
     @staticmethod
     def _energy_zone_template_type(zone_dict: dict) -> str:
@@ -798,7 +739,7 @@ class EnergyAirflowCoupler(object):
 
         flow_by_path = {}
         try:
-            flow_result = readPathResult(prj_file)
+            flow_result = read_path_result(prj_file)
             path_list = list(self.networkDict.get("paths", {}).values())
             for i, p in enumerate(path_list):
                 if i not in flow_result:
@@ -833,8 +774,8 @@ class EnergyAirflowCoupler(object):
             mech_energy[zone_user] = mech_energy.get(zone_user, 0.0) + (energy_wh / 1000.0 / zone_area)
         return mech_energy
 
-    def coupledTask(self, energyDict: dict = None, timestep=1, iteration=1, mode="sequence",
-                    preheat=10, k=0.8, sigma=3.8, start_hoy=5088, end_hoy=5112,
+    def coupledTask(self, energyDict: dict = None, timestep=1, iteration=1,
+                    k=0.8, sigma=3.8, start_hoy=5088, end_hoy=5112,
                     earse_conditioned=False, **kwargs):
         """
         Coupled simulation between energy and comfort results.
@@ -876,8 +817,6 @@ class EnergyAirflowCoupler(object):
             energyDict=energyDict,
             timestep=timestep,
             iteration=iteration,
-            mode=mode,
-            preheat=preheat,
             k=k,
             sigma=sigma,
             start_hoy=start_hoy,
@@ -950,23 +889,6 @@ class EnergyAirflowCoupler(object):
                 "delta_t": delta_s
             }
         return result
-
-    def _sorted_zone_values(self):
-        return sorted(self.networkDict['zones'].values(), key=lambda z: int(z['prjIndex']))
-
-    def _zone_heat_array(self):
-        return np.array([float(z['heatLoad']) for z in self._sorted_zone_values()])
-
-    def _zone_result_template(self):
-        zones = []
-        for z in self._sorted_zone_values():
-            zones.append(ZoneResult(
-                name=f"z{int(z['prjIndex']):03d}",
-                heat=float(z['heatLoad']),
-                volume=float(z['volume']),
-                userName=z['userName']
-            ))
-        return zones
 
     @staticmethod
     def _moving_average(values: np.ndarray, sigma: float) -> np.ndarray:
@@ -1054,36 +976,9 @@ class EnergyAirflowCoupler(object):
         self.runtime['prj_counter'] = 0
         return ws
 
-    def _preheat(self, hoys, outdoor_series, preheat, inf_p=0.1, energyDict=None):
-        peak_hoy = hoys[0]
-        peak_sum = -float("inf")
-        for hoy in hoys:
-            self.updateHeatLoad(hoy, energyDict=energyDict)
-            this_sum = sum(float(z['heatLoad']) for z in self.networkDict['zones'].values())
-            if this_sum > peak_sum:
-                peak_sum = this_sum
-                peak_hoy = hoy
-
-        self.updateHeatLoad(peak_hoy, energyDict=energyDict)
-        zone_info = self.zoneInfo()
-        prj_file = self.prj(prjFilePath=self._next_workspace_prj_path("preheat"))
-        peak_t = outdoor_series[hoys.index(peak_hoy)]
-        for _ in range(max(int(preheat), 0)):
-            AFN = contam_iteration(prj_file, paths=self.runtime['vent_paths'])
-            AFN*=1+inf_p
-            temperature = sensible_heat_iteration(AFN=AFN, zoneInfo=zone_info, outdoorTemperature=peak_t)
-            prj_file = write_contam(temperature=temperature, prjFile=prj_file)
-        return prj_file
-
-    def _next_workspace_prj_path(self, prefix="afn"):
-        ws = self._ensure_runtime_workspace(reset=False)
-        idx = int(self.runtime.get('prj_counter', 0)) + 1
-        self.runtime['prj_counter'] = idx
-        return os.path.join(ws['project_dir'], f"{prefix}_{idx:06d}.prj")
-
-    def ventilationTask(self, hoy, energyDict: dict = None, iteration=1, inf_p=0.1, mode="onions"):
+    def ventilationTask(self, hoy, energyDict: dict = None, iteration=1, inf_p=0.1):
         """
-        Run one-hour ventilation coupling task in selected mode.
+        Run one-hour ventilation coupling through AirflowRunner.
 
         Parameters
         ----------
@@ -1092,75 +987,33 @@ class EnergyAirflowCoupler(object):
         energyDict : dict, optional
             Network dictionary override.
         iteration : int, default 1
-            Coupling iterations per hour (ignored in `sequence`).
-        mode : {"onions", "sequence", "ping-pong"}, default "onions"
-            Coupling strategy.
-
+            Maximum airflow and sensible-heat iterations per hour.
         Returns
         -------
-        list[ZoneResult]
-            One-hour result snapshot.
+        tuple[AirflowZoneResult, ...]
+            One-hour immutable zone results.
         """
         self._ensure_runtime_workspace(reset=False)
         if energyDict:
             self.networkDict = energyDict
         self.updateHeatLoad(hoy, energyDict=energyDict)
-        zText = self.zoneInfo(self.networkDict)
-
-        if mode == "onions":
-            zoneInfoFilePath = os.path.join(self.runtime['workspace']['root'], f"zoneinfo_{hoy}.info")
-            zFile = self.zoneInfo(self.networkDict, zoneInfoFilePath=zoneInfoFilePath)
-            prjFile = self.runtime.pop('onions_prj', None)
-            if prjFile is None:
-                prjFile = self.prj(prjFilePath=self._next_workspace_prj_path("onions"))
-            self.runtime['last_prj_file'] = prjFile
-            return iterateFile(
-                prjFile,
-                zFile,
-                maxIteration=iteration,
-                outdoorTemperature=self.runtime.get('outdoor_temperature', 25),
-                paths=self.runtime['vent_paths'],
-            )
-
-        zones = self._zone_result_template()
-        if mode == "sequence":
-            AFN = self.runtime.get('AFN_ref')
-            if AFN is None:
-                raise ValueError("AFN_ref is not prepared for sequence mode.")
-            self.runtime['last_prj_file'] = self.runtime.get('AFN_ref_prj')
-            temperature = sensible_heat_iteration(
-                AFN=AFN, zoneInfo=zText, outdoorTemperature=self.runtime.get('outdoor_temperature', 25)
-            )
-            achIteration = [max(x, y) for x, y in zip(AFN[-1], AFN[:, -1])]
-            tC = (np.array(temperature) - 273.15).flatten().tolist()
-            for i in range(len(zones)):
-                zones[i].temperature.append(tC[i])
-                zones[i].ACH.append(achIteration[i])
-            return zones
-
-        if mode == "ping-pong":
-            current_prj = self.runtime.get('current_prj')
-            if current_prj is None:
-                current_prj = self.prj(prjFilePath=self._next_workspace_prj_path("pingpong"))
-            last_AFN = None
-            last_t = None
-            for _ in range(max(int(iteration), 1)):
-                last_AFN = contam_iteration(current_prj, paths=self.runtime['vent_paths'])
-                last_AFN *= 1 + inf_p
-                last_t = sensible_heat_iteration(
-                    AFN=last_AFN, zoneInfo=zText, outdoorTemperature=self.runtime.get('outdoor_temperature', 25)
-                )
-                current_prj = write_contam(temperature=last_t, prjFile=current_prj)
-            self.runtime['current_prj'] = current_prj
-            self.runtime['last_prj_file'] = current_prj
-            achIteration = [max(x, y) for x, y in zip(last_AFN[-1], last_AFN[:, -1])]
-            tC = (np.array(last_t) - 273.15).flatten().tolist()
-            for i in range(len(zones)):
-                zones[i].temperature.append(tC[i])
-                zones[i].ACH.append(achIteration[i])
-            return zones
-
-        raise ValueError("mode must be one of ['onions', 'sequence', 'ping-pong'].")
+        heat_loads = {
+            str(zone.get("userName", zone_key)): float(zone["heatLoad"])
+            for zone_key, zone in self.networkDict["zones"].items()
+        }
+        result = AirflowRunner(
+            model=self.model,
+            outdoor_temperature=self.runtime.get("outdoor_temperature", 25),
+            heat_loads=heat_loads,
+            max_iterations=max(int(iteration), 1),
+            flow_multiplier=1.0 + float(inf_p),
+            paths=self.runtime["vent_paths"],
+        ).run()
+        self.runtime["last_airflow_result"] = result
+        self.runtime["last_prj_file"] = os.path.join(
+            result.workspace.path, "project", "model.prj"
+        )
+        return result.zones
 
     @staticmethod
     def _is_variable_flow_path_dict(path_obj: dict, eps=1e-9) -> bool:
@@ -1264,8 +1117,8 @@ class EnergyAirflowCoupler(object):
         filtered["paths"] = kept_paths
         return self._remove_non_ambient_connected_from_dict(filtered)
 
-    def annualComfort(self, energyDict: dict = None, iteration=3, mode="ping-pong", timestep=1,
-                      preheat=10, k=0.5, sigma=1, inf_p=0.1, start_hoy=0, end_hoy=8759,
+    def annualComfort(self, energyDict: dict = None, iteration=3, timestep=1,
+                      k=0.5, sigma=1, inf_p=0.1, start_hoy=0, end_hoy=8759,
                       earse_conditioned=False, **kwargs):
         """
         Run annual ventilation comfort simulation with selectable coupling strategy.
@@ -1275,14 +1128,10 @@ class EnergyAirflowCoupler(object):
         energyDict : dict, optional
             Network dictionary override.
         iteration : int, default 3
-            Per-hour coupling iterations (ignored in `sequence` mode).
-        mode : {"onions", "sequence", "ping-pong"}, default "ping-pong"
-            Annual coupling strategy.
+            Maximum airflow and sensible-heat iterations per hour.
         timestep : int, default 1
             Hour step size. Number of hoy samples is
             `len(range(start_hoy, end_hoy + 1, timestep))`.
-        preheat : int, default 10
-            Bootstrap ping-pong rounds at peak-load hour to generate initial project state.
         k : float, default 0.5
             Thermal inertia strength. Recommended range [0, 1].
         sigma : float, default 1
@@ -1334,20 +1183,6 @@ class EnergyAirflowCoupler(object):
         indoor_ref_t = [(1.0 - float(k)) * t + float(k) * a for t, a in zip(weather_t, avg_t)]
         outdoor_series = weather_t
 
-        preheated_prj = self._preheat(hoys=hoys, outdoor_series=outdoor_series, preheat=preheat,inf_p=inf_p, energyDict=energyDict)
-
-        if mode == "sequence":
-            AFN_ref = contam_iteration(preheated_prj, paths=self.runtime['vent_paths'])
-            AFN_ref*=1+inf_p
-            self.runtime['AFN_ref'] = AFN_ref
-            self.runtime['AFN_ref_prj'] = preheated_prj
-        elif mode == "ping-pong":
-            self.runtime['current_prj'] = preheated_prj
-        elif mode == "onions":
-            self.runtime['onions_prj'] = preheated_prj
-        else:
-            raise ValueError("mode must be one of ['onions', 'sequence', 'ping-pong'].")
-
         base_network_for_hours = deepcopy(self.networkDict)
         zone_users = [str(z.get("userName", k)) for k, z in base_network_for_hours.get("zones", {}).items()]
         user_to_zone_name = {
@@ -1368,13 +1203,13 @@ class EnergyAirflowCoupler(object):
             if not zones_result:
                 return out_temp, out_ach
             for zr in zones_result:
-                zone_user = str(getattr(zr, "userName", ""))
+                zone_user = zr.user_name
                 if zone_user not in out_temp:
                     continue
-                if len(getattr(zr, "temperature", [])) > 0:
-                    out_temp[zone_user] = float(zr.temperature[-1])
-                if len(getattr(zr, "ACH", [])) > 0:
-                    out_ach[zone_user] = float(zr.ACH[-1])
+                if zr.temperatures:
+                    out_temp[zone_user] = zr.temperatures[-1]
+                if zr.ach_values:
+                    out_ach[zone_user] = zr.ach_values[-1]
             return out_temp, out_ach
 
         for hi, hoy in enumerate(hoys):
@@ -1386,8 +1221,7 @@ class EnergyAirflowCoupler(object):
                 zResultHoy = self.ventilationTask(
                     hoy=hoy,
                     energyDict=energyDict,
-                    iteration=iteration if mode != "sequence" else 1,
-                    mode=mode,
+                    iteration=iteration,
                     inf_p=inf_p
                 )
             except LinAlgError as e:
@@ -1397,7 +1231,7 @@ class EnergyAirflowCoupler(object):
             except Exception as e:
                 print(f"Warning: Exception at hoy={hoy} ({type(e).__name__}: {e}), filled NaN for this timestep.")
             else:
-                if (not zResultHoy) or len(getattr(zResultHoy[0], "temperature", [])) == 0 or len(getattr(zResultHoy[0], "ACH", [])) == 0:
+                if (not zResultHoy) or not zResultHoy[0].temperatures or not zResultHoy[0].ach_values:
                     print(f"Warning: Empty result at hoy={hoy}, filled NaN for this timestep.")
                 else:
                     hour_temp, hour_ach = _extract_hour_result(zResultHoy)
@@ -1428,7 +1262,6 @@ class EnergyAirflowCoupler(object):
                         hoy=hoy,
                         energyDict=filtered_energy,
                         iteration=iteration,
-                        mode="onions",
                         inf_p = inf_p
                     )
                     second_temp, second_ach = _extract_hour_result(zResultSecond)

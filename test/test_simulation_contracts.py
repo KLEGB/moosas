@@ -5,11 +5,11 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import MoosasPy
-from MoosasPy.simulation import CommandResult, SimulationResult
+from MoosasPy.simulation import CommandResult, SimulationResult, WorkspaceReport
 from MoosasPy.simulation.energy.runner import EnergyResult, EnergyRunner
 from MoosasPy.simulation.coupling import EnergyAirflowCoupler
 from MoosasPy.simulation.radiation.runner import RadianceDaylightResult
-from MoosasPy.simulation.airflow.runner import AirflowResult, AirflowRunner, VentPaths
+from MoosasPy.simulation.airflow.runner import AirflowResult, AirflowRunner, AirflowZoneResult, VentPaths
 
 
 class SimulationContractTests(unittest.TestCase):
@@ -35,6 +35,16 @@ class SimulationContractTests(unittest.TestCase):
         self.assertEqual(MoosasPy.simulation.airflow.__name__, "MoosasPy.simulation.airflow")
         self.assertEqual(MoosasPy.simulation.weather.__name__, "MoosasPy.simulation.weather")
         self.assertEqual(MoosasPy.simulation.coupling.__name__, "MoosasPy.simulation.coupling")
+
+    def test_airflow_exposes_only_model_driven_simulation_api(self):
+        airflow = MoosasPy.simulation.airflow
+
+        self.assertEqual(
+            set(airflow.__all__),
+            {"AirflowResult", "AirflowRunner", "AirflowZoneResult", "create_openfoam_workspace"},
+        )
+        for legacy_name in ("iterateFile", "iterateProjects", "contam_iteration", "runFile"):
+            self.assertFalse(hasattr(airflow, legacy_name))
 
     def test_weather_exports_unprefixed_sky_types(self):
         weather = MoosasPy.simulation.weather
@@ -84,15 +94,18 @@ class SimulationContractTests(unittest.TestCase):
         self.assertEqual(result.as_legacy(), {"total": {}})
         self.assertEqual(result.commands, (command_result,))
 
-    def test_airflow_runner_returns_matrix_and_command_diagnostics(self):
+    def test_airflow_runner_builds_project_from_model_in_its_workspace(self):
         command_result = CommandResult(("contamx", "model.prj"), 0, "", "")
         matrix = [[0.0, 1.0], [1.0, 0.0]]
+        model = SimpleNamespace()
+        zone = SimpleNamespace(
+            userName="zone-1", prjName="z001", heatLoad=100.0, volume=30.0
+        )
+        airflow_paths = [SimpleNamespace()]
 
         with TemporaryDirectory() as work_dir:
             root = Path(work_dir)
-            project_path = root / "model.prj"
             response_path = root / "response.txt"
-            project_path.write_text("project", encoding="utf-8")
             response_path.write_text("response", encoding="utf-8")
             paths = VentPaths.from_workspace(root / "workspace")
             with patch(
@@ -100,20 +113,88 @@ class SimulationContractTests(unittest.TestCase):
                 return_value=command_result,
             ) as run_command, patch(
                 "MoosasPy.simulation.airflow.runner.build_matrix", return_value=matrix
+            ), patch(
+                "MoosasPy.simulation.airflow.runner.buildNetworkFile"
+            ) as build_network_file, patch(
+                "MoosasPy.simulation.airflow.runner.getZoneAndPath",
+                return_value=([zone], airflow_paths),
+            ), patch(
+                "MoosasPy.simulation.airflow.runner._solve_sensible_heat",
+                return_value=[[298.15]],
+            ), patch(
+                "MoosasPy.simulation.airflow.runner._write_project_temperatures"
             ):
                 result = AirflowRunner(
-                    prj_file=str(project_path),
+                    model=model,
                     response_file=str(response_path),
                     paths=paths,
+                    max_iterations=2,
                 ).run()
 
         self.assertIsInstance(result, AirflowResult)
-        self.assertEqual(result.airflow_matrix, matrix)
-        self.assertEqual(result.commands, (command_result, command_result))
-        self.assertEqual(run_command.call_count, 2)
+        self.assertEqual(result.airflow_matrix.tolist(), matrix)
+        self.assertTrue(result.converged)
+        self.assertEqual(result.iteration_count, 2)
+        self.assertEqual(result.residual, 0.0)
+        self.assertEqual(result.zones[0].user_name, "zone-1")
+        self.assertEqual(len(result.commands), 5)
+        self.assertEqual(run_command.call_count, 5)
+        build_network_file.assert_called_once_with(
+            model=model,
+            pathList=airflow_paths,
+            zoneList=[zone],
+            networkFilePath=str(Path(paths.project_dir) / "model.json"),
+        )
+        self.assertEqual(
+            run_command.call_args_list[1].args[0],
+            (paths.contamx, str(Path(paths.project_dir) / "model.prj")),
+        )
 
     def test_energy_airflow_coupler_is_exposed_by_coupling_package(self):
         self.assertEqual(EnergyAirflowCoupler.__module__, "MoosasPy.simulation.coupling.energy_airflow")
+
+    def test_energy_airflow_coupler_delegates_iteration_to_airflow_runner(self):
+        coupler = object.__new__(EnergyAirflowCoupler)
+        coupler.model = SimpleNamespace()
+        coupler.networkDict = {
+            "zones": {"zone-1": {"userName": "zone-1", "heatLoad": 120.0}}
+        }
+        coupler.runtime = {
+            "outdoor_temperature": 21.0,
+            "vent_paths": SimpleNamespace(),
+        }
+        zone_result = AirflowZoneResult(
+            user_name="zone-1",
+            project_name="z001",
+            heat_load=120.0,
+            volume=30.0,
+            temperatures=(24.0,),
+            ach_values=(1.5,),
+        )
+        airflow_result = AirflowResult(
+            zones=(zone_result,),
+            workspace=WorkspaceReport("workspace", True),
+        )
+
+        with patch.object(
+            EnergyAirflowCoupler, "_ensure_runtime_workspace"
+        ), patch.object(
+            EnergyAirflowCoupler, "updateHeatLoad"
+        ), patch(
+            "MoosasPy.simulation.coupling.energy_airflow.AirflowRunner"
+        ) as runner_type:
+            runner_type.return_value.run.return_value = airflow_result
+            zones = coupler.ventilationTask(10, iteration=3, inf_p=0.2)
+
+        self.assertEqual(zones, (zone_result,))
+        runner_type.assert_called_once_with(
+            model=coupler.model,
+            outdoor_temperature=21.0,
+            heat_loads={"zone-1": 120.0},
+            max_iterations=3,
+            flow_multiplier=1.2,
+            paths=coupler.runtime["vent_paths"],
+        )
 
 
 if __name__ == "__main__":

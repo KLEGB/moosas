@@ -396,34 +396,31 @@ commands used by the calculation.
 
 ### Ventilation Analysis
 
-`MoosasPy.simulation.airflow` constructs airflow networks, generates CONTAM
-projects, executes CONTAM, and performs buoyancy/sensible-heat iterations.
+`MoosasPy.simulation.airflow` accepts a `MoosasModel`, constructs its airflow
+network, generates a CONTAM project, and performs buoyancy/sensible-heat
+iterations inside one runner call.
 
-Generate project and zone-information files from a model:
+Run an airflow simulation directly from a model:
 
 ```python
-from MoosasPy.simulation.airflow import buildPrj, buildZoneInfoFile, iterateFile
+from MoosasPy.simulation.airflow import AirflowRunner
 
-project_file = buildPrj(model=model, split=False)
-zone_info_file = buildZoneInfoFile(
+result = AirflowRunner(
     model=model,
-    zoneInfoFilePath="building.info",
-)
-zones = iterateFile(project_file, zone_info_file)
+    outdoor_temperature=25.0,
+    max_iterations=50,
+    convergence_tolerance=0.01,
+).run()
 
-for zone in zones:
-    print(zone.userName, zone.temperature, zone.ACH)
+print(result.converged, result.iteration_count, result.residual)
+for zone in result.zones:
+    print(zone.user_name, zone.temperatures, zone.ach_values)
 ```
 
-Core airflow functions include:
-
-- `buildNetworkFile()`: serialize zones and paths for the native AFN tool.
-- `buildPrj()`: build one or more CONTAM `.prj` files.
-- `buildZoneInfoFile()`: write heat-load and zone-name metadata.
-- `AirflowRunner`: execute CONTAM and return a structured airflow matrix.
-- `iterateFile()` / `iterateProjects()`: iterate zone temperature and airflow.
-- `contam_iteration()` and `sensible_heat_iteration()`: lower-level iteration
-  steps.
+`AirflowResult` contains the final airflow matrix, immutable per-zone histories,
+convergence state, native-command diagnostics, warnings, and the retained
+workspace report. Intermediate network JSON, CONTAM projects, and iteration
+steps are implementation details rather than public simulation inputs.
 
 Bundled CONTAM executables support Windows x86-64 and Linux x86-64. Other
 architectures fail explicitly.
@@ -465,6 +462,11 @@ The coupling package also provides:
 - `run_position_sun_hours` for weather-aware direct sunlight calculation.
 - `run_roof_pv` and `run_facade_pv` for hourly photovoltaic generation.
 - `calculate_face_incident_energy` for face-level incident solar energy.
+
+`EnergyAirflowCoupler` delegates every hourly airflow solve to
+`AirflowRunner`. Its `iteration` argument sets the maximum internal iterations;
+CONTAM project paths and individual iteration functions are not coupling API
+inputs.
 
 Example photovoltaic calculation:
 

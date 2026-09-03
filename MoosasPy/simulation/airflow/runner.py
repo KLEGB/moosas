@@ -1,27 +1,30 @@
-"""
-    Simulating buoyancy effect by contamX based on Mass Flow Balance in Air Flow Network.
-    More information can be found in this article:
-
-    To build the *.prj file and *.info zoneInfo file,
-    you can call vent.buildPrj(), vent.buildNetworkFile() or vent.buildZoneInfoFile()
-"""
+"""Model-driven CONTAM airflow simulation."""
 
 from dataclasses import dataclass
+import os
 import platform
-import sys
-import time
-from .parser import *
-import csv
 import random
-from ...utils.tools import path, parseFile
+import re
+import shutil
+import sys
+
+import numpy as np
+
+from ...model import MoosasModel
+from ...utils.tools import path
 from ..contracts import SimulationResult
 from ..engine import NativeEngine
 from ..runner import Runner
 from ..workspace import SimulationWorkspace, WorkspaceReport
-import os
-import shutil
-
-DEFAULT_INDOOR_TEMPERATURE = 298.15
+from .network import VENT_EXE_SUFFIX, buildNetworkFile, getZoneAndPath, pathTopology
+from .parser import (
+    AIR_DENSITY,
+    build_matrix,
+    read_file,
+    read_flowpath,
+    read_topology,
+    write_file,
+)
 
 
 def _contam_platform(system=None, machine=None):
@@ -85,18 +88,39 @@ class VentPaths:
 
 
 @dataclass(frozen=True)
+class AirflowZoneResult:
+    """Temperature and air-change histories for one model zone."""
+
+    user_name: str
+    project_name: str
+    heat_load: float
+    volume: float
+    temperatures: tuple[float, ...]
+    ach_values: tuple[float, ...]
+
+
+@dataclass(frozen=True)
 class AirflowResult(SimulationResult):
-    """Structured output from one CONTAM airflow calculation."""
+    """Structured output from one iterative CONTAM airflow calculation."""
 
     airflow_matrix: np.ndarray | None = None
+    zones: tuple[AirflowZoneResult, ...] = ()
+    converged: bool = False
+    iteration_count: int = 0
+    residual: float = float("inf")
 
 
 class AirflowRunner(Runner):
-    """Run CONTAM and simread, then parse the resulting airflow matrix."""
+    """Build and iteratively solve a CONTAM airflow model."""
 
     def __init__(
         self,
-        prj_file,
+        model: MoosasModel,
+        outdoor_temperature=25.0,
+        heat_loads: dict[str, float] | None = None,
+        max_iterations=50,
+        convergence_tolerance=0.01,
+        flow_multiplier=1.0,
         contam_exe=None,
         simread_exe=None,
         response_file=None,
@@ -105,753 +129,177 @@ class AirflowRunner(Runner):
         engine: NativeEngine | None = None,
     ):
         super().__init__(timeout_seconds=timeout_seconds, engine=engine)
-        self.prj_file = prj_file
+        if int(max_iterations) <= 0:
+            raise ValueError("max_iterations must be positive.")
+        if float(convergence_tolerance) < 0:
+            raise ValueError("convergence_tolerance must be non-negative.")
+        self.model = model
+        self.outdoor_temperature = float(outdoor_temperature)
+        self.heat_loads = heat_loads
+        self.max_iterations = int(max_iterations)
+        self.convergence_tolerance = float(convergence_tolerance)
+        self.flow_multiplier = float(flow_multiplier)
         self.paths = paths or VentPaths.create()
         self.contam_exe = contam_exe or self.paths.contamx
         self.simread_exe = simread_exe or self.paths.simread
         self.response_file = response_file or self.paths.response
 
     def run(self) -> AirflowResult:
-        """Execute CONTAM tools and return the parsed airflow matrix."""
-        contam_result = self.run_command((self.contam_exe, self.prj_file))
+        """Build the project and iterate airflow and zone sensible heat balance."""
+        network_file = os.path.join(self.paths.project_dir, "model.json")
+        project_file = os.path.join(self.paths.project_dir, "model.prj")
+        zones, airflow_paths = getZoneAndPath(self.model)
+        zones, airflow_paths = self._apply_heat_loads(zones, airflow_paths)
+        buildNetworkFile(
+            model=self.model,
+            pathList=airflow_paths,
+            zoneList=zones,
+            networkFilePath=network_file,
+        )
+        afn_result = self.run_command((
+            os.path.join(path.libDir, "vent", f"MoosasAFN{VENT_EXE_SUFFIX}"),
+            "-p", "model",
+            "-d", self.paths.project_dir,
+            "-t", str(self.outdoor_temperature),
+            "-s", "0",
+            network_file,
+        ))
+        commands = [afn_result]
+        temperature_history = [[] for _ in zones]
+        ach_history = [[] for _ in zones]
+        previous_temperature = None
+        previous_ach = None
+        residual = float("inf")
+        airflow_matrix = None
+
+        for iteration_count in range(1, self.max_iterations + 1):
+            iteration_result = self._run_project(project_file)
+            commands.extend(iteration_result.commands)
+            airflow_matrix = np.asarray(iteration_result.airflow_matrix, dtype=float) * self.flow_multiplier
+            temperature = _solve_sensible_heat(
+                airflow_matrix.copy(),
+                np.array([zone.heatLoad for zone in zones]),
+                self.outdoor_temperature,
+            )
+            temperature_values = (np.asarray(temperature, dtype=float) - 273.15).flatten()
+            ach_values = np.maximum(airflow_matrix[-1, :-1], airflow_matrix[:-1, -1])
+            for index in range(len(zones)):
+                temperature_history[index].append(float(temperature_values[index]))
+                ach_history[index].append(float(ach_values[index]))
+
+            if previous_temperature is not None:
+                temperature_residual = _relative_residual(temperature_values, previous_temperature)
+                ach_residual = _relative_residual(ach_values, previous_ach)
+                residual = float(np.mean(np.concatenate((temperature_residual, ach_residual))))
+
+            _write_project_temperatures(temperature, project_file)
+            if residual <= self.convergence_tolerance:
+                break
+            previous_temperature = temperature_values
+            previous_ach = ach_values
+
+        converged = residual <= self.convergence_tolerance
+        return AirflowResult(
+            airflow_matrix=airflow_matrix,
+            zones=tuple(
+                AirflowZoneResult(
+                    user_name=zone.userName,
+                    project_name=zone.prjName,
+                    heat_load=float(zone.heatLoad),
+                    volume=float(zone.volume),
+                    temperatures=tuple(temperature_history[index]),
+                    ach_values=tuple(ach_history[index]),
+                )
+                for index, zone in enumerate(zones)
+            ),
+            converged=converged,
+            iteration_count=iteration_count,
+            residual=residual,
+            commands=tuple(commands),
+            warnings=() if converged else ("Airflow iteration did not converge.",),
+            workspace=WorkspaceReport(self.paths.workspace, True),
+        )
+
+    def _apply_heat_loads(self, zones, airflow_paths):
+        if self.heat_loads is None:
+            return zones, airflow_paths
+        known_zones = {zone.userName for zone in zones}
+        unknown_zones = set(self.heat_loads) - known_zones
+        if unknown_zones:
+            raise ValueError(f"Unknown airflow zones: {sorted(unknown_zones)}")
+        zones = [zone for zone in zones if zone.userName in self.heat_loads]
+        if not zones:
+            raise ValueError("heat_loads must select at least one airflow zone.")
+        for index, zone in enumerate(zones, start=1):
+            zone.prjIndex = index
+            zone.prjName = f"z{index:03d}"
+            zone.heatLoad = float(self.heat_loads[zone.userName])
+        return zones, pathTopology(airflow_paths, zones)
+
+    def _run_project(self, project_file):
+        contam_result = self.run_command((self.contam_exe, project_file))
         with open(self.response_file, "r", encoding="utf-8") as response_file:
             simread_result = self.run_command(
-                (self.simread_exe, self.prj_file),
+                (self.simread_exe, project_file),
                 stdin=response_file,
             )
         return AirflowResult(
-            airflow_matrix=build_matrix(file_path=self.prj_file),
+            airflow_matrix=build_matrix(file_path=project_file),
             commands=(contam_result, simread_result),
             workspace=WorkspaceReport(self.paths.workspace, True),
         )
 
 
-class ZoneResult(object):
-    """
-        A structure to record the analysis result.
-        name: zone name in the prj file
-        heat: zone total heat load
-        volume: zone space volume
-        userName: users define name of the zone, default is MoosasSpace.id
-        temperature: a list[float] for temperature result in C. inf if invalid.
-        ACH: a list[float] for mass flow result in m3/h. inf if invalid.
-    """
-    __slots__ = ['name', 'heat', 'volume', 'userName', 'temperature', 'ACH', 'thermalParams']
-
-    def __init__(self, name=None, heat=None, volume=None, userName=None):
-        """
-        Initialize a ZoneResult instance with optional parameters.
-        
-        Parameters
-        ----------
-        name : str, optional
-            Name of the zone. Default is None.
-        heat : float, optional
-            Heat value associated with the zone. Will be converted to float. Default is None.
-        volume : float, optional
-            Volume of the zone. Default is None.
-        userName : str, optional
-            User-defined name for the zone. Default is None.
-        
-        Returns
-        -------
-        None
-            This constructor does not return a value.
-        """
-        super(ZoneResult, self).__init__()
-        self.name = name
-        self.heat = float(heat)
-        self.volume = volume
-        self.userName = userName
-        self.temperature: list[float] = []
-        self.ACH: list[float] = []
+def _relative_residual(current, previous):
+    denominator = np.maximum(np.abs(previous), np.finfo(float).eps)
+    return np.abs((current - previous) / denominator)
 
 
-def iterateProjects(prjFiles, zoneInfoFiles, concatResultFile=None, outdoorTemperature=20, maxIteration=10,
-                    exitResidual=0.01, paths: VentPaths | None = None) -> list[ZoneResult]:
-    """
-    Iterate over multiple CONTAM project files to perform buoyancy ventilation simulations and merge results.
-    
-    Parameters
-    ----------
-    prjFiles : str or list of str
-        Path(s) to CONTAM project file(s) (.prj). If a string is provided, it will be converted to a list.
-        Initial indoor temperature must be defined in these files.
-    zoneInfoFiles : str or list of str
-        Path(s) to zone information file(s), each containing room-specific data. Each file should contain
-        one or more of the following formats:
-        - [[prjroomname, roomheatload, userroomname], ...]
-        - [[prjroomname, roomheatload], ...] (userroomname defaults to prjroomname)
-        - [[roomheatload, userroomname], ...] (order matches zones in .prj)
-        - [[roomheatload], ...] (order matches zones in .prj)
-    concatResultFile : str, optional
-        Path to the output CSV file where all merged results will be saved. If not provided, defaults to
-        'concatResult.csv' in the result directory.
-    outdoorTemperature : float, default 20
-        Static outdoor temperature in degrees Celsius. Only the temperature difference between indoor and
-        outdoor is considered in the simulation.
-    maxIteration : int, default 10
-        Maximum number of iterations for the CONTAM simulation.
-    exitResidual : float, default 0.01
-        Convergence criterion; simulation stops when residual falls below this value.
-    
-    Returns
-    -------
-    list of ZoneResult
-        A list of ZoneResult objects, each representing the simulation result for a zone.
-    """
-    """
-    Enter method for iterateFile().
-    This method allow users to give multi project file for calculation.
-    In this way, separated Air Flow Network can be calculated individually to escape from error.
-    The result will be merged together finally.
-    ---------------------------------
-
-    prjFiles: Contam project files. Initial indoor temperature should be carefully defined in this file.
-        Users can use the contamW3.exe to build this file by a GUI.
-        Documents about contamX and contamW can be found at:
-        https://www.nist.gov/el/energy-and-environment-division-73200/nist-multizone-modeling/software/contam/documentation
-
-    zoneInfoFiles: standard roomInfo files:
-        [[prjroomname, roomheatload, userroomname]..[]]
-        in which:
-            prjroomname: the room name set in the *.prj file, must be the same in every character
-            roomheatload: the gross load of the room in (W).
-            userroomname: the room name define by the users, and it will occur in the result file.
-
-        The roomInfo file can exclude the roomname and only provide roomInfo, which means that:
-        the room heat file can only have 2 columns:
-        [[prjroomname,roomheatload]...[]]
-        in this case, the roomnome will be the same to the prjroomname
-
-        or 2 columns:
-        [[roomheatload,usersroomname]...[]]
-        iin this case, the roomInfo data should be in the same sequence of zones in the project file
-
-        or only 1 column:
-        [[roomheatload]...[]]
-        in this case, the roomheatload data should be in the same sequence of zones in the project file
-
-    concatResultFile: all result will be merged into this file.
-
-    outdoorTemperature: The static outdoor temperature.
-        Notice that only the indoor/outdoor temperature difference will be considered in contamX,
-        which means that #25 indoor 20 outdoor# is equal to #20 outdoor 15 indoor#.
-
-    maxIteration: how many times contamX should run.
-    """
-    print('auto contamx iteration for buoyancy ventilation')
-    print(f'prj files:{prjFiles}')
-    print(f'roomInfo files:{zoneInfoFiles}')
-    print('------------------------------')
-    if isinstance(prjFiles, str):
-        prjFiles = [prjFiles]
-    if isinstance(zoneInfoFiles, str):
-        zoneInfoFiles = [zoneInfoFiles]
-    paths = paths or VentPaths.create()
-    resultFiles = [os.path.join(paths.result_dir, os.path.basename(prj)[:-4] + '_result.csv') for prj in prjFiles]
-    if concatResultFile is None:
-        concatResultFile = os.path.join(paths.result_dir, 'concatResult.csv')
-
-    allZones = []
-    for prj, heat, res in zip(prjFiles, zoneInfoFiles, resultFiles):
-        allZones += iterateFile(prjFile=prj,
-                                zoneInfoFile=heat,
-                                resultFile=res,
-                                outdoorTemperature=outdoorTemperature, maxIteration=int(maxIteration),
-                                exitResidual=float(exitResidual), paths=paths)
-
-    writeZone(concatResultFile, allZones)
-    print('------------------------------')
-    print('result in ', concatResultFile)
-    return allZones
+def _solve_sensible_heat(airflow_matrix, heat_loads, outdoor_temperature):
+    temperature_k = _calculate_temperature(airflow_matrix, heat_loads, outdoor_temperature)
+    temperature_c = np.asarray(temperature_k, dtype=float) - 273.15
+    temperature_c = np.where(temperature_c < 10.0, 22.0, temperature_c)
+    temperature_c = np.where(temperature_c > 30.0, 30.0, temperature_c)
+    return temperature_c + 273.15
 
 
-def iterateFile(prjFile, zoneInfoFile, resultFile=None, outdoorTemperature=25, maxIteration=50,
-                exitResidual=0.01, paths: VentPaths | None = None) -> list[ZoneResult]:
-    """
-    Simulate buoyancy-driven airflow in a building using CONTAMX based on mass flow balance in an air flow network.
-    
-    Parameters
-    ----------
-    prjFile : str
-        Path to the CONTAM project file (.prj). The initial indoor temperature must be defined in this file.
-        This file can be created using CONTAMW3 GUI. See NIST documentation for details.
-    zoneInfoFile : str or list[list]
-        Path to a room information file or direct data in list format. Each entry contains zone-specific data:
-        [prjroomname, roomheatload, userroomname] or variations with 1-2 columns as described below:
-        
-        - 3 columns: [prjroomname (str), roomheatload (float), userroomname (str)]
-        - 2 columns: [prjroomname, roomheatload] → userroomname defaults to prjroomname
-        - 2 columns: [roomheatload, userroomname] → assumes order matches zones in .prj file
-        - 1 column: [roomheatload] → values assigned sequentially to zones in .prj file
-        
-        Alternatively, output from `MoosasModel.buildRoomHeat()` can be passed directly.
-    resultFile : str, optional
-        Path to save iteration results as CSV. Records indoor temperature (°C) and ACH over iterations.
-        If None, results are not saved to file. Default is None.
-    outdoorTemperature : float, default=25
-        Outdoor air temperature in °C. Only temperature difference between indoor and outdoor affects simulation.
-    maxIteration : int, default=50
-        Maximum number of iterations before stopping, regardless of convergence.
-    exitResidual : float, default=0.01
-        Convergence threshold. Iteration stops when mean absolute residual (temperature and airflow) falls below this value.
-    
-    Returns
-    -------
-    list[ZoneResult]
-        List of ZoneResult objects containing per-zone results including:
-        - temperature history (in °C)
-        - air change rate (ACH) history
-        - zone names (project and user-defined)
-        - heat loads
-        Each object corresponds to a zone in the project file.
-    """
-    """
-    Simulating buoyancy effect by contamx based on Mass Flow Balance in Air Flow Network.
-    More information can be found in this article:
+def _write_project_temperatures(temperature, project_file):
+    head, temperature_block, rear = read_file(project_file)
+    rows = np.array([
+        re.split(r"[ ]+", line)
+        for line in temperature_block.split("\n")[:-1]
+    ])
+    rows[:, 9] = temperature
+    temperature_block = "\n".join(" ".join(row) for row in rows) + "\n"
+    write_file(project_file, head, temperature_block, rear)
 
-    -----------------------------------------
-    prjFile: single contam project file. Initial indoor temperature should be carefully defined in this file.
-        Users can use the contamW3.exe to build this file by a GUI.
-        Documents about contamX and contamW can be found at:
-        https://www.nist.gov/el/energy-and-environment-division-73200/nist-multizone-modeling/software/contam/documentation
 
-    zoneInfoFile: a standard roomInfo file or roomInfo data should be given here:
-        [[prjroomname, roomheatload, userroomname]..[]]
-        in which:
-            prjroomname: the room name set in the *.prj file, must be the same in every character
-            roomheatload: the gross load of the room in (W).
-            userroomname: the room name define by the users, and it will occur in the result file.
-
-        The roomInfo file can exclude the roomname and only provide roomInfo, which means that:
-
-        the room heat file can only have 2 columns:
-        [[prjroomname,roomheatload]...[]]
-        in this case, the roomnome will be the same to the prjroomname
-
-        or 2 columns:
-        [[roomheatload,usersroomname]...[]]
-        iin this case, the roomInfo data should be in the same sequence of zones in the project file
-
-        or only 1 column:
-        [[roomheatload]...[]]
-        in this case, the roomheatload data should be in the same sequence of zones in the project file
-
-        Of course, you can get a roomInfo series by MoosasModel.buildRoomHeat() method, then directly send as the argument
-
-    resultFile: the iteration result path, will be coded into csv.
-        In this file, the temperature changes and Volume Metric Flow Rate in ACH will be recorded.
-            The active project's workspace is provided through ``VentPaths``.
-
-    outdoorTemperature: The static outdoor temperature.
-        Notice that only the indoor/outdoor temperature difference will be considered in contamX,
-        which means that #25 indoor 20 outdoor# is equal to #20 outdoor 15 indoor#.
-
-    maxIteration: The max iterations contamX should run.
-
-    exitResidual: Stop iteration if overall Residual is smaller than this value
-    """
-    iteration = 0
-    residual = 100.0
-
-    """preparing the file"""
-    paths = paths or VentPaths.create()
-    if not test_exist(paths, prjFile):
-        raise Exception('Error occurred while checking files.')
-    current_file = os.path.normpath(os.path.join(paths.project_dir, os.path.basename(prjFile)))
-    src_prj = os.path.normcase(os.path.abspath(os.path.normpath(prjFile)))
-    dst_prj = os.path.normcase(os.path.abspath(current_file))
-    if src_prj != dst_prj:
-        shutil.copy2(src_prj, dst_prj)
-
-    """build zone series"""
-    tempResult, ACHresult = [], []
-    zones = readZoneInfo(prjFile, zoneInfoFile)
-    invalidRoom = np.array([False] * len(zones))
-
-    """start iteration"""
-    while iteration <= maxIteration and residual > exitResidual:
-        iteration += 1
-
-        print('------------------------------')
-        print("Iteration", iteration, current_file)
-
-        try:
-            AFN = contam_iteration(prjFile=current_file, paths=paths)
-            temperature = sensible_heat_iteration(
-                AFN=AFN,
-                zoneInfo=np.array([z.heat for z in zones]),
-                outdoorTemperature=outdoorTemperature
+def _calculate_temperature(airflow_matrix, heat_loads, outdoor_temperature):
+    airflow_matrix = np.asmatrix(airflow_matrix)
+    heat_loads = np.asmatrix(heat_loads)
+    for column in range(len(airflow_matrix)):
+        airflow_matrix[column, column] = -np.sum(airflow_matrix[:, column])
+        for row in range(len(airflow_matrix) - 1):
+            if airflow_matrix[row, column] == 0:
+                airflow_matrix[row, column] = -0.0001
+            airflow_matrix[row, column] += (
+                airflow_matrix[row, column] * random.randrange(-100, 100) * 0.00001
             )
-            tempIteration = (np.array(temperature) - 273.15).flatten().tolist() + [outdoorTemperature]
-            print(np.array(temperature) - 273.15)
-            for i in range(temperature.shape[1]):
-                if temperature[0, i] < 200 or temperature[0, i] > 375:
-                    invalidRoom[i] = True
-                    temperature[0, i] = DEFAULT_INDOOR_TEMPERATURE
-                    tempIteration[i] = 'inf'
-                    print(
-                        '\033[40m' + f'Warrning: irregular temperature will be fix to 27C and inf in result' + '\033[0m')
-
-            achIteration = [max(x, y) for x, y in zip(AFN[-1], AFN[:, -1])]
-            tempResult.append(tempIteration)
-            ACHresult.append(achIteration)
-            for i in range(len(zones)):
-                zones[i].temperature.append(tempIteration[i])
-                zones[i].ACH.append(achIteration[i])
-
-            """calculating residual on temperature and flow rate"""
-            if len(tempResult) > 1:
-                thisResult = [tempResult[-1][i] for i in range(len(tempResult[-1]) - 1) if not invalidRoom[i]]
-                lastResult = [tempResult[-2][i] for i in range(len(tempResult[-2]) - 1) if not invalidRoom[i]]
-                zoneNames = [zones[i].userName for i in range(len(tempResult[-1]) - 1) if not invalidRoom[i]]
-                print()
-                print('\t'.join(['Residual:'] + zoneNames))
-                residual1 = [(thisResult[i] - lastResult[i]) / lastResult[i] for i in range(len(thisResult))]
-                print('\t'.join(['Temperature'] + [str(np.abs(np.round(z, 4))) for z in residual1]))
-                print(' \t\t\t' + '\t'.join(np.round(thisResult, 2).astype(str)))
-
-                thisResult = [ACHresult[-1][i] for i in range(len(ACHresult[-1]) - 1) if not invalidRoom[i]]
-                lastResult = [ACHresult[-2][i] for i in range(len(ACHresult[-2]) - 1) if not invalidRoom[i]]
-                print('\t'.join(['Residual:'] + zoneNames))
-                residual2 = [(thisResult[i] - lastResult[i]) / lastResult[i] for i in range(len(thisResult))]
-                print('\t'.join(['Mass Flow'] + [str(np.abs(np.round(z, 4))) for z in residual2]))
-                print(' \t\t\t' + '\t'.join(np.round(thisResult, 1).astype(str)))
-                residual = np.mean(np.abs(residual1 + residual2))
-
-            write_contam(temperature=temperature, prjFile=current_file)
-
-        except Exception as e:
-            print('\033[40m' + f'Error occurred and simulation has collapsed: {e}' + '\033[0m')
-            return zones
-
-        finally:
-            if resultFile is not None:
-                """write the result"""
-                print(f'writing: {resultFile}')
-                writeZone(resultFile, zones)
-
-    if resultFile is None:
-        return zones
-    print('simulation finished :', resultFile)
-    shutil.copy2(current_file, prjFile[:-4]+'_final.prj')
-    return zones
+    outdoor_heat = airflow_matrix[-1, :-1] * (outdoor_temperature * 1.2 / 3600 * 1005)
+    enthalpy = heat_loads + outdoor_heat
+    airflow_matrix *= 1.2 / 3600 * 1005
+    return 273.15 - enthalpy * airflow_matrix[:-1, :-1].I
 
 
-def contam_iteration(prjFile, contamExe=None, simreadExe=None, responseFile=None, paths: VentPaths | None = None):
-    """
-    Run one CONTAM iteration and return the Air Flow Network matrix.
-
-    Parameters
-    ----------
-    prjFile : str
-        Path to the CONTAM project file (.prj).
-    contamExe : str, optional
-        Path to `contamx` executable. Defaults to package preset.
-    simreadExe : str, optional
-        Path to `simread` executable. Defaults to package preset.
-    responseFile : str, optional
-        Response file path for `simread`. Defaults to package preset.
-
-    Returns
-    -------
-    numpy.ndarray
-        AFN matrix parsed from generated CONTAM output files.
-    """
-    return AirflowRunner(
-        prj_file=prjFile,
-        contam_exe=contamExe,
-        simread_exe=simreadExe,
-        response_file=responseFile,
-        paths=paths,
-    ).run().airflow_matrix
-
-
-def _zoneinfo_text_to_roominfo(zoneInfoText):
-    """
-    Parse in-memory zoneInfo text stream into roomInfo list.
-    """
-    blocks = zoneInfoText.split(';')
-    lines = []
-    for bl in blocks:
-        for li in bl.split('\n'):
-            data = li.split('!')[0].strip()
-            if not data:
-                continue
-            arr = [x.strip() for x in data.split(',') if x.strip() != ""]
-            if arr:
-                lines.append(arr)
-    roomInfo = []
-    for data in lines:
-        if len(data) == 3:
-            roomInfo.append([data[0], float(data[1]), data[2]])
-        elif len(data) == 2:
-            dig = data[0].split('.')
-            if dig[0].isdigit():
-                roomInfo.append([None, float(data[0]), data[1]])
-            else:
-                roomInfo.append([data[0], float(data[1]), data[0]])
-        elif len(data) == 1:
-            roomInfo.append([None, float(data[0]), None])
-    return roomInfo
-
-
-def sensible_heat_iteration(AFN, zoneInfo, outdoorTemperature=25, prjFile=None):
-    """
-    Solve sensible heat balance and return updated indoor temperature (Kelvin).
-
-    Parameters
-    ----------
-    AFN : numpy.ndarray
-        Air Flow Network matrix from `contam_iteration`.
-    zoneInfo : str or array-like
-        One of:
-        - zoneInfo file path
-        - zoneInfo text stream in-memory
-        - direct room heat-load sequence
-    outdoorTemperature : float, default 25
-        Outdoor temperature in Celsius.
-
-    Returns
-    -------
-    numpy.ndarray
-        Indoor temperatures in Kelvin (row vector).
-    """
-    roomInfo = None
-    if isinstance(zoneInfo, str):
-        if os.path.exists(zoneInfo):
-            if prjFile is None:
-                raise ValueError('prjFile is required when zoneInfo is a file path.')
-            parsed = readZoneInfo(prjFile=prjFile, roomInfoFile=zoneInfo)
-            roomInfo = [z.heat for z in parsed]
-        else:
-            parsed = _zoneinfo_text_to_roominfo(zoneInfo)
-            roomInfo = [float(li[1]) for li in parsed]
-    else:
-        roomInfo = np.array(zoneInfo).flatten().tolist()
-    if roomInfo is None:
-        raise ValueError('zoneInfo is required for sensible_heat_iteration')
-    temperature_k = change_temperature(AFN=AFN, roomInfo=np.array(roomInfo), t0=outdoorTemperature)
-    temp_c = np.array(temperature_k, dtype=float) - 273.15
-    temp_c = np.where(temp_c < 10.0, 22.0, temp_c)
-    temp_c = np.where(temp_c > 30.0, 30.0, temp_c)
-    return temp_c + 273.15
-
-
-def write_contam(temperature, prjFile, outputFile=None):
-    """
-    Write updated temperature back into CONTAM `.prj` file.
-
-    Parameters
-    ----------
-    temperature : numpy.ndarray
-        Indoor temperature row vector in Kelvin.
-    prjFile : str
-        Input project file path.
-    outputFile : str, optional
-        Output project file path. If None, overwrite `prjFile`.
-
-    Returns
-    -------
-    str
-        Path to written project file.
-    """
-    prj_file = prjFile
-    output_file = outputFile or prj_file
-
-    print(f'writing: {output_file}')
-    head, temp, rear = read_file(prj_file)
-    temp_revise = np.array([re.split(r'[ ]+', li) for li in temp.split('\n')[0:-1]])
-    temp_revise[:, 9] = temperature
-    temp_revise = '\n'.join([' '.join(li) for li in temp_revise]) + '\n'
-    write_file(output_file, head, temp_revise, rear)
-    return output_file
-
-def runFile(prjFiles, paths: VentPaths | None = None):
-    """run and read the AirFlowNetwork result of a *.prj file.
-
-    -----------------------------------------
-    prjFile: path of the prj file. the *.lfr file should be in the same directory and has same basename
-
-    return: None
-    """
-    if isinstance(prjFiles, str):
-        prjFiles = [prjFiles]
-    paths = paths or VentPaths.create()
-    for prjFile in prjFiles:
-        AirflowRunner(prj_file=prjFile, paths=paths).run()
-
-
-
-def readZoneInfo(prjFile, roomInfoFile):
-    """
-    Build a list of ZoneResult objects by combining zone data from project and room info files.
-    
-    Parameters
-    ----------
-    prjFile : str
-        Path to the project file containing zone names and volumes.
-    roomInfoFile : str or list of lists
-        Path to the room information file or a pre-parsed list of lists containing room heat load data.
-        The file can have one of the following formats:
-        - 3 columns: [prjroomname, roomheatload, usersroomname]
-        - 2 columns: [prjroomname, roomheatload] (usersroomname defaults to prjroomname)
-        - 2 columns: [roomheatload, usersroomname] (must match project zone order)
-        - 1 column: [roomheatload] (must match project zone order)
-    
-    Returns
-    -------
-    list of ZoneResult
-        A list of ZoneResult objects containing zone name, volume, heat load, and user-defined name.
-    """
-    """
-    Build the zone list by combining the data in prjFile and roomInfoFile.
-    in this method we will read standard roomInfo file into:
-    [[prjroomname,roomheatload,usersroomname]...[]]
-
-    the room heat file can only have 2 columns:
-    [[prjroomname,roomheatload]...[]]
-    in this case, the roomnome will be the same to the prjroomname
-
-    or 2 columns:
-    [[roomheatload,usersroomname]...[]]
-    iin this case, the roomInfo data should be in the same sequence of zones in the project file
-
-    or only 1 column:
-    [[roomheatload]...[]]
-    in this case, the roomInfo data should be in the same sequence of zones in the project file
-    """
-    if not isinstance(roomInfoFile, str):
-        return roomInfoFile
-    roomInfo = []
-    roomInfodata = parseFile(roomInfoFile)[0]
-    for data in roomInfodata:
-            if len(data) == 3:
-                # zoneName in prjFile, zone heat load, user define zoneName
-                roomInfo.append([data[0], float(data[1]), data[2]])
-            elif len(data) == 2:
-                dig = data[0].split('.')
-                if dig[0].isdigit():
-                    # zone heat load, user define zoneName
-                    roomInfo.append([None, float(data[0]), data[1]])
-                else:
-                    # zoneName in prjFile, zone heat load
-                    roomInfo.append([data[0], float(data[1]), data[0]])
-            elif len(data) == 1:
-                roomInfo.append([None, float(data[0]), None])
-    roomInfo = np.array(roomInfo)
-    # read room volume and name in the prj file
-    vol, room_name = read_zone(prjFile)
-
-    if None in roomInfo[:, 0].flatten():
-        if len(room_name) != len(roomInfo):
-            raise Exception('Error in file preparing: roomInfoFile is not in the same len to the project file.')
-        roomInfoRoomName = room_name
-    else:
-        roomInfoRoomName = roomInfo[:, 0].flatten().tolist()
-    zones: list[ZoneResult] = []
-    for name, vol in zip(np.array(room_name).flatten(), np.array(vol).flatten()):
-        if name not in roomInfoRoomName:
-            raise Exception(f'Error in file preparing: zone {name} not found in roomInfoFile.')
-        info = roomInfo[roomInfoRoomName.index(name)]
-        zones.append(ZoneResult(
-            name=name,
-            volume=vol,
-            heat=info[1],
-            userName=info[2]
-        ))
-
-    return zones
-
-
-def execContam(exe, file):
-    """
-    Execute CONTAM simulation using the specified executable and input file.
-    
-    Parameters
-    ----------
-    exe : str
-        Path to the CONTAMX executable file.
-    file : str
-        Path to the input project file for the simulation.
-    
-    Returns
-    -------
-    bool
-        True if the execution command was successfully called, False if either the executable or input file does not exist.
-    """
-    if not os.path.exists(exe):
-        print('error: contamx.exe not found')
-        return False
-    if not os.path.exists(file):
-        print('error: ' + file + ' not found')
-        return False
-    Runner().run_command([exe, file])
-    return True
-
-def readPathResult(prjFile,netFile=None):
-    """read *.lfr file and translate the mass flow to volumetric flow
-
-    -----------------------------------------
-    prjFile: path of the prj file. the *.lfr file should be in the same directory and has same basename
-
-    netFile: optional network file to name the zones and paths
-
-    return: dict{
-                #{pathName or pathIndex}:{
-                    'from':#{zoneName or zoneIndex},'to':#{zoneName or zoneIndex}',flow:#{volumetric flow m3/h}
-                }
-            }
-    """
-
-    airflow = read_flowpath(prjFile[:-4] + '.lfr') * 3600.0 / AIR_DENSITY
-    topology = read_topology(prjFile)
-    if netFile:
-        zoneName,pathName = [],[]
-        strs = parseFile(netFile)
-        zoneStr = strs[0]
-        pathStr = strs[1]
-        zoneName = [line[0] for line in zoneStr if len(line) > 1]
-        pathName = [line[0] for line in pathStr if len(line) > 1]
-        zoneName=['ambient']+zoneName
-        topology = [[max(flow[0],0),max(flow[1],0)] for flow in topology]
-        topology = {pathName[i]:{'from':zoneName[topology[i][0]],"to":zoneName[topology[i][1]],'flow':airflow[i][0]+airflow[i][1]} for i in range(len(topology))}
-
-    else:
-        topology = {i: {'from': topology[i][0], "to":topology[i][1],'flow': airflow[i][0] + airflow[i][1]} for i in range(len(topology))}
-    return topology
-
-
-def change_temperature(AFN: np.ndarray, roomInfo: np.ndarray, t0):
-    """
-    Calculate indoor temperatures using mass flow balance in an air flow network.
-    
-    Parameters
-    ----------
-    AFN : numpy.ndarray
-        The clean matrix of Air Flow Network, including outdoor air connections.
-        Modified in-place to adjust diagonal elements and off-diagonal zero entries.
-    roomInfo : numpy.ndarray
-        Room-specific information array with length matching the number of rooms.
-        Represents internal heat data or similar room properties.
-    t0 : float or int
-        Outdoor temperature in degrees Celsius, used to compute heat exchange
-        from outside air.
-    
-    Returns
-    -------
-    numpy.ndarray
-        Array of indoor temperatures in Kelvin, calculated based on energy balance.
-        The result is obtained by solving a linear system derived from the modified
-        AFN matrix and adjusted room heat gains, then converting from Celsius to Kelvin.
-    """
-    """
-    calculate indoor temperature via Mass Flow Balance in the network.
-
-    AFN: the clean matrix of Air Flow Network, include outdoor air.
-    roomInfo: roomInfo data, which have the same len to the rooms.
-    t0: outdoorTemperature
-    """
-    AFN = np.asmatrix(AFN)
-    roomInfo = np.asmatrix(roomInfo)
-
-    for i in range(len(AFN)):
-        AFN[i, i] = -np.sum(AFN[:, i])
-        for j in range(len(AFN) - 1):
-            if AFN[j, i] == 0: AFN[j, i] = -0.0001
-            AFN[j, i] += AFN[j, i] * random.randrange(-100, 100) * 0.01 * 0.001
-
-    Qout = AFN[-1, 0:-1] * (t0 * 1.2 / 3600 * 1005)
-    dH = roomInfo + Qout
-
-    AFN *= (1.2 / 3600 * 1005)
-
-    t = -dH * AFN[0:-1, 0:-1].I
-    temperature = 273.15 + t
-    return temperature
-
-
-def test_exist(paths: VentPaths, prj_file):
-    """
-    Check existence and set up necessary directories and files for the project.
-    
-    Parameters
-    ----------
-    None
-    
-    Returns
-    -------
-    bool
-        True if all required paths exist (or are created successfully), False otherwise.
-    """
-    if not os.path.exists(paths.contam_dir):
-        return False
-    if not os.path.exists(prj_file):
-        return False
-    return True
-
-
-def wait(file):
-    """
-    Wait for a file to exist by checking at regular intervals.
-    
-    Parameters
-    ----------
-    file : str
-        The path of the file to wait for.
-    
-    Returns
-    -------
-    bool
-        True if the file exists within the waiting period.
-    """
-    for i in range(100):
-        if os.path.exists(file):
-            return True
-        else:
-            print('waiting:', file)
-            time.sleep(0.1)
-    raise Exception('Return file error:', file)
-
-
-def writeZone(resultFile, zones):
-    """
-    Write zone data to a CSV file and return it as a formatted string.
-    
-    Parameters
-    ----------
-    resultFile : str or None
-        Path to the output CSV file. If None, the data is not written to a file.
-    zones : list of object
-        List of zone objects, each having attributes `name`, `heat`, `volume`, 
-        `userName`, `ACH` (list), and `temperature` (list).
-    
-    Returns
-    -------
-    str
-        A string representation of the CSV data, with rows separated by newlines
-        and columns separated by commas.
-    """
-    lines = [['!prjZoneName'] + [z.name for z in zones]]
-    lines += [['!zoneHeatLoad'] + [z.heat for z in zones]]
-    lines += [['!zoneVolume'] + [z.volume for z in zones]]
-    lines += [['!ACH'] + [z.userName for z in zones]]
-    lines += [[i] + [z.ACH[i] for z in zones] for i in range(len(zones[0].ACH))]
-    lines += [['!Temperature'] + [z.userName for z in zones]]
-    lines += [[i] + [z.temperature[i] for z in zones] for i in range(len(zones[0].temperature))]
-    if resultFile is not None:
-        path.checkBuildDir(resultFile)
-        with open(resultFile, 'w+', newline='') as f:
-            csv.writer(f).writerows(lines)
-    return '\n'.join([','.join(np.array(li).astype(str)) for li in lines])
-
-
-if __name__ == '__main__':
-    prj_name = [file for file in os.listdir(os.path.join('..', 'data')) if file[-3:] == 'prj'][0]
-    prjfile = os.path.join('.', 'data', prj_name)
-    roomInfo_file = os.path.join('..', 'data', 'roomInfo.txt')
-    # iterateFile(r'C:\Users\Lenovo\PycharmProjects\ComtamW\data\kunming_old.prj',r'C:\Users\Lenovo\PycharmProjects\ComtamW\data\roomInfo_old.txt')
-    # iterateFile(r'.\data\ttt.prj', r'.\data\roomInfottt.txt')
-    iterateFile(prjfile,
-                roomInfo_file)
+def read_path_result(project_file):
+    """Return volumetric flow by path from a completed CONTAM project."""
+    airflow = read_flowpath(project_file[:-4] + ".lfr") * 3600.0 / AIR_DENSITY
+    topology = read_topology(project_file)
+    return {
+        index: {
+            "from": topology[index][0],
+            "to": topology[index][1],
+            "flow": airflow[index][0] + airflow[index][1],
+        }
+        for index in range(len(topology))
+    }

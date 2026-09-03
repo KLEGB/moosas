@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import numpy as np
 import pytest
 
 from MoosasPy.simulation.airflow.network import (
@@ -17,6 +18,11 @@ from MoosasPy.simulation.airflow.network import (
     buildNetworkFile,
     buildZoneInfoFile,
 )
+from MoosasPy.model import MoosasModel
+from MoosasPy.simulation.airflow import AirflowRunner
+from MoosasPy.simulation.airflow.runner import VentPaths
+from MoosasPy.simulation.radiation import modelRadiation
+from MoosasPy.simulation.weather.sky.cumulative import CumulativeSky
 
 
 def _zone():
@@ -139,3 +145,30 @@ def test_moosas_afn_binary_generates_prj_from_json():
     assert "create such prjFile" in result.stdout
     assert "30.00 300.15 0.00 z001" in project_text
     assert "0.222222 1.000000 0.500000 0.780000" in project_text
+
+
+def test_rdf_model_runs_airflow_simulation():
+    rdf_path = Path(__file__).parent / "caseFile" / "NBuilding.rdf"
+    model = MoosasModel.load(rdf_path)
+    zero_sky = CumulativeSky(np.zeros(145))
+    modelRadiation(
+        model,
+        {"summer": zero_sky, "winter": zero_sky},
+        reflection=0,
+    )
+
+    with TemporaryDirectory() as directory:
+        result = AirflowRunner(
+            model=model,
+            paths=VentPaths.create(work_dir=directory),
+            max_iterations=2,
+            timeout_seconds=60,
+        ).run()
+
+    assert len(result.zones) == len(model.spaceList)
+    assert result.airflow_matrix.shape == (len(model.spaceList) + 1,) * 2
+    assert result.iteration_count == 2
+    assert len(result.commands) == 5
+    assert all(command.returncode == 0 for command in result.commands)
+    assert all(len(zone.temperatures) == 2 for zone in result.zones)
+    assert all(len(zone.ach_values) == 2 for zone in result.zones)
