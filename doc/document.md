@@ -570,6 +570,6 @@ Developed by the research team directed by **Prof. Borong Lin** at the Key
 Laboratory of Eco Planning & Green Building, Ministry of Education, Tsinghua
 University.
 
-For collaboration: linbr@tsinghua.edu.cn
+For collaboration: [linbr@tsinghua.edu.cn](mailto:linbr@tsinghua.edu.cn)
 
-For technical questions: junx026@gmail.com, liyihui23@mails.tsinghua.edu.cn
+For technical questions: [junx026@gmail.com](mailto:junx026@gmail.com), [liyihui23@mails.tsinghua.edu.cn](mailto:liyihui23@mails.tsinghua.edu.cn)
