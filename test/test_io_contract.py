@@ -9,6 +9,7 @@ import pytest
 
 from MoosasPy.model import MoosasModel
 from MoosasPy.model.io.idf.version import configure_idd
+from MoosasPy.model.resources import configure_model_resources
 from MoosasPy.transform import transform
 
 
@@ -19,6 +20,26 @@ GEOMETRY_FIXTURE = PROJECT_ROOT / "test" / "caseFile" / "test3_geomove.geo"
 @pytest.fixture(scope="module")
 def semantic_model() -> MoosasModel:
     return transform(str(GEOMETRY_FIXTURE), input_type="geo", stdout=StringIO())
+
+
+def test_model_initialization_does_not_load_external_resources():
+    model = MoosasModel()
+
+    assert model.buildingTemplate == {}
+    assert model.schedule == {}
+    assert not hasattr(model, "weather")
+    assert not hasattr(model, "cumSky")
+    assert not hasattr(model, "idfZoneTemplate")
+    assert not hasattr(model, "loadSchedule")
+    assert not hasattr(model, "loadWeatherData")
+
+
+def test_resource_service_configures_a_domain_model():
+    model = configure_model_resources(MoosasModel())
+
+    assert model.buildingTemplate
+    assert model.schedule
+    assert model.scheduleByType
 
 
 @pytest.mark.parametrize("suffix", (".geo", ".obj", ".stl"))
