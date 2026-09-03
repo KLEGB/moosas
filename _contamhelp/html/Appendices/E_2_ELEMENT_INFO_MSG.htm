@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication|ContamX TCP/IP Message Formats" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>E.2.7 Element Info Message</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>ELEMENT_INFO_MSGTYPE</h3>
+        <p>Provides a list of airflow elements in the order in which they occur in the project file.  This provides the ability to change the airflow element, via the ADJ_ELEMENT_MSGTYPE, to which an airflow path refers using the index of the element in the list of names provided by this message.</p>
+        <p class="code">Message Header;</p>
+        <p class="code"><span style="color: blue;">int </span>num_elements;       <span style="color: green;">// number of airflow elements (not ducts) in the PRJ</span></p>
+        <p class="code"><span style="color: blue;">char </span>element_names[<span style="color: blue;"></span>num_elements];  <span style="color: green;">// name of each element (null-terminated strings)</span></p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

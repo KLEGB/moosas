@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Ducts|Defining Ducts|Duct Segment Properties" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Duct Flow Element Types</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4><a name="kanchor78"></a>Duct Flow Element Types</h4>
+        <p>This is a list of available duct flow elements or mathematical models that provide the relationship between airflow and pressure difference for duct segments. See Airflow Analysis in the <a href="../Theory/IDH_Theory_Background.htm">Theoretical Background</a> section of the manual for mathematical details.</p>
+        <p class="SubHeading1">Darcy-Colebrook Model</p>
+        <p>The most common model to use for CONTAM duct systems is the Darcy-Weisbach relation and Colebrook's natural roughness function.</p>
+        <p class="NormalIndent"><a href="IDH_PP_AFE_DCTDWC.htm">Darcy-Colebrook Model</a>
+        </p>
+        <p class="SubHeading1">Powerlaw Models</p>
+        <p>Three versions of the powerlaw model are included:</p>
+        <ol>
+            <li value="1">
+                <p><a href="IDH_PP_AFE_DCTPLR.htm">Orifice resistance model</a>
+                </p>
+            </li>
+            <li value="2">
+                <p><a href="IDH_PP_AFE_DCTFCN.htm">Resistance: F = C(<span style="font-family: 'Symbol';">D</span>P)^n</a> (mass flow)</p>
+            </li>
+            <li value="3">
+                <p><a href="IDH_PP_AFE_DCTQCN.htm">Resistance: Q = C(<span style="font-family: 'Symbol';">D</span>P)^n</a> (volume flow)</p>
+            </li>
+        </ol>
+        <p class="SubHeading1">Forced Flow Models</p>
+        <p>Three types of forced flow models are included:</p>
+        <ol>
+            <li value="1">
+                <p><a href="IDH_PP_AFE_DCTFAN.htm">Fan - performance curve</a>
+                </p>
+            </li>
+            <li value="2">
+                <p><a href="IDH_PP_AFE_DCTCMF.htm">Constant mass flow</a>
+                </p>
+            </li>
+            <li value="3">
+                <p><a href="IDH_PP_AFE_DCTCVF.htm">Constant volume flow</a>
+                </p>
+            </li>
+        </ol>
+        <p class="SubHeading1">Backdraft Damper Models</p>
+        <p>The Backdraft Damper models make it possible to model a feature (e.g. a smoke control damper) that has different flow resistances depending on the direction of the pressure drop, with greatly reduced (or zero) flow in one direction.</p>
+        <ol>
+            <li value="1">
+                <p><a href="IDH_PP_AFE_DCTBDF.htm">Backdraft Damper: F = C(<span style="font-family: 'Symbol';">D</span>P)^n</a> (mass flow)</p>
+            </li>
+            <li value="2">
+                <p><a href="IDH_PP_AFE_DCTBDF.htm">Backdraft Damper: Q = C(<span style="font-family: 'Symbol';">D</span>P)^n</a> (volume flow)</p>
+            </li>
+        </ol>
+        <p class="SubHeading1">Cubic Spline Flow Models</p>
+        <p>These models provide the ability to create user-defined duct flow elements based on a set of data points to which a cubic spline curve is fit. There are four versions that relate either mass flow or volume flow to pressure difference across the flow element (or vice versa). The cubic spline curve fit ensures that the relationship between flow and pressure is differentiable as required by the CONTAM airflow solver. </p>
+        <ol>
+            <li value="1">
+                <p><a href="../AirflowPaths/IDH_AFE_CubicSpline.htm">F vs P</a>: <i>Mass flow rate</i> as a function of <i>Pressure difference</i></p>
+            </li>
+            <li value="2">
+                <p><a href="../AirflowPaths/IDH_AFE_CubicSpline.htm">Q vs P</a>: <i>Volume flow rate</i> as a function of <i>Pressure difference</i></p>
+            </li>
+            <li value="3">
+                <p><a href="../AirflowPaths/IDH_AFE_CubicSpline.htm">P vs F</a>: <i>Pressure difference</i> as a function of <i>Mass flow rate</i></p>
+            </li>
+            <li value="4">
+                <p><a href="../AirflowPaths/IDH_AFE_CubicSpline.htm">P vs Q</a>: <i>Pressure difference</i> as a function of <i>Volume flow rate</i></p>
+            </li>
+        </ol>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

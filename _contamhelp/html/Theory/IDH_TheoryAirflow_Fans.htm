@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Theoretical Background|Airflow Analysis" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Fans</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4>Fans</h4>
+        <p>This section describes the theory of how forced flow elements are modeled with CONTAM. Forced flow elements include constant flow fans and variable flow fans. Constant flow fans include both constant volume and constant mass flow. Variable flow fans are modeled based on the input of a fan performance curve that relates pressure drop to airflow through the fan flow element.</p>
+        <h5>Constant Flow Fans</h5>
+        <p>One particularly simple but useful airflow element sets a constant flow between two nodes. Since the flow is constant, the partial derivatives of flow with respect to the node pressures must be zero. The constant flow element does not contribute to the Jacobian, [<span style="font-weight: bold;">A</span>], but it does add to the right side vector, {<b>B</b>}.
+        </p>
+        <p>Constant flow elements do not mathematically link the pressures of the adjacent nodes. It is necessary that all node in the network be linked to constant pressure nodes in order to have a unique solution. Violation of this restriction will produce a division by zero somewhere in the solution of the equations. Consider the following simple network:</p>
+        <p>&#160;</p>
+        <p class="code">&#160;&#160;&#160;&#160; |----C1----|----F1----|----C2----|----F2----|----C3----|</p>
+        <p class="code">&#160;&#160;&#160;&#160; P1&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; P2&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; P3&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; P4&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; P5&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; P6</p>
+        <p>&#160;</p>
+        <p>where P<span style="vertical-align: sub;font-size: 10pt">1</span> and P<span style="vertical-align: sub;font-size: 10pt">6</span> are known pressures, and F<span style="vertical-align: sub;font-size: 10pt">1</span> and F<span style="vertical-align: sub;font-size: 10pt">2</span> are known flows. Since the flow through C<span style="vertical-align: sub;font-size: 10pt">2</span> is determined by P<span style="vertical-align: sub;font-size: 10pt">3</span> - P<span style="vertical-align: sub;font-size: 10pt">4</span>, and no other flow is related to those pressures, there are not enough equations to determine P<span style="vertical-align: sub;font-size: 10pt">3</span><span style="font-style: italic;">and</span> P<span style="vertical-align: sub;font-size: 10pt">4</span> uniquely. This is a mathematical expression of the fact that it is possible for F<span style="vertical-align: sub;font-size: 10pt">1</span> and F<span style="vertical-align: sub;font-size: 10pt">2</span> to be assigned different flows, which produces a physically impossible condition. 
+        </p>
+        <p>CONTAM provides two constant flow elements:&#160; one for constant mass flow and one for constant volumetric flow.</p>
+        <h5>Variable Flow Fans&#160;</h5>
+        <p>The theory of flows induced by fans is summarized in Chapter 18 of the 2000 ASHRAE HVAC Systems and Equipment Handbook [<a href="../IDH_References.htm#REF_ASHRAE_2004">ASHRAE 2004</a>]. More extensive treatment is given in [<a href="../IDH_References.htm#REF_Osborne_1977">Osborne 1977</a>]. Fan performance is normally characterized by a performance curve which relates the total pressure <span style="font-style: italic;">rise</span> to the flow rate for a given fan speed and air density. Conversion to another fan speed or density is done with the fan laws.
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000CE.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(53)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>or</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000CF.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(54)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>and</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000D0.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(55)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where </p>
+        <p class="NormalIndent"><span style="font-style: italic;">Q </span>= volume flow rate, <br></br><span style="font-style: italic;">F</span> = mass flow rate, <br></br><span style="font-style: italic;">P</span> = total pressure rise, <br></br><span style="font-family: Symbol;">r</span> = density, <br></br><span style="font-style: italic;">N</span> = rotational speed, and <br></br>subscript <span style="font-size: 8pt;">0</span> indicates values at the rating conditions for the fan.
+        </p>
+        <p>These laws are valid if all flow conditions at the two speeds are similar. In particular, they will not apply at very low flows where fully turbulent conditions have not been developed. </p>
+        <p>In CONTAM the fan performance curve is represented by a cubic polynomial:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000D1.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(56)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>with</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000D2.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(57)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>The polynomial coefficients are developed with air density and fan speed at the rating conditions. Therefore, when <span style="font-style: italic;">N</span> and <span style="font-family: Symbol;">r</span> are not at the rating conditions, convert the actual pressure rise <span style="font-style: italic;">P</span> to <span style="font-style: italic;">P</span><span style="vertical-align: sub;font-size: 10pt">0</span>.
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000D3.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(58)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Solve (56) for <span style="font-style: italic;">F</span><span style="vertical-align: sub;font-size: 10pt">0</span>using iterative or analytic solution and (57) for <span style="font-style: italic;">P</span><span style="font-style: italic;">’</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">0</span>. Convert these values to current conditions.
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000D4.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(59)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>and</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000D5.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(60)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>The derivative for flow with respect to pressure drop is given by</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000D6.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(61)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>There are two important factors to note on the shape of the fan performance curve. First, it is described by a relationship of the form <span style="font-style: italic;">P(F)</span> instead of <span style="font-style: italic;">F(P)</span> which would be more appropriate for the calculation of flow and partial derivatives for the Jacobian. The basic shape of the performance curve cannot be well represented by a simple polynomial with <span style="font-style: italic;">P</span> as the independent variable. CONTAM uses an analytic solution of the cubic polynomial (56) to determine <span style="font-style: italic;">F</span> as a function of <span style="font-style: italic;">P</span>. 
+        </p>
+        <p>Second, it is common for the performance curve to contain points of contraflecture (where <span style="font-style: italic;">P</span><span style="font-family: 'WP MathA';font-style: italic;">’</span> = 0) creating up to three different flow rates at certain values of fan pressure rise. This causes difficulty in solving for the flow rate and has points where <span style="font-style: italic;">dF</span>/<span style="font-style: italic;">dP</span> goes to infinity. However, it is usually not recommended that the fan operate in the region of the contraflecture points. Therefore, the fan can be modeled with a performance curve that does include the contraflecture so long as you make sure that the air distribution system has not operated in that region.
+        </p>
+        <p>You can identify the points of contraflecture from the coefficients of the polynomial. Solving equation (56) for <span style="font-style: italic;">F</span> gives:
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000D7.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(62)</td>
+                </tr>
+            </tbody>
+        </table>
+        <table style="margin-left: 5pt;border-collapse: collapse;">
+            <col style="width: 108pt;">
+            </col>
+            <col style="width: 329pt;">
+            </col>
+            <tr>
+                <td style="border-top-style: none;border-left-style: none;border-bottom-style: none;border-right-style: none;padding-left: 0pt;padding-right: 0pt;">
+                    <p>
+                        <img src="../../image/080000D8.png" style="visibility: visible;mso-wrap-style: square;width: 88px;height: 26px;">
+                        </img>
+                    </p>
+                </td>
+                <td style="border-top-style: none;border-left-style: none;border-bottom-style: none;border-right-style: none;padding-left: 0pt;padding-right: 0pt;">
+                    <p>There are two real points of contraflecture</p>
+                </td>
+            </tr>
+            <tr>
+                <td style="border-top-style: none;border-left-style: none;border-bottom-style: none;border-right-style: none;padding-left: 0pt;padding-right: 0pt;">
+                    <p>
+                        <img src="../../image/080000D9.png" style="visibility: visible;mso-wrap-style: square;width: 88px;height: 26px;">
+                        </img>
+                    </p>
+                </td>
+                <td style="border-top-style: none;border-left-style: none;border-bottom-style: none;border-right-style: none;padding-left: 0pt;padding-right: 0pt;">
+                    <p>There is a point of inflection which still has the derivative problem</p>
+                </td>
+            </tr>
+            <tr>
+                <td style="border-top-style: none;border-left-style: none;border-bottom-style: none;border-right-style: none;padding-left: 0pt;padding-right: 0pt;">
+                    <p>
+                        <img src="../../image/080000DA.png" style="visibility: visible;mso-wrap-style: square;width: 86px;height: 26px;">
+                        </img>
+                    </p>
+                </td>
+                <td style="border-top-style: none;border-left-style: none;border-bottom-style: none;border-right-style: none;padding-left: 0pt;padding-right: 0pt;">
+                    <p>The fan performance curve is monotonic and well-behaved for computing the derivatives for the Jacobian.</p>
+                </td>
+            </tr>
+        </table>
+        <p>&#160;</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

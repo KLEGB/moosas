@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Theoretical Background|Airflow Analysis" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Ducts</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4>Ducts</h4>
+        <p>The theory of flows in ducts (and pipes) is well established and summarized in Chapter 35 of the <span style="font-style: italic;">200</span><span style="font-style: italic;">5</span><span style="font-style: italic;"> ASHRAE Fundamentals Handbook</span> [ASHRAE 2005] and treated more extensively in [Blevins 1984] in a chapter on pipe and duct flow. See the <span style="font-style: italic;">Duct Fitting Database</span> [ASHRAE 2002] for extensive data on dynamic losses in duct fittings. Analysis is based on Bernoulli's equation and its assumptions. The friction losses in a section of duct or pipe are given by
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/0800008C.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(47)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where</p>
+        <p class="NormalIndent"><span style="font-style: italic;">f</span> = friction factor,<br /><span style="font-style: italic;">L</span> = duct length, and <br /><span style="font-style: italic;">D</span> = hydraulic diameter. 
+        </p>
+        <p>The dynamic losses due to fittings and so forth are given by</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000C9.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(48)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">d</span> = dynamic loss coefficient. Total pressure losses are given by
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000CA.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(49)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Since <span style="font-style: italic;">F = </span><span style="font-family: Symbol;">r</span><span style="font-style: italic;">VA</span>, where <span style="font-style: italic;">A</span> is the cross section (or flow) area,
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000CB.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(50)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>CONTAM calculates the friction factor using the nonlinear Colebrook equation [ASHRAE 2001, p 2.9, eqn. 29b]:
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000CC.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(51)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where </p>
+        <p class="NormalIndent"><span style="font-family: Symbol;">e</span> = roughness dimension, and <br />Re = Reynolds number = <span style="font-family: Symbol;">r</span><span style="font-style: italic;">VD</span>/<span style="font-family: Symbol;">m</span> = <span style="font-style: italic;">FD</span>/<span style="font-family: Symbol;">m</span><span style="font-style: italic;">A</span>. 
+        </p>
+        <p>This nonlinear equation may be readily solved using the following iterative expression derived from equation (51) by Newton's method:
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000CD.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(52)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="">where</p>
+        <p class="NormalIndent"><span style="font-style: italic;">g</span> = <span style="font-style: italic;">f</span><span style="vertical-align: super;font-size: 10pt;"> -1/2</span>,<br /><span style="font-family: Symbol;">a</span> = 1.14 - <span style="font-family: Symbol;">g</span> ln(<span style="font-family: Symbol;">e</span>/D),<br />ß = 9.3/(Re<span style="font-family: 'WP MathA';">·</span><span style="font-family: Symbol;">e</span>/<span style="font-style: italic;">D</span>), and<br /><span style="font-family: Symbol;">g</span> = 2<span style="font-family: 'WP MathA';">·</span>log(e) = 0.868589.
+        </p>
+        <p>The convergent solution is achieved in 2 or 3 iterations of equation (52) using <span style="font-style: italic;">g</span> = <span style="font-family: Symbol;">a</span> as a starting value. If the value of <span style="font-style: italic;">g</span> has been saved from the previous time it was computed for a particular duct element, and the flow rate has not changed greatly, only one iteration of equation (52) will be needed to compute the friction factor.
+        </p>
+        <p>The exact derivatives of equation (50) are difficult to compute, so CONTAM uses a secant approximation. The derivatives suffer the standard problem of powerlaw equations, i.e., they go undefined as <span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span> approaches zero. This is solved in CONTAM by the linear approximation (22) with the coefficient computed to give the same flow as equation (50) at the user specified transition Reynolds number (default = 2000). A more detailed description of the flow in the laminar region could be developed, but that would probably exceed the level of detail with which the rest of the problem is described in CONTAM.
+        </p>
+        <p class="SubHeading1">Terminal Loss Calculation</p>
+        <p class="Normal">In CONTAM, duct terminals are essentially zero-length ducts characterized by an equivalent loss coefficient that is determined during simulation from the properties of the terminal, <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">t</span> and <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">b</span>, and the schedule or control signal (<span style="font-style: italic;">S</span>) acting upon the terminal. </p>
+        <p class="Normal"><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">e</span> = <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">t</span> + <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">b</span> + (1-S)/S </p>
+        <p class="Normal">where</p>
+        <p class="EqnParams"><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">t</span> = terminal loss coefficient</p>
+        <p class="EqnParams"><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">b</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;"></span>= terminal balance coefficient</p>
+        <p class="EqnParams"><span style="font-style: italic;">S</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">c</span> = schedule or control signal acting upon the terminal</p>
+        <p class="EqnParams">S = max(1x10<span style="vertical-align: super;font-size: 10pt;">-6</span>, S<span style="font-style: italic;vertical-align: sub;font-size: 10pt;">c1</span>)</p>
+        <p class="EqnParams">S<span style="font-style: italic;vertical-align: sub;font-size: 10pt;">c1</span>= min(1, <span style="font-style: italic;">S</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">c</span>)</p>
+        <p class="Normal">Using this technique, an input signal <span style="font-style: italic;">S</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">c</span> of 0.0 will effect a very high loss coefficient, that of 1.0 will simply provide the loss determined by the combination of <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">t</span> and <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">b</span>, <span style="font-style: italic;">S</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">c</span><span style="font-style: italic;"></span> between 1x10<span style="vertical-align: super;font-size: 10pt;">-6</span> and 1 will be used to increase the value of (<span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">t</span> + <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">b</span>) according to the equation above, and <span style="font-style: italic;">S</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">c</span> less than 0.0 will equate to 1.0, i.e., the loss cannot be reduced below (<span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">t</span> + <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">b</span>). The value <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">e</span> will then be used as the dynamic loss coefficient in the duct flow equations presented above.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

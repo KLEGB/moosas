@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Theoretical Background" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Contaminant Analysis</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2><a name="kanchor159"></a>Contaminant Analysis</h2>
+        <p>The CONTAM contaminant dispersal model is an implementation of Axley's methods [<a href="../IDH_References.htm#REF_Axley_1987">Axley 1987</a> and <a href="../IDH_References.htm#REF_Axley_1988">1988</a>]. He states: "The central concern of indoor air quality analysis is the prediction of airborne contaminant dispersal in buildings. Airborne contaminants disperse throughout buildings in a complex manner that depends on the nature of air movements in-to, out-of, and within the building system; the influence of the heating, ventilating, and air-conditioning (HVAC) systems; the possibility of removal, by filtration, or contribution, by generation, of contaminants; and the possibility of chemical reaction, radio-chemical decay, settling, or sorption of contaminants. In indoor air quality analysis we seek to comprehensively model all of these phenomena."  </p>
+        <p>The basis for contaminant dispersal analysis is the application of conservation of mass for all species in a control volume (c.v.). A c.v. is a volume of air which may correspond to a single room, a portion of a room, or several well-coupled rooms (a CONTAM <span style="font-style: italic;">zone</span>) or the ductwork (where a <span style="font-style: italic;">junction</span>, under the well-mixed assumption, has half the volume of each of the adjacent duct segments). The representation of building spaces as CONTAM zones is a matter of engineering judgment.  </p>
+        <p style="color: #a52a2a;">CONTAM 2.3 added the capability to model convection-diffusion in the ductwork and user-selected zones instead of treating them as <span style="font-style: italic;">well-mixed </span>control volumes. In CONTAM this is done with the new <span style="font-style: italic;">short time step </span>method<span style="font-style: italic;"></span>, which utilizes an explicit Euler formulation.</p>
+        <p style="color: #a52a2a;">CONTAM 3.2 added a variable time step solver based on CVODE [<a href="../IDH_References.htm#REF_Hindmarsh_CVODE_2012">Hindmarsh 2012</a>], which is a general-purpose code for solving ordinary differential equations. While the remainder of this section provides details on the contaminant transport equations and original solution techniques, the CVODE solution methods are addressed in Lorenzetti [<a href="../IDH_References.htm#REF_Lorenzetti_2013">2013</a>].</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

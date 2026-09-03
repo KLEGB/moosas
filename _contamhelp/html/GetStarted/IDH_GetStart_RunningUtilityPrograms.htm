@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Running Utility Programs</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>Running Utility Programs</h2>
+        <p class="NormalCW2">These utility programs are provided with ContamW as 32-bit versions for the Windows operating system. They are also available on the NIST Multizone Modeling Website as 64-bit versions for both the Windows and Linux operating systems. Type the following at the command prompt to obtain usage information for each program, respectively:</p>
+        <p class="SubHeading1">simread</p>
+        <p class="codeCW2">$ simread</p>
+        <p class="SubHeading1">simcomp</p>
+        <p class="codeCW2">$ simcomp</p>
+        <p class="NormalCW2">A configuration file (<code>simcomp.cfg</code>) can also be utilized to override the default uncertainty associated with the comparison. If used, the configuration file must be located alongside the <i>simcomp</i> executable. The following example of the <code>simcomp.cfg</code> file provides the default uncertainty values.</p>
+        <p class="codeindentCW2">1.00e-04 ! epsdP – relative error in link Pressure difference</p>
+        <p class="codeindentCW2">1.00e-04 ! epsF – relative error in link Flow rate</p>
+        <p class="codeindentCW2">1.00e-03 ! epsT – absolute error in node Temperature</p>
+        <p class="codeindentCW2">1.00e-04 ! epsPg – relative error in node gage Pressure</p>
+        <p class="codeindentCW2">1.00e-05 ! epsD – absolute error in node air Density</p>
+        <p class="codeindentCW2">1.00e-04 ! epsMf – relative error in node Mass fractions</p>
+        <p class="codeindentCW2">1.00e-20 ! epsMa – absolute error in node Mass fractions</p>
+        <p class="codeindentCW2">100      ! nmax – maximum number of failures to report</p>
+        <p class="NormalCW2">Where,</p>
+        <p class="NormalIndentCW2"><span style="font-family: Symbol;">e</span><span style="vertical-align: sub;">rel</span> = |v1-v2|/|v1+v2|</p>
+        <p class="NormalIndentCW2"><span style="font-family: Symbol;">e</span><span style="vertical-align: sub;">abs</span> = |v1-v2|</p>
+        <p class="SubHeading1">prjup</p>
+        <p class="codeCW2">$ prjup -h</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

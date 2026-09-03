@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Theoretical Background|Airflow Analysis" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Quadratic Flow Elements</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4>Quadratic Flow Elements</h4>
+        <p>Baker, Sharples, and Ward [Baker 1987] indicate that infiltration openings can be more accurately modeled by a quadratic relationship of the form</p>
+        <p>&#160;</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000BB.png" alt="equation" />
+                    </td>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000BC.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">&#160;</td>
+                </tr>
+                <tr>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000BD.png" alt="equation" />
+                    </td>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000BE.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(37)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>This form can be used as an airflow element by solving the quadratic equation for <span style="font-style: italic;">F</span> (= <span style="font-family: Symbol;">r</span><span style="font-style: italic;">Q</span>). Letting <span style="font-style: italic;">a</span> = <span style="font-style: italic;">A</span>/<span style="font-family: Symbol;">r</span> and <span style="font-style: italic;">b</span> = <span style="font-style: italic;">B</span>/<span style="font-family: Symbol;">r</span><span style="font-style: italic;vertical-align: super;">2</span> allows equations (37) to be rewritten as
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000BF.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(38)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>These quadratic equations solve as</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000C0.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(39)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>with the partial derivatives given by</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000C1.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(40)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Equations (39) require that <span style="font-style: italic;">b</span> be nonzero to prevent a division by zero and equations (40) requires that <span style="font-style: italic;">a</span> be nonzero to prevent a division by zero as <span style="font-style: italic;">F</span> goes to zero. There are contrary opinions that the powerlaw relationship is better.
+        </p>
+        <h5>Temperature Dependence</h5>
+        <p>It is useful to think of the coefficients a and b as simple constants evaluated at a particular set of conditions (<span style="font-family: Symbol;">m</span><span style="vertical-align: sub;font-size: 10pt;">0</span>, <span style="font-family: Symbol;">r</span><span style="vertical-align: sub;font-size: 10pt;">0</span> and <span style="font-family: Symbol;">n</span><span style="vertical-align: sub;font-size: 10pt;">0</span>=<span style="font-family: Symbol;">m</span><span style="vertical-align: sub;font-size: 10pt;">0</span>/<span style="font-family: Symbol;">r</span><span style="vertical-align: sub;font-size: 10pt;">0</span>) multiplied by correction factors to account for actual air properties as was done for the powerlaw equations. That is&#160;</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000C2.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(41)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>and</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000C3.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(42)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Note that <span style="font-family: Symbol;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">0</span>/<span style="font-family: Symbol;">r</span> = <span style="font-style: italic;">T</span>/<span style="font-style: italic;">T</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">0</span> for a perfect gas of constant composition.</p>
+        <p style="text-align: justify;">
+        </p>
+        <h5>Fitting Quadratic Coefficients</h5>
+        <p>The quadratic coefficients can also be computed from measured flow and pressure data. Given two points (<span style="font-style: italic;">F</span><span style="vertical-align: sub;font-size: 10pt;">1</span>, <span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span><span style="vertical-align: sub;font-size: 10pt;">1</span>) and (<span style="font-style: italic;">F</span><span style="vertical-align: sub;font-size: 10pt;">2</span>, <span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span><span style="vertical-align: sub;font-size: 10pt;">2</span>), the values of <span style="font-style: italic;">a</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">0</span> and <span style="font-style: italic;">b</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">0</span> are:
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000C4.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(43)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>and</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000C5.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(44)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>The main advantage of the quadratic model over the powerlaw model is computation speed achieved by avoiding the slow power function. (Tests have shown pow(x) four to eight times slower than sqrt(x). This performance is hardware and software dependent.)&#160; It must still be determined which model is the most accurate representation for a particular airflow element. For example, it has been found that the powerlaw model is a better approximation for smooth ducts while the quadratic model is a better approximation for rough ducts. However, for very large openings the derivatives (40) can become quite large leading to slow convergence of the simultaneous mass balance equations.</p>
+        <h5>Crack Description&#160;</h5>
+        <p>Theoretical relationships have been developed between the coefficients A and B of the quadratic airflow element model and the physical characteristics of the openings [Baker 1987]. These are</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000C6.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(45)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where </p>
+        <p class="NormalIndent"><span style="font-family: Symbol;">m</span>= viscosity, <br></br><span style="font-family: Symbol;">r</span>= density, <br></br><span style="font-style: italic;">z</span>= distance along the direction of flow, <br></br><span style="font-style: italic;">d</span>= crack width, <br></br><span style="font-style: italic;">L</span>= crack length, and <br></br><span style="font-style: italic;">C</span>= 1.5 + number of bends in the flow path. 
+        </p>
+        <p>For the mass flow form of the equations (38) the coefficients are</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000C7.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(46)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

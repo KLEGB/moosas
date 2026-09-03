@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Filters|Filter Element Types" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Simple Gaseous Filter</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4><a name="kanchor108"></a>Simple Gaseous Filter</h4>
+        <p>The <span style="font-style: italic;">simple gaseous </span><span style="font-style: italic;">filter</span> element is made up of a set of species and associated efficiency vs. loading curves. Therefore, the efficiency is a function of the amount of contaminant "absorbed" by the filter. Each filter element can be associated with anywhere between one and the number of species that exist within the current project. Only those species that you have selected to be contaminants will be accounted for when you perform simulations. </p>
+        <p><span style="font-weight: bold;">Name:</span> A unique name you want to use to identify the filter element.</p>
+        <p><span style="font-weight: bold;">Area:</span> The face area and units of the filter element. </p>
+        <p><span style="font-weight: bold;">Depth:</span> The depth of the filter element along the axis of airflow.</p>
+        <p><span style="font-weight: bold;">Density:</span> The density of the filter media. </p>
+        <p>Area, Depth and Density are currently used to calculate the mass of the filter media which is in turn used to calculate filter loading.</p>
+        <p><span style="font-weight: bold;">Description:</span> Use this field to provide a more detailed description of the filter element.</p>
+        <p><span style="font-weight: bold;">Edit Element Data:</span> Select to define the specific properties of the filter element. </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Filter Curve Data:</span> This is a list of relative loading and filter efficiency data pairs used to define the filter curve for the currently selected species (see figure below). Once you have entered at least three data points, ContamW will attempt to calculate a cubic spline fit to the points. If there are any errors in the spline fit procedure, you will be notified and the offending portion of the curve will be highlighted.</p>
+        <p class="CaptionCenter">
+            <img src="../../image/ebx_-1377254862.gif" border="0" alt="image\ebx_-1377254862.gif" />
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Species:</span> This is a list of all the <span style="font-style: italic;">species</span> in either the current project or library file depending on whether you are editing project data or library data. Select the <span style="font-style: italic;">species</span> for which you want to display/edit filter curve data.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Breakthrough Efficiency:</span> Set the breakthrough efficiency for each species. This value will be used during simulation to report if and when the filter efficiency drops below this value. Breakthrough is reported to the <span style="font-style: italic;">Contaminant Summary</span> simulation result file (see <a href="../Results/IDH_UsingResults_ResultsFiles.htm">Results Files</a> in the <a href="../Results/IDH_UsingResults_Working_with_Results.htm">Working with Results</a> section). </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Filter Curve Data:</span> This is the list of data points you create from which a <span style="font-style: italic;">filter </span><span style="font-style: italic;">curve</span> is generated using the cubic spline fit method. A minimum of four data points is required before a curve will be generated. The space below will provide a plot of <span style="font-style: italic;">Relative Loading</span> vs. <span style="font-style: italic;">Filter Efficiency</span>. <span style="font-style: italic;">Relative loading</span> is the ratio of Mass of contaminant accumulated by the filter to the Mass of the filter. </p>
+        <p class="NormalIndent">Use the <span style="font-weight: bold;">Relative Loading</span> and <span style="font-weight: bold;">Efficiency</span> data entry fields to set and modify the <span style="font-style: italic;">Filter Curve Data</span> list along with the <span style="font-weight: bold;">Add</span> and <span style="font-weight: bold;">Delete</span> buttons.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

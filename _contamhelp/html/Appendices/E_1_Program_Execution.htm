@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Program Execution</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>Program Execution</h2>
+        <p>In order to activate the socket communication capabilities of ContamX, the program must be run with the following command line structure. Both Type98 and ContamFMU.dll call <code>contamx3</code> with the appropriate command line options.</p>
+        <p class="code"><span style="font-weight: bold;"><span style="color: #a52a2a;">contamx3 &lt;PRJ file name&gt; –b [address:port] [-w] [-f]</span> <![CDATA[ ]]></span>
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code"><span style="font-size: 11pt;font-weight: bold;">contamx3</span>&#160;program executable</p>
+        <p class="code"><span style="font-size: 11pt;font-weight: bold;">&lt;project&gt;</span>&#160;name of the CONTAM project file</p>
+        <p class="code"><span style="font-size: 11pt;font-weight: bold;">-b</span>&#160;Run ContamX in bridge mode (required)</p>
+        <p class="codeindentCW2"><span style="color: #8b0000;">The following options, if provided, must immediately follow "-b"</span>:</p>
+        <p class="codeindent"><span style="font-size: 11pt;font-weight: bold;">address</span>&#160;ip address of process (server) that will be controlling this instance of ContamX (client)</p>
+        <p class="codeindent"><span style="font-size: 11pt;font-weight: bold;">port</span>&#160;port number of the socket, i.e., the listening socket, used to established connectivity. The listening socket is created by the server, e.g., ContamFMU. ContamX (the client) then creates another socket through which the communications will take place, i.e., via the connect() function. Once a connection is established by the server, i.e., via the accept() function, the listening socket is closed. However, the communication socket remains open.</p>
+        <p class="code"><b style="color: #a52a2a;">-w</b> ContamX calculates <b style="color: #a52a2a;">w</b><span style="color: #a52a2a;">ind pressure</span> using traditional methods as determined by the PRJ file (none, constant, or variable). Wind speed and direction for variable pressure flow paths should be provided to ContamX via the ADJ_WTH_MSGTYPE message. If this command line option is not used then wind pressure and ambient contaminants must be provided via the ADJ_WPC_MSGTYPE message.</p>
+        <p class="code"><b style="color: #a52a2a;">-f</b> contamx socket messages provide airflow rates in <span style="color: #a52a2a;">volume </span><b style="color: #a52a2a;">f</b><span style="color: #a52a2a;">low</span> units [m<sup>3</sup>/s] as opposed to the default [kg/s].</p>
+        <p>&#160;</p>
+        <p>After ContamX starts, it will attempt to make contact with the controlling application, i.e., server, and establish a socket connection. Once a connection has been established, ContamX will send the <span style="font-family: 'Courier New';">_INFO_MSGTYPE</span> messages to the server to provide information on the contents of the project file. These project information messages will be sent in numerical order. ContamX will then perform the steady state initialization calculation and send all of the <i>simulation result</i> messages (<span style="font-family: 'Courier New';">_UPDATE_MSGTYPE</span>) followed by the <span style="font-family: 'Courier New';">CX_READY_MSGTYPE</span>. At this point the server can begin interacting with ContamX in the bridge mode via the <i>execution control</i> and <i>project modification</i> messages detailed below.  ContamX will respond with the requested<span style="font-family: 'Courier New';"> _UPDATE_MSGTYPE</span>  messages and indicate when it is ready to receive more messages by sending the <span style="font-family: 'Courier New';">CX_READY_MSGTYPE</span> message.</p>
+        <p><b>NOTE:</b> Set the <span style="font-family: 'Courier New';">_echo</span> value in the PRJ file greater than 1 to have bridge message information written to the XLOG file. This can provide insight into bridge execution behavior. </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

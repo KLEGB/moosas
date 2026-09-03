@@ -1,0 +1,1485 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Results" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Results Files</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Results Files</h3>
+        <p>When ContamX performs a simulation, it creates a set of results files within the same directory that the project file is stored. These results files have the same file name as the project file with different extensions appended to indicate the type of results file. The following table lists the different file extensions and gives a brief description of the files. Details of each file are provided following the table.</p>
+        <div align="center">
+            <table class="center">
+                <col />
+                <col />
+                <col />
+                <tr>
+                    <td class="HeadCenterBold">Extension</td>
+                    <td class="HeadCenterBold">Type</td>
+                    <td class="HeadCenterBold">File Description</td>
+                </tr>
+                <tr>
+                    <td class="center">ACH</td>
+                    <td class="center">Text</td>
+                    <td>Whole building air change rate - broken down into airflow path and ventilation system components and the combined value. This file can contain results for each time step and/or daily box-whisker results.</td>
+                </tr>
+                <tr>
+                    <td class="center">AGE</td>
+                    <td class="center">Text</td>
+                    <td>Age of air - age of air results for each zone at each time step and/or daily box-whisker results.</td>
+                </tr>
+                <tr>
+                    <td class="center">BAL</td>
+                    <td class="center">Text</td>
+                    <td>Balance - results of duct balancing calculation.</td>
+                </tr>
+                <tr>
+                    <td class="center">CBW</td>
+                    <td class="center">Text</td>
+                    <td>Contaminant box whisker results - only created for daily box-whisker results.</td>
+                </tr>
+                <tr>
+                    <td class="center" style="color: #a52a2a;"><span style="color: #000000;">CEX</span>
+                    </td>
+                    <td class="center" style="color: #a52a2a;"><span style="color: #000000;">Text</span>
+                    </td>
+                    <td style="color: #a52a2a;"><span style="color: #000000;">Contaminant exfiltration result.</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="center">CSM</td>
+                    <td class="center">Text</td>
+                    <td>Contaminant source/sink summation - total mass of contaminants generated and/or accumulated by source/sinks and filters during a simulation.</td>
+                </tr>
+                <tr>
+                    <td class="center">EBW</td>
+                    <td class="center">Text</td>
+                    <td>Occupant exposure results - average exposure of each occupant to each contaminant for each time step and/or daily box-whisker results.</td>
+                </tr>
+                <tr>
+                    <td class="center">LOG</td>
+                    <td class="center">Text</td>
+                    <td>Controls log file - contains the output of all Report control nodes.</td>
+                </tr>
+                <tr>
+                    <td class="center">RST</td>
+                    <td class="center">Binary</td>
+                    <td>Simulation restart file - only for use by ContamX for restarting simulations at the beginning of intermediate days of a simulation.</td>
+                </tr>
+                <tr>
+                    <td class="center">RXR</td>
+                    <td class="center">Binary</td>
+                    <td>Short time step simulation results cross reference data</td>
+                </tr>
+                <tr>
+                    <td class="center">RZF</td>
+                    <td class="center">Binary</td>
+                    <td>Short time step simulation results zone environmental properties</td>
+                </tr>
+                <tr>
+                    <td class="center">RZM</td>
+                    <td class="center">Binary</td>
+                    <td>Short time step simulation results zone mass fractions</td>
+                </tr>
+                <tr>
+                    <td class="center">RZ1</td>
+                    <td class="center">Binary</td>
+                    <td>Short time step simulation results 1D zone cell mass fractions</td>
+                </tr>
+                <tr>
+                    <td class="center">SIM</td>
+                    <td class="center">Binary</td>
+                    <td>Detailed simulation results - airflow rates and pressure difference of flow links, reference pressures and temperatures of airflow nodes, and contaminant concentrations of contaminant nodes at each time step. This is the file from which SketchPad results and graphs are produced and displayed using ContamW. It is also the file from which Export and Report files can be generated.</td>
+                </tr>
+                <tr>
+                    <td class="center" style="color: #8b0000;"><span style="color: #000000;">SQLITE3</span>
+                    </td>
+                    <td class="center" style="color: #8b0000;"><span style="color: #000000;">Binary</span>
+                    </td>
+                    <td style="color: #8b0000;"><span style="color: #000000;">SQLite database file contains the same data as the SIM file.</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="center" style="color: #8b0000;"><span style="color: #000000;">SRF</span>
+                    </td>
+                    <td class="center" style="color: #8b0000;"><span style="color: #000000;">Text</span>
+                    </td>
+                    <td style="color: #8b0000;"><span style="color: #000000;">Surface result file - contains contaminant concentrations for source/sinks that include a reversible storage node.</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="center">VAL</td>
+                    <td class="center">Text</td>
+                    <td>Model "validation" test results file - contains the results of either the Building Airflow Test or Building Pressurization Test airflow simulation methods.</td>
+                </tr>
+            </table>
+        </div>
+        <p>&#160;</p>
+        <p class="SubHeading1">&lt;project name&gt;.ACH - Whole Building Air Change Rate</p>
+        <p>The air change rate is calculated based on the summation of airflow rates from the ambient zone into the <span style="font-style: italic;">conditioned space</span> of the building including ducts and simple air handlers. Results are presented based on total flows into the mechanical systems (ducts and simple AHS), airflow paths and total of all flows. The <span style="font-style: italic;">conditioned space</span> includes all mechanical system volume and the volume of those zones which you select to <span style="font-style: italic;">include in building volume</span> (See <a href="../Zones/IDH_PP_ZONEPARMS0.htm">Zone Data</a> in the <a href="../Zones/IDH_UsingZones_WorkingWithZones.htm">Working with Zones</a> section).</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_ACR.PNG" border="0" alt="equation" />
+        </p>
+        <p>where</p>
+        <p class="EqnParams"><span style="font-style: italic;">ACR</span>&#160;= whole building air change rate [h<span style="vertical-align: super;font-size: 10pt;">-1</span>]</p>
+        <p class="EqnParams">
+            <img src="../../image/mdot_17x18.png" border="0" alt="image\ebx_593217281.gif" style="width: 17; height: 18;" />&#160;&#160;= mass flow rate into the conditioned space [kg/s]
+        </p>
+        <p class="EqnParams"><span style="font-family: 'Symbol';font-style: italic;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">air</span>&#160;&#160;= density of incoming air [kg/m<span style="vertical-align: super;font-size: 10pt;">3</span>]</p>
+        <p class="EqnParams"><span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">bldg</span> &#160;= volume of conditioned space [m<span style="vertical-align: super;font-size: 10pt;">3</span>]</p>
+        <p class="EqnParams" style="margin-top: 0;margin-bottom: 0;">&#160;</p>
+        <p>If there is a mass-imbalance for any airflow zone, ContamX will generate a warning message indicating the zone in question.</p>
+        <p><span style="font-weight: bold;">File Format</span><span style="font-weight: bold;"> (tab-delimited text)</span><span style="font-weight: bold;">:</span>
+        </p>
+        <p class="NormalItalic">The first line of the ACH file contains: </p>
+        <p class="code">StartDate // first date of simulation (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="code">EndDate // last date of simulation (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="code">SimStep // simulation time step [s](IX)
+        </p>
+        <p class="code">achsave        // save detailed results flag [0/1] (IX)
+        </p>
+        <p class="code">abwsave        // save box-whisker results flag [0/1] (IX)
+        </p>
+        <p class="code">Vcond // volume of conditioned space [m^3] (R4)
+        </p>
+        <p class="NormalItalic">If achsave is 1, then a header line is written for the detailed data: </p>
+        <p class="code">"day &#160;time &#160;path &#160;duct &#160;total"
+        </p>
+        <p class="NormalItalic">If abwsave is 1, then a header line is written for daily box-whisker data:</p>
+        <p class="code">"day b-w avg dev min min max max"</p>
+        <p class="NormalItalic">Then for each day </p>
+        <p class="NormalIndentItalic">If achsave is 1, then a line of data is written for each output time step for a day:</p>
+        <p class="codeindent">Date // date (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)</p>
+        <p class="codeindent">Time // time (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)</p>
+        <p class="codeindent">ACRpath // air change rate via flow paths (R4)</p>
+        <p class="codeindent">ACRduct // air change rate via ducts (R4)</p>
+        <p class="codeindent">ACRtotal // ACRpath + ACRduct (R4)</p>
+        <p class="NormalIndentItalic">If abwsave is 1, then three lines of daily box-whisker data are written - one for paths, ducts and total respectively. Each line contains:</p>
+        <p class="codeindent">date // date (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)</p>
+        <p class="codeindent">type // "path" "duct" or "total"</p>
+        <p class="codeindent">avg // average value for day (R4)</p>
+        <p class="codeindent">dev // standard deviation (R4)</p>
+        <p class="codeindent">tmin // time at which min occurs (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)</p>
+        <p class="codeindent">min // minimum value for day (R4)</p>
+        <p class="codeindent">tmax // time at which max occurs (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)</p>
+        <p class="codeindent">max // maximum value for day (R4)</p>
+        <p class="NormalIndentItalic">At the end:</p>
+        <p class="NormalIndentItalic">If abwsave is 1, then three lines of summary box-whisker data for the entire simulation - one for paths, ducts and total respectively. Each line contains:</p>
+        <p class="codeindent">"final"</p>
+        <p class="codeindent">type // "path" "duct" or "total"</p>
+        <p class="codeindent">avg // average value for simulation (R4)</p>
+        <p class="codeindent">dev // standard deviation for sim (R4)</p>
+        <p class="codeindent">dmin // date on which min occurs (mm/dd <span style="font-family: 'Symbol';font-size: 12pt;">®</span> IX)</p>
+        <p class="codeindent">min // minimum value for simulation (R4)</p>
+        <p class="codeindent">dmax // date on which max occurs (mm/dd <span style="font-family: 'Symbol';font-size: 12pt;">®</span> IX)</p>
+        <p class="codeindent">max // maximum value for simulation (R4)</p>
+        <p>&#160;</p>
+        <p><span style="font-weight: bold;">Example</span><span style="font-weight: bold;"> File</span><span style="font-weight: bold;">:</span>
+        </p>
+        <p class="code">1/1 &#160;1/1 &#160;3600 &#160;1 &#160;0 &#160;847.44
+        </p>
+        <p class="code">day &#160;time &#160;path &#160;duct &#160;total
+        </p>
+        <p class="code">1/1 &#160;01:00:00 &#160;2.911 &#160;0.010 &#160;2.921
+        </p>
+        <p class="code">1/1 &#160;02:00:00 &#160;2.932 &#160;0.098 &#160;3.030
+        </p>
+        <p class="SubHeading1">&lt;project name&gt;.AGE - Age of Air</p>
+        <p>The mean age of air of a zone is an indication of the residence time of air within a zone. ContamX can calculate these values for all the zones in a project and provide them in detailed or box-whisker form. ContamX calculates these values using the method presented in AIVC Technical 34 [<a href="../IDH_References.htm#REF_AIVC_1991">AIVC 1991</a>].</p>
+        <p><span style="font-weight: bold;">File Format</span><span style="font-weight: bold;"> (tab-delimited text)</span><span style="font-weight: bold;">:</span>
+        </p>
+        <p class="NormalItalic">The first line of the AGE file contains: </p>
+        <p class="code">StartDate // first date of simulation (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="code">EndDate // last date of simulation (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="code">SimStep // simulation time step [s](IX)
+        </p>
+        <p class="code">zaasave // save detailed zone age of air results flag [0/1] (IX)
+        </p>
+        <p class="code">zbwsave // save box-whisker results flag [0/1] (IX)
+        </p>
+        <p class="NormalItalic">If zaasave is 1, then a header line is written for the detailed data: </p>
+        <p class="code">"day time" &#160;zone[] // …list of zone numbers
+        </p>
+        <p class="NormalItalic">If zbwsave is 1, then a header line is written for daily box-whisker data:</p>
+        <p class="code">"day &#160;zone &#160;avg &#160;dev &#160;min &#160;min &#160;max &#160;max"
+        </p>
+        <p class="NormalItalic">Then for each day </p>
+        <p class="NormalIndentItalic">If zaasave is 1, then a line of data is written for each output time step for a day:</p>
+        <p class="codeindent">Date // date (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="codeindent">Time // time (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)
+        </p>
+        <p class="codeindent" style="color: #a52a2a;">age[] // age of air for each zone [h]</p>
+        <p class="NormalIndentItalic">If zbwsave is 1, then a line of daily box-whisker data is written for each zone. Each line contains:</p>
+        <p class="codeindent">date // date (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="codeindent">zone // zone number (IX)</p>
+        <p class="codeindent">avg // average value for day (R4)</p>
+        <p class="codeindent">dev // standard deviation (R4)</p>
+        <p class="codeindent">tmin // time at which min occurs (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)
+        </p>
+        <p class="codeindent">min // minimum value for day (R4)</p>
+        <p class="codeindent">tmax // time at which max occurs (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)
+        </p>
+        <p class="codeindent">max // maximum value for day (R4)</p>
+        <p class="NormalItalic">At the end:</p>
+        <p class="NormalItalic">If zbwsave is 1, a line of summary box-whisker data is written for each zone for the entire simulation. Each line contains:</p>
+        <p class="code">"final"
+        </p>
+        <p class="code">zone // zone number (IX)</p>
+        <p class="code">avg // average value for simulation (R4)
+        </p>
+        <p class="code">dev // standard deviation for sim (R4)
+        </p>
+        <p class="code">dmin // date on which min occurs (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="code">min // minimum value for simulation (R4)
+        </p>
+        <p class="code">dmax // date on which max occurs (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="code">max // maximum value for simulation (R4)
+        </p>
+        <p class="code">&#160;</p>
+        <p><span style="font-weight: bold;">Example File:</span>
+        </p>
+        <p class="code">3&#160;1/1&#160;1/1&#160;300&#160;0&#160;1
+        </p>
+        <p class="code">day&#160;zone&#160;avg&#160;dev&#160;min&#160;min&#160;max&#160;max
+        </p>
+        <p class="code">1/1&#160;1&#160;1.000&#160;0.000&#160;00:05:00&#160;1.000&#160;00:05:00&#160;1.000
+        </p>
+        <p class="code">1/1&#160;2&#160;2.000&#160;0.000&#160;00:05:00&#160;2.000&#160;00:05:00&#160;2.000
+        </p>
+        <p class="code">1/1&#160;3&#160;3.000&#160;0.000&#160;00:05:00&#160;3.000&#160;00:05:00&#160;3.000
+        </p>
+        <p class="code">final&#160;1&#160;1.000&#160;0.000&#160;1/1&#160;1.000&#160;1/1&#160;1.000
+        </p>
+        <p class="code">final&#160;2&#160;2.000&#160;0.000&#160;1/1&#160;2.000&#160;1/1&#160;2.000
+        </p>
+        <p class="code">final&#160;3&#160;3.000&#160;0.000&#160;1/1&#160;3.000&#160;1/1&#160;3.000
+        </p>
+        <p class="SubHeading1">&lt;project name&gt;.BAL - Duct Balance Results File</p>
+        <p>This file contains the results of a duct balance operation if performed by ContamX. It contains the status of the balance operation along with detailed results and error tracking information if required.</p>
+        <p><span style="font-weight: bold;">File Format</span><span style="font-weight: bold;"> (tab-delimited text)</span><span style="font-weight: bold;">:</span>
+        </p>
+        <p class="NormalItalic">The first line of the BAL file contains the status of the balance procedure: </p>
+        <p class="code">Code           // balance completion code [0-5] (IX)
+        </p>
+        <p class="code">!Message[] // comment containing completion message (I1)
+        </p>
+        <p class="NormalItalic">The next two lines are headers for fan and terminal data:</p>
+        <p class="code">!fan duct # flow [kg/s] Prise [Pa] RPMratio
+        </p>
+        <p class="code">!trm jctn # rel-flow [-] Cb [-]
+        </p>
+        <p class="NormalItalic">Then for each balancing terminal and associated fans:</p>
+        <p class="NormalItalic">    If terminal:&#160;</p>
+        <p class="code">  "trm" // indicates terminal data
+        </p>
+        <p class="code">  junc // junction number of terminal (IX)
+        </p>
+        <p class="code">  rflow // relative flow Fbal/Fdes (R4)
+        </p>
+        <p class="code">  Cb // balance coefficient (R4)
+        </p>
+        <p class="NormalItalic">    If fan:&#160;</p>
+        <p class="code">  "fan" // indicates fan data
+        </p>
+        <p class="code">  duct // duct segment number of fan(IX)
+        </p>
+        <p class="code">  flow         &#160;// total fan &#160;flow (R4)
+        </p>
+        <p class="code"> &#160;prise        // pressure rise across fan (R4)
+        </p>
+        <p class="NormalItalic">    If fan performance curve fan:&#160;</p>
+        <p class="code">  frpm // RPM ratio required to achieve balance &#160;
+        </p>
+        <p class="code">               // flow rate with design fan (R4)
+        </p>
+        <p class="NormalItalic">The last line is exactly:</p>
+        <p class="code">end
+        </p>
+        <p class="code">&#160;</p>
+        <p><span style="font-weight: bold;">Example</span><span style="font-weight: bold;"> File</span><span style="font-weight: bold;">:</span>
+        </p>
+        <p class="code">0 ! Flow balance iterations converged
+        </p>
+        <p class="code">!fan duct # flow [kg/s] Prise [Pa] RPMratio
+        </p>
+        <p class="code">!trm jctn # rel-flow [-] Cb [-]
+        </p>
+        <p class="code">fan 4 0.334472 68.0745
+        </p>
+        <p class="code">trm 1 1.000025        4.38419
+        </p>
+        <p class="code">trm 2 0.999974        4.2013
+        </p>
+        <p class="code">fan 8 0.334472 107.938      0.78357
+        </p>
+        <p class="code">trm 11     1.000007        7.76847
+        </p>
+        <p class="code">trm 12     &#160;0.999991        7.58544
+        </p>
+        <p class="code">end
+        </p>
+        <p class="SubHeading1">&lt;project name&gt;.CBW - Contaminant Box Whisker</p>
+        <p>This file contains contaminant daily box-whisker results and summary box-whisker results for the entire simulation period. Results are presented for all zones within a project file as well as for each contaminant simulated.</p>
+        <p><span style="font-weight: bold;">File Format</span><span style="font-weight: bold;"> (</span><span style="font-weight: bold;">tab-delimited </span><span style="font-weight: bold;">text)</span><span style="font-weight: bold;">:</span>
+        </p>
+        <p class="NormalItalic">The first line of the CBW file is a header describing the amount of data in the file: </p>
+        <p class="code">NumZones // number of zones (IX)
+        </p>
+        <p class="code">NumCont // number of contaminants (IX)
+        </p>
+        <p class="code">StartDate // first date of simulation (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="code">EndDate // last date of simulation (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="NormalItalic">The second line is a header:</p>
+        <p class="code">"day &#160;zone &#160;ctm &#160;avg &#160;dev &#160;min &#160;min &#160;max &#160;max"
+        </p>
+        <p class="NormaItalic">Then daily box-whisker results for each day<br />&#160;&#160;for each zone <br />&#160;&#160;&#160;&#160;for each contaminant:
+        </p>
+        <p class="codeindent">date // date (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="codeindent">zone // zone number (IX)</p>
+        <p class="codeindent">ctm // contaminant number (IX)</p>
+        <p class="codeindent">avg // average value for day (R4)</p>
+        <p class="codeindent">dev // standard deviation (R4)</p>
+        <p class="codeindent">min // minimum value for day (R4)</p>
+        <p class="codeindent">tmin // time at which min occurs (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)
+        </p>
+        <p class="codeindent">max // maximum value for day (R4)</p>
+        <p class="codeindent">tmax // time at which max occurs (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)
+        </p>
+        <p class="NormalItalic">After all daily values comes the summary for the entire simulation<br />    for each zone <br />       for each contaminant:</p>
+        <p class="codeindent">"final"</p>
+        <p class="codeindent">zone // zone number (IX)</p>
+        <p class="codeindent">ctm // contaminant number (IX)</p>
+        <p class="codeindent">avg // average value for simulation (R4)</p>
+        <p class="codeindent">dev // standard deviation for sim (R4)</p>
+        <p class="codeindent">min // minimum value for simulation (R4)</p>
+        <p class="codeindent">dmin // date on which min occurs (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="codeindent">max // maximum value for simulation (R4)</p>
+        <p class="codeindent">dmax // date on which max occurs (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="codeindent" style="margin-top: 0;margin-bottom: 0;">&#160;</p>
+        <p><span style="font-weight: bold;">Example</span><span style="font-weight: bold;"> File</span><span style="font-weight: bold;">:</span>
+        </p>
+        <p class="code">2 &#160;1 &#160;1/1 &#160;1/1
+        </p>
+        <p class="code">day &#160;zone &#160;ctm &#160;avg &#160;dev &#160;min &#160;min &#160;max &#160;max
+        </p>
+        <p class="code">1/1 &#160;0 &#160;1 &#160;0.000e+000 0.000e+000 00:05:00 0.000e+000 00:05:00 0.000e+000
+        </p>
+        <p class="code">1/1 &#160;1 &#160;1 &#160;1.036e-004 0.000e+000 00:05:00 1.036e-004 00:05:00 1.036e-004
+        </p>
+        <p class="code">1/1 2 &#160;1 &#160;6.839e-005 &#160;4.049e-005 &#160;00:05:00 &#160;0.000e+000 &#160;24:00:00 &#160;1.019e-004
+        </p>
+        <p class="code">final &#160;0 &#160;1 &#160;0.000e+000 &#160;0.000e+000 &#160;1/1 &#160;0.000e+000 &#160;1/1 &#160;0.000e+000
+        </p>
+        <p class="code">final 1  1 &#160;1.036e-004 &#160;0.000e+000 &#160;1/1 &#160;1.036e-004 &#160;1/1 &#160;1.036e-004
+        </p>
+        <p class="code">final 2  1 &#160;6.839e-005 &#160;4.049e-005 &#160;1/1 &#160;0.000e+000 &#160;1/1 &#160;1.019e-004
+        </p>
+        <p class="codeindent" style="margin-top: 0;margin-bottom: 0;">&#160;</p>
+        <p class="SubHeading1" style="color: #000000;"><a name="CEX_Files"></a><span>&lt;project name&gt;.CEX - Contaminant Exfiltration</span>
+        </p>
+        <p>This file contains the mass of each contaminant that exits the building during each simulation time step.</p>
+        <p style="font-weight: bold;">File Format (tab-delimited text):</p>
+        <p class="NormalItalic">The first line provides the name of the project.</p>
+        <p class="code">“Project:” PrjName[]</p>
+        <p class="NormalItalic">The next line provides a header.</p>
+        <p class="code">“nctm units”</p>
+        <p class="NormalItalic">The next line provides the number of contaminant and the units of mass.</p>
+        <p class="code">nc	// number of contaminants (I4)</p>
+        <p class="code">“kg”  // mass units, kilogram</p>
+        <p class="NormalItalic">The next line is a header line.</p>
+        <p class="code">“Date	Time”</p>
+        <p class="code">contaminant_name[nc] // name of each contaminant (I1)</p>
+        <p class="NormalItalic">For each time step a line is output containing:</p>
+        <p class="code">Date // date (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)</p>
+        <p class="code">Time // time (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)</p>
+        <p class="NormalItalic">For each contaminant:</p>
+        <p class="code">Mass // mass exiting to ambient during the time step (R4)</p>
+        <p class="NormalItalic">The final line provides the total mass of each contaminant that left the building during the simulation.</p>
+        <p class="code">TotalMass[nc] // for entire simulation period (R4)</p>
+        <p class="code">&#160;</p>
+        <p><b>Example File:</b>
+        </p>
+        <p class="code">Project:  test-cex-a</p>
+        <p class="code">nctm	units</p>
+        <p class="code">2	kg</p>
+        <p class="code">Date	Time	CTM1	PART1</p>
+        <p class="code">1/1	01:00:00	3.00001e-001	1.49983e-010</p>
+        <p class="code">1/1	02:00:00	3.00001e-001	1.49983e-010</p>
+        <p class="code">. . .</p>
+        <p class="code">1/1	24:00:00	3.00001e-001	1.49983e-010</p>
+        <p class="code">Sum		7.20003e+000	3.59958e-009</p>
+        <p>&#160;</p>
+        <p class="SubHeading1" style="color: #a52a2a;"><span style="color: #000000;">&lt;project name&gt;_&lt;contaminant name&gt;.CEX – Detailed Contaminant Exfiltration</span>
+        </p>
+        <p>These files provide the amount of a single contaminant that leaves the building through individual flow paths, duct terminals and duct leaks connected to ambient and for each simple air handling system exhaust. One file is generated for each contaminant simulated.</p>
+        <p style="color: #a52a2a;"><b style="color: #000000;">File Format (tab-delimited text):</b>
+        </p>
+        <p class="NormalItalic">The first line of the CEX file contains the name of the project.</p>
+        <p class="code">PrjName[]</p>
+        <p class="NormalItalic">The next line is a header line.</p>
+        <p class="code">“Date	Time”</p>
+        <p class="code">contaminant_name[nc] // name of each contaminant (I1)</p>
+        <p class="NormalItalic">The next line of the file provides general file information.</p>
+        <p class="code">npath      // number of connections to ambient</p>
+        <p class="code">cont_name  // name of contaminant in this file</p>
+        <p class="code">“kg”       // units of mass</p>
+        <p class="NormalItalic">The next line is the header line.  The first column heading is date/time followed by a list of connections to ambient. Connections are provided with a type character followed by a number of the item according to the project file. Type characters are: ‘p’ = airflow path, ‘t’ = duct terminal, ‘l’ = duct leak and ‘a’ = air handling system exhaust (e.g., p5 = airflow path 5 as found on the SketchPad).</p>
+        <p class="code">“Date	Time”</p>
+        <p class="code">connection[nconn]  // identifier of each connection to ambient</p>
+        <p class="NormalItalic">For each time step a line is output containing:</p>
+        <p class="code">Date // date (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)</p>
+        <p class="code">Time // time (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)</p>
+        <p class="NormalItalic">For each connection:</p>
+        <p class="code">Mass // mass exiting through given connection during time step (R4)</p>
+        <p style="font-weight: bold;color: #000000;">Example File:</p>
+        <p class="code">Project:  test-cex-a</p>
+        <p class="code">npath	ctm_name	units</p>
+        <p class="code">4	CTM1	kg</p>
+        <p class="code">Date	Time	p1	p2	a1	t2</p>
+        <p class="code">1/1	01:00:00	0.00000e+000	1.00000e-001	1.00000e-001	1.00000e-001</p>
+        <p class="code">1/1	02:00:00	0.00000e+000	1.00000e-001	1.00000e-001	1.00000e-001</p>
+        <p class="code">. . .</p>
+        <p class="code">1/1 24:00:00	0.00000e+000	1.00000e-001	1.00000e-001	1.00000e-001</p>
+        <p class="SubHeading1"><a name="CSMfile">&lt;project name&gt;.CSM - Contaminant Source/Sink Summation</a>
+        </p>
+        <p>This file contains summary data related to contaminant simulation. This file is created automatically by ContamX whenever transient contaminant simulations are performed. Source/sink, filter and zone numbers are provided for referencing back to ContamW. The file consists of six sections: </p>
+        <p><span style="font-style: italic;">Contaminant source/sink summary</span> - This section provides the mass of contaminant generated, removed and stored for each source/sink during a simulation.</p>
+        <p><span style="font-style: italic;">Filter challenge summary</span> - This section provides the mass of contaminant to which each filter is exposed during a simulation (upstream challenge).</p>
+        <p><span style="font-style: italic;">Filter loading summary</span> - This section provides the mass of contaminant "loaded" onto each filter during a simulation (not including initial loading).</p>
+        <p><span style="font-style: italic;">Filter breakthrough summary</span> - This section provides indication of whether or not filter breakthrough applies. If breakthrough applies and occurs then the date and time when it occurs and the breakthrough efficiency are provided, otherwise the efficiency at the end of the simulation is provided. Breakthrough only applies to Simple Gaseous Filters for which a non-zero breakthrough efficiency is provided.</p>
+        <p><span style="font-style: italic;">Interactions with ambient</span> - This section provides the mass of each contaminant that enters and exits the building volume, i.e., those that are set to be included in the building volume. </p>
+        <p><span style="font-style: italic;">Simulation time</span> - This section provides information on the duration of the simulation.</p>
+        <p><span style="font-weight: bold;">File Format</span><span style="font-weight: bold;"> (tab-delimited text)</span><span style="font-weight: bold;">:</span>
+        </p>
+        <p class="NormalItalic">The first two lines of the CSM file display the PRJ file name and the date and time the simulation was run: </p>
+        <p class="code">"Project:"&#160; FilePath[]&#160;&#160;// the full path of the PRJ file (I1)</p>
+        <p class="code">"Time:"&#160;&#160;&#160;&#160; SimTime[]&#160;&#160; // PC time the simulation was started (I1)</p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="code">This is followed by the number of contaminants simulated.
+        </p>
+        <p class="code">NumCont "contaminants"&#160;// number of contaminants (I4)
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">This is followed by the <span style="font-weight: bold;">Contaminant source/sink summary section</span>.<br />NOTE: the following section is only presented if source/sinks exist within the PRJ file.</p>
+        <p class="NormalItalic">The first line of the source/sink section is a header:</p>
+        <p>"Contaminant source/sink summary."
+        </p>
+        <p class="NormalItalic">The next line contains the number of source/sinks:</p>
+        <p class="code">NumSS "source/sinks" // number of source/sinks(IX)
+        </p>
+        <p class="NormalItalic">The next line is a header:</p>
+        <p class="code">s/s# &#160;zn# &#160;species &#160;released &#160;removed &#160;stored &#160;[kg]
+        </p>
+        <p class="NormalIndentItalic">Then a line of data for each source/sink:</p>
+        <p class="codeindent">SSNum&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; // source/sink number (IX)</p>
+        <p class="codeindent">Type[]&#160;&#160;&#160;&#160;&#160;&#160;&#160; &#160;// source/sink type (I1)</p>
+        <p class="codeindent">Name[]&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; // contaminant name (I1)</p>
+        <p class="codeindent">ZoneNum&#160;&#160;&#160;&#160;&#160;&#160;&#160; // zone number (IX)</p>
+        <p class="codeindent">As&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; &#160;&#160;&#160;// surface area of deposition elements [m^2] (R4)</p>
+        <p class="codeindent">mult &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;// multiplier (R4)</p>
+        <p class="codeindent">Xmin &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;// location coordinates [m] (R4)</p>
+        <p class="codeindent">Xmax</p>
+        <p class="codeindent">Ymin</p>
+        <p class="codeindent">Ymax</p>
+        <p class="codeindent">Zmin</p>
+        <p class="codeindent">Zmax<br /></p>
+        <p class="codeindent">MassRel&#160;&#160;&#160;&#160;&#160;&#160;&#160; // mass released(R4)</p>
+        <p class="codeindent">MassRem&#160;&#160;&#160;&#160;&#160;&#160;&#160; // mass removed [kg] (R4)</p>
+        <p class="codeindent">MassAcc&#160;&#160;&#160;&#160;&#160;&#160;&#160; // mass accumulated including previous storage (R4)</p>
+        <p class="code">-- Blank line ---
+        </p>
+        <p class="NormalItalic">This is followed by the <b>Filter challenge section</b>.<br />NOTE: this section is only presented if filters exist within the PRJ file.</p>
+        <p class="NormalItalic">The first line of the section is a header:</p>
+        <p class="code">"Filter challenge summary."
+        </p>
+        <p class="NormalItalic">The next line contains the number of filters:</p>
+        <p class="code">NumFilt  "filters"&#160;// number of filters (IX)
+        </p>
+        <p class="NormalItalic">The next line is a header:</p>
+        <p class="codeindent">"path" Ctm[nc] "element" // Ctm[nc] is a list of contaminants </p>
+        <p class="codeindent" style="margin-top: 0;margin-bottom: 0;">                       // where nc is the number of contaminants.&#160;</p>
+        <p class="NormalIndentItalic">Then two lines of data for each filter:<br />The first line is:</p>
+        <p class="codeindent">FltNum &#160;&#160;&#160;&#160;// number of flow component that contains the filter</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">&#160;&#160;&#160;&#160;&#160;//&#160;and letter indicating type (p:path, d:duct, t:term)</p>
+        <p class="codeindent">MassUp[nc]&#160;// challenge mass of each contaminant [kg] (R4)</p>
+        <p class="codeindent">Name[]&#160;&#160;&#160;&#160;&#160;// filter element name (I1)</p>
+        <p class="NormalIndentItalic">The second line is:</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">"--"&#160;&#160;&#160; // indicates same filter as previous</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">MassDown[nc] // unfiltered mass of each contaminant [kg] (R4)</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">"downstream" // indicates downstream mass</p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">This is followed by the <b>Filter loading section</b>.<br />NOTE: this section is only presented if filters exist within the PRJ file.</p>
+        <p class="NormalItalic">The first line of the section is a header:</p>
+        <p class="code">"Filter loading summary."
+        </p>
+        <p class="NormalItalic">The next line contains the number of filters:</p>
+        <p class="code">NumFilt // number of filters (IX)
+        </p>
+        <p class="NormalItalic">The next line is a header:</p>
+        <p class="codeindent">"path" Ctm[nc] "element ns"&#160;// Ctm[nc] is a list of contaminants</p>
+        <p class="codeindent">&#160;&#160;&#160;&#160;&#160;// nc is the number of contaminants.</p>
+        <p class="NormalIndentItalic">Then a line of data for each filter:</p>
+        <p class="codeindent">FltNum&#160;// number of flow component that contains the filter</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">&#160;//&#160;and letter indicating type (p:path, d:duct, t:terminal)</p>
+        <p class="codeindent">MassLoad[nc] // mass filtered during simulation [kg] (R4)</p>
+        <p class="codeindent">Name[] // filter element name (I1)</p>
+        <p class="codeindent">ns&#160;&#160; &#160;&#160;// number of sub-elements, ns&gt;0 for super-filter (I4)</p>
+        <p class="NormalIndentItalic">If <span style="font-style: normal;">ns</span>&gt;0, then a line of data for each sub-filter of the super-filter:</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">"--"&#160;&#160;&#160; // indicates sub-filter</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">MassLoad[nc] // mass filtered during simulation [kg] (R4)</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">Name[]&#160;&#160;// filter element name (I1)</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">"0"&#160;&#160;&#160; &#160; // zero sub-elements (I4)</p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">This is followed by the <b>Filter breakthrough section</b>.<br />NOTE: this section is only presented if filters exist within the PRJ file.</p>
+        <p class="NormalItalic">The first line of the section is a header:</p>
+        <p class="code">"Filter breakthrough summary."
+        </p>
+        <p class="NormalItalic">The next line contains the number of filters:</p>
+        <p class="code" style="margin-left: 144.00pt;text-indent: -144.00pt;">NumFilt "filters" &#160;// number of filters for which for which 
+        </p>
+        <p class="code" style="margin-left: 144.00pt;text-indent: -144.00pt;">&#160;&#160;&#160;&#160; // breakthrough &#160;is possible, currently on Simple
+        </p>
+        <p class="code" style="margin-left: 144.00pt;text-indent: -144.00pt;">&#160;&#160;&#160;&#160; // Gaseous types (IX)
+        </p>
+        <p class="NormalItalic">The next two lines are headers:</p>
+        <p class="code">"path element"
+        </p>
+        <p class="code">" contaminant date time efficiency"
+        </p>
+        <p class="NormalIndentItalic">Then a line of data for each filter:</p>
+        <p class="codeindent">FltNum&#160;&#160;// number of flow component that contains the filter<br />&#160;&#160;&#160;&#160;&#160;&#160; &#160; &#160;&#160;//&#160;and letter indicating type (p:path, d:duct, t:terminal)</p>
+        <p class="codeindent">Name[]&#160;&#160;// filter element name (I1)</p>
+        <p class="codeindent">nc&#160;&#160;&#160;&#160;&#160;&#160;// number of contaminants (I4)</p>
+        <p class="NormalIndentItalic">Then a line of data for each contaminant for which breakthrough is specified.</p>
+        <p class="NormalIndentItalic">Each line contains:</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">"--"&#160;// indicates continuation of filter</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">Ctm[] &#160;// contaminant name (I1)</p>
+        <p class="NormalIndentItalic">If breakthrough occurred:</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">Date[] // date on which breakthrough occurs (MMMDD <span style="font-family: 'Symbol';">®</span> I4)</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">Time&#160; // time at which breakthrough occurs (hh:mm:ss <span style="font-family: 'Symbol';">®</span> I4)</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">bkeff&#160; // breakthrough efficiency</p>
+        <p class="NormalIndentItalic">If breakthrough does not occur:</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">"--"&#160; // indicates no breakthrough date</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">"--"&#160; // indicates no breakthrough time</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">eff&#160; // efficiency at end of simulation</p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">This is followed by the <b>Interactions with ambient section</b>.<br />The next two lines of the section are headers. They are exactly:</p>
+        <p class="code">"Interactions with ambient."
+        </p>
+        <p class="code">"contaminant flow from flow to [kg]"
+        </p>
+        <p class="NormalIndentItalic">Then a line of data for each contaminant:</p>
+        <p class="codeindent">Ctm[]&#160;&#160;// contaminant name (I1)</p>
+        <p class="codeindent">MassFrom&#160;&#160;&#160;&#160;&#160;&#160; // total mass entering from ambient zone [kg] (R4)</p>
+        <p class="codeindent">MassTo&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; // total mass exiting to ambient zone [kg] (R4)</p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">The final section is the <b>Simulation time section</b>:</p>
+        <p class="NormalItalic">It contains a header and three lines of data:</p>
+        <p class="codeindent">"Simulation time:"</p>
+        <p class="codeindent">tsec "seconds"&#160;// simulation time in seconds [s] (IX)</p>
+        <p class="codeindent">thr&#160; "hours,"&#160;&#160;// simulation time in hours [h] (R4)</p>
+        <p class="codeindent">tday "days"&#160;&#160;&#160;&#160;// simulation time in days [days] (R4)</p>
+        <p class="code">&#160;</p>
+        <p><b>Example File:</b>
+        </p>
+        <p class="code">Project: C:\CONTAM96\samples\.4\Filters\TestBK3.prj
+        </p>
+        <p class="code">Time: Mon Jul 18 10:17:22 2005
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">5&#160;contaminants
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Contaminant source/sink summary.
+        </p>
+        <p class="code">4&#160;source/sinks
+        </p>
+        <p class="code">s/s#	type	species	zn#	As	mult	Xmin	Xmax	Ymin	Ymax	Zmin	Zmax	released	removed	stored [kg]
+        </p>
+        <p class="code">1	ccf	CO	3	0	1	0	0	0	0	0	0	7.20E-01	0.00E+00	0
+        </p>
+        <p class="code">2	brs	Cl2	3	0	1	0	0	0	0	0	0	1.00E-04	0.00E+00	0
+        </p>
+        <p class="code">4	drs	Cl2	4	0	1	0	0	0	0	0	0	0.00E+00	1.04E-01	0
+        </p>
+        <p class="code">3	bls	Cl2	4	1	1	0	0	0	0	0	0	8.66E-03	8.67E-03	1.23E-05
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Filter challenge summary.
+        </p>
+        <p class="code">3&#160;filters
+        </p>
+        <p class="code">path&#160;CO&#160;&#160;CO2&#160;Cl2&#160;part0.10&#160;part1.00&#160;element
+        </p>
+        <p class="code">6p&#160;1.164e-001&#160;1.829e+000&#160;2.361e-001&#160;1.204e-001&#160;1.204e-001&#160;Both
+        </p>
+        <p class="code">--&#160;6.215e-002&#160;1.829e+000&#160;1.079e-001&#160;1.039e-001&#160;7.389e-002&#160;downstream
+        </p>
+        <p class="code">1d&#160;1.164e-001&#160;1.829e+000&#160;2.361e-001&#160;1.204e-001&#160;1.204e-001&#160;MERV10
+        </p>
+        <p class="code">--&#160;1.164e-001&#160;1.829e+000&#160;2.361e-001&#160;1.039e-001&#160;7.389e-002&#160;downstream
+        </p>
+        <p class="code">2t&#160;1.164e-001&#160;1.829e+000&#160;2.361e-001&#160;1.039e-001&#160;7.388e-002&#160;GF0
+        </p>
+        <p class="code">--&#160;6.213e-002&#160;1.829e+000&#160;1.079e-001&#160;1.039e-001&#160;7.388e-002&#160;downstream
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Filter loading summary.
+        </p>
+        <p class="code">3&#160;filters
+        </p>
+        <p class="code">path&#160;CO&#160;CO2&#160;Cl2&#160;part0.10&#160;part1.00&#160;element&#160;ns
+        </p>
+        <p class="code">6p&#160;5.427e-002&#160;0.000e+000&#160;1.282e-001&#160;1.649e-002&#160;4.652e-002&#160;Both&#160;2
+        </p>
+        <p class="code">--&#160;0.000e+000&#160;0.000e+000&#160;0.000e+000&#160;1.649e-002&#160;4.652e-002&#160;MERV10&#160;0
+        </p>
+        <p class="code">--&#160;5.427e-002&#160;0.000e+000&#160;1.282e-001&#160;0.000e+000&#160;0.000e+000&#160;GF0&#160;0
+        </p>
+        <p class="code">1d&#160;0.000e+000&#160;0.000e+000&#160;0.000e+000&#160;1.648e-002&#160;4.651e-002&#160;MERV10&#160;0
+        </p>
+        <p class="code">2t&#160;5.427e-002&#160;0.000e+000&#160;1.282e-001&#160;0.000e+000&#160;0.000e+000&#160;GF0&#160;0
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Filter breakthrough summary.
+        </p>
+        <p class="code">2&#160;filters
+        </p>
+        <p class="code">path&#160;element&#160;nc
+        </p>
+        <p class="code">&#160;contaminant&#160;date&#160;time&#160;efficiency
+        </p>
+        <p class="code">6p&#160;Both&#160;2
+        </p>
+        <p class="code">--&#160;CO&#160;Jan01&#160;01:01:00&#160;0.3
+        </p>
+        <p class="code">--&#160;Cl2&#160;Jan01&#160;00:58:00&#160;0.5
+        </p>
+        <p class="code">2t&#160;GF0&#160;2
+        </p>
+        <p class="code">--&#160;CO&#160;Jan01&#160;01:01:00&#160;0.3
+        </p>
+        <p class="code">--&#160;Cl2&#160;Jan01&#160;00:58:00&#160;0.5
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Interactions with ambient.
+        </p>
+        <p class="code">contaminant&#160;mass from&#160;mass to [kg]
+        </p>
+        <p class="code">CO&#160;0.000e+000&#160;2.067e-001
+        </p>
+        <p class="code">CO2&#160;0.000e+000&#160;4.938e+000
+        </p>
+        <p class="code">Cl2&#160;0.000e+000&#160;3.011e-001
+        </p>
+        <p class="code">part0.10&#160;0.000e+000&#160;2.954e-001
+        </p>
+        <p class="code">part1.00&#160;0.000e+000&#160;2.414e-001
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Simulation time:
+        </p>
+        <p class="code">7200&#160;seconds
+        </p>
+        <p class="code">2&#160;hours
+        </p>
+        <p class="code">0.0833333&#160;days
+        </p>
+        <p class="code">&#160;</p>
+        <p class="SubHeading1">&lt;project name&gt;.EBW - Occupant Exposure</p>
+        <p>Occupant exposure can only be calculated for transient contaminant simulations. The occupant exposure is calculated based on the contaminant concentrations within the zones (or zone cells when using 1D zones with the <i>short time step</i> method) occupied by each occupant. These zones (or cells) are determined based on the associated occupancy schedules. The exposure is determined by integrating the concentration vs. time using the mean-value of the contaminant concentrations to which the occupant is exposed during each simulation time step. The resultant integral is divided by the output time step then written to the file in units of kg_cont/kg_air.</p>
+        <p><b>File Format (tab-delimited text):</b>
+        </p>
+        <p class="NormalItalic">The first line of the EBW file is a header describing the data in the file: </p>
+        <p class="code">NumExps // number of exposure icons (IX)
+        </p>
+        <p class="code">NumCont // number of contaminants (IX)
+        </p>
+        <p class="code">StartDate // first date of simulation (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="code">EndDate // last date of simulation (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="code">SimStep // simulation time step [s](IX)</p>
+        <p class="code">expsave // save detailed results flag [0/1] (IX)
+        </p>
+        <p class="code">ebwsave // save box-whisker results flag [0/1] (IX)
+        </p>
+        <p class="NormalItalic">If <span style="font-style: normal;">expsave</span> is 1, then a header line is written for the detailed data: </p>
+        <p class="code">"day &#160;time &#160;ctm" &#160;exp[] &#160;// exp[] is a list of exposure icon numbers
+        </p>
+        <p class="NormalItalic">If <span style="font-style: normal;">ebwsave </span>is 1, then a header line is written for daily box-whisker data:</p>
+        <p class="code">"day &#160;pexp &#160;ctm &#160;avg &#160;dev &#160;min &#160;min &#160;max &#160;max"
+        </p>
+        <p class="NormalItalic">Then for each day</p>
+        <p class="NormalIndentItalic">If <span style="font-style: normal;">expsave</span> is 1, then a line of data is written for each for each contaminant and output time step for a day:</p>
+        <p class="code">Date&#160;// date (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="code">Time&#160;// time (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)
+        </p>
+        <p class="code">exp[]&#160;// exposure for each exp icon for timestep [kg/kg]</p>
+        <p class="NormalIndentItalic">If <span style="font-style: normal;">ebwsave</span> is 1, then a line of daily box-whisker data is written for each exposure icon:</p>
+        <p class="codeindent">date // date (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="codeindent">exp // exposure icon number (IX)</p>
+        <p class="codeindent">ctm // contaminant number (IX)</p>
+        <p class="codeindent">avg // average value for day (R4)</p>
+        <p class="codeindent">dev // standard deviation (R4)</p>
+        <p class="codeindent">tmin // time at which min occurs (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)
+        </p>
+        <p class="codeindent">min // minimum value for day (R4)</p>
+        <p class="codeindent">tmax // time at which max occurs (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4)
+        </p>
+        <p class="codeindent">max // maximum value for day (R4)</p>
+        <p class="NormalItalic">At the end:</p>
+        <p class="NormalItalic">If <span style="font-style: normal;">ebwsave</span> is 1, a line of summary box-whisker data is written for each exposure icon and for each contaminant for the entire simulation. Each line contains:</p>
+        <p class="codeindent">"final"
+        </p>
+        <p class="codeindent">exp&#160;// exposure icon number (IX)</p>
+        <p class="codeindent">ctm&#160;// contaminant number (IX)</p>
+        <p class="codeindent">avg&#160;// average value for simulation (R4)
+        </p>
+        <p class="codeindent">dev&#160;// standard deviation for sim (R4)
+        </p>
+        <p class="codeindent">dmin&#160;// date on which min occurs (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="codeindent">min&#160;// minimum value for simulation (R4)
+        </p>
+        <p class="codeindent">dmax&#160;// date on which max occurs (mm/dd <span style="font-family: 'Symbol';font-size: 10pt;">®</span> IX)
+        </p>
+        <p class="codeindent">max&#160;// maximum value for simulation (R4)
+        </p>
+        <p class="code">&#160;</p>
+        <p><span style="font-weight: bold;">Example File:</span>
+        </p>
+        <p class="code">1 &#160;2 &#160;1/1 &#160;1/1 &#160;300 &#160;1 &#160;1
+        </p>
+        <p class="code">day &#160;time &#160;ctm &#160;1
+        </p>
+        <p class="code">day &#160;pexp &#160;ctm &#160;avg &#160;dev &#160;min &#160;min &#160;max &#160;max
+        </p>
+        <p class="code">1/1 &#160;01:00:00 &#160;1 &#160;2.811e-007
+        </p>
+        <p class="code">1/1 &#160;01:00:00 &#160;2 &#160;9.970e-008
+        </p>
+        <p class="code">1/1 &#160;02:00:00 &#160;1 &#160;2.571e-007
+        </p>
+        <p class="code">1/1 &#160;02:00:00 &#160;2    6.109e-008
+        </p>
+        <p class="code">1/1 &#160;1 &#160;1 &#160;3.021e-007 &#160;0.000e+000 &#160;02:00:00 &#160;2.571e-007 &#160;00:05:00 &#160;3.592e-007
+        </p>
+        <p class="code">1/1  1 &#160;2 &#160;1.061e-007 &#160;1.945e-008 &#160;02:00:00 &#160;6.109e-008 &#160;00:05:00 &#160;1.562e-007
+        </p>
+        <p class="code">final &#160;1 &#160;1 &#160;3.021e-007 &#160;0.000e+000 &#160;1/1 &#160;2.571e-007 &#160;1/1 &#160;3.592e-007
+        </p>
+        <p class="code">final &#160;1 &#160;2 &#160;1.061e-007 &#160;1.945e-008 &#160;1/1 &#160;6.109e-008 &#160;1/1 &#160;1.562e-007
+        </p>
+        <p class="SubHeading1">&lt;project name&gt;.LOG</p>
+        <p>If you perform a transient simulation and implement <span style="font-style: italic;">report control elements</span>, ContamX will create a file in the same directory as your project file with the name of your project file and the .LOG extension appended (See Control Element Type: Report a Value). This file will contain a line of data at each o<span style="font-style: italic;">utput time step</span> and a column of signal values for each <span style="font-style: italic;">report control element</span>.</p>
+        <p class="SubHeading1">&lt;project name&gt;.RST - Simulation Restart File</p>
+        <p>Restart is an alternative to normal initialization of a simulation. It contains the state of all airflow and contaminant nodes, flow rates and pressure differences for all flow paths, contaminant storage terms for sinks, and signal values of various control node types. State data will be stored at 24:00:00 of all days simulated. </p>
+        <p><span style="font-weight: bold;">File Format (binary):</span>
+        </p>
+        <p class="NormalItalic">Header data:</p>
+        <p class="code"> m[0] = 0L; /* TURBO C++ messes up the first bytes written; */&#160;</p>
+        <p class="code"> m[1] = (I4)_nzone; /* therefore, send 4 unused bytes. */&#160;</p>
+        <p class="code"> m[2] = (I4)_npath;</p>
+        <p class="code"> m[3] = (I4)_nctm;</p>
+        <p class="code"> m[4] = (I4)_njct;</p>
+        <p class="code"> m[5] = (I4)_ndct;</p>
+        <p class="code"> m[6] = (I4)_ncss;</p>
+        <p class="code"> m[7] = (I4)_nctrl;</p>
+        <p class="code"> m[8] = (I4)_rcdat.date_0;</p>
+        <p class="code"> m[9] = (I4)_rcdat.date_1;</p>
+        <p class="code"> m[10] = (I4)_rSizeData;</p>
+        <p class="code"> m[11] = (not set)</p>
+        <p class="code">m[1] thru m[7] allow ContamW to check for some changes in the project.<br />m[8] and m[9] are the date limits displayed to the user.<br />m[11] will allow reading all dates on the file -- could be used to create a selection box of available dates.</p>
+        <p class="NormalItalic">RESTART DATA:</p>
+        <p class="NormalItalic">For all AF_NODEs:</p>
+        <p class="code">R8 T - temperature</p>
+        <p class="code">R8 P - pressure</p>
+        <p class="code">R8 M - mass</p>
+        <p class="code">R4 Mf[_nctm] - mass fractions</p>
+        <p class="code">  For all AF_PATHs:</p>
+        <p class="code">R8 Flow[0] - primary flow</p>
+        <p class="code">R8 Flow[1] - secondary flow</p>
+        <p class="code">R8 dP - pressure drop</p>
+        <p class="NormalItalic">  For CSS_DSC:</p>
+        <p class="code">CSE_EDS (I4)pss-&gt;local (stored as R4, converted to I4 in simulation)</p>
+        <p class="code">CSE_BLS (R4)pss-&gt;local</p>
+        <p class="NormalItalic">  For CT_NODEs:</p>
+        <p class="code">SNSDAT: R4 oldsig</p>
+        <p class="code">PICDAT: R4 oldsig, R4 olderr</p>
+        <p class="code">HYSDAT: R4 oldsig</p>
+        <p class="SubHeading1">1D Simulation Results (RXR, RZF, RZM and RZ1)</p>
+        <p>The RXR file provides the number of contaminants, zones, and cells necessary to read the other three 1D simulation results files. 1D simulation results can be displayed and converted to tab-delimitted files using the utility programs provided by NIST: ContamRV and 1DZRead respectively.</p>
+        <p>These files require that the structures in ContamW and ContamX be compiled using no greater than 4-byte member alignment (under Visual C++). The file is unreadable if the default structure member alignment (8-bytes) is used.  </p>
+        <p>The day and time values are provided so the program reading these files can insure it is reading from the proper position. The RXR file provides the number of contaminants, zones, and cells necessary to read the other three files. </p>
+        <h5>RXR File Format (binary)
+        </h5>
+        <p class="NormalItalic">The first section of the file is:</p>
+        <p class="code">24 // identifier (for ContamX 2.4) (I4)</p>
+        <p class="code">_time_list // listing time steps [s](I4)</p>
+        <p class="code">_date_0 // start of simulation - day of year (I4)</p>
+        <p class="code">_time_0 // start of simulation - time of day [s] (I4)</p>
+        <p class="code">_date_1 // end of simulation - day of year (I4)</p>
+        <p class="code">_time_1 // end of simulation - time of day [s] (I4)</p>
+        <p class="code">_urzf // if true, create RZF file (I4)</p>
+        <p class="code">_urzm // if true, create RZM file (I4)</p>
+        <p class="code">_urz1 // if true, create RZ1 file (I4)</p>
+        <p class="code">_nctm // number of contaminants (I4)</p>
+        <p class="code">_nzone // number of zones (excluding ambient) (I4)</p>
+        <p class="code">_nZ1D // number of 1-D zones (I4)</p>
+        <p class="code">_nC1D // total number of cells in 1-D zone (I4) </p>
+        <p class="NormalItalic">If _nZ1D &gt; 0, then the following data is written for each 1-D zone:</p>
+        <p class="code">nr&#160;// the ContamW zone number (I4)</p>
+        <p class="code">nc&#160;// the number of cells in the zone (I4)</p>
+        <p class="code">X1&#160;// the x-coordinate of the axis origin [m] (R4)</p>
+        <p class="code">Y1&#160;// the y-coordinate of the axis origin [m] (R4)</p>
+        <p class="code">Z1&#160;// the z-coordinate of the axis origin [m] (R4)</p>
+        <p class="code">X2&#160;// the x-coordinate of the axis end [m] (R4)</p>
+        <p class="code">Y2&#160;// the y-coordinate of the axis end [m] (R4)</p>
+        <p class="code">Z2&#160;// the z-coordinate of the axis end [m] (R4)</p>
+        <h5>RZF File Format (binary)</h5>
+        <p class="NormalItalic">For each time step:</p>
+        <p class="code">_dayofy // day of year [1 to 365] (I4)</p>
+        <p class="code">_sim_time // time value [s] [0 to 86400] (I4)</p>
+        <p class="code">for each zone:</p>
+        <p class="code">T // Temperature [K] (R4)</p>
+        <p class="code">P // Gage Pressure [Pa] (R4)</p>
+        <p class="code">D // Density [kg/m<span style="vertical-align: super;font-size: 10pt;">3</span>] (R4)</p>
+        <h5>RZM File Format (binary)
+        </h5>
+        <p class="NormalItalic">For each time step:</p>
+        <p class="code">_dayofy // day of year [1 to 365] (I4)</p>
+        <p class="code">_sim_time // time value [s] [0 to 86400] (I4)</p>
+        <p class="NormalIndentItalic">&#160;for each zone:</p>
+        <p class="codeindent">CC[0] // mass fraction of species 0 [kg/kg] (R4)</p>
+        <p class="codeindent">...</p>
+        <p class="codeindent">CC[n] // mass fraction of species n [kg/kg] (R4)</p>
+        <h5>RZ1 File Format (binary)
+        </h5>
+        <p class="NormalItalic">For each time step:</p>
+        <p class="code">_dayofy // day of year [1 to 365] (I4)</p>
+        <p class="code">_sim_time // time value [s] [0 to 86400] (I4)</p>
+        <p class="NormalItalic">for each 1-D zone cell:</p>
+        <p class="codeindent">CC[0] // mass fraction of species 0 [kg/kg] (R4)</p>
+        <p class="codeindent">...</p>
+        <p class="codeindent">CC[n] // mass fraction of species n [kg/kg] (R4)</p>
+        <p class="SubHeading1">&lt;project name&gt;.SIM - Detailed Simulation Results</p>
+        <p>The SIM file is the main results file of ContamX containing detailed airflow and contaminant results. The data in the SIM file is used by ContamW to display airflow results on the SketchPad, to display contaminant concentrations in the results display window, to create export and report files, and to generate charts of transient simulation results. Output is created at every <span style="font-style: italic;">output time step</span>. Shorter <span style="font-style: italic;">output time steps</span> allow you to see the results in more detail, but lead to larger simulation results file.</p>
+        <p>The format of this file has been slightly modified from the previous version to accommodate a greater number of building components (zones, paths, ducts, etc.). This is reflected in the "nr" fields that have changed from I2 to I4. It is still a binary file (not "human-readable" as opposed to a text file) to provide for faster access and smaller file size than a text file.</p>
+        <p class="NormalCW2">Several post-processor programs are available in the <b style="font-style: italic;">SOFTWARE&#160;Tools</b> section of the <b style="font-style: italic;"></b><a href="https://www.nist.gov/el/energy-and-environment-division-73200/nist-multizone-modeling">NIST Multizone Modeling website</a> that can be used to read the .SIM file and generate various forms of output from it. </p>
+        <h5>File Format (binary):</h5>
+        <p class="NormalItalic">The first 16 lines of the simulation results file contain data (32-bit integers) to help assure that the results apply to the project file currently in ContamW and to set the array sizes necessary to process the results.</p>
+        <p class="code">24          // CONTAM version number &#160;id (I4)
+        </p>
+        <p class="code">_nzone // number of airflow zones (excluding ambient) (I4)</p>
+        <p class="code">_npath // number of airflow paths (I4)</p>
+        <p class="code">_nctm // number of contaminants (I4)</p>
+        <p class="code">_njct // number of junctions and terminals (I4)</p>
+        <p class="code">_ndct // number of duct segments (I4)</p>
+        <p class="code">_time_list // listing time steps [s](I4)</p>
+        <p class="code">_date_0 // start of simulation - day of year (I4)</p>
+        <p class="code">_time_0 // start of simulation - time of day (I4)</p>
+        <p class="code">_date_1 // end of simulation - day of year (I4)</p>
+        <p class="code">_time_1 // end of simulation - time of day (I4)</p>
+        <p class="code">_pfsave // if true, write path flow results (I4)</p>
+        <p class="code">_zfsave // if true, write zone flow results (I4)</p>
+        <p class="code">_zcsave // if true, write zone contaminant results (I4)</p>
+        <p class="code">_nafnd // number of airflow nodes (zones + junctions) (I4)</p>
+        <p class="code">_nccnd // number of contaminant nodes (zones + junctions) (I4)</p>
+        <p class="code">_nafpt // number of airflow paths (paths + ducts) (I4)</p>
+        <p class="NormalItalic">This is followed by _nafnd lines of airflow node cross-reference data:</p>
+        <p class="codeindent">typ // source of node [zone, junction or terminal] (I4)</p>
+        <p class="codeindent">nr // zone, junction or terminal number (I4)</p>
+        <p class="NormalItalic">The next _nafnd lines give the contaminant node cross-reference data:</p>
+        <p class="codeindent">typ // source of node [zone or junction] (I4)</p>
+        <p class="codeindent">nr // zone, junction or terminal number (I4)</p>
+        <p class="NormalItalic">The next _nafpt lines give the airflow path cross-reference data:</p>
+        <p class="codeindent">typ // source of path [path, duct, or leak] (I4)</p>
+        <p class="codeindent">nr // path, duct, or leak number (I4)</p>
+        <p class="NormalItalic">The simulation results for each day consist of: </p>
+        <p class="NormalIndentItalic">The results for each time step consist of:</p>
+        <p class="NormalIndentItalic">A line of time and ambient data:</p>
+        <p class="codeindent">dayofy // day of year [1 to 365] (I2)</p>
+        <p class="codeindent">daytyp // type of day [1 to 12] (I2)</p>
+        <p class="codeindent">sim_time // time value [s] [0 to 86400] (I4)</p>
+        <p class="codeindent">Tambt // ambient temperature [k] (R4)</p>
+        <p class="codeindent">P // barometric pressure [Pa] (R4)</p>
+        <p class="codeindent">Ws // wind speed [m/s] (R4)</p>
+        <p class="codeindent">Wd // wind angle [deg] (R4)</p>
+        <p class="codeindent">CC[0] // ambient mass fraction of species 0 [kg/kg] (R4)</p>
+        <p class="codeindent">...</p>
+        <p class="codeindent">CC[n] // ambient mass fraction of species n [kg/kg] (R4)</p>
+        <p class="NormalIndentItalic">A line of data for each airflow path:</p>
+        <p class="codeindent">nr // path number; use as check (I4)</p>
+        <p class="codeindent">dP // pressure drop across path [Pa] (R4)</p>
+        <p class="codeindent">Flow0 // primary flow value [kg/s] (R4)</p>
+        <p class="codeindent">Flow1 // alternate flow value [kg/s] (R4)</p>
+        <p class="NormalIndentItalic">A line of data for each airflow node (excluding ambient):</p>
+        <p class="codeindent">nr // node number; use as check (I4)</p>
+        <p class="codeindent">T // node temperature [K] (R4)</p>
+        <p class="codeindent">P // node reference pressure [Pa] (R4)</p>
+        <p class="codeindent">D // node air density [kg/m^3] (R4)</p>
+        <p class="NormalIndentItalic">A line of data for each contaminant node (excluding ambient):</p>
+        <p class="codeindent">nr // node number; use as check (I4)</p>
+        <p class="codeindent">CC[0] // mass fraction of species 0 [kg/kg] (R4)</p>
+        <p class="codeindent">...</p>
+        <p class="codeindent">CC[n] // mass fraction of species n [kg/kg] (R4)</p>
+        <p class="NormalIndentItalic">The time step data is followed by summary data for the day.  </p>
+        <p class="NormalIndentItalic">It begins with the following line of ambient data:</p>
+        <p class="codeindent">dayofy // day of year [1 to 365] (I2)</p>
+        <p class="codeindent">daytyp // type of day [1 to 12] (I2)</p>
+        <p class="codeindent">Tamax // maximum ambient temperature [k] (R4)</p>
+        <p class="codeindent">Tamin // minimum ambient temperature [k] (R4)</p>
+        <p class="codeindent">Pavg // average barometric pressure [Pa] (R4)</p>
+        <p class="codeindent">Wsmax // maximum wind speed [m/s] (R4)</p>
+        <p class="codeindent">Wsavg // average wind speed [m/s] (R4)</p>
+        <p class="codeindent">CC[0] // maximum ambient mass fraction of species 0 [kg/kg] (R4)</p>
+        <p class="codeindent">...</p>
+        <p class="codeindent">CC[n] // maximum ambient mass fraction of species n [kg/kg] (R4)</p>
+        <p class="NormalIndentItalic">A line of data for each airflow path:</p>
+        <p class="codeindent">nr // path number; use as check (I4)</p>
+        <p class="codeindent">dPmax // maximum pressure drop across path [Pa] (R4)</p>
+        <p class="codeindent">Flowmax // maximum primary flow value [kg/s] (R4)</p>
+        <p class="codeindent">0.0 // place holder (R4)</p>
+        <p class="NormalIndentItalic">A line of data for each airflow node (excluding ambient):</p>
+        <p class="codeindent">nr // node number; use as check (I4)</p>
+        <p class="codeindent">T // node temperature [K] (R4)</p>
+        <p class="codeindent">P // node reference pressure [Pa] (R4)</p>
+        <p class="codeindent">D // node air density [kg/m^3] (R4)</p>
+        <p class="NormalIndentItalic">A line of data for each contaminant node (excluding ambient):</p>
+        <p class="codeindent">nr // node number; use as check (I4)</p>
+        <p class="codeindent">CCmax[0] // maximum mass fraction of species 0 [kg/kg] (R4)</p>
+        <p class="codeindent">...</p>
+        <p class="codeindent">CCmax[n] // maximum mass fraction of species n [kg/kg]</p>
+        <p class="codeindent" style="margin-top: 0;margin-bottom: 0;">
+        </p>
+        <p><span style="font-weight: bold;">Programmer's Note:</span> this file requires that the structures in ContamW and ContamX be compiled using no greater than 2-byte member alignment (under Visual C++). The file is unreadable if the default structure member alignment is used.  </p>
+        <p class="SubHeading1">&lt;project file&gt;.SQLITE3</p>
+        <p>The SQLITE3 file contains the same information as the SIM file but in SQLite3 database format consisting of the following tables: SimInfo, Time, AmbientConditions, NodeZoneFlowData, NodeZoneCcData, NodeDuctFlowData, NodeDuctCcData, LinkPathData, LinkDuctInfo, LinkDuctData. This file can be browsed and queried using a tool like <i>DB Browser for SQLite</i>.</p>
+        <p class="SubHeading1">&lt;project file&gt;.SRF</p>
+        <p>The SRF file contains contaminant concentrations for source/sinks that include a reversible storage node. Unlike most source/sinks, these contribute a contaminant node to the system of contaminant equations. Currently there are two types: boundary layer diffusion (BLS)  and deposition/resuspension (DVR). The units for BLS nodes are kg of contaminant/kg of surface and those of DVR nodes are kg/m<sup>2</sup>.</p>
+        <p><span style="font-weight: bold;">Surface Result File - </span><span style="font-weight: bold;">File Format (tab-delimited text):</span>
+        </p>
+        <p class="NormalItalic">The first line of the file is a header providing the name of the PRJ file: </p>
+        <p class="code">"Project:" file[]&#160;// PRJ file name (I1)
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">Then a header line: </p>
+        <p class="code">"nr	zone	type	species	units	trace/non-trace"
+       </p>
+        <p class="NormalItalic">Then for each surface node : </p>
+        <p class="codeindent">source &#160;&#160;&#160;// number of source/sink (IX)</p>
+        <p class="codeindent">zone &#160;&#160;&#160;&#160;&#160;// number of zone in which source is located (IX)</p>
+        <p class="codeindent">type[]&#160;&#160;&#160;&#160;// type of source/sink ("bls", "dvr") (I1)</p>
+        <p class="codeindent">species[] // name of species associated with source/sink (I1)</p>
+        <p class="codeindent">units[] &#160;&#160;// units of results (I1)</p>
+        <p class="codeindent">trace[] &#160;&#160;// type of source: "trace", "non-trace", "inactive" (I1)</p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">Then a header line: </p>
+        <p class="code">"date time " &lt;type+nr&gt; for each source/sink</p>
+        <p class="NormalItalic">Then a line of data for each listing time step:</p>
+        <p class="codeindent">date &#160;&#160;// date (mm/dd)</p>
+        <p class="codeindent">time &#160;&#160;// time (hh:mm:ss)</p>
+        <p class="codeindent">conc[] // surface concentration for each surface node (R4)</p>
+        <p class="SubHeading1">&lt;project file&gt;.VAL</p>
+        <p>The VAL file contains the results of either the Building Airflow Tests or Building Pressurization Test airflow simulation methods. The file will be created or overwritten each time you perform one of these tests on a project file, so be sure to rename or copy any files you wish to keep. </p>
+        <p>If you perform a <span style="font-weight: bold;">Building Airflow Test </span>calculation, the data written to this file will be divided into five sections: Building info and ACH, Zones, Junctions, Classified Flows and Volumes. The first and last sections are always written, but the other three are controlled by the simulation output parameters for the Airflow Test simulation method.</p>
+        <p><span style="font-weight: bold;">Building Airflow Test - </span><span style="font-weight: bold;">File Format (tab-delimited text):</span>
+        </p>
+        <p class="NormalItalic">The first line of the file is a header providing the name of the PRJ file: </p>
+        <p class="code">"Airflow Summary for" file[]&#160;// PRJ file name (I1)
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">Weather conditions section: </p>
+        <p class="code">"Ambient T:"&#160;Tambt&#160;"C"&#160;&#160;// ambient temperature [C] (R4)
+        </p>
+        <p class="code">"Pressure:"&#160;Pbar&#160;"Pa"&#160;&#160;// barometric pressure [Pa] (R4)
+        </p>
+        <p class="code">"Wind spd:"&#160;wspd&#160;"m/s"&#160;// wind speed [m/s] (R4)
+        </p>
+        <p class="code">"Wind dir:"&#160;wdir&#160;"deg"&#160;// wind direction [deg] (R4)
+        </p>
+        <p>"Time:"&#160;&#160;time&#160;day[]&#160;// sim time (hh:mm:ss <span style="font-family: 'Symbol';font-size: 10pt;">®</span> I4) day of week (I1)
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">Whole building air change rate - total flow from conditioned to unconditioned zones divided by the total volume of conditioned zones. Air change rate is calculated as ACH = F * 3600/(ZoneDensity * ZoneVol). ACH can be calculated from data provided in the Classified Flow section :</p>
+        <p class="code">"Bldg ACH:"&#160;ach&#160;&#160;&#160;// building air change rate [1/hr] (R4)
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">Zones section:</p>
+        <p class="NormalItalic">This section is only written to the file if the simulation output parameter BldgFlowZ is equal to 1.</p>
+        <p class="code">"Zones: nZones "flows [ACH]"// number of zones (I4) plus header
+        </p>
+        <p class="NormalItalic">Data header:</p>
+        <p class="code">zone C/U Supply Ret/Exh OA sys OA tot Circ tot P [Pa] T [C] Vol [m^3] 
+        </p>
+        <p class="NormalItalic">A line of data for each zone (excluding implicit zones of simple air handling systems, i.e., cu&#160;=&#160;S) - all flows provided as air changes per hour, ACH [1/hr]:</p>
+        <p class="codeindent">nr&#160;&#160;// zone number (I4)
+        </p>
+        <p class="codeindent">cu&#160;&#160;// C:conditioned, U:unconditioned, A:ambt, S:AHS
+        </p>
+        <p class="codeindent">Qs&#160;&#160;// Total supply airflow from system to zone.
+        </p>
+        <p class="codeindent"> &#160;&#160;&#160;// Includes flow from: terminals, simple ahs, duct leaks 
+        </p>
+        <p class="codeindent"> &#160;&#160;&#160;// and forced flow paths
+        </p>
+        <p class="codeindent">Qrex&#160;// Total return + exhaust airflow from zone to system.
+        </p>
+        <p class="codeindent">&#160;&#160;&#160;&#160;&#160;// Includes flow to: terminals, simple ahs, duct leaks 
+        </p>
+        <p class="codeindent"> &#160;&#160;&#160;&#160;// and forced flow paths
+        </p>
+        <p class="codeindent">Qoasys&#160;// Total outdoor airflow from system to zone.
+        </p>
+        <p class="codeindent">&#160;&#160;&#160;&#160;&#160;&#160;&#160;// Includes flow from: terminals, simple ahs, duct leaks 
+        </p>
+        <p class="codeindent"> &#160;&#160;&#160;&#160;&#160;&#160;// and forced flow paths connected to Ambt
+        </p>
+        <p class="codeindent">Qoatot&#160;// Total outdoor air intake including all paths (non-forced flow)
+        </p>
+        <p class="codeindent"> &#160;&#160;&#160;&#160;&#160; &#160;&#160;// connected to ambient: Qoasys + direct infiltration
+        </p>
+        <p class="codeindent">Qcirctot&#160;// "Circulation flow" sum of all flows out of zone
+        </p>
+        <p class="codeindent">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;// Includes flow to: terminals, simple ahs, duct leaks, 
+        </p>
+        <p class="codeindent"> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;// conditioned zones, unconditioned zones and Ambt
+        </p>
+        <p class="codeindent">P&#160;&#160;// Zone pressure = absolute zone pressure minus the ambient
+        </p>
+        <p class="codeindent"> &#160;&#160;// pressure at the reference elevation of the level on 
+        </p>
+        <p class="codeindent">&#160;&#160;&#160;// which the zone is located [Pa]</p>
+        <p class="codeindent">T&#160;&#160;// Zone temperature [C]
+        </p>
+        <p class="codeindent">V&#160;&#160;// Zone volume [m<span style="font-size: 9pt;vertical-align: super;">3</span>]
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">Junctions section:</p>
+        <p class="NormalItalic">This section is only written to the file if the simulation output parameter BldgFlowD is equal to 1.</p>
+        <p class="code"> "Junctions:"&#160;nJct&#160;// number of junctions (I4)
+        </p>
+        <p class="NormalItalic">Data header:</p>
+        <p class="code">junction J/T&#160; OA [%] Flow [kg/s] P [Pa] T [C] Vol [m^3] 
+        </p>
+        <p class="NormalItalic">A line of data for each junction:</p>
+        <p class="codeindent">nr&#160;&#160;// junction number (I4)</p>
+        <p class="codeindent">jt&#160;&#160;// J:junction, T:terminal</p>
+        <p class="codeindent">poa&#160;// Percent outdoor air [%]</p>
+        <p class="codeindent">w&#160;&#160;&#160;// Airflow rate [kg/s]</p>
+        <p class="codeindent">P&#160;&#160;&#160;// Junction pressure [Pa]</p>
+        <p class="codeindent">T&#160;&#160;&#160;// Junction temperature [C]</p>
+        <p class="codeindent">V&#160;&#160;&#160;// Junction volume [m<span style="vertical-align: super;font-size: 10pt;">3</span>]</p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">Flow classification section:</p>
+        <p class="NormalItalic">This section is only written to the file if the simulation output parameter BldgFlowC is equal to 1.</p>
+        <p class="code"> "Classified Zone Airflows for " file[] ".prj"&#160;// PRJ file name (I1)
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="code">"Zones:" nZones "flows [kg/s]"&#160;// number of zones (I4) plus header
+        </p>
+        <p class="NormalItalic">Data header:</p>
+        <p class="code">"zone C/U Vol [m^3] Dens [kg/m^3] fmTerm fmLeak fmAHS fmFan fmCzone fmUzone fmAmbt toTerm toLeak toAHS toFan toCzone toUzone toAmbt oaTerm oaLeak oaAHS oaFan"
+        </p>
+        <p class="NormalItalic">A line of data for each zone (excluding implicit zones of simple air handling systems, i.e., cu&#160;=&#160;S) - all flows provided in kg/s:</p>
+        <p class="codeindent">nr&#160;&#160;// zone number (I4)
+        </p>
+        <p class="codeindent">cu&#160;&#160;// C:conditioned, U:unconditioned, A:ambt, S:AHS
+        </p>
+        <p class="codeindent">V&#160;&#160;&#160;// Zone volume (volume for A is total cond volume<br />&#160;&#160;&#160;&#160;// including zones, ducts and simple AHS) [m3]
+        </p>
+        <p class="codeindent">Dens&#160;&#160;&#160;&#160;// Zone density [kg/m3]
+        </p>
+        <p class="codeindent">FfmTrm&#160;&#160;// Airflow rate into zone from terminals
+        </p>
+        <p class="codeindent">FfmLeak&#160;// Airflow rate into zone from duct leaks
+        </p>
+        <p class="codeindent">FfmAHS&#160;&#160;// Airflow rate into zone from simple AHS
+        </p>
+        <p class="codeindent">FfmFan&#160;&#160;// Airflow rate into zone from forced flow elements
+        </p>
+        <p class="codeindent">FfmZnC&#160;&#160;// Airflow rate into zone from conditioned zones
+        </p>
+        <p class="codeindent">FfmZnU&#160;&#160;// Airflow rate into zone from unconditioned zones (except Ambt)
+        </p>
+        <p class="codeindent">FfmAmbt&#160;// Airflow rate into zone from ambient (except forced flows)
+        </p>
+        <p class="codeindent">FtoTrm&#160;&#160;// Airflow rate out of zone to terminals
+        </p>
+        <p class="codeindent">FtoLeak&#160;// Airflow rate out of zone to duct leaks
+        </p>
+        <p class="codeindent">FtoAHS&#160;&#160;// Airflow rate out of zone to simple AHS
+        </p>
+        <p class="codeindent">FtoFan&#160;&#160;// Airflow rate out of zone to forced flow elements
+        </p>
+        <p class="codeindent">FtoZnC&#160;&#160;// Airflow rate out of zone to conditioned zones
+        </p>
+        <p class="codeindent">FtoZnU&#160;&#160;// Airflow rate out of zone to unconditioned zones (except Ambt)
+        </p>
+        <p class="codeindent">FtoAmbt&#160;// Airflow rate out of zone to Ambt
+        </p>
+        <p class="codeindent">FoaTrm&#160;&#160;// Outdoor airflow rate into zone from terminals
+        </p>
+        <p class="codeindent">FoaLeak&#160;// Outdoor airflow rate into zone from duct leaks
+        </p>
+        <p class="codeindent">FoaAHS&#160;&#160;// Outdoor airflow rate into zone from simple AHS
+        </p>
+        <p class="codeindent">FoaFan&#160;&#160;// Outdoor airflow rate into zone from forced flow elements
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="NormalItalic">Volume section:</p>
+        <p class="code">"Volumes:"
+        </p>
+        <p class="code">"Conditioned zones"
+        </p>
+        <p class="code">VZCm  "m^3"&#160;&#160;// Total conditioned zone volume [m3]
+        </p>
+        <p class="code">VZCft "cuft"&#160;// Total conditioned zone volume [ft3]
+        </p>
+        <p class="code">"Ducts &amp; AHS (conditioned)"
+        </p>
+        <p class="code">VDCm "m^3"&#160;&#160;// Total system volume [m3]
+        </p>
+        <p class="code">VDCft "cuft"&#160;// Total system volume [ft3]
+        </p>
+        <p class="code">"Unconditioned zones"
+        </p>
+        <p class="code">VZUm "m^3"&#160;&#160;// Total unconditioned zone volume [m3]
+        </p>
+        <p class="code">VZUft "cuft"&#160;// Total unconditioned zone volume [ft3]
+        </p>
+        <p class="code">&#160;</p>
+        <p><b>Example File:</b>
+        </p>
+        <p class="code">Airflow Summary for DEMO7_AirflowTest.prj
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Ambient T:&#160;20.00&#160;C
+        </p>
+        <p class="code">Pressure: &#160;101325.00&#160;Pa
+        </p>
+        <p class="code">Wind spd: &#160;0.00&#160;m/s
+        </p>
+        <p class="code">Wind dir: &#160;0.00&#160;deg
+        </p>
+        <p class="code">Time: &#160;00:00:00&#160;Sunday
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Bldg ACH:&#160;0.450
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Zones:&#160;5&#160;&#160; flows [ACH]
+        </p>
+        <p class="code">zone&#160;C/U&#160;Supply&#160;Ret/Exh&#160;OA sys&#160;OA tot&#160;Circ tot&#160;P [Pa]&#160;T [C]&#160;Vol [m^3]
+        </p>
+        <p class="code">1&#160;C&#160;0.78505&#160;0&#160;0.18038&#160;0.18038&#160;0.79&#160;949.0&#160;20.0&#160;216.0
+        </p>
+        <p class="code">2&#160;C&#160;3.1401&#160;0&#160;0.7215&#160;0.7215&#160;3.14&#160;949.0&#160;20.0&#160;54.0
+        </p>
+        <p class="code">3&#160;C&#160;1.5702&#160;6.0457&#160;0.36079&#160;0.36079&#160;7.85&#160;949.0&#160;20.0&#160;108.0
+        </p>
+        <p class="code">4&#160;C&#160;9.4165&#160;0&#160;2.1636&#160;2.1636&#160;9.42&#160;949.0&#160;20.0&#160;18.0
+        </p>
+        <p class="code">5&#160;C&#160;4.7083&#160;0&#160;1.0818&#160;1.0818&#160;4.71&#160;949.0&#160;20.0&#160;36.0
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Junctions:&#160;12
+        </p>
+        <p class="code">junction&#160;J/T&#160;OA [%]&#160;Flow [kg/s]&#160;P [Pa]&#160;T [C]&#160;Vol [m^3]
+        </p>
+        <p class="code">1&#160;T&#160;23.0&#160; 0.056717&#160;78.0&#160;20.0&#160;0.00
+        </p>
+        <p class="code">2&#160;T&#160;23.0&#160; 0.056715&#160;63.3&#160;20.0&#160;0.01
+        </p>
+        <p class="code">3&#160;T&#160;23.0&#160; 0.056721&#160;20.3&#160;20.0&#160;0.01
+        </p>
+        <p class="code">4&#160;T&#160;23.0&#160; 0.056692&#160;0.0&#160;20.0&#160;0.01
+        </p>
+        <p class="code">5&#160;T&#160;100.0&#160; 0.065148&#160;-0.0&#160;20.0&#160;0.00
+        </p>
+        <p class="code">6&#160;J&#160;23.0&#160; 0.28354&#160;-0.2&#160;20.0&#160;0.11
+        </p>
+        <p class="code">7&#160;J&#160;23.0&#160; 0.28354&#160;79.3&#160;20.0&#160;0.05
+        </p>
+        <p class="code">8&#160;J&#160;23.0&#160; 0.22682&#160;64.5&#160;20.0&#160;0.06
+        </p>
+        <p class="code">9&#160;J&#160;23.0&#160; 0.17011&#160;21.4&#160;20.0&#160;0.09
+        </p>
+        <p class="code">10&#160;J&#160;23.0&#160; 0.11338&#160;1.1&#160;20.0&#160;0.07
+        </p>
+        <p class="code">11&#160;T&#160;0.0&#160; 0.21839&#160;-880.2&#160;20.0&#160;0.04
+        </p>
+        <p class="code">12&#160;T&#160;23.0&#160; 0.056692&#160;0.0&#160;20.0&#160;0.01
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Classified Zone Airflows for DEMO7_AirflowTest.prj
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Zones:&#160;6&#160;&#160; flows [kg/s]
+        </p>
+        <p class="code">zone&#160;C/U&#160;Vol [m^3]&#160;Dens [kg/m^3]&#160;fmTerm&#160;fmLeak&#160;fmAHS&#160;. . . oaLeak&#160;oaAHS&#160;oaFan
+        </p>
+        <p class="code">0&#160;A&#160;432.45&#160;1.2041&#160;0&#160;0&#160;0&#160;. . .&#160;0&#160;0&#160;0
+        </p>
+        <p class="code">1&#160;C&#160;216&#160;1.2041&#160;0.056717&#160;0&#160;0&#160;. . .&#160;0&#160;0&#160;0
+        </p>
+        <p class="code">2&#160;C&#160;54&#160;1.2041&#160;0.056715&#160;0&#160;0&#160;. . .&#160;0&#160;0&#160;0
+        </p>
+        <p class="code">3&#160;C&#160;108&#160;1.2041&#160;0.056721&#160;0&#160;0&#160;. . .&#160;0&#160;0&#160;0
+        </p>
+        <p class="code">4&#160;C&#160;18&#160;1.2041&#160;0.056692&#160;0&#160;0&#160;. . .&#160;0&#160;0&#160;0
+        </p>
+        <p class="code">5&#160;C&#160;36&#160;1.2041&#160;0.056692&#160;0&#160;0&#160;. . . &#160;0&#160;0&#160;0
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Volumes:
+        </p>
+        <p class="code">Conditioned zones
+        </p>
+        <p class="code">432.00&#160;m^3
+        </p>
+        <p class="code">15255.9&#160;cuft
+        </p>
+        <p class="code">Ducts &amp; AHS (conditioned)
+        </p>
+        <p class="code">0.45&#160;m^3
+        </p>
+        <p class="code">15.8&#160;cuft
+        </p>
+        <p class="code">Unconditioned zones
+        </p>
+        <p class="code">0.00&#160;m^3
+        </p>
+        <p class="code">0.0&#160;cuft
+        </p>
+        <p class="code">&#160;</p>
+        <p><b>Building Pressurization Test - File Format (tab-delimited text):</b>
+        </p>
+        <p class="NormalItalic">The first line of the file is a header providing the name of the PRJ file: </p>
+        <p class="code">"Building Pressurization Test for" file[]&#160;// PRJ file name (I1)
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="code">"Pressurization:"
+        </p>
+        <p class="code">Ptest&#160;"Pa"&#160;&#160;// Test pressure (R4) &#160;
+        </p>
+        <p class="code">Ptest&#160;"in.H20" &#160;// positive =&gt; pressurization
+        </p>
+        <p class="code">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;// negative =&gt; depressurization
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="code">"Mass flow rate:"
+        </p>
+        <p class="code">F&#160;&#160;"kg/s"&#160;// Flow rate required to obtain Test pressure (R4)
+        </p>
+        <p class="code">F&#160;&#160;"kg/h" 
+        </p>
+        <p class="code">F&#160;&#160;"scfm" 
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="code">"Volume flow rate:"
+        </p>
+        <p class="code">Q&#160;&#160;"L/s"&#160;&#160;// Flow rate required to obtain Test pressure (R4)
+        </p>
+        <p class="code">Q&#160;&#160;"m^3/h" 
+        </p>
+        <p class="code">Q&#160;&#160;"cfm" 
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="code">"Ambient conditions:"
+        </p>
+        <p class="code">"Pressure"
+        </p>
+        <p class="code">Pambt&#160;"Pa"&#160;&#160;// Barometric pressure (R4) 
+        </p>
+        <p class="code">Pambt&#160;"in.H2O" 
+        </p>
+        <p class="code">"Temperature"
+        </p>
+        <p class="code">Tambt&#160;"C"&#160;&#160;// Outdoor temperature (R4) 
+        </p>
+        <p class="code">Tambt&#160;"F" 
+        </p>
+        <p class="code">"Air Density"
+        </p>
+        <p class="code">Dambt&#160;"kg/m^3"&#160;// Outdoor air density (R4) 
+        </p>
+        <p class="code">Dambt&#160;"lb/ft^3" 
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="code">"Volumes:"
+        </p>
+        <p class="code">"Conditioned zones"
+        </p>
+        <p class="code">VZC&#160;"m^3"&#160;// Total volume of conditioned zones
+        </p>
+        <p class="code">VZC&#160;"cuft"
+        </p>
+        <p class="code">"Ducts &amp; AHS (conditioned)"
+        </p>
+        <p class="code">VD&#160;&#160;"m^3"&#160;// Total volume of ducts and AHS 
+        </p>
+        <p class="code">VD&#160;&#160;"cuft"
+        </p>
+        <p class="code">"Unconditioned zones"
+        </p>
+        <p class="code">VZU&#160;"m^3"&#160;// Total volume of conditioned zones
+        </p>
+        <p class="code">VZU&#160;"cuft"
+        </p>
+        <p class="code">-- Blank line --
+        </p>
+        <p class="code">"Airflow details:"
+        </p>
+        <p class="code">"Path Czone Uzone dP [Pa] [in.H2O] F [kg/s] [kg/h] [scfm] Q [L/s] [m^3/h] [cfm]"
+        </p>
+        <p class="NormalItalic">A line of data for each flow path contains airflow details. All flows and pressure differences are absolute values. If test is pressurization test, then all flows are from conditioned to unconditioned zones. If a depressurization test, then flows are from unconditioned to conditioned zones.</p>
+        <p class="codeindent">nr&#160;&#160;// path number</p>
+        <p class="codeindent">Czone&#160;&#160;&#160;// number of conditioned zone</p>
+        <p class="codeindent">Uzone&#160;&#160;&#160;// number of unconditioned zone</p>
+        <p class="codeindent">dP_Pa&#160;&#160;&#160;// pressure difference across path [Pa]</p>
+        <p class="codeindent">dP_iH20&#160;// [in.H20]</p>
+        <p class="codeindent">F_kgs&#160;&#160;&#160;// mass flow through path [kg/s]</p>
+        <p class="codeindent">F_kgh&#160;&#160;&#160;// [kg/h]</p>
+        <p class="codeindent">F_scfm&#160;&#160;// [scfm]</p>
+        <p class="codeindent">Q_Ls&#160;&#160;&#160;&#160;// volume flow through path [L/s]</p>
+        <p class="codeindent">Q_m3h&#160;&#160;&#160;// [m^3/h]</p>
+        <p class="codeindent">Q_cfm&#160;&#160;&#160;// [cfm]</p>
+        <p class="code">&#160;</p>
+        <p><span style="font-weight: bold;">Example File:</span>
+        </p>
+        <p class="code">Building Pressurization Test for Test2_BldgPress_Auto.prj
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Pressurization:
+        </p>
+        <p class="code">50.0&#160;Pa
+        </p>
+        <p class="code">0.201&#160;in.H2O
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Mass flow rate:
+        </p>
+        <p class="code">0.4674&#160;kg/s
+        </p>
+        <p class="code">1683&#160;kg/h
+        </p>
+        <p class="code">822.6&#160;scfm
+        </p>
+        <p class="code">Volume flow rate:
+        </p>
+        <p class="code">388.2&#160;L/s
+        </p>
+        <p class="code">1398&#160;m^3/h
+        </p>
+        <p class="code">822.6&#160;cfm
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Ambient conditions:
+        </p>
+        <p class="code">Pressure
+        </p>
+        <p class="code">101320&#160;Pa
+        </p>
+        <p class="code">29.920&#160;in.H2O
+        </p>
+        <p class="code">Temperature
+        </p>
+        <p class="code">20&#160;C
+        </p>
+        <p class="code">68&#160;F
+        </p>
+        <p class="code">Air Density
+        </p>
+        <p class="code">1.2040&#160;kg/m^3
+        </p>
+        <p class="code">0.07517&#160;lb/ft^3
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Volumes:
+        </p>
+        <p class="code">Conditioned zones
+        </p>
+        <p class="code">445.44&#160;m^3
+        </p>
+        <p class="code">15730.6&#160;cuft
+        </p>
+        <p class="code">Ducts &amp; AHS (conditioned)
+        </p>
+        <p class="code">17.11&#160;m^3
+        </p>
+        <p class="code">604.3&#160;cuft
+        </p>
+        <p class="code">Unconditioned zones
+        </p>
+        <p class="code">384.89&#160;m^3
+        </p>
+        <p class="code">13592.3&#160;cuft
+        </p>
+        <p class="code">&#160;</p>
+        <p class="code">Airflow Details:
+        </p>
+        <p class="code">Path&#160;Czone&#160;Uzone&#160;dP [Pa]&#160;[in.H2O]&#160;F [kg/s]&#160;[kg/h]&#160;[scfm]&#160;Q [L/s]&#160;[m^3/h]&#160;[cfm]
+        </p>
+        <p class="code">3&#160;4&#160;1&#160;49.95&#160;0.2007&#160;0.01077&#160;38.78&#160;18.95&#160;0.008946&#160;32.21&#160;18.96
+        </p>
+        <p class="code">4&#160;2&#160;1&#160;49.95&#160;0.2007&#160;0.009482&#160;34.14&#160;16.69&#160;0.007875&#160;28.35&#160;16.69
+        </p>
+        <p class="code">5&#160;3&#160;1&#160;49.95&#160;0.2007&#160;0.009482&#160;34.14&#160;16.69&#160;0.007875&#160;28.35&#160;16.69
+        </p>
+        <p class="code">. . .
+        </p>
+        <p class="code">205&#160;16&#160;0&#160;50.00&#160;0.2009&#160;0.009616&#160;34.62&#160;16.92&#160;0.007987&#160;28.75&#160;16.92
+        </p>
+        <p class="code">206&#160;16&#160;0&#160;50.00&#160;0.2009&#160;0.001923&#160;6.924&#160;3.384&#160;0.001597&#160;5.75&#160;3.385
+        </p>
+        <p class="SubHeading1"><a name="XLOGfile">&lt;project name&gt;.XLOG – ContamX LOG File</a>
+        </p>
+        <p class="Normal">The simulation engine will produce the text-based log file .XLOG within the same directory as the PRJ file. This file mostly contains simulation performance data that is typically not relevant to most users. However, if you encounter an error during simulation, this file can be useful to the program developers in tracing the error.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

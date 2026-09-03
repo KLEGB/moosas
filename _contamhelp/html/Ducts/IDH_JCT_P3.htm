@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Ducts|Defining Ducts|Duct Junction and Terminal Properties" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Filter and Schedule</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Filter and Schedule</h5>
+        <p>Junctions and terminals differ with respect to Filters and Schedules. Junctions cannot have filters associated with them and only the temperature of the junction can be scheduled or controlled. Beginning with CONTAM version 2.4, terminals can be both filtered and scheduled. The terminal temperature and loss coefficient can be scheduled (or controlled), although only one type of schedule can be applied at a time.</p>
+        <p><span style="font-weight: bold;">Filter:</span> You may either create, edit or delete the filter associated with this terminal. Creating a new filter or modifying an existing one will display the <a href="../Filters/IDH_FILTER_DEF.htm">Filter Properties</a> dialog box. Use this dialog box to create and edit filter elements as needed. For an explanation of contaminant filters see <a href="../Contaminants/IDH_UsingContaminants_Contaminant_Filters.htm">Contaminant Filters</a> in the <a href="../IDH_Using_Overview.htm">Using CONTAM</a> section of the manual.</p>
+        <p><span style="font-weight: bold;">Schedule:</span> As of CONTAM version 2.4, terminals consist of both a duct segment and a terminal junction during simulation. Each of these are schedulable items. You can select to schedule either the <span style="font-weight: bold;">Loss coefficient</span> of the segment or the <span style="font-weight: bold;"><span style="font-weight: bold;">Temperature</span> <![CDATA[ ]]></span>of the junction. The list of schedules will contain those types (unitless or temperature) of schedules that exist in the project.</p>
+        <p>If there are previously defined schedules within the current project, you may select one from the Name list. Click the "New Schedule" button to define a new schedule. To view or modify an existing schedule click the "Edit Schedule" button. Setting this field to &lt;none&gt; indicates no schedule. (See <a href="../Schedules/IDH_UsingSchedules_Working_with_Schedules.htm">Working with Schedules</a>)</p>
+        <p><span style="font-weight: bold;">CVF/DVF Control:</span> <![CDATA[ ]]>Values from either a CVF or DVF file can be used in place of the above Schedule  (read about CVF and DVF controls in the          <![CDATA[ ]]><a href="../Controls/IDH_UsingControls_ControlElementTypes.htm">Control Element Types</a> section). This enables using these control element types without having to draw/define an associated control network. The associated radio buttons "Use Neither", "Use CVF" and "Use DVF" are used to select the desired control method. Select the heading name from the associated "Name" drop-down box that will display the headings of either the CVF or DVF file as per the aforementioned radio button selection. </p>
+        <p><span style="font-weight: bold;">Control Status:</span> <![CDATA[ ]]>This will display the current method of control: Schedule, direct CVF, direct DVF or Control Network. If an actuator of a control network on the SketchPad is associated with the scheduled item then it will take precedence over the Schedule and CVF/DVF Control. If either the "Use CVF" or "Use DVF" radio button is selected then CVF or DVF will take precedence over an associated schedule.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

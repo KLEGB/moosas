@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Zones" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Creating Zones</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Creating Zones</h3>
+        <p>You create zones by drawing walls upon the SketchPad. The wall drawing operations are described in the <a href="../SketchPad/IDH_UsingWalls_DrawingWalls.htm">Drawing Walls</a> section of this manual. The shape and size of zones as drawn upon the SketchPad do not provide the underlying model with any scaling information. However, the manner in which the enclosed regions border each other is significant. Any zones between which you wish to provide a direct connection (via an airflow path) must share a common wall <span style="color: #8b0000;">or floor and ceiling</span>. Therefore, when drawing a building floor plan, you should try to maintain the general topology of the actual floor plan. </p>
+        <p class="NormalCW2">While the scaled drawing is not required, ContamW does provide you with the SketchPad coordinates that may help you when laying out your project. Means are provided to enable you to draw building floorplans to scale (see Show Pseudo-Geometry in <a href="../Config/IDH_CONFIGPARMS_ALL.htm#ConfigContamW_ProjectOptions" title="Project Configuration Properties" alt="Project Configuration Properties">Project Configuration Properties</a>) and to import drawings over which you can trace when drawing the walls that form the outline of building zones (see <a href="../SketchPad/IDH_UsingWalls_Working_with_Walls.htm#Working" title="Working with Walls" alt="Working with Walls">Working with Walls</a>). If you set Show Pseudo-Geometry before you define a zone, ContamW will calculate the zone area based on the Scaling Factor and the number of SketchPad cells enclosed by the walls of the zone.</p>
+        <p>The dimensions of your zones are determined when you define them. If you change the shape or size of a region on the SketchPad that contains a zone icon, the dimensions do not change according to the model unless you actually modify the properties of the associated zone icon.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

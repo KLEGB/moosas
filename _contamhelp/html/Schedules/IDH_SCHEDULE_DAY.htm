@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Schedules" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Day Schedule</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor138"></a>Day Schedule Properties</h3>
+        <p>These are the properties and methods you use to define day schedules. You may display the schedule graphically by pressing the "Display Graphically" button.</p>
+        <p><span style="font-weight: bold;">Name:</span> This is the name you give to this day schedule. This name must be unique among the day schedules within a project.</p>
+        <p><span style="font-weight: bold;">Description:</span> Field for entering a more detailed description of the specific schedule.</p>
+        <p><span style="font-weight: bold;">Shape:</span> Use this check box to set how CONTAMW interprets values between the data points you define. </p>
+        <ul>
+            <li value="1">Rectangular: characterized by a step function between the data points</li>
+            <li value="2">Trapezoidal: characterized by linear interpolation between the data points. </li>
+        </ul>
+        <p><span style="font-weight: bold;">Schedule Data:</span> These are the time/multiplier pairs that you set to define a day schedule. The times are entered in the hh:mm:ss format. </p>
+        <p>For unitless schedules, the value is a multiplier between 0.0 and 1.0 used to adjust down the maximum design values of various schedulable building components, e.g., constant volume flow rate of a fan flow element.</p>
+        <p><b>To insert a new data point</b>
+            <br />Enter the new time/multiplier pair in the "Time" and "Value" edit boxes in the Edit Schedule Value Section of the dialog box and press the "&lt;&lt; Insert &lt;&lt;" button. The data point will be inserted into the schedule in the correct sequence. </p>
+        <p><b>To modify an existing data point</b>
+            <br />Select the data point that you wish to modify from the list, enter the revised data, and press the "&lt;&lt; Insert &lt;&lt;" button to overwrite the previously entered data point. </p>
+        <p><b>To delete an existing data point</b>
+            <br />Select the data point you want to delete from the list and click the "Delete" button. You cannot delete 00:00:00 or 24:00:00.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Theoretical Background|Airflow Analysis" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Airflow Elements</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Airflow Elements</h3>
+        <p>Infiltration is the result of air flowing through openings, large and small, intentional and accidental, in the building envelope. Simulation programs require a mathematical model of the flow characteristics of the openings. For a general introduction see Chapter 27 of [<a href="../IDH_References.htm#REF_ASHRAE_2005">ASHRAE 2005</a>] and section 2.2 of [<a href="../IDH_References.htm#REF_Feustel_1990">Feustel 1990</a>].
+        </p>
+        <p>Flow within each airflow element is assumed to be governed by Bernoulli's equation:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/08000099.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(16)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where</p>
+        <p class="NormalIndent"><span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span>= total pressure drop between points 1 and 2<br /><span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">1</span>, <span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">2</span>= entry and exit static pressures<br /><span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">1</span>, <span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">2</span>= entry and exit velocities<br /><span style="font-family: Symbol;">r</span>= air density<br /><span style="font-style: italic;">g</span>= acceleration of gravity (9.81 m/s<span style="vertical-align: super;font-size: 10pt">2</span>)<br /><span style="font-style: italic;">z</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">1</span>, <span style="font-style: italic;">z</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">2</span>= entry and exit elevations.
+        </p>
+        <p>The following parameters apply to the zones:&#160; pressure, temperature (to compute density and viscosity), and elevation. The zone elevation values are used to determine stack effect pressures. When the zone represents a room, the airflow elements may connect with the room at other than its reference elevation. The hydrostatic equation is used to relate the pressure difference across a flow element to the elevations of the element ends and the zone elevations, assuming the air in the room is at constant temperature. Pressure terms can be rearranged and a possible wind pressure for building envelope openings added to give</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/0800009A.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(17)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where</p>
+        <p class="NormalIndent"><span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">i</span>, <span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">j</span>= total pressures at zones i and j<br /><span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">S</span>= pressure difference due to density and elevation differences, and<br /><span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">W</span>= pressure difference due to wind.
+        </p>
+        <p>Equation (17) establishes a sign convention for direction of flow:&#160; positive is from zone j to zone i. Since the airflow elements will be described by a relationship of the form <span style="font-style: italic;">w</span> = f(<span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span>), the partial derivatives needed for [<span style="font-weight: bold;">J</span>] in equation (9) are related by <span style="font-family: Symbol;">¶</span><span style="font-style: italic;">w</span>/<span style="font-family: Symbol;">¶</span><span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">j</span> = -<span style="font-family: Symbol;">¶</span><span style="font-style: italic;">w</span>/<span style="font-family: Symbol;">¶</span><span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">i</span> which establishes the relation in equation (10). Many forms of airflow elements are available in CONTAM.
+        </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

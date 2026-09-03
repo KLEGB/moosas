@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Airflow Paths|Defining Airflow Paths|Airflow Path Properties" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Airflow Path CFD Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Airflow Path – CFD Properties
+        </h5>
+        <p>Airflow paths connecting CFD zones to non-CFD zones are referred to as <i>interface paths</i> whose properties are defined by the following parameters.</p>
+        <p><span style="font-weight: bold;">CFD&#160;Path ID:</span> Each interface path must be given a unique identifier. This identifier will be used to identify each interface path within the <i>CFD0 Editor</i> that is used to define the size and location of the interface paths with respect to the CFD zone.               </p>
+        <p><span style="font-weight: bold;">Boundary Condition - CONTAM to CFD:</span> <![CDATA[ ]]>Select the type of boundary condition to pass from the multizone to the CFD calculation for this path. These options will be enabled/disabled depending on the multizone-to-CFD coupling method selected (see <a href="../Simulation/IDH_UsingSIM_ParamsCFD.htm">CFD Numerics</a>) and the type of airflow element of the interface path. The “CONTAM &lt;-&gt; CFD” and the “CONTAM -&gt; CFD-&gt;CONTAM” coupling methods will set all boundary conditions to their default values to provide the pressure-pressure boundary condition exchange method, which is the most stable of the three (pressure-pressure, pressure-flow, flow-pressure).</p>
+        <ul>
+            <li value="1"><b>Mass Flow Rate:</b> CONTAM provides a mass flow rate boundary condition to CFD. </li>
+            <li value="2"><b>Pressure:</b> CONTAM provides a pressure boundary condition to CFD.</li>
+        </ul>
+        <p class="NormalIndent"><b>Pressure Boundary Condition Type</b>
+        </p>
+        <p class="NormalIndent"><b>Linear:</b> When a pressure boundary condition is provided by CONTAM to CFD, the linear coefficient (C = 1.0) and exponent (Exp = 1.0) will be used for each interface cell in the CFD zone. This simple model should be used for large openings with potential two-way flow (recirculation) across the openings, where the “Stagnation and Static Pressure Model” normally cause numerical issues. This is the default model.</p>
+        <p class="NormalIndent"><b>Stagnation and Static Pressure:</b> When a pressure boundary condition is provided by CONTAM to CFD, a stagnation pressure is imposed for inflows of the CFD zone, and a static pressure is imposed for outflows of the CFD zone. Numerically, a static pressure is set for CFD outflows as follows: a linear coefficient with the order of 10<span style="vertical-align: super;">3</span> is used so that the CFD local pressure can be maintained as a difference of 10<span style="vertical-align: super;">-3</span>  from the external boundary pressure. This may cause numerical issues for large openings with two-way flows, where a slight change of dynamic pressure head could cause a huge airflow at the boundary. In such cases, a linear model should be used. When comparing a coupled simulation to a CFD-only simulation (all zones simulated by CFD), the flow coefficients and exponents in a coupled simulation become more important and are normally unknown. Above all, a linear model brings more numerical stability while a stagnation and static pressure model provides a means of setting CFD pressure boundary conditions.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

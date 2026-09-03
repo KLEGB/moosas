@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with TRNSYS" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>TRNSYS-CONTAM Coupling Process</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>TRNSYS-CONTAM Coupling Process</h2>
+        <p><span style="color: #8b0000;">The following outline describes the process of developing a coupled multizone heat transfer, airflow, and contaminant transport model between <b>TRNSYS 18</b> and CONTAM using Type56 and Type98.</span> It covers the basic method, but not all the details required for all possible coupling scenarios. You may need to implement scheduling, thermostatic control, etc. between the two types that are not automatically implemented by this process. However, this process does provide the connectivity between the zone airflows and temperatures. You should ensure that the CONTAM project to be used is fully defined prior to implementing the following coupling process, as it can be a bit cumbersome to modify significant features of the project once the coupling has been established. For example, adding/removing zones will cause major issues and require the coupling formation to be repeated. On the other hand, changing schedules, non-coupled controls, or adjusting simulation parameters of CONTAM should not require reformation of the coupling.</p>
+        <p><b>Automatic Inputs to Type98</b>
+        </p>
+        <p>The coupling process below will automatically create TRNSYS Inputs to Type98 for each zone temperature as well as ambient conditions: dry bulb temperature, barometric pressure, wind speed, and wind direction.</p>
+        <p><b>Automatic Outputs from Type98</b>
+        </p>
+        <p>Each <i>connection</i> (which is made up of the sum of airflows) between two zones and between a zone and ambient is included as an Output from Type98.</p>
+        <p><b>Manual Inputs to Type98</b>
+        </p>
+        <p>To establish a manual Input, define a <i>Constant</i> control node in the CONTAM project file and give it a name.  This can be used in many ways, e.g., to control the fraction of the design airflow rate of a supply point.</p>
+        <p><b>Manual Outputs from Type98</b>
+        </p>
+        <p>To establish a manual Output, define a <i>Signal Split</i> control node in the CONTAM project and give it a name.</p>
+        <p><b>Windows</b>
+        </p>
+        <p>To create a window for the purposes of thermal modeling via Type 56, define an airflow path within the CONTAM project that utilizes a two-way airflow element having a name that contains the word "wind". Place the airflow path icon on the wall where you would like the center of the window to be located. Define the elevation of the bottom of the window via the airflow path Reference Elevation and define the height and width of the window via the airflow element properties. If you do not want any airflow through the window during the coupled simulation, then set the path multiplier to zero. Upon export, the window will be created in the idf file according to these properties. You must ensure that the windows are fully contained within the wall and do not overlap each other.</p>
+        <h3>The Coupling Process</h3>
+        <ol>
+            <!-- 1. -->
+            <li value="1">Open/Create a project in <b>ContamW</b> sample project file name: [<span style="color: #e9967a;">test.prj</span>].<br />The CONTAM model should be drawn to scale using a scaling factor. Using the scaling factor should result in 3D geometry that will produce a relatively accurate zone volume.</li>
+            <!-- 2. -->
+            <li value="2">Open the <b>CONTAM3DExport</b> program.</li>
+            <ol style="list-style-type: lower-alpha;">
+                <!-- a. -->
+                <li value="1">Select the TRNSYS tab, then click on the <i>Select CONTAM Project</i> button.
+								<br />Select the desired CONTAM Project file [<span style="color: #e9967a;">test.prj</span>].
+								<br />The <i>Scale Factor</i> should change to reveal that of the PRJ file.</li>
+                <!-- b. -->
+                <li value="2">Click the <i>Save Trnsys3D IDF</i> button.<br />This will create a Trnsys3d compatible IDF file [<span style="color: #7b68ee;">test_T3D.idf</span>]<br /></li>
+                <!-- c. -->
+                <li style="color: #8b0000;" value="3">Set the locations for the TRNSYS and Type98-specific proformas:</li>
+                <ul>
+                    <li style="color: #8b0000;" value="1">TRNSYS Install Path - For version 18 this would typically be <i>C:\TRNSYS18</i>.</li>
+                    <li style="color: #8b0000;" value="2">Proforma Install Relative Path - This is typically set by TRNSYS as <i>Studio\Proformas</i>.</li>
+                    <li style="color: #8b0000;" value="3">Project Proforma Relative Path - This defaults to the location for the external programs directory for CONTAM, i.e., <i>Utility\Calling External Programs\CONTAM</i>, but can be any subdirectory you prefer. You must make sure to create the directory before you select it.</li>
+                </ul>
+                <!-- e. -->
+                <li style="color: #8b0000;" value="4">Click the <i>Save TRNSYS Building and Deck Files</i> button to create and save files. 
+								<br />These files will be created in same directory as the CONTAM project file [<span style="color: #e9967a;">test.prj</span>]</li>
+                <ul>
+                    <li style="color: #8b0000;" value="1">TRNSYS Input file [<span style="color: #a9a9a9;"><span style="color: #a9a9a9;">test</span>.dck</span>]</li>
+                    <li style="color: #8b0000;" value="2">Type56 Building file  [<span style="color: #2e8b57;">test.b18</span>]</li>
+                    <li style="color: #8b0000;" value="3">Variable exchange file [<span style="color: #4169e1;">test.vef</span>]</li>
+                    <li style="color: #8b0000;" value="4">The dynamic-static proforma <span style="color: #ff8c00;"><span style="color: #8b0000;">[</span>test.tmf</span>] will be created in the Project Proforma Relative Path directory.</li>
+                </ul>
+            </ol>
+            <!-- 3. -->
+            <li value="3">Review the geometry of the IDF file [<span style="color: #7b68ee;">test_T3D.idf</span>]. This best done using <b>Trnsys3d</b> plugin for <b>Sketchup</b>.<br />					Check the model to ensure that windows are fully contained within wall surfaces. If there are problems with the model, then it's best to fix them in the CONTAM project file before proceeding.</li>
+            <!-- 4. -->
+            <li style="color: #8b0000;" value="4">Open the <b>TRNSYS SimulationStudio</b> program</li>
+            <ol style="list-style-type: lower-alpha;">
+                <!-- a. -->
+                <li style="color: #8b0000;" value="1">Select the <i>File &#8594;  Import TRNSYS Input File ...</i> menu command.</li>
+                <!-- b. -->
+                <li style="color: #8b0000;" value="2">Select the TRNSYS Input file created by CONTAM3DExporter [<span style="color: #a9a9a9;"><span style="color: #a9a9a9;">test</span>.dck</span>].
+							<br />This will create the TRNSYS project [<span style="color: #b8860b;">test_imported.tpf</span>] with the automatic Inputs and Outputs defined and connected between Type56 and Type98. There should also be several other Types defined and connected including an weather file Type 15 for EnergyPlus (EPW) files (be sure to select an existing weather file).</li>
+            </ol>
+            <!-- 5. -->
+            <li style="color: #8b0000;" value="5">At this point you should have a fully functioning, coupled model.</li>
+            <ol style="list-style-type: lower-alpha;">
+                <!-- a. -->
+                <li style="color: #8b0000;" value="1">Select the <i>Calculate &#8594;  Run Simulation</i> menu command.</li>
+                <!-- b. -->
+                <li style="color: #8b0000;" value="2">This will perform a coupled simulation resulting in both airflows and temperatures being calculated by Type98 (ContamX) and Type56, respectively. The airflows will be driven by weather-related boundary conditions and HVAC system airflow rates as defined in the CONTAM. You can open the CONTAM project in ContamW and observe the simulation results including interzone airflows and zone temperatures.</li>
+            </ol>
+            <!-- 6. -->
+            <li style="color: #8b0000;" value="6">The next steps depend on whether or not the three dimensional geometry generated by the exporter is acceptable for the purposes of your simulations.</li>
+            <ol style="list-style-type: lower-alpha;">
+                <li style="color: #8b0000;" value="1">If a purely rectilinear building with no shading is adequate for the purposes of your analysis, then you can proceed to incorporate other thermal systems or Types necessary to complete your model (see Step 9).</li>
+                <li style="color: #8b0000;" value="2">If you need to modify the building geometry, for example by changing the slope of the roof or adding shading components, then close <b>TRNSYS SimulationStudio</b> and proceed to Step 7.</li>
+            </ol>
+            <!-- 7. -->
+            <li style="color: #8b0000;" value="7">The geometry within the TRNSYS building file [<span style="color: #2e8b57;">test.b18</span>] must ultimately be modified. The following steps assume you are using the <b>Trnsys3D</b> plugin for <b>SketchUp</b>.</li>
+            <ol style="list-style-type: lower-alpha;">
+                <!-- a. -->
+                <li style="color: #8b0000;" value="1">Follow the instruction for the Trnsys3D plugin for SketchUp to open the IDF file you created above [<span style="color: #7b68ee;">test_T3D.idf</span>]. 
+							<br />Modify the geometry as desired and save the IDF file [<span style="color: #0000ff;">test_T3D_mod.idf</span>]. </li>
+                <!-- b. -->
+                <li style="color: #8b0000;" value="2">Run the <b>TRNBuild</b> program from the TRNSYS18 group in the Windows Start menu.</li>
+                <!-- c. -->
+                <li style="color: #8b0000;" value="3">Select <i>File &#8594;  Import TRNSYS3d file...</i> from the menu, then select the hemisphere and the IDF file to import [<span style="color: #0000ff;">test_T3D_mod.idf</span>].</li>
+                <ul>
+                    <li style="color: #8b0000;" value="1">This will use the modified geometry of the IDF file to create a new TRNSYS building file [<span style="color: #2e8b57;">test_T3D_mod.b18</span>]. </li>
+                    <li style="color: #8b0000;" value="2">The modified B18 file will not include all the user-defined Inputs created by the CONTAM3DExporter and may include different surfaces depending on the modification you made to the IDF/B18 files. </li>
+                </ul>
+                <!-- d. -->
+                <li style="color: #8b0000;" value="4">The B18 file originally generated by the CONTAM3DExporter [<span style="color: #2e8b57;">test.b18</span>] must be updated with the geometry of the modified B18 file [<span style="color: #2e8b57;">test_T3D_mod.b18</span>]. This can be done using a diff tool (e.g., WinMerge or KDiff3) or simply using a text editor to copy the relevant sections of the modified file to the original file. The following sections should be copied from the modified file to the original file:</li>
+                <ul>
+                    <li style="color: #8b0000;" value="1">Orientations - If you modified the angles of any surfaces, then there will be new solar orientations added to this section. These will be utilized by the internal solar calculations of Type 56. However, the solar radiation associated with these new angles will not be included in the <i>Solar_Plotter</i>.</li>
+                    <li style="color: #8b0000;" value="2">AIRNODEs - Update the surfaces (WALLs, FLOORs, CEILINGs, and WINDOWs), of each airnode, because their properties have likely been changed, e.g., numbers, areas, and orientations.<br />									NOTE: Be sure to retain the REGIME data of the original B18 file.</li>
+                    <li style="color: #8b0000;" value="3">_EXTENSION_BuildingGeometry_START_ - It is likely that this entire section should be updated, because vertex and associated surface definitions were likely changed when the drawing was modified.</li>
+                    <li style="color: #8b0000;" value="4">_EXTENSION_ExternalShadingGeometry_START_ - Copy shading surfaces that were added to the modified building.</li>
+                </ul>
+                <!-- e. -->
+                <li style="color: #8b0000;" value="5">Save and close the original B18 file [<span style="color: #2e8b57;">test.b18</span>] that you just updated with the modified geometry.</li>
+            </ol>
+            <!-- 8. -->
+            <li style="color: #8b0000;" value="8">Open the <b>TRNSYS SimulationStudio</b> program.</li>
+            <ol style="list-style-type: lower-alpha;">
+                <!-- a. -->
+                <li style="color: #8b0000;" value="1">Select the <i>File -&gt; Open ...</i> menu command to open the TRNSYS project file created earlier [<span style="color: #b8860b;">test_imported.tpf</span>].</li>
+                <!-- b. -->
+                <li style="color: #8b0000;" value="2">Select the <i>Calculate -&gt; Run Simulation</i> menu command to run a simulation using the modified building file.</li>
+            </ol>
+            <!-- 9. -->
+            <li style="color: #8b0000;" value="9">At this point you can modify the models as needed to incorporate thermal systems and other Types necessary to complete your analysis. The following are options you might want to consider:<br /></li>
+            <ol style="list-style-type: lower-alpha;">
+                <li style="color: #8b0000;" value="1">TRNSYS model:</li>
+                <ul>
+                    <li style="color: #8b0000;" value="1">Thermostatically controlled heating and air-conditioning systems (coordinated with CONTAM HVAC system airflow controls).
+									<br />Typically, the controlled variable in an HVAC system is contained within the thermal domain, e.g., temperature, so the control signal would originate from the heat transfer components for the TRNSYS project. With respect to airflow, the control signal would adjust the airflow of a fan. As such, the control signal should be coordinated with the corresponding fan in the airflow domain, i.e., the CONTAM model. This coordination can be accomplished using the <i>control</i>-related communication messages.</li>
+                    <li style="color: #8b0000;" value="2">Internal gains: occupants, lighting, shading control, etc.<br />								NOTE: Occupant-related internal gains should be coordinated with the occupancy schedules of the CONTAM model (contaminant generation rate and location).</li>
+                </ul>
+                <li style="color: #8b0000;" value="2">CONTAM model:</li>
+                <ul>
+                    <li class="CW2" value="1">HVAC system airflow controls (coordinated with TRNSYS HVAC system controls)
+									<br />As explained above, HVAC system airflow control signals are likely to originate from the thermal domain. Such control signals need to be brought into the CONTAM model (via named controls). However, some systems could also be required to control a variable within the contaminant domain, e.g., a CO2-based demand-controlled ventilation system. In this case, logic must be coordinated between the thermal, airflow and contaminant transport domains.<br />									NOTE: Anytime you modify the CONTAM control network you must perform the <i>Simulation -&gt; Run Building Check</i> command in ContamW. Further, if you add or remove any shared control types, i.e., named Set or Pass, controls to the CONTAM model, you will need to regenerate the variable exchange file (VEF). Such changes to the PRJ file should be done with a copy of the PRJ file in a separate directory, and care should be taken when updating the VEF file used for the coupled simulation.</li>
+                    <li style="color: #8b0000;" value="2">Indoor contaminant sources and sinks<br />									NOTE: Occupancy schedules should be coordinated with the schedule of occupant-related cooling loads of Type 56.</li>
+                    <li style="color: #8b0000;" value="3">Contaminant and particle filters</li>
+                </ul>
+            </ol>
+        </ol>
+        <p class="SubHeading1">Updating Coupled TRNSYS 17 Projects</p>
+        <p class="NormalCW2">Existing coupled TRNSYS project files (tpf) can be updated by opening them with TRNSYS 18 Simulation Studio. The associated CONTAM PRJ file must be updated to the new version by opening it with ContamW and saving the updated PRJ file. Ensure that Type98 references the new PRJ file. The previous versions of both <i>Type98.dll</i> and <i>contamx3.exe</i> must be replaced with the new versions in the directories as described in the previous section.</p>
+        <ol>
+            <!-- End of Steps -->
+        </ol>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

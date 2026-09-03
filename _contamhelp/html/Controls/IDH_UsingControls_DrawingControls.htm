@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Controls" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Drawing Controls</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Drawing Controls</h3>
+        <p>You draw controls using the links drawing tools previously described in the "<a href="../SketchPad/IDH_UsingSketchPad_WorkingWithTheSketchPad.htm">Working with the SketchPad</a>" section. When you finalize the drawing of a set of control links, the appropriate icons will be placed upon the SketchPad depending on where the link originates and where it terminates. For example, if you begin drawing a control link directly on a zone icon, a sensor icon will be placed adjacent to the zone icon, and if you terminate a control link on an airflow path, an actuator icon will be placed adjacent to the airflow path icon (See Figure below).</p>
+        <p class="center">&#160;</p>
+        <p class="center">
+            <img src="../../image/Ctrl_Draw02_312x255.gif" style="visibility: visible; mso-wrap-style: square; width: 312; height: 255;" alt="image/invalid control link" />
+        </p>
+        <p class="CaptionCenter">Figure – Control link icons</p>
+        <p>If you terminate a control link on a blank cell, a control node icon will be placed within that cell. You may not originate and terminate a link on a non-control node icon (e.g. zone, flow path or occupant) without an intermediate control node icon (See Figure below). This is due to the requirement that the input from an actuator to a non-control node icon must be in the form of a multiplier ranging from 0.0 to 1.0.</p>
+        <p class="center">&#160;</p>
+        <p class="center">
+            <img src="../../image/Ctrl_Draw01_282x218.gif" style="visibility: visible; mso-wrap-style: square; width: 282; height: 218;" />
+        </p>
+        <p class="CaptionCenter">Figure – Invalid control link</p>
+        <p>Control node icons can have up to four links into or out of them depending on the type of control node you are defining. If a control node icon is not yet defined, ContamW will only allow you to draw at most two inputs (one vertical and one horizontal) into the node and at most four outlets from the node. However, if the control node icon is already defined, ContamW will only allow the correct set of links to be defined into the icon depending on the <span style="font-style: italic;">control element type</span> (See <a href="IDH_UsingControls_ControlElementTypes.htm">Control Element Types</a>) of the control node. This is due to the input signal convention of control nodes that distinguishes two different inputs signals for certain element types, e.g. limit controls, or to establish the order of operators for non-commutative mathematical operations, e.g. subtraction and division. As shown in the Figure below, <span style="font-style: italic;">Input Signal 1</span> enters either from the left or right and <span style="font-style: italic;">Input Signal 2</span> enters from either the top or bottom of the node. Details on input signals are provided for each element type where required in the description of the specific elements.</p>
+        <p class="center">
+            <img src="../../image/ControlInputSignals.gif" style="visibility: visible;mso-wrap-style: square;width: 291px;height: 171px;" alt="image/control input signals" />
+        </p>
+        <p class="CaptionCenter">Figure – Control node input signal convention</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

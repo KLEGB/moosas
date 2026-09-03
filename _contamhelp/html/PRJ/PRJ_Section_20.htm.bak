@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" class="">
+    <head><title>Section 20: Source/Sinks</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" type="text/css" />
+    </head>
+    <body>
+        <h5>Section 20: Source/Sinks</h5>
+        <p>Contaminant sources/sinks are read by the css_read( ) function and saved by the css_save( ) function. The data are stored in the CSS_DSC structures that are defined in contam.h for ContamW and simdat.h for ContamX.  </p>
+        <p class="NormalItalic">The source/sink section starts with: </p>
+        <p class="code">_ncss // number of source/sinks (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">This is followed by a data header comment line and then data for all _ncss source/sinks.</p>
+        <p class="NormalItalic">For each source/sink the data line includes:</p>
+        <p class="codeindent">nr // source/sink number (<span style="color: red;">IX</span>); in order from 1 to _ncss</p>
+        <p class="codeindent">pz // zone index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">pe // source/sink element index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">ps // schedule index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">pc // control node index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">mult // multiplier (R4)</p>
+        <p class="codeindent">CC0 // initial mass fraction (some types) [kg/kg] (R4)</p>
+        <p class="codeindent">Xmin // minimum x coordinate of source/sink location [m] (R4)</p>
+        <p class="codeindent">Ymin // minimum y coordinate of source/sink location [m] (R4)</p>
+        <p class="codeindent">Hmin // minimum z coordinate relative to level [m] (R4)</p>
+        <p class="codeindent">Xmax // maximum x coordinate of source/sink location [m] (R4)</p>
+        <p class="codeindent">Ymax // maximum y coordinate of source/sink location [m] (R4)</p>
+        <p class="codeindent">Hmax // maximum z coordinate relative to level [m] (R4)</p>
+        <p class="codeindent">u_XYZ // units of location coordinates (I2)</p>
+        <p class="codeindentCW2">vf_type // 0=no value file, 1=use cvf, 2=use dvf (I2)  {CONTAM 3.2}</p>
+        <p class="codeindentCW2">vf_node_name[NAMELEN] // value file node name (I1)  {CONTAM 3.2}</p>
+        <p class="codeindentCW2">cfd // cfd path (0=no, 1=yes) (I2) {CONTAM 3.0}</p>
+        <p class="NormalItalic">If cfd = 1 then the line continues to include: {CONTAM 3.0}
+</p>
+        <p class="codeindent">name[] // cfd path id (I1)
+</p>
+        <p class="NormalItalic">The source/sink section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data</p>
+        <p class="code">&#160;</p>
+    </body>
+</html>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication|ContamX TCP/IP Message Formats" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>AHS_INFO_MSGTYPE</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>AHS_INFO_MSGTYPE</h3>
+        <p>Provides information related to simple air handling systems which can be useful if using the <span style="font-family: 'Courier New';">ADJ_AHS_POA_MSGTYPE</span>.</p>
+        <p class="code">Message Header;</p>
+        <p class="code"><span style="color: blue;">int </span>num_ahs; &#160;&#160;&#160;&#160;&#160;&#160;       <span style="color: #008100;">// number of simple AHSs in the PRJ file</span></p>
+        <p class="code"><span style="color: blue;">int </span>id[<span style="color: blue;"></span>num_ahs]; &#160;&#160;      <span style="color: #008100;">// index of each AHS:&#160;index according to ContamX</span></p>
+        <p class="code"><span style="color: blue;">char </span>*name[num_ahs]       <span style="color: #008100;">// AHS&#160;names (null-terminated string)</span></p>
+        <p class="code">&#160;</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

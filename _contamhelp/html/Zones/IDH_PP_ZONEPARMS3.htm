@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Zones|Defining Zones|Zone Properties" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Zone - Schedule Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4>Zone – Schedule Properties</h4>
+        <p><a name="kanchor34"></a>These are the properties used to define a temperature schedule for the zone. If a temperature schedule is associated with the zone then the constant value will be overridden and the simulation run control should be set to vary the density within building zones during simulation (see Airflow Numerics Properties in the <a href="../Simulation/IDH_UsingSIM_Working_with_Simulations.htm">Working with Simulations</a> section).</p>
+        <p><span style="font-weight: bold;">Zone Name:</span> This is the symbolic name of the zone as entered on the Zone Data property page.</p>
+        <p><span style="font-weight: bold;">Temperature Schedule:</span> Select the temperature schedule you want to associate with this zone. (See <a href="../Schedules/IDH_UsingSchedules_Working_with_Schedules.htm">Working with Schedules</a>).</p>
+        <p><span style="font-weight: bold;">CVF/DVF Control:</span> <![CDATA[ ]]>Values from either a CVF or DVF file can be used in place of the above Schedule  (read about CVF and DVF controls in the             <![CDATA[ ]]><a href="../Controls/IDH_UsingControls_ControlElementTypes.htm">Control Element Types</a> section). This enables using these control element types without having to draw/define an associated control network. The associated radio buttons "Use Neither", "Use CVF" and "Use DVF" are used to select the desired control method. Select the heading name from the associated "Name" drop-down box that will display the headings of either the CVF or DVF file as per the aforementioned radio button selection. </p>
+        <p><span style="font-weight: bold;">Control Status:</span> <![CDATA[ ]]>This will display the current method of control: Schedule, direct CVF, direct DVF or Control Network. If an actuator of a control network on the SketchPad is associated with the scheduled item then it will take precedence over the Schedule and CVF/DVF Control. If either the "Use CVF" or "Use DVF" radio button is selected then CVF or DVF will take precedence over an associated schedule.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

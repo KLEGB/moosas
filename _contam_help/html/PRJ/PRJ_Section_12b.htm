@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix A - PRJ File Format" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Section 12b: Control Nodes</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Section 12b: Control Nodes</h5>
+        <p>Control node data are read by the ctrl_read( ) function and saved by the ctrl_save( ) function. The data are stored in the CTRL_DSC structures that are defined in contam.h for ContamW and the CT_NODE structures defined simdat.h for ContamX.</p>
+        <p class="NormalItalic">The control nodes section starts with: </p>
+        <p class="code">_nctrl // number of control nodes (<span style="color: red;">IX</span>); in order from 1 to _nctrl</p>
+        <p class="NormalItalic">This is followed by a data header comment line and then data for all _nctrl control nodes.</p>
+        <p class="NormalItalic">For each control node the first data line includes:</p>
+        <p class="codeindent">nr // node (SketchPad) number (<span style="color: red;">IX</span>); in order from 1 to _nctrl</p>
+        <p class="codeindent">type // node data type (string ? I2)</p>
+        <p class="codeindent">Node type names are stored in _ctrl_names in type order.</p>
+        <p class="codeindent">seqnr // computation sequence number (<span style="color: red;">IX</span>); set in ContamW </p>
+        <p class="codeindent">flags // flags for offset &amp; scale, time constant, <span style="color: red;">and 1D sensor</span> (U2)</p>
+        <p class="codeindent">inreq // number of required inputs (I2) {W}</p>
+        <p class="codeindent">n1 // SketchPad number of input node #1 (<span style="color: red;">IX</span>)</p>
+        <p class="codeindent">n2 // SketchPad number of input node #2 (<span style="color: red;">IX</span>)</p>
+        <p class="codeindent">name[] // element name (I1) {W}</p>
+        <p class="NormalItalic">and the second line has:</p>
+        <p class="codeindent">desc[] // control node description (I1) {W} may be blank </p>
+        <p class="NormalItalic">This may be followed by one more line of data that depends on the node type.</p>
+        <p class="NormalItalic">Node type 0 [CT_SNS] "sns" stored in structure SENSOR {W} or SNSDAT {X}.</p>
+        <p class="codeindent">offset // offset value (R4)</p>
+        <p class="codeindent">scale // scale value (R4)</p>
+        <p class="codeindent">tau // time constant (R4)</p>
+        <p class="codeindent">oldsig // signal at last time step - for restart (R4)</p>
+        <p class="codeindent">source // index of source (source not defined at read time) (<span style="color: red;">IX</span>)</p>
+        <p class="codeindent">type // type of source: 1=zone, 2=path, 3=junction, 4=duct,</p>
+        <p class="codeindent">          // <span style="color: red;">5=exp, 6=term</span> (I2)</p>
+        <p class="codeindent">measure // 0=contaminant, 1=temperature, 2=flow rate, 3=dP,</p>
+        <p class="codeindent">          // <span style="color: red;">4=Pgage, 5=zone occupancy</span> (I2)</p>
+        <p class="codeindent">X // X-coordinate of sensor [m] (R4)</p>
+        <p class="codeindent">Y // Y-coordinate of sensor [m] (R4)</p>
+        <p class="codeindent">relHt // relative height of sensor [m] (R4)</p>
+        <p class="codeindent">units[] // units of coordinates {W} (I1)</p>
+        <p class="codeindent">species[] // species name [I1]; convert to pointer</p>
+        <p class="NormalItalic">Node type 1 [CT_SCH] "sch" stored in structure SCHDAT.</p>
+        <p class="codeindent">ps // week schedule index (I2); converted to pointer</p>
+        <p class="NormalItalic">Node type<span style="font-family: 'Courier New';"> 2 [CT_SET] "set" </span>stored in structure <span style="font-family: 'Courier New';">SETDAT.</span></p>
+        <p class="codeindent">value // constant value (R4)</p>
+        <p class="NormalItalic">Node type 3 [CT_CVF] "cvf" stored in structure CDVDAT. {Contam 2.1}</p>
+        <p class="codeindent">name[] // name of the value read from the Continuous Values file (I1)</p>
+        <p class="NormalItalic">Node type 4 [CT_DVF] "dvf" stored in structure CDVDAT. {Contam 2.1}</p>
+        <p class="codeindent">name[] // name of the value read from the Discrete Values file (I1)</p>
+        <p class="NormalItalic">Node type 5 [CT_LOG] "log" stored in structure LOGDAT.</p>
+        <p class="codeindent">offset // offset value (R4)</p>
+        <p class="codeindent">scale // scale value (R4)</p>
+        <p class="codeindent">udef // true if using default units (I2) {W}</p>
+        <p class="codeindent">header[] // header string (I1)</p>
+        <p class="codeindent">units[] // units string (I1)</p>
+        <p class="NormalItalic">Node type 6 [CT_PAS] "pas" has no additional data.</p>
+        <p class="NormalItalic">Node type 7 [CT_MOD] "mod" stored in structure MOD.</p>
+        <p class="codeindent">offset // offset value (R4)</p>
+        <p class="codeindent">scale // scale value (R4)</p>
+        <p class="NormalItalic">Node type 8 [CT_HYS] "hys" stored in structure HYSDAT.</p>
+        <p class="codeindent">slack; // hysteresis parameter (R4)</p>
+        <p class="codeindent">slope // 1.0 / (1.0 - slack) (R4)</p>
+        <p class="codeindent">oldsig // prior output signal (R4)</p>
+        <p class="NormalItalic">Node type 9 [CT_ABS] "abs" has no additional data.</p>
+        <p class="NormalItalic">Node type 10 [CT_BIN] "bin" has no additional data.</p>
+        <p class="NormalItalic">Node type 11 [CT_DLS] "dls" stored in structure CDVDAT. {Contam 2.1}</p>
+        <p class="codeindent">dsincr // day schedule number for increasing signal (I2)</p>
+        <p class="codeindent">dsdecr // day schedule number for decreasing signal (I2)</p>
+        <p class="NormalItalic">Node type 12 [CT_DLX] "dlx" stored in structure CDVDAT. {Contam 2.1}</p>
+        <p class="codeindent">tauincr // time constant for increasing signal [s] (I4)</p>
+        <p class="codeindent">taudecr // time constant for decreasing signal [s] (I4)</p>
+        <p class="NormalItalic">Node type 13 [CT_INT] "int" has no additional data.</p>
+        <p class="NormalItalic">Node type 14 [CT_RAV] "rav" stored in structure CDVDAT. {Contam 2.1}</p>
+        <p class="codeindent">tspan // time span for the running average [s] (I4)</p>
+        <p class="NormalItalic">Node type 15 [CT_INV] "inv" has no additional data.</p>
+        <p class="NormalItalic">Node type 16 [CT_AND] "and" has no additional data.</p>
+        <p class="NormalItalic">Node type 17 [CT_OR] "od" has no additional data.</p>
+        <p class="NormalItalic">Node type 18 [CT_XOR] "xor" has no additional data.</p>
+        <p class="NormalItalic">Node type 19 [CT_ADD] "add" has no additional data.</p>
+        <p class="NormalItalic">Node type 20 [CT_SUB] "sub" has no additional data.</p>
+        <p class="NormalItalic">Node type 21 [CT_MUL] "mul" has no additional data.</p>
+        <p class="NormalItalic">Node type 22 [CT_DIV] "div" has no additional data.</p>
+        <p class="NormalItalic">Node type 23 [CT_SUM] "sum" stored in structure SUMAVG.</p>
+        <p class="NormalItalic">Node type 24 [CT_AVG] "avg" stored in structure SUMAVG.</p>
+        <p class="NormalItalic">Node type 25 [CT_MAX] "max" stored in structure SUMAVG.</p>
+        <p class="NormalItalic">Node type 26 [CT_MIN] "min" stored in structure SUMAVG.</p>
+        <p class="codeindent">npcs // number of controls to be processed (<span style="color: red;">IX</span>)</p>
+        <p class="codeindent">pc[npcs] // indices of npcs control nodes (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">Node type 27 [CT_LLS] "lls" has no additional data.</p>
+        <p class="NormalItalic">Node type 28 [CT_ULS] "uls" has no additional data.</p>
+        <p class="NormalItalic">Node type 29 [CT_LBS] "lbs" stored in structure BANDAT.</p>
+        <p class="NormalItalic">Node type 30 [CT_UBS] "ubs" stored in structure BANDAT.</p>
+        <p class="codeindent">band // width of band (R4)</p>
+        <p class="NormalItalic">Node type 31 [CT_LLC] "llc" has no additional data.</p>
+        <p class="NormalItalic">Node type 32 [CT_ULC] "ulc" has no additional data.</p>
+        <p class="NormalItalic">Node type 33 [CT_PC1] "pc1" stored in structure PCDAT.</p>
+        <p class="codeindent">kp // proportional gain factor (R4)</p>
+        <p class="NormalItalic">Node type 34 [CT_PI1] "pi1" stored in structure PICDAT.</p>
+        <p class="codeindent">kp // proportional gain factor (R4)</p>
+        <p class="codeindent">ki // integral gain factor (R4)</p>
+        <p class="codeindent">oldsig // prior output signal - for restart (R4)</p>
+        <p class="codeindent">olderr // prior error value - for restart (R4)</p>
+        <p class="NormalItalic">Node type 35 [CT_SUP] "sup" stored in structure SUPDAT.</p>
+        <p class="codeindent">def // 0:super element undefined 1:defined (I2)</p>
+        <p class="codeindent">se // super element number (IX)</p>
+        <p class="codeindent">in // input sub-node number (IX)</p>
+        <p class="codeindent">out // output sub-node number (IX)</p>
+        <p class="NormalItalic">Node type 36 [CT_SEN] this is only a placeholder value for use with the type dialog.</p>
+        <p class="NormalItalic">Node type 37 [CT_SPH] "sph" has no additional data.</p>
+        <p class="NormalItalic">The control nodes section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data</p>
+        <h6 class="code">&#160;</h6>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

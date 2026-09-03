@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with Schedules</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2><a name="kanchor131"></a>Working with Schedules</h2>
+        <p>Schedules provide you with the ability to modify various parameters based on the time of day and day of the week. You use schedules to set or modify values of controlled parameters at times which you define. You can schedule parameters such as the flow through airflow paths; ducts; simple air handling system inlets, outlets and fraction of outdoor air intake; contaminant source/sinks; the location and contaminant generation rate of occupants; and zone temperatures. </p>
+        <p>CONTAM provides occupant schedules and non-occupant schedules which are split up into week schedules which are in turn made up of one or more day schedules. Non-occupant week schedules can be associated with as many schedulable items as you need, whereas occupant week schedules can only be applied to a single occupant. Only non-occupant schedules can be shared between CONTAM project files using the ContamW Library Manager. Occupant schedules cannot be shared between projects, because they are dependent on the level and zone names which may be different between projects. The following sections provide detailed information related to the creation, modification and deletion of schedules in ContamW.</p>
+        <p>Schedules apply when performing both transient and steady-state simulations, and schedule values are accessed according to the Day Type and time during a simulation. The Day Type is used to select one of twelve day schedules that make up each week schedule as explained below.  The Day Type will be determined during simulation via either the steady state or transient weather data (See <a href="../Simulation/IDH_UsingSIM_ParamsRunControl.htm">Run Control Properties</a> in the <a href="../Simulation/IDH_UsingSIM_Working_with_Simulations.htm">Working with Simulations</a> section). For greater scheduling flexibility, use the CVF and DVF control types which allow scheduling to vary over the course of a year (see <a href="../Controls/IDH_UsingControls_ControlElementTypes.htm#Controls_CVF_DVF">CVF/DVF</a> in the<a href="../Controls/IDH_UsingControls_WorkingWithControls.htm"> Working with Controls</a> section).</p>
+        <p>If a schedule and a control signal (see <a href="../Controls/IDH_UsingControls_WorkingWithControls.htm">Working with Controls</a>) are both associated with the same building element icon, then the control signal will take precedence over the schedule during simulation.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

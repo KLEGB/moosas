@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication|ContamX TCP/IP Message Formats" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>ADJ_CONTROL_NODE_MSGTYPE</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>ADJ_CONTROL_NODE_MSGTYPE</h3>
+        <p>This message can be received by ContamX at any time while in the <span style="font-style: italic; font-weight: normal;">ready mode</span>. It is used to set the value of a <i>Constant</i> (<i>Set</i> type, CT_SET) control node where <code>node_id</code> is the identifier assigned to the control node by ContamX and provided by <span style="font-family: 'Courier New';">INPUT_CTRL_INFO_MSGTYPE</span>. Note that the <span style="font-family: 'Courier New';font-size: 10pt;"></span><code>node_id</code> will not likely correspond to the control node number shown on the ContamW SketchPad for the corresponding control icon. However, node names are provided by <span style="font-family: 'Courier New';">INPUT_CTRL_INFO_MSGTYPE</span>.    <![CDATA[ ]]></p>
+        <p class="code">Message Header;</p>
+        <p class="code"><span style="color: blue;">int </span>node_id;    <span style="color: #008100;">// id of the control node</span></p>
+        <p class="code"><span style="color: blue;">float </span>value;    <span style="color: #008100;">// value to which node should be changed</span></p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

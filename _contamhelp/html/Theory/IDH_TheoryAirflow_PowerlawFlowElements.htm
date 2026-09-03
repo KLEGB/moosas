@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Theoretical Background|Airflow Analysis" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Powerlaw Flow Elements</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4>Powerlaw Flow Elements</h4>
+        <p>Most infiltration models are based on the following empirical (powerlaw) relationship between the flow and the pressure difference across a crack or opening in the building envelope:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/0800009B.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(18)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>The volumetric flow rate, <span style="font-style: italic;">Q</span> [m<span style="vertical-align: super;font-size: 10pt;">3</span>/s], is a simple function of the pressure drop, <span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span> [Pa], across the opening. A common variation of the powerlaw equation is:
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/0800009C.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(19)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where the mass flow rate, <span style="font-style: italic;">F</span> [kg/s], is a simple function of the pressure drop. A third variation is related to the orifice equation:
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/0800009D.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(20)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where </p>
+        <p class="NormalIndent"><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">d</span>= discharge coefficient, and <br /><span style="font-style: italic;">A</span>= orifice opening area.
+        </p>
+        <p>Theoretically, the value of the flow exponent should lie between 0.5 and 1.0. Large openings are characterized by values very close to 0.5, while values near 0.65 have been found for small crack-like openings. </p>
+        <p>The primary advantage of equations (18-20) for describing airflow components is the simple calculation of the partial derivatives for the Newton's method solution of the simultaneous equations:
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/0800009E.png" alt="equation" />&#160;and&#160;
+                        <img src="../../image/0800009F.png" alt="equation" /></td>
+                    <td class="EqnNum">(21)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>The sign in equations (21) will agree with the sign of <span style="font-style: italic;">F</span>. However, there is also a problem with equations (21): the derivatives become unbounded as the pressure drop (and the flow) go to zero. A simple way to avoid this problem is suggested by what physically happens at low flow rates: the physical character of the flow (and the form of the equation) changes. It goes from turbulent to laminar. Equations (18-20) can be replaced by
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000A0.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(22)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where </p>
+        <p class="NormalIndent"><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">k</span>= laminar flow coefficient, and <br /><span style="font-family: Symbol;">m</span>= viscosity. 
+        </p>
+        <p>The partial derivatives are simple constants:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000A1.png" alt="equation" />&#160;and&#160;
+                        <img src="../../image/080000A2.png" alt="equation" /></td>
+                    <td class="EqnNum">(23)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>The origin of this laminar relationship is shown by the duct equations in the next section. This technique has been independently discovered and used by several researchers [Axley 1987] and [Isaacs 1980]. Although there is physical reason for using equation (22) at low pressure drops, its purpose here is to assure convergence of the equations when <span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span> approaches zero for one of the many flow paths in a complex network, instead of accurately representing airflows which are too small to be of interest. Because the linear flow expression is not used as a true flow model but as a mathematical artifice, it is not necessary to adjust its flow coefficient. Given the uncertainty in estimating the temperature of the air as it flows through an opening, especially a crack, this additional detail is of debatable usefulness.
+        </p>
+        <p>The CONTAM functions for powerlaw elements calculate flows using both the laminar and the turbulent models and select the method giving the smaller magnitude flow. There is a discontinuity in the derivative of the <span style="font-style: italic;">F</span>(<span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span>) curve where the two equations intersect. This discontinuity is a violation of one of the sufficient conditions for convergence of Newton's method [Conte and de Boor 1972, p. 86]. However, numerical tests conducted by the author for flows at that point using a small airflow network have shown no convergence problem.
+</p>
+        <p>
+        </p>
+        <h5>Temperature Dependence</h5>
+        <p>It is useful to think of the coefficient <span style="font-style: italic;">C</span> as a simple constant, <span style="font-style: italic;">C</span><span style="font-family: Symbol;vertical-align: sub;">a</span>, evaluated at a particular set of conditions (<span style="font-family: Symbol;">m</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">0</span>, <span style="font-family: Symbol;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">0</span> and <span style="font-family: Symbol;">n</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">0</span>=<span style="font-family: Symbol;">m</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">0</span><span style="font-style: italic;">/</span><span style="font-family: Symbol;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">0</span>) multiplied by a correction factor to account for actual air properties. Equations (18-20) are converted to a common form and summarized below with their appropriate temperature correction factors. 
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000A3.png" alt="heading" />
+                    </td>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000A4.png" alt="equation" />
+                    </td>
+                    <td class="EqnCenter">Correction Factor</td>
+                    <td class="EqnNum">&#160;</td>
+                </tr>
+                <tr>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000A5.png" alt="heading" />
+                    </td>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000A6.png" alt="equation" />
+                    </td>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000A7.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">&#160;</td>
+                </tr>
+                <tr>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000A8.png" alt="heading" />
+                    </td>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000A9.png" alt="equation" />
+                    </td>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000AA.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(24)</td>
+                </tr>
+                <tr>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000AB.png" alt="heading" />
+                    </td>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000AC.png" alt="equation" />
+                    </td>
+                    <td class="EqnCenter">
+                        <img src="../../image/080000AD.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">&#160;</td>
+                </tr>
+            </tbody>
+        </table>
+        <p> 
+        CONTAM uses the following formulae for computing <span style="font-family: Symbol;">r</span> and <span style="font-family: Symbol;">n</span>:</p>
+        <p><span style="font-family: Symbol;">r</span> = <span style="font-style: italic;">P</span> / (287.055 <span style="font-style: italic;">T</span>)
+        </p>
+        <p><span style="font-family: Symbol;">m</span> = 3.7143<span style="font-family: Symbol;">´</span>10<span style="vertical-align: super;font-size: 10pt;">-6</span> + 4.9286<span style="font-family: Symbol;">´</span>10<span style="vertical-align: super;font-size: 10pt;">-8</span><span style="font-style: italic;">T</span></p>
+        <p><span style="font-family: Symbol;">n</span> = <span style="font-family: Symbol;">m</span> / <span style="font-family: Symbol;">r</span></p>
+        <p>Using reference conditions of standard atmospheric pressure and 20<span style="font-family: Symbol;">°</span>C gives <span style="font-family: Symbol;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">o</span> = 1.2041 kg/m<span style="vertical-align: super;font-size: 10pt;">3</span> and <span style="font-family: Symbol;">n</span><span style="vertical-align: sub;font-size: 10pt;">o</span> = 1.5083<span style="font-family: Symbol;">´</span>10<span style="vertical-align: super;font-size: 10pt;">-5</span> m<span style="vertical-align: super;font-size: 10pt;">2</span>/s.</p>
+        <h5>Laminar Flow Coefficient Calculation</h5>
+        <p class="NormalCW2">The following procedure outlines the method used by ContamW to calculate laminar flow coefficients at a given transition Reynolds number. For the following equations:</p>
+        <p class="NormalIndentCW2">F<span style="vertical-align: sub;">trans</span> = mass airflow rate [kg/s]</p>
+        <p class="NormalIndentCW2">A = opening area [m<span style="vertical-align: super;">2</span>]</p>
+        <p class="NormalIndentCW2">D = hydraulic diameter = 4 A/Perimeter (unless otherwise specified) [m]</p>
+        <p class="NormalIndentCW2"><span style="font-family: Symbol;">&#61549;&#61472;&#61501;</span> viscosity of air, 1.81625 x 10<span style="vertical-align: super;">-5</span> [kg/m·s]</p>
+        <p>&#160;</p>
+        <p class="NormalCW2">1.	Calculate flow rate at transitional Reynolds number. Reynolds number is 30, unless otherwise specified by user input.</p>
+        <blockquote>
+            <p class="NormalCW2">F<span style="vertical-align: sub;">trans</span> = <span style="font-family: symbol;">&#61549;</span> Re A / D</p>
+        </blockquote>
+        <p class="NormalCW2">2.	Calculate pressure difference <span style="font-family: symbol;">&#61508;</span>P<span style="vertical-align: sub;">trans</span>at transitional flow rate</p>
+        <blockquote>
+            <p class="NormalCW2">a.	For airflow element type Q = C(dP)^n</p>
+            <blockquote>
+                <p class="NormalCW2"><span style="font-family: symbol;">&#61505;&#61472;&#61501;&#61472;&#61480;&#61554;&#61487;&#61490;&#61481;<span style="vertical-align: super;">&#61488;&#61486;&#61493;</span>&#61472;&#61480;</span> C / 0.6)</p>
+                <p class="NormalCW2">D = A<span style="font-family: Symbol;vertical-align: super;">&#61488;&#61486;&#61493;</span></p>
+                <p class="NormalCW2"><span style="font-family: Symbol;">&#61508;</span>P<span style="vertical-align: sub;">trans</span> = [F/(C <span style="font-family: Symbol;">&#61554;&#61481;&#61533;</span><span style="vertical-align: super;">1/n</span></p>
+            </blockquote>
+        </blockquote>
+        <blockquote>
+            <p class="NormalCW2">b.	For airflow element type F = C(dP)^n</p>
+            <blockquote>
+                <p class="NormalCW2"><span style="font-family: Symbol;">&#61505;&#61472;&#61501;&#61472;&#61480;&#61554;&#61487;&#61490;&#61481;<span style="vertical-align: super;">&#61488;&#61486;&#61493;</span>&#61472;&#61480;</span> C / 0.6)</p>
+                <p class="NormalCW2">D = A<span style="font-family: Symbol;vertical-align: super;">&#61488;&#61486;&#61493;</span></p>
+                <p class="NormalCW2"><span style="font-family: Symbol;">&#61508;</span>P<span style="vertical-align: sub;">trans</span> = (F/C)<span style="vertical-align: super;">1/n</span></p>
+            </blockquote>
+            <p class="NormalCW2">c.	For airflow Orifice, Leaks and Crack element types</p>
+            <blockquote>
+                <p class="NormalCW2">C = 2<span style="font-family: Symbol;vertical-align: super;">&#61488;&#61486;&#61493;</span> A C<span style="vertical-align: sub;">d</span></p>
+                <p class="NormalCW2"><span style="font-family: Symbol;">&#61508;</span>P<span style="vertical-align: sub;">trans</span>= [F/(C <span style="font-family: Symbol;">&#61554;&#61489;&#61487;&#61490;&#61481;&#61533;</span><span style="vertical-align: super;">1/n</span></p>
+            </blockquote>
+            <p class="NormalCW2">If (<span style="font-family: Symbol;">&#61508;</span>P<span style="vertical-align: sub;">trans</span> &lt; 10<span style="vertical-align: super;">-10</span>) then <span style="font-family: Symbol;">&#61508;</span>P<span style="vertical-align: sub;">trans</span> = 10<span style="vertical-align: super;">-10</span></p>
+            <p class="NormalCW2">3.	Calculate laminar flow coefficient from <span style="font-family: Symbol;">&#61508;</span>P<span style="vertical-align: sub;">trans</span></p>
+        </blockquote>
+        <blockquote>
+            <blockquote>
+                <p class="NormalCW2">C<span style="vertical-align: sub;">k</span> = (<span style="font-family: Symbol;">&#61549;</span> F) / <span style="font-family: Symbol;">(&#61554;&#61472;&#61508;</span>P<span style="vertical-align: sub;">trans</span>)</p>
+            </blockquote>
+        </blockquote>
+        <p>&#160;</p>
+        <h5>Fitting Powerlaw Coefficients&#160;</h5>
+        <p>Experimental data can be used to determine the coefficients in the orifice form of the powerlaw equation: </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000AE.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(25)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>If <span style="font-style: italic;">n</span> is known or can be assumed, <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">b</span>, in equation (24), can be computed from the inverse of equation (25)
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000AF.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(26)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>When two points (<span style="font-style: italic;">F</span><span style="vertical-align: sub;font-size: 10pt;">1</span>, <span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span><span style="vertical-align: sub;font-size: 10pt;">1</span>) and (<span style="font-style: italic;">F</span><span style="vertical-align: sub;font-size: 10pt;">2</span>, <span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span><span style="vertical-align: sub;font-size: 10pt;">2</span>), are known, <span style="font-style: italic;">n</span> can be computed from:
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000B0.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(27)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>with <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">b</span> then computed from equation (26). 
+        </p>
+        <h5>Leakage Areas</h5>
+        <p>The powerlaw model can be used with the component leakage area formulation which has been used to characterize openings for infiltration calculations [ASHRAE 2001, p. 25.18]. The leakage area is based on a series of pressurization tests where the airflow rate is measured at a series of pressure differences ranging from about 10 Pa to 75 Pa. The effective leakage area is based on a rearrangement of equation (20)
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000B1.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(28)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where </p>
+        <p class="NormalIndent"><span style="font-style: italic;">L</span>= equivalent or effective leakage area [m<span style="vertical-align: super;font-size: 10pt;">2</span>],<br></br><span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">r</span>= reference pressure difference [Pa],<br></br><span style="font-style: italic;">Q</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">r</span>= predicted airflow rate at <span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">r</span> (from curve fit to pressurization test data) [m<span style="vertical-align: super;font-size: 10pt;">3</span>/s], and<br></br><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">d</span>= discharge coefficient.
+        </p>
+        <p>There are two common sets of reference conditions:</p>
+        <p><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">d</span> = 1.0&#160; and <span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">r</span> = 4 Pa
+        </p>
+        <p>or</p>
+        <p><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">d</span> = 0.6&#160; and <span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">r</span> = 10 Pa.
+        </p>
+        <p>A leakage area can be converted to the flow coefficient by</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000B2.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(29)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>This equation requires a value for <span style="font-style: italic;">n</span>. If it is not reported with the test results, a value between 0.6 and 0.7 is reasonable.
+        </p>
+        <h5>Stairwells</h5>
+        <p>A stairwell will normally be modeled as a vertical series of zones connected by low resistance openings through the floors. The CONTAM model for airflow in stairwells is based on a fit to experimental data [Achakji and Tamura 1988]. They expressed the airflow resistance per floor as an effective area <span style="font-style: italic;">A</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">e</span> in the orifice equation (20) with a 0.6 discharge coefficient. The effective area is expressed in terms of the area of the shaft <span style="font-style: italic;">A</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">S</span>, the distance between floors <span style="font-style: italic;">h</span>, the density of people on the stairs <span style="font-style: italic;">d</span>, and whether the treads are open or closed. A large number of people on the stairs, as in an evacuation scenario, influences the flow resistance. The experiment used densities of 0, 1, and 2 persons/m<span style="vertical-align: super;font-size: 10pt;">2</span>. For open treads the effective area is approximately
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000B3.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(30)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>and for closed treads</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000B4.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(31)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>The coefficients for the powerlaw equation are</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000B6.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(32)</td>
+                </tr>
+            </tbody>
+        </table>
+        <h5>Cracks</h5>
+        <p>A relationship for flow through cracks that can be converted directly into a powerlaw airflow element is presented in [Clarke 1985, p. 204] as:
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000B7.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(33)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000B8.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(34)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>and</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000B9.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(35)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>with</p>
+        <p class="NormalIndent"><span style="font-style: italic;">W</span> = crack width (mm), and
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">a</span>&#160; = crack length (m).
+        </p>
+        <p>Therefore, the coefficients in the powerlaw equation (19) are given by <span style="font-style: italic;">n</span> in equation (34) and
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000BA.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(36)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

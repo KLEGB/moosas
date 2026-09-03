@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Airflow Paths|Defining Airflow Paths|Airflow Path Properties" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Wind Pressure Profile</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5><a name="kanchor47"></a>Wind Pressure Profile</h5>
+        <p>Wind Pressure Profiles are used to account for the wind direction effects in flow elements. CONTAM refers to the function relating the average wind pressure coefficient for the face of a building to the angle of incidence of the wind on the face of the building as the <span style="font-style: italic;">wind pressure profile</span> or <span style="font-style: italic;">f</span>(<span style="font-family: 'Symbol';">q</span>). A more detailed explanation of this function is given in the <a href="IDH_UsingWTH_Working_with_Weather_and_Wind.htm">Working with Weather and Wind</a> section. The profile is displayed graphically at the bottom of the screen for a visual review of the data.</p>
+        <p><span style="font-weight: bold;">Name:</span> This is the name you give to the wind pressure profile. Wind profile names must be unique within a project.</p>
+        <p><span style="font-weight: bold;">Description:</span> Field for entering a more detailed description of the specific wind pressure profile.</p>
+        <p><span style="font-weight: bold;">Data Points:</span> You may enter up to 16 angle/pressure coefficient pairs. Pressure coefficients are in the range -1 to 1. The first value must be at a wind direction of zero degrees. The angle zero indicates a wind blowing directly toward the surface in which the opening lies. An identical value at angle 360º is automatically assumed. 90º indicates a wind blowing parallel to the wall from the right, and 270º is from the left. By making these angles relative to the wall, the same profile might be used on different walls around the building without modification depending on building geometry.</p>
+        <p>To update entered data points on the graph press the "Redraw" button in the curve fit frame. Pressing this button will re-plot the data on the graph and will sort the data points by angle.</p>
+        <p>Select Curve Fit:</p>
+        <p class="NormalIndent"><span style="text-decoration: underline;">Curve Fit 1</span>: This curve fit simply connects the data points and linearly interpolates between the data points. </p>
+        <p class="NormalIndent"><span style="text-decoration: underline;">Curve Fit 2</span>: This curve fit connects all the user data points using a nonlinear curve fit between the points (cubic spline).</p>
+        <p class="NormalIndent"><span style="text-decoration: underline;">Curve Fit 3</span>: This curve fit requires five data points – one for each wind direction angle 0º, 90º, 180º, 270º and 360º. The curve fits a trend line to these five data points (ignoring any others) according to the following equation developed by Walker and Wilson [<a href="../IDH_References.htm#REF_Walker_and_Wilson_1994">Walker and Wilson 1994</a> and <a href="../IDH_References.htm#REF_ASHRAE_2005">ASHRAE 2005</a> p 27.6].</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_WindProfile_876x50.png" border="0" alt="equation" style="width: 876; height: 50;" />
+        </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

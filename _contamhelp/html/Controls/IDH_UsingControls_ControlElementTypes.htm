@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Controls" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Control Element Types</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Control Element Types</h3>
+        <p>There are a number of control element types that you can associate with an undefined control node. Detailed descriptions and properties of these control elements are provided in the following sections.</p>
+        <p class="SubHeading1">Sensor</p>
+        <p><span>There are two types of sensors that can be created depending on the type of icon with which the sensor is associated: </span><span style="font-style: italic">Zone or Junction Sensor</span> and <span style="font-style: italic">Path or Duct Sensor</span>. The Sensor definition dialog box will provide you with the properties available for the type of sensor being created.
+        </p>
+        <h5><a name="Zone"></a><b>Zone or Junction Sensor</b>
+        </h5>
+        <p><span style="font-weight: bold;">Sensed Value:</span> Select the property of the zone or junction that you would like the sensor to provide as output: <span style="font-weight: bold;font-style: italic;">Temperature</span>, <span style="font-weight: bold;font-style: italic;">Contaminant mass fraction</span>, <span style="font-weight: bold;font-style: italic;">Gage pressure </span>or <span style="font-weight: bold;font-style: italic;">Occupancy</span>.</p>
+        <h5 class="NormalIndent">Path or Duct Sensor</h5>
+        <p><span style="font-weight: bold">Sensed Value:</span> Select the property of the path or duct that you would like the sensor to provide as output: <span style="font-weight: bold;font-style: italic">Flow rate</span> through the path or <span style="font-weight: bold;font-style: italic">Pressure drop</span> across the path.
+        </p>
+        <p><span style="font-weight: bold">Sensor Output:</span><span> Sensor output defaults to the base units of CONTAM, but you can modify this by changing the</span> <![CDATA[ ]]><span style="font-style: italic;">Gain</span> <![CDATA[ ]]><span>and </span><span style="font-style: italic">Offset</span><span> values provided. However, the Report a Value control element (described below) automatically provides values to convert from the base units to the default units of your project or of the particular contaminant which you are sensing.</span></p>
+        <p class="NormalIndentItalic">Out = (Sensor Challenge Value&#160; – Offset) * Gain</p>
+        <p><span style="font-weight: bold;"></span><span style="font-weight: bold;">Gain</span><span style="font-weight: bold;">: </span>a multiplier used to convert the <span style="font-style: italic;">Sens</span><span style="font-style: italic;">or Challenge</span><span style="font-style: italic;"> Value</span> to the <span style="font-style: italic;">O</span><span style="font-style: italic;">ut</span> value</p>
+        <p><span style="font-weight: bold">Offset: </span><span>an offset value used to convert the </span><span style="font-style: italic">Sensed Value</span><span> to the </span><span style="font-style: italic">O</span><span style="font-style: italic">utput</span><span> value</span>
+        </p>
+        <p><span style="font-weight: bold;">Time Constant: </span>sensor response time constant in units of seconds. ContamX will use this to calculate a delay factor.</p>
+        <p class="NormalIndent">Delay = e<span style="vertical-align: super;font-size: 10pt;">-</span><span style="font-family: Symbol;vertical-align: super;">D</span><span style="vertical-align: super;font-size: 10pt;">t/</span><span style="font-family: Symbol;vertical-align: super;">t</span></p>
+        <p class="NormalIndent">The sensor output is calculated from the converted <i>Sensor Challenge Value</i> for the current time step t (Out), the output from the previous time step t-<span style="font-family: Symbol;">D</span>t, and the <i>Delay</i> value as follows:
+</p>
+        <p class="NormalIndent">Output(t) = <i>Out</i> + [Output(t-<span style="font-family: Symbol;">D</span>t) – <i>Out</i>] * <i>Delay</i></p>
+        <p><b>Location:</b> These parameters only apply to <i>Mass fraction sensors</i> associated with 1D zones. Select whether you want the sensor to provide the <b>Zone Average</b> concentration of a 1D zone or the value within a single <b>1D Cell</b> of a 1D zone. The 1D cell option is only effective when performing a simulation using the <i>short time step</i> method otherwise the sensor will provide a value based on the zone average.</p>
+        <p><b>X, Y</b> and <b>Rel Elevation</b> (Z) are the coordinates and units for the selected sensor. X and Y are absolute coordinates and Rel Elevation is relative to the level on which the sensor is located. These values are required for any sensor that is located within a cell of a 1D <i>convection/diffusion zone</i> (see <a href="../Zones/IDH_PP_ZONEPARMS2_CFD.htm">1D Zone Data</a>). If the sensor is to be located within a particular cell of a 1D zone, then these coordinates will be verified by ContamW against the axis of the 1D zone in which it is located. This verification will be performed automatically when you select either the <b><u>R</u>un Simulation</b> or <b>Create a Contam<u>X</u> Input File</b> command from the <b><u>S</u>imulation</b> menu.
+</p>
+        <p><span style="font-weight: bold;">Description:</span> Use this to describe the sensor in detail. This description will be displayed in the status bar when you highlight the sensor icon. The description defaults to either "zone sensor" or "path sensor."</p>
+        <p class="SubHeading1">Phantom control</p>
+        <p><span>Use this control element to reference a named control element that already exists elsewhere within your project. Phantom nodes are useful when you need a control signal from a node that is located remotely upon the SketchPad or when you are implementing one of the multiple-input elements. This is useful in referencing a node on another level of a building, because </span><span>ContamW</span><span> does not allow you to draw links between building levels. This can also be used to "cascade" inputs into the multiple-input </span><span style="font-style: italic">sum</span><span> and </span><span style="font-style: italic">average</span><span> controls when you want to sum or average more than three inputs or remotely located, named inputs.</span>
+        </p>
+        <p class="SubHeading1">Schedule</p>
+        <p>Use this control element to apply a schedule via the control network. A schedule can be applied to airflow paths, simple air handling systems, inlets and outlets of simple air handling systems and source/sinks. Control schedules will override schedules that are defined as a parameter of an element. You can select an existing schedule or create a new one (See Creating Schedules). </p>
+        <p class="SubHeading1">Constant</p>
+        <p><span>Use this control element to define a simple constant. The constant is useful as input to other control elements such as the </span><span style="font-style: italic">mathematical</span><span>, </span><span style="font-style: italic">limit</span><span> and </span><span style="font-style: italic">switch</span><span> controls.</span>
+        </p>
+        <p class="SubHeading1">Modifier</p>
+        <p>Use this control element to modify an input signal by providing a Gain and Offset parameter. The input signal will be modified according to the following equation.</p>
+        <p class="NormalIndent"><span style="font-style: italic;">output</span> = (<span style="font-style: italic;">input</span> – Offset) * Gain</p>
+        <p>The parameters for the Modifier control are:</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Gain:</span> a multiplier used to convert the <span style="font-style: italic;">input</span> signal</p>
+        <p class="NormalIndent"><span></span><span style="font-weight: bold">Offset:</span><span> an offset value used to convert the </span><span style="font-style: italic">input</span><span> signal</span>
+        </p>
+        <p class="SubHeading1">Hysteresis</p>
+        <p>Use this control element to simulate hysteresis of a control actuator. Hysteresis is characterized by the Slack parameter where Slack is the fraction of the input signal’s range over which the output signal remains constant when the input signal changes direction. The relationship of the output signal to the input signal is shown in the following figure. This plot shows the signal increasing from 0 to 1 and back down to 0 again. The increasing and decreasing signals are characterized by the following equations, respectively.</p>
+        <p class="NormalIndent"><span><b>Increasing:</b>&#160; </span><span style="font-style: italic">output</span><span> = maximum( 0.0, </span><span style="font-style: italic">input</span><span> * Slope + Int )</span>
+        </p>
+        <p class="NormalIndent"><span><b>Decreasing:</b> <![CDATA[ ]]></span><span style="font-style: italic">output</span><span> = minimum( 1.0, </span><span style="font-style: italic">input</span><span> * Slope )</span>
+        </p>
+        <p class="NormalIndent">Where</p>
+        <p class="NormalIndent">Slope = 1 / (1.0 – Slack)</p>
+        <p class="NormalIndent"><span>Int = </span><span style="font-style: italic">output</span><span> – Slope * </span><span style="font-style: italic">input</span>
+        </p>
+        <p class="CaptionCenter">
+            <img src="../../image/HysteresisPlot.gif" style="visibility: visible;mso-wrap-style: square;" alt="image/hysteresis" />
+        </p>
+        <p class="CaptionCenter">Figure – Plot showing hysteresis curve of Hysteresis control element</p>
+        <p class="SubHeading1"><a name="Report_Control"></a>Report a value</p>
+        <p>Use this control element to report values to a file created by ContamW for the specific purpose of logging these reported values for each <span style="font-style: italic;">listing time step</span> of a transient simulation (See Output Properties). If you perform a transient simulation and implement <span style="font-style: italic;">report control elements</span>, ContamW will create a file in the same directory as your project file with the name of your project file and the .LOG extension appended. For example if your project is <span style="font-style: italic;">MyProj.PRJ</span>, ContamW will create the file <span style="font-style: italic;">MyProj.LOG</span>. You can also use the Report control element to provide automatic unit conversions of sensor data from the dimensionless units of a sensor (e.g. K or kg/kg) to engineering units associated with the type of sensed data (e.g. ºC or ppm(v)).</p>
+        <p>The value output from the report element will be determined according to the following equation:</p>
+        <p class="NormalIndent"><span style="font-style: italic;">output</span> = ( <span style="font-style: italic;">input</span> – Offset ) * Gain</p>
+        <p>The parameters for the Report control are:</p>
+        <p><span style="font-weight: bold;">Gain: </span>a multiplier used to convert the <span style="font-style: italic;">input</span> signal</p>
+        <p><span style="font-weight: bold;">Offset: </span>an offset value used to convert the <span style="font-style: italic;">input</span> signal</p>
+        <p><span style="font-weight: bold;">Header: </span>the header that will appear in the log file for this control element</p>
+        <p><span style="font-weight: bold;">Units: </span>units that will appear below the header in the log file for this control element</p>
+        <p>The report control will also provide the default conversion values, Gain, Offset and Units if ContamW finds a sensor "down-link" in the control network that has not yet been converted from its dimensionless form. </p>
+        <p class="SubHeading1">Signal split</p>
+        <p>Use this to split a signal, so the same signal can be linked directly to multiple nodes in the control network.</p>
+        <p class="SubHeading1">Logical</p>
+        <p>Use these controls to provide logical operations including:</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Binary</span> – convert input signal to binary 0 or 1,</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">NOT</span> – negate single input value and provide binary output 0 or 1,</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">AND</span> – perform AND operation on two input values and provide binary output 0 or 1.</p>
+        <p class="NormalIndent"><span style="font-style: italic;">output </span>= 1&#160; IF (<span style="font-style: italic;">input1 </span>&gt; 0) AND (<span style="font-style: italic;">input2</span> &gt; 0)</p>
+        <p class="NormalIndent"><span style="font-style: italic;">output </span>= 0&#160; otherwise</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">OR</span> – perform OR operation on two input values and provide binary output 0 or 1.</p>
+        <p class="NormalIndent"><span style="font-style: italic;">output </span>= 1&#160; IF (<span style="font-style: italic;">input1 </span>&gt; 0) OR (<span style="font-style: italic;">input2</span> &gt; 0)</p>
+        <p class="NormalIndent"><span style="font-style: italic;">output </span>= 0&#160; otherwise</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">XOR</span> – perform XOR operation on two input values and provide binary output 0 or 1.</p>
+        <p class="NormalIndent"><span style="font-style: italic;">output </span>= 1&#160; IF (<span style="font-style: italic;">input1 </span>&gt; 0) AND (<span style="font-style: italic;">input2</span> &lt;= 0)</p>
+        <p class="NormalIndent"><span style="font-style: italic;">output </span>= 1&#160; IF (<span style="font-style: italic;">input2 </span>&gt; 0) AND (<span style="font-style: italic;">input1</span> &lt;= 0)</p>
+        <p class="NormalIndent"><span style="font-style: italic;">output </span>= 0&#160; otherwise</p>
+        <p class="SubHeading1">Mathematical </p>
+        <p>Use these controls to provide mathematical operations including:</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Absolute value</span> – provide absolute value of input signal</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Add, Subtract, Multiply, and Divide</span> – perform operation on two input signals and provide result as output. </p>
+        <p class="NormalIndent" style="margin-bottom: 2pt;">Note the order of operation is important for Subtract and Divide.</p>
+        <p class="NormalIndent" style="margin-bottom: 2pt;">Subtract: <i>output</i> = <i>input1</i> – <i>input2</i></p>
+        <p class="NormalIndent">Divide: <i>output</i> = <i>input1</i> / <i>input2</i></p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Sum and Average</span> – Sum or average multiple input signals and provide result as output signal. Three signals can be directly input to using links drawn into the control node icon, and more can be cascaded through the use of <span style="font-style: italic;">phantom</span> nodes.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">EXP(x)</span> – raise e to the power of x.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">LN(x)</span> – calculate natural logarithm of x.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">LOG10(x)</span> – calculate log base 10 of x.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">POW(x,y)</span> – raise x to the power of y where x is <i>input1</i> and y is <i>input2</i>.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">SQRT(x)</span> – calculate the square root of x.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Polynomial(x)</span> – calculate polynomial of x based on user-defined polynomial coefficients.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">SIN(x)</span> – calculate sine of x.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">COS(x)</span> – calculate cosine of x.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">TAN(x)</span> – calculate tangent of x.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">MOD(x,y)</span> – calculate the floating-point remainder of x divided by y where x is <i>input1</i> and y is <i>input2</i>.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">CEIL(x)</span> – calculate the smallest integer that is greater than or equal to x.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">FLOOR(x)</span> – calculate the largest integer that is less than or equal to x.</p>
+        <p class="SubHeading1">Limit switches</p>
+        <p><span style="font-style: italic;">Limit switches</span> provide the ability to set an output signal to either on or off (0 or 1) based upon the difference between the two input signals. </p>
+        <p><b>Lower limit switch</b>
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">output</span> = 1&#160; IF ( <span style="font-style: italic;">input1</span> &lt; Limit )&#160;&#160;&#160;&#160; [Limit = <span style="font-style: italic;">input2</span>]</p>
+        <p class="NormalIndent"><span style="font-style: italic;">output</span> = 0&#160; otherwise.</p>
+        <p><b>Upper limit switch</b>
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">output</span> = 1&#160; IF ( <span style="font-style: italic;">input1</span> &gt; Limit )&#160;&#160;&#160;&#160; [Limit = <span style="font-style: italic;">input2</span>]</p>
+        <p class="NormalIndent"><span style="font-style: italic;">output</span> = 0&#160; otherwise</p>
+        <p class="NormalIndent">The band switches incorporate the control parameter, <span style="font-weight: bold;">Band width</span>, to provide a <span style="font-style: italic;">dead band</span> for the on/off control.</p>
+        <p><b>Lower band switch</b>
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">output</span> = 1 when <span style="font-style: italic;">input1</span> rises above <span style="font-style: italic;">input2</span> + Band width</p>
+        <p class="NormalIndent"><i>output</i> = 0 when <i>input1</i> &lt; <i>input2</i></p>
+        <p class="NormalIndent"><span style="font-style: italic;">input2</span> is the lower limit of the band</p>
+        <p><b>Upper band switch</b>
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">output</span> = 1 when <span style="font-style: italic;">input1</span> falls below <span style="font-style: italic;">input2</span> – Band width</p>
+        <p class="NormalIndent"><i>output</i> = 0 when <i>input1</i> &gt; <i>input2</i></p>
+        <p class="NormalIndent"><span style="font-style: italic;">input2</span> is the upper limit of the band</p>
+        <p class="SubHeading1">Limit controls</p>
+        <p><span style="font-style: italic;">Limit controls</span> provide the ability to set an output signal to a value ranging from 0.0 to 1.0 based upon the difference between the two input signals. These would typically be used to provide an <span style="font-style: italic;">error signal</span> to a proportional controller.</p>
+        <p><b>Lower limit control</b> <![CDATA[ ]]></p>
+        <p class="NormalIndent"><i>output</i> = <i>input2</i> - <i>input1</i></p>
+        <p><b>Upper limit control</b>
+        </p>
+        <p class="NormalIndent"><i>output</i> = <i>input1</i> - <i>input2</i></p>
+        <p>The <span style="font-style: italic;">upper and lower limit controls</span> can be used to prepare an error signal for the <span style="font-style: italic;">proportional controls</span>.&#160; If the input signal to an <span style="font-style: italic;">upper limit control</span> is greater than the limit value, a positive output results;&#160; e.g., if a contaminant concentration is too high, the positive signal could activate an airflow device.&#160; If the input signal to a<span style="font-style: italic;"> lower limit control</span> is lower than the limit value, a positive output results;&#160; e.g., if the air flow through an opening is too low, a positive signal could activate a fan to provide the required flow.&#160; </p>
+        <p class="SubHeading1">Proportional and Proportional–Integral</p>
+        <p><span style="font-weight: bold;">Proportional control</span> – This is a model of a simple proportional controller where the input signal is an error signal that is typically a sensed value minus a set-point value which is obtained by using other control functions, e.g. the <span style="font-style: italic;">constant control</span>. The input signal is multiplied by the proportionality constant parameter of the control, <span style="font-weight: bold;">Kp</span>. The output signal is limited to values between 0 and 1, so you should set the proportionality constant accordingly. The output signal could then be modified as required using other control elements.</p>
+        <p class="NormalIndent"><i>output</i> = <i>input</i> <![CDATA[ ]]><span style="font-family: Symbol;">×</span> Kp </p>
+        <p><span style="font-weight: bold;">Proportional-Integral control</span> – This is a model of a simple P-I controller where the input signal is an error signal. The output signal is limited to values between 0 and 1 and is modified by the control parameters <span style="font-weight: bold;">Kp</span> and <span style="font-weight: bold;">Ki</span> according to the following equation.</p>
+        <p class="NormalIndent"><span style="font-style: italic;">output</span> = <span style="font-style: italic;">output</span>* + Kp <span style="font-family: Symbol;">×</span> (<span style="font-style: italic;">input</span> - <span style="font-style: italic;">input</span>*) + Ki <span style="font-family: Symbol;">×</span> (<span style="font-style: italic;">input</span> + <span style="font-style: italic;">input</span>*)</p>
+        <p>where <span style="font-style: italic;">output</span>* and <span style="font-style: italic;">input</span>* are the values of <span style="font-style: italic;">output</span> and <span style="font-style: italic;">input</span> at the previous time step. The Kp and Ki factors must be tuned for the specific problem and time step. This is similar to an "incremental" P-I algorithm described in equations (17-37) and (18-3) of [Stoecker and Stoecker 1989].</p>
+        <p class="SubHeading1">Scheduled Delay</p>
+        <p>This control element provides the ability to simulate time delays associated with the ramping up/down of system components changing between states, e.g., the spin down of a fan or the opening/closing of a damper. The <span style="font-style: italic;">scheduled delay</span> element allows you to define a schedule according to which the change of state occurs. The <span style="font-style: italic;">output</span> will change according to this schedule when the <span style="font-style: italic;">input</span> changes.</p>
+        <p><span style="font-weight: bold;">Node Name:</span> This is an optional name you can provide for this control node. This name can be used to reference this node with a <span style="font-style: italic;">Phantom control node</span>.</p>
+        <p><span style="font-weight: bold;">Schedule - Signal Increasing:</span> Select/enter a day schedule that characterizes the delay in an increasing signal. The schedule must be <span style="font-style: italic;">trapezoidal </span>beginning with a value of 0.0 at time 00:00:00 and increase to a value of 1.0 before 24:00:00. Only one increasing time period per schedule will be allowed.</p>
+        <p><span style="font-weight: bold;">Schedule - Signal Decreasing:</span> Select/enter a day schedule that characterizes the delay in a decreasing signal. The schedule must be <span style="font-style: italic;">trapezoidal </span>beginning with a value of 1.0 at time 00:00:00 and decrease to a value of 0.0 before 24:00:00. Only one decreasing time period per schedule will be allowed.</p>
+        <p><span style="font-weight: bold;">Description:</span> Enter an optional description for this control element.</p>
+        <p class="SubHeading1">Exponential Delay</p>
+        <p>This control element provides the ability to simulate time delays associated with the ramping up/down of system components changing between states, e.g., the spin down of a fan or the opening/closing of a damper. The <span style="font-style: italic;">exponential delay</span> element allows you to define an exponential delay based on a time constant.</p>
+        <p><span style="font-weight: bold;">Node Name:</span> This is an optional name you can provide for this control node. This name can be used to reference this node with a <span style="font-style: italic;">Phantom control node</span>.</p>
+        <p><span style="font-weight: bold;">Time Constants</span><span style="font-weight: bold;">: </span>
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Increase:</span> Enter the amount of time it should take for the <span style="font-style: italic;">output</span> signal to exponentially increase by (1 – 1/e) % of the total change in the <span style="font-style: italic;">input</span> signal when it rises from one state to the next. The format is hh:mm:ss.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Decrease:</span> Enter the amount of time it should take for the <span style="font-style: italic;">output</span> signal to exponentially decrease by (1 – 1/e) % of the total change in the <span style="font-style: italic;">input</span> signal when it falls from one state to the next. The format is hh:mm:ss.</p>
+        <p class="NormalIndent">NOTE: An amount of time of about 4.6 times the value entered above is required for the <span style="font-style: italic;">output</span> signal to increase/decrease by 99 % of the total change in the <span style="font-style: italic;">input</span> signal.</p>
+        <p><span style="font-weight: bold;">Description:</span> Enter an optional description for this control element.</p>
+        <p class="SubHeading1">Maximum and Minimum</p>
+        <p>The <span style="font-style: italic;">output</span> will be the <span style="font-style: italic;">maximum</span> or <span style="font-style: italic;">minimum</span> of all <span style="font-style: italic;">input</span> signals to the control node each time step. Once a node is defined to be of this type, up to three input signals can be drawn directly into it. More signals can be cascaded through the use of <span style="font-style: italic;">phantom</span> control elements.</p>
+        <p><span style="font-weight: bold;">Node Name:</span> This is an optional name you can provide for this control node. This name can be used to reference this node with a <span style="font-style: italic;">Phantom control node</span>.</p>
+        <p><span style="font-weight: bold;">Description:</span> Enter an optional description for this control element.</p>
+        <p class="SubHeading1">Integrate over time</p>
+        <p>The <span style="font-style: italic;">output </span>will be the integration over time of <span style="font-style: italic;">input signal 1</span> (horizontal) controlled by <span style="font-style: italic;">input signal 2</span> (vertical).&#160; Integration occurs when <span style="font-style: italic;">input signal 2</span> &gt; 0; there is no integration when <span style="font-style: italic;">input signal 2</span> = 0; the integral is reinitialized to zero when <span style="font-style: italic;">input signal 2</span> &lt; 0.&#160; A simple trapezoidal integration method is used.</p>
+        <p class="SubHeading1">Running average</p>
+        <p>The <span style="font-style: italic;">output </span>will be the average of the <span style="font-style: italic;">input </span>signal integrated over the <b>Time Span</b>, <span style="font-family: Symbol;">D</span>t<span style="vertical-align: sub;font-size: 10pt;">int</span>:&#160;</p>
+        <p class="NormalIndent"><i>out</i> = &#8747;<i>in</i> dt / <span style="font-family: Symbol;">D</span>t<span style="vertical-align: sub;font-size: 10pt;">int</span></p>
+        <p>At the start of simulation, when the simulated time is less than the time span, the output will be the average of the input up to that time.</p>
+        <p><span style="font-weight: bold;">Node Name:</span> This is an optional name you can provide for this control node. This name can be used to reference this node with a <span style="font-style: italic;">Phantom control node</span>.</p>
+        <p><span style="font-weight: bold;">Time Span:</span> Enter the amount of time included in the running average, <span style="font-family: Symbol;">D</span>tint.&#160; The format is hh:mm:ss.</p>
+        <p><span style="font-weight: bold;">Description:</span> Enter an optional description for this control element.</p>
+        <p class="SubHeading1"><a name="Controls_CVF_DVF"></a>Continuous Value File and Discrete Value File (CVF/DVF) </p>
+        <p>These control elements allow you to implement general schedules by obtaining input values from a file. This allows you to create schedules that are not restricted by the 12-<span style="font-style: italic;">day schedule</span> limit of CONTAM <span style="font-style: italic;">week schedules</span>. These are text files that you create according to the format specified in the <a href="IDH_UsingControls_CVF.htm">CVF Format</a> and <a href="IDH_UsingControls_DVF.htm">DVF Format</a> sections of this document. You can only use one of each file per simulation, but the file may contain multiple lists of values. Value lists are referenced by <span style="font-style: italic;">Value name</span>, which are column headings in the files. </p>
+        <p>CVF and DVF files differ not only in format but also in behavior. During a simulation, CONTAM will interpolate between the CVF values but not so for DVF values, i.e., they will remain constant until a new value is encountered within the file.</p>
+        <p>Beginning with CONTAM version 3.2, these files can now be utilized without the use of an associated control node/network, i.e., building components that may be associated with a schedule can do so by directly associating them with a <i>value name</i> <![CDATA[ ]]>of a CVF/DVF file. This is now apparent in the Schedule properties of each component within ContamW.</p>
+        <p><span style="font-weight: bold;">Value Name:</span> Select the name of a set of values from the list of headings as they appear in the CVF/DVF file.</p>
+        <p><span style="font-weight: bold;">File Name:</span> This field displays the CVF/DVF file that contains the data that will be used by the control node during simulation. You must use the <span style="font-weight: bold;text-decoration: underline;">D</span><span style="font-weight: bold;">ata</span><span style="font-family: Symbol;">®</span><span style="font-weight: bold;">Co</span><span style="font-weight: bold;text-decoration: underline;">n</span><span style="font-weight: bold;">trols</span><span style="font-family: Symbol;">®</span><span style="font-weight: bold;text-decoration: underline;">C</span><span style="font-weight: bold;">ontinuous Values File…</span> and <span style="font-weight: bold;text-decoration: underline;">D</span><span style="font-weight: bold;">ata</span><span style="font-family: Symbol;">®</span><span style="font-weight: bold;">Co</span><span style="font-weight: bold;text-decoration: underline;">n</span><span style="font-weight: bold;">trols</span><span style="font-family: Symbol;">®</span><span style="font-weight: bold;text-decoration: underline;">D</span><span style="font-weight: bold;">iscrete Values File…</span> menu items to select the files you want to use prior to creating the CVF/DVF control nodes.</p>
+        <p><span style="font-weight: bold;">Node Name:</span> This is an optional name you can provide for this control node. This name can be used to reference this node with a <span style="font-style: italic;">Phantom control node</span>.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

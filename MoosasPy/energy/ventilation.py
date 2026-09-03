@@ -7,7 +7,7 @@ from ..rad import modelRadiation, writeRadGeo, rayTest
 from ..utils import np, path, os
 from ..utils.date import DateTime
 from numpy.linalg import LinAlgError
-from ..vent.afn import AfnNetwork, buildPrj, buildZoneInfoFile, AfnPath, AfnZone
+from ..vent.afn import AfnNetwork, buildPrj, buildZoneInfoFile, AfnPath, AfnZone, NETWORK_SCHEMA_VERSION
 from ..vent.iteration import (
     iterateFile,
     contam_iteration,
@@ -66,11 +66,11 @@ class heatLoadModel(object):
                     "zone_equipment", "zone_lighting", "zone_infiltration", "zone_nightACH", "zone_name",
                     "zone_summerrad", "zone_winterrad", "zone_template"
                     ]
-    AFN_INDEX = ['userName', 'temperature', 'prjIndex', 'heatLoad', 'volume', 'position_x', 'position_y', 'position_z',
-                 'boundary']
+    AFN_INDEX = ['userName', 'temperature', 'prjIndex', 'prjName', 'heatLoad', 'volume', 'position_x', 'position_y',
+                 'position_z', 'boundary', 'level', 'levelIndex', 'relHt', 'contam']
     LPG_OUTSIDE_NODE = "OUTSIDE"
     LPG_ZONE_FIELDS = ("zone_wallU", "zone_winU", "zone_win_SHGC")
-    LPG_PATH_FIELDS = ("pathHeight", "pathWidth", "pressure")
+    LPG_PATH_FIELDS = ("pathHeight", "pathWidth", "pressure", "pathType")
 
     def __init__(self, model: MoosasModel, stationid=None,
                  schedulePath=None):
@@ -120,20 +120,32 @@ class heatLoadModel(object):
         t0 = time.time()
         rays = []
         fixMatrix = []
+        ray_paths = []
         for ps in self.paths:
+            if self._is_leakage_path_dict(ps.toDict()):
+                self.pathRadIntensity[ps.userName] = [0.0] * 8760
+                continue
             origin = Vector(ps.position_x, ps.position_y, ps.position_z)
             thisRays = [Ray(origin, pos) for pos in self.skySeries[0].position]
             rays += thisRays
-            fixMatrix.append(np.array([abs(Vector.dot(ps.element.normal, r.direction)) for r in thisRays]))
+            fixMatrix.append(np.array([abs(Vector.dot(ps.geometry.normal, r.direction)) for r in thisRays]))
+            ray_paths.append(ps)
         rays = np.array(rays)
         geo_path = writeRadGeo(model)
         resRay = rayTest(rays, geo_path=geo_path)
         resRay = np.array([1.0 if r is not None else 0 for r in resRay])
-        resRay = resRay.reshape(len(self.paths), int(len(resRay) / len(self.paths)))
+        if len(ray_paths) > 0:
+            resRay = resRay.reshape(len(ray_paths), int(len(resRay) / len(ray_paths)))
+        else:
+            resRay = np.zeros((0, len(self.skySeries[0].position)))
 
-        for i, ps in enumerate(self.paths):
+        ray_idx = 0
+        for ps in self.paths:
+            if self._is_leakage_path_dict(ps.toDict()):
+                continue
             for sky in self.skySeries:
-                self.pathRadIntensity[ps.userName].append(np.sum(resRay[i] * sky.value * fixMatrix[i]) * 1000)
+                self.pathRadIntensity[ps.userName].append(np.sum(resRay[ray_idx] * sky.value * fixMatrix[ray_idx]) * 1000)
+            ray_idx += 1
         print("-----------------------\nNetwork Ready...\n-----------------------")
         print(time.time() - t0)
         t0 = time.time()
@@ -254,18 +266,22 @@ class heatLoadModel(object):
             prjDict[str(idx)] = zUserName
 
         for ps in self.networkDict['paths'].values():
+            if self._is_leakage_path_dict(ps):
+                continue
             # Keep AFN heatload power baseline fixed at the initial hour.
             pid = ps["userName"]
             if pid not in self.pathRadIntensity:
                 self.pathRadIntensity[pid] = [0.0] * 8760
             radHeat = self.pathRadIntensity[pid][hoy] * float(ps['pathHeight']) * float(ps['pathWidth'])
-            if ps["fromZone"] != "-1":
-                zUserName = prjDict.get(ps["fromZone"])
+            from_zone = self._coerce_zone_ref(ps.get("fromZone"))
+            to_zone = self._coerce_zone_ref(ps.get("toZone"))
+            if from_zone != -1:
+                zUserName = prjDict.get(from_zone)
                 if zUserName is not None:
                     self.networkDict['zones'][zUserName]['zone_radHeat'] += radHeat
                     self.networkDict['zones'][zUserName]['heatLoad'] += radHeat
-            elif ps["toZone"] != "-1":
-                zUserName = prjDict.get(ps["toZone"])
+            elif to_zone != -1:
+                zUserName = prjDict.get(to_zone)
                 if zUserName is not None:
                     self.networkDict['zones'][zUserName]['zone_radHeat'] += radHeat
                     self.networkDict['zones'][zUserName]['heatLoad'] += radHeat
@@ -302,9 +318,53 @@ class heatLoadModel(object):
                     zoneDict[zone_name][key] = z.params[key]
                 elif zone_id in zoneDict:
                     zoneDict[zone_id][key] = z.params[key]
+        energyDict['schemaVersion'] = NETWORK_SCHEMA_VERSION
+        energyDict['levels'] = [dict(level) for level in getattr(network, 'levels', [])]
         energyDict['paths'] = pathDict
         energyDict['zones'] = zoneDict
         return energyDict
+
+    @staticmethod
+    def _coerce_zone_ref(value):
+        if value is None:
+            return -1
+        try:
+            return int(round(float(value)))
+        except Exception:
+            return -1
+
+    def prj(self, networkDict=None, prjFilePath=None, networkFilePath=None, split=False,
+            t0=25, windVector=None, airDensity=1.205, alpha=0.22,
+            simulate=False, resultFile=None):
+        if networkDict is not None:
+            self.networkDict = self._normalize_energy_schedule_fields_in_dict(networkDict)
+        else:
+            self._normalize_energy_schedule_fields_in_dict(self.networkDict)
+        return buildPrj(
+            model=self.model,
+            prjFilePath=prjFilePath,
+            networkFilePath=networkFilePath,
+            split=split,
+            t0=t0,
+            windVector=windVector,
+            airDensity=airDensity,
+            alpha=alpha,
+            simulate=simulate,
+            resultFile=resultFile,
+            networkDict=self.networkDict,
+        )
+
+    def zoneInfo(self, networkDict=None, zoneInfoFilePath=None, networkFilePath=None):
+        if networkDict is not None:
+            self.networkDict = self._normalize_energy_schedule_fields_in_dict(networkDict)
+        else:
+            self._normalize_energy_schedule_fields_in_dict(self.networkDict)
+        return buildZoneInfoFile(
+            model=self.model,
+            networkDict=self.networkDict,
+            zoneInfoFilePath=zoneInfoFilePath,
+            networkFilePath=networkFilePath,
+        )
 
     @staticmethod
     def _energy_zone_template_type(zone_dict: dict) -> str:
@@ -457,6 +517,8 @@ class heatLoadModel(object):
             )
 
         for path_key, path_value in paths.items():
+            if self._is_leakage_path_dict(path_value):
+                continue
             from_zone = str(path_value.get("fromZone"))
             to_zone = str(path_value.get("toZone"))
             if from_zone == "-1":
@@ -483,6 +545,7 @@ class heatLoadModel(object):
                 pathHeight=path_value.get("pathHeight"),
                 pathWidth=path_value.get("pathWidth"),
                 pressure=path_value.get("pressure"),
+                pathType=path_value.get("pathType"),
             )
         return graph
 
@@ -551,6 +614,8 @@ class heatLoadModel(object):
             )
 
         for path_value in paths.values():
+            if self._is_leakage_path_dict(path_value):
+                continue
             from_zone = str(path_value.get("fromZone", ""))
             to_zone = str(path_value.get("toZone", ""))
             is_outside_link = (from_zone == "-1" and to_zone != "-1") or (to_zone == "-1" and from_zone != "-1")
@@ -607,15 +672,19 @@ class heatLoadModel(object):
             summer_intensity = np.sum(self.pathRadIntensity[pid][MoosasCumSky.SUMMER_START_HOY:MoosasCumSky.SUMMER_END_HOY])
             winter_intensity = np.sum(self.pathRadIntensity[pid][MoosasCumSky.WINTER_START_HOY:]) + \
                                np.sum(self.pathRadIntensity[pid][:MoosasCumSky.WINTER_END_HOY])
+            if self._is_leakage_path_dict(ps):
+                continue
             summerradHeat = summer_intensity * float(ps['pathHeight']) * float(ps['pathWidth'])
             winterradHeat = winter_intensity * float(ps['pathHeight']) * float(ps['pathWidth'])
-            if ps["fromZone"] != "-1":
-                zUserName = zoneIndexDict.get(ps["fromZone"])
+            from_zone = self._coerce_zone_ref(ps.get("fromZone"))
+            to_zone = self._coerce_zone_ref(ps.get("toZone"))
+            if from_zone != -1:
+                zUserName = zoneIndexDict.get(from_zone)
                 if zUserName is not None:
                     self.networkDict['zones'][zUserName]['zone_summerrad'] += summerradHeat
                     self.networkDict['zones'][zUserName]['zone_winterrad'] += winterradHeat
-            if ps["toZone"] != "-1":
-                zUserName = zoneIndexDict.get(ps["toZone"])
+            if to_zone != -1:
+                zUserName = zoneIndexDict.get(to_zone)
                 if zUserName is not None:
                     self.networkDict['zones'][zUserName]['zone_summerrad'] += summerradHeat
                     self.networkDict['zones'][zUserName]['zone_winterrad'] += winterradHeat
@@ -693,6 +762,8 @@ class heatLoadModel(object):
     def _mechanical_candidate_paths(self):
         candidates = []
         for path_key, p in self.networkDict.get("paths", {}).items():
+            if self._is_leakage_path_dict(p):
+                continue
             from_zone = str(p.get("fromZone", ""))
             to_zone = str(p.get("toZone", ""))
             is_outside_edge = (from_zone == "-1" and to_zone != "-1") or (to_zone == "-1" and from_zone != "-1")
@@ -770,6 +841,56 @@ class heatLoadModel(object):
             mech_energy[zone_user] = mech_energy.get(zone_user, 0.0) + (energy_wh / 1000.0 / zone_area)
         return mech_energy
 
+    def _zone_lookup_maps(self):
+        zone_by_name = {}
+        zone_by_user = {}
+        for zone_key, zone_value in self.networkDict.get("zones", {}).items():
+            zone_user = str(zone_value.get("userName", zone_key))
+            zone_name = str(zone_value.get("zone_name", zone_user))
+            zone_by_name[zone_name] = zone_value
+            zone_by_user[zone_user] = zone_value
+        return zone_by_name, zone_by_user
+
+    def _resolve_zone_series_value(self, zone_dict, hoy, field_name, default=0.0):
+        if not isinstance(zone_dict, dict):
+            return float(default)
+        zone_user = str(zone_dict.get("userName", zone_dict.get("zone_name", "zone")))
+        try:
+            return float(self._resolve_gain_value(zone_dict.get(field_name), hoy, field_name, zone_user))
+        except Exception:
+            return float(default)
+
+    def _build_hvac_availability(self, zone_dict, hoys, comfort_s):
+        hvac_from_comfort = []
+        occupancy_mask = []
+        hvac_availability = []
+        for i, hoy in enumerate(hoys):
+            comfort = float(comfort_s[i]) if i < len(comfort_s) else 0.0
+            comfort_on = bool(comfort < 0.5)
+            occ_on = self._resolve_zone_series_value(zone_dict, hoy, "zone_ppsm", default=0.0) > 0.0
+            hvac_from_comfort.append(comfort_on)
+            occupancy_mask.append(bool(occ_on))
+            hvac_availability.append(bool(comfort_on and occ_on))
+        return hvac_from_comfort, occupancy_mask, hvac_availability
+
+    def _startup_cooling_schedule(self, zone_dict, hoys, hvac_availability, temp_s):
+        startup_schedule = []
+        startup_flags = []
+        previous_on = False
+        for i, hoy in enumerate(hoys):
+            current_on = bool(hvac_availability[i]) if i < len(hvac_availability) else False
+            is_startup = bool(current_on and (not previous_on))
+            startup_flags.append(is_startup)
+            if is_startup:
+                predicted_temp = float(temp_s[i]) if i < len(temp_s) and np.isfinite(temp_s[i]) else np.nan
+                cooling_setpoint = self._resolve_zone_series_value(zone_dict, hoy, "zone_c_temp", default=26.0)
+                delta_t = max(float(predicted_temp) - float(cooling_setpoint), 0.0) if np.isfinite(predicted_temp) else 0.0
+                startup_schedule.append(0.0458 * delta_t)
+            else:
+                startup_schedule.append(0.0)
+            previous_on = current_on
+        return startup_schedule, startup_flags
+
     def coupledTask(self, energyDict: dict = None, timestep=1, iteration=1, mode="sequence",
                     preheat=10, k=0.8, sigma=3.8, start_hoy=5088, end_hoy=5112,
                     earse_conditioned=False, **kwargs):
@@ -836,13 +957,18 @@ class heatLoadModel(object):
         hoys = list(range(st_hoy, ed_hoy + 1, step))
         period_end_exclusive = ed_hoy + 1
         n = len(hoys)
+        zone_by_name, zone_by_user = self._zone_lookup_maps()
         zone_names = [zn for zn in c_res.keys() if zn in e_res]
         result = {}
         for zn in zone_names:
             ez = e_res[zn]
             cz = c_res[zn]
+            zone_dict = zone_by_name.get(zn)
+            if zone_dict is None:
+                zone_dict = zone_by_user.get(str(zn))
             heating_s, cooling_s, lighting_s = [], [], []
             total_energy_s, total_energy_vent_s = [], []
+            total_base_load_s, startup_load_s = [], []
             comfort_s = list(cz.get("Comfort", []))[:n]
             ach_s = list(cz.get("ACH", []))[:n]
             temp_s = list(cz.get("Temperature", []))[:n]
@@ -858,19 +984,32 @@ class heatLoadModel(object):
                 delta_s += [np.nan] * (n - len(delta_s))
             if len(mech_s) < n:
                 mech_s += [0.0] * (n - len(mech_s))
+            hvac_from_comfort_s, people_mask_s, hvac_availability_s = self._build_hvac_availability(
+                zone_dict=zone_dict,
+                hoys=hoys,
+                comfort_s=comfort_s
+            )
+            startup_load_s, startup_flag_s = self._startup_cooling_schedule(
+                zone_dict=zone_dict,
+                hoys=hoys,
+                hvac_availability=hvac_availability_s,
+                temp_s=temp_s
+            )
             for i, hoy in enumerate(hoys):
                 st = int(hoy)
                 ed = min(8760, period_end_exclusive, st + step)
                 h = self._window_mean(ez.get("heating_hourly", []), st, ed)
                 c = self._window_mean(ez.get("cooling_hourly", []), st, ed)
                 l = self._window_mean(ez.get("Lighting_hourly", []), st, ed)
-                comfort = float(comfort_s[i])
                 total_energy = h + c + l
-                total_energy_vent = (h + c) * (1.0 - comfort) + l + float(mech_s[i])
+                hvac_mask = 1.0 if hvac_availability_s[i] else 0.0
+                total_base_load = (h + c) * hvac_mask
+                total_energy_vent = total_base_load + float(startup_load_s[i]) + l + float(mech_s[i])
                 heating_s.append(h)
                 cooling_s.append(c)
                 lighting_s.append(l)
                 total_energy_s.append(total_energy)
+                total_base_load_s.append(total_base_load)
                 total_energy_vent_s.append(total_energy_vent)
             result[zn] = {
                 "hoy": list(hoys),
@@ -879,11 +1018,17 @@ class heatLoadModel(object):
                 "cooling": cooling_s,
                 "lighting": lighting_s,
                 "total_energy": total_energy_s,
+                "total_base_load": total_base_load_s,
                 "total_energy_vent": total_energy_vent_s,
+                "startup_cooling_load": [float(v) for v in startup_load_s],
+                "startup_cooling_event": [bool(v) for v in startup_flag_s],
                 "mechanical_vent_energy": mech_s,
                 "Temperature": temp_s,
                 "ACH": ach_s,
                 "Comfort": comfort_s,
+                "HVACavailabilityFromComfort": [bool(v) for v in hvac_from_comfort_s],
+                "PeopleAvailability": [bool(v) for v in people_mask_s],
+                "HVACavailability": [bool(v) for v in hvac_availability_s],
                 "delta_t": delta_s
             }
         return result
@@ -1012,13 +1157,8 @@ class heatLoadModel(object):
                 peak_hoy = hoy
 
         self.updateHeatLoad(peak_hoy, energyDict=energyDict)
-        venNetwork = self.reconstructVentilationInputs()
-        zone_info = buildZoneInfoFile(zoneList=venNetwork['zones'], pathList=venNetwork['paths'])
-        prj_file = buildPrj(
-            zoneList=venNetwork['zones'],
-            pathList=venNetwork['paths'],
-            prjFilePath=self._next_workspace_prj_path("preheat")
-        )
+        zone_info = self.zoneInfo()
+        prj_file = self.prj(prjFilePath=self._next_workspace_prj_path("preheat"))
         peak_t = outdoor_series[hoys.index(peak_hoy)]
         for _ in range(max(int(preheat), 0)):
             AFN = contam_iteration(prj_file)
@@ -1057,23 +1197,14 @@ class heatLoadModel(object):
         if energyDict:
             self.networkDict = energyDict
         self.updateHeatLoad(hoy, energyDict=energyDict)
-        venNetwork = self.reconstructVentilationInputs(self.networkDict)
-        zText = buildZoneInfoFile(zoneList=venNetwork['zones'], pathList=venNetwork['paths'])
+        zText = self.zoneInfo(self.networkDict)
 
         if mode == "onions":
             zoneInfoFilePath = os.path.join(path.tempDir, f"zoneinfo_{hoy}.info")
-            zFile = buildZoneInfoFile(
-                zoneList=venNetwork['zones'],
-                pathList=venNetwork['paths'],
-                zoneInfoFilePath=zoneInfoFilePath
-            )
+            zFile = self.zoneInfo(self.networkDict, zoneInfoFilePath=zoneInfoFilePath)
             prjFile = self.runtime.pop('onions_prj', None)
             if prjFile is None:
-                prjFile = buildPrj(
-                    zoneList=venNetwork['zones'],
-                    pathList=venNetwork['paths'],
-                    prjFilePath=self._next_workspace_prj_path("onions")
-                )
+                prjFile = self.prj(prjFilePath=self._next_workspace_prj_path("onions"))
             self.runtime['last_prj_file'] = prjFile
             return iterateFile(
                 prjFile,
@@ -1101,11 +1232,7 @@ class heatLoadModel(object):
         if mode == "ping-pong":
             current_prj = self.runtime.get('current_prj')
             if current_prj is None:
-                current_prj = buildPrj(
-                    zoneList=venNetwork['zones'],
-                    pathList=venNetwork['paths'],
-                    prjFilePath=self._next_workspace_prj_path("pingpong")
-                )
+                current_prj = self.prj(prjFilePath=self._next_workspace_prj_path("pingpong"))
             last_AFN = None
             last_t = None
             for _ in range(max(int(iteration), 1)):
@@ -1131,9 +1258,16 @@ class heatLoadModel(object):
         try:
             h = float(path_obj.get("pathHeight", 0.0))
             w = float(path_obj.get("pathWidth", 0.0))
-            op_raw = path_obj.get("operable", 1.0)
-            op = 1.0 if op_raw is None else float(op_raw)
-            return (h > eps) and (w > eps) and (op > eps)
+            return (h > eps) and (w > eps)
+        except Exception:
+            return False
+
+    @staticmethod
+    def _is_leakage_path_dict(path_obj: dict) -> bool:
+        try:
+            path_type = str(path_obj.get("pathType", "")).strip().lower()
+            dtype = str((path_obj.get("element") or {}).get("dtype", "")).strip().lower()
+            return path_type == "leakage" or dtype == "plr_leak3"
         except Exception:
             return False
 
@@ -1209,6 +1343,8 @@ class heatLoadModel(object):
         valid_prj = {str(z.get("prjIndex")) for z in zones.values()}
         kept_paths = {}
         for path_key, p in paths.items():
+            if self._is_leakage_path_dict(p):
+                continue
             from_zone = str(p.get("fromZone", ""))
             to_zone = str(p.get("toZone", ""))
             if (from_zone in remove_zone_prj) or (to_zone in remove_zone_prj):

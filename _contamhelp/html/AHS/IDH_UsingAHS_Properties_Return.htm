@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Simple Air-Handling Systems|Air-Handling System Properties" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Air handling System Return System Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Air-handling System - Return System Properties</h5>
+        <p><span style="font-weight: bold;">System Volume: </span>Enter a value for the return sub-system (implicit return zone) of the simple air handler (e.g., return-side duct work etc.). This volume is similar to a zone volume and will be used in the simulation of contaminant transport.
+        </p>
+        <p><span style="font-weight: bold;">Contaminant Data: </span>All of the defined contaminants in the project will be displayed in this list box.
+        </p>
+        <p><span style="font-weight: bold;">Initial Concentration: </span>Select a contaminant from the list and enter the <span style="font-style: italic;">initial contaminant concentrations</span> for the <span style="font-style: italic;">return air sub-system</span> of this <span style="font-style: italic;">simple air handling system</span>. Note that only those species you have selected to be contaminants (to use during simulation) appear in the list. If a species for which you wish to set an initial concentration does not appear in the list you must set the "Use in simulation" property of the corresponding species to be true (see <a href="../Contaminants/IDH_UsingContaminants_Creating_Contaminants.htm">Creating Species and Contaminants</a>). You can reset these initial values through the Run Control Properties of the Simulation Parameters.
+        </p>
+        <p><span style="font-weight: bold;">NOTE: </span>Changing the number of contaminants, i.e. those species used in the simulation, will reset the <span style="font-style: italic;">initial concentrations</span> of all zones to the default contaminant concentrations. You can reset all of these concentrations via the Run Control Properties as indicated above or individually here.
+        </p>
+        <p><span style="font-weight: bold;">Sum of Non-trace Initial Concentrations: </span>This value is provided as a check for you to ensure that you input a reasonable set of initial values when using <span style="font-style: italic;">non-trace contaminants</span>. This value should be close to 1.0.
+        </p>
+        <p><span style="font-weight: bold;">Kinetic Reaction: </span>You define a new kinetic reaction by pressing the "New Reaction" button and then completing the kinetic reaction matrix. You can edit an existing matrix by selecting the proper matrix from the drop-down box and pressing the "Edit Reaction" button. You must have previously defined contaminants in order to implement a kinetic reaction.
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Description: </span>Field that shows a more detailed description of the specific reaction if entered by the user. This description can be modified by pressing the "Edit Reaction" button next to the description field and then changing the description field for the reaction.
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Name: </span>This contains a list of names of all previously created reactions. The reaction selected from this box will define the behavior of the specific return system being modified.
+        </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Species and Contaminants" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Non-trace Contaminants and Water Vapor</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Non-trace Contaminants and Water Vapor</h3>
+        <p>CONTAM handles non-trace contaminants, which are those contaminants that you define to be the constituents of air. Typically, you might want to treat water vapor as a non-trace contaminant. CONTAM will treat a contaminant with the name "H20" as water vapor. The concentration will be affected by the humidity ratio contained in weather files that you use during simulations (See <a href="../Weather/IDH_UsingWTH_Defining_Transient_Weather_and_Wind.htm">Defining Transient Weather and Wind</a>). ContamX will calculate the concentration of H<span style="vertical-align: sub;font-size: 10pt;">2</span>O within each zone, as the mass fraction of water to air in units of <span style="font-style: italic;">kg</span><span style="font-style: italic;"> of </span><span style="font-style: italic;">H</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">2</span><span style="font-style: italic;">O</span> /<span style="font-style: italic;">kg</span><span style="font-style: italic;"> of</span><span style="font-style: italic;"> <![CDATA[ ]]></span><span style="font-style: italic;">air</span>, where <span style="font-style: italic;">kg </span><span style="font-style: italic;">of </span><span style="font-style: italic;">air</span> = <span style="font-style: italic;">kg</span><span style="font-style: italic;"> of </span><span style="font-style: italic;">dry</span><span style="font-style: italic;"> <![CDATA[ ]]></span><span style="font-style: italic;">air </span>+ <span style="font-style: italic;">kg</span><span style="font-style: italic;"> of </span><span style="font-style: italic;">H</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">2</span><span style="font-style: italic;">O</span>. Whereas the humidity ratio is typically given as the ratio of the mass of water vapor to that of dry air. You can convert between the two using the following relationship.</p>
+        <p class="NormalIndent">Humidity ratio = mass fraction of H<span style="vertical-align: sub;font-size: 10pt;">2</span>O / (1 – mass fraction of H<span style="vertical-align: sub;font-size: 10pt;">2</span>O)</p>
+        <p>For example, to create air from its typical constituents you might define the following set of non-trace contaminants (See <a href="IDH_UsingContaminants_Creating_Contaminants.htm">Creating Species and Contaminants</a>):</p>
+        <div align="center">
+            <table class="center">
+                <col />
+                <col />
+                <col />
+                <col />
+                <col />
+                <tr>
+                    <td class="HeadCenterBold">Name</td>
+                    <td class="HeadCenterBold">Molar Mass<br />[kg/kmol]</td>
+                    <td class="HeadCenterBold">Default Concentration<br />[kg_cont/kg_air]</td>
+                    <td class="HeadCenterBold">Trace Contaminant</td>
+                    <td class="HeadCenterBold">Use in Simulation</td>
+                </tr>
+                <tr>
+                    <td class="Center">N2</td>
+                    <td class="Center">28</td>
+                    <td class="Center">0.7554</td>
+                    <td class="Center">Non-trace</td>
+                    <td class="Center">Use</td>
+                </tr>
+                <tr>
+                    <td class="Center">O2</td>
+                    <td class="Center">32</td>
+                    <td class="Center">0.2314</td>
+                    <td class="Center">Non-trace</td>
+                    <td class="Center">Use</td>
+                </tr>
+                <tr>
+                    <td class="Center">Ar</td>
+                    <td class="Center">40</td>
+                    <td class="Center">0.0127</td>
+                    <td class="Center">Non-trace</td>
+                    <td class="Center">Use</td>
+                </tr>
+                <tr>
+                    <td class="Center">CO2</td>
+                    <td class="Center">44</td>
+                    <td class="Center">0.0005</td>
+                    <td class="Center">Non-trace</td>
+                    <td class="Center">Use</td>
+                </tr>
+                <tr>
+                    <td class="Center">H2O</td>
+                    <td class="Center">18</td>
+                    <td class="Center">0.0000</td>
+                    <td class="Center">Non-trace</td>
+                    <td class="Center">Use</td>
+                </tr>
+            </table>
+        </div>
+        <p style="margin-top: 0;margin-bottom: 0;">&#160;</p>
+        <p>Note in the above example, the <span style="font-family: 'Symbol';">å</span>Default Concentration = 1.0 kg/kg (see <a href="IDH_UsingContaminants_ProjectSpecies.htm">Project Species</a> for details). </p>
+        <p>As a simpler example, you might create a dry air contaminant, Air, and a water vapor contaminant, H20, as follows.</p>
+        <div align="center">
+            <table class="center">
+                <col />
+                <col />
+                <col />
+                <col />
+                <col />
+                <tr>
+                    <td class="HeadCenterBold">Name</td>
+                    <td class="HeadCenterBold">Molar Mass<br />[kg/kmol]</td>
+                    <td class="HeadCenterBold">Default Concentration<br />[kg_cont/kg_air]</td>
+                    <td class="HeadCenterBold">Trace Contaminant</td>
+                    <td class="HeadCenterBold">Use in Simulation</td>
+                </tr>
+                <tr>
+                    <td class="Center">DryAir</td>
+                    <td class="Center">28.9645</td>
+                    <td class="Center">1.000</td>
+                    <td class="Center">Non-trace</td>
+                    <td class="Center">Use</td>
+                </tr>
+                <tr>
+                    <td class="Center">H2O</td>
+                    <td class="Center">18.0150</td>
+                    <td class="Center">0.000</td>
+                    <td class="Center">Non-trace</td>
+                    <td class="Center">Use</td>
+                </tr>
+            </table>
+        </div>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

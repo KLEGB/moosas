@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Airflow Paths|Defining Airflow Paths|Airflow Element Types|Backdraft Damper Flow Models" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Self-regulating Vent Model</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h6>Self-regulating Vent Model</h6>
+        <p>CONTAM implements the self-regulating vent as described in [<a href="../IDH_References.htm#REF_Axley_2001">Axley 2001</a>]<a href="../IDH_References.htm#REF_Axley_2001"></a>. This element limits the airflow rate in both directions through a flow path with user-defined limiting air pressure differences.</p>
+        <p>Flow is calculated based on the following equations for positive and negative pressure differences across the element. The positive flow direction is set for each airflow path.</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_AFE_SelfRegAxley_Qpos.png" />
+        </p>
+        <p>
+            <img src="../../Resources/Images/Eqn_AFE_SelfRegAxley_Qneg.png" />
+        </p>
+        <p><span style="font-weight: bold;">Name:</span> Enter the name you want to use to identify the airflow element. The airflow element will be saved within the current project and can be associated with multiple airflow paths.</p>
+        <p><b>Maximum Flow Rate (</b><i style="font-weight: bold;">Q</i><sub style="font-style: italic;font-weight: bold;">0</sub><b>):</b> an empirical value that sets the maximum airflow rate that will be allowed to pass through the airflow path.</p>
+        <p><b>Regulating Pressure (</b><span style="font-family: Symbol;font-style: italic;font-weight: bold;">D</span><i style="font-weight: bold;">P</i><sub style="font-style: italic;font-weight: bold;">0</sub><b>):</b> an empirical value that represents the approximate pressure difference above which the airflow will be limited to the maximum flow rate <i>Q</i><sub style="font-style: italic;">0</sub>.</p>
+        <p><b>Reverse Flow Fraction (</b><i style="font-weight: bold;">f</i><b>):</b> the fraction of the Maximum Flow Rate to which the airflow through this element will be limited when the pressure difference is negative across the airflow path.</p>
+        <p><b>Description:</b> You can provide a more detailed note to describe this airflow element.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

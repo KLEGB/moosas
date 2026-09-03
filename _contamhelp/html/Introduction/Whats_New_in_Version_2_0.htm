@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Enhancements for Version 2.0?</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>Enhancements for Version 2.0?</h2>
+        <p>Enhancements from version 1.0 to 2.0</p>
+        <p><span style="font-family: 'Symbol';">·<span style="font-size: 8pt;font-family: ;">&#160;&#160;&#160;</span></span>Building controls – Controls include sensors, actuators, modifiers and links. Control actuators can be used to modify various characteristics of building components based on control signals obtained from sensors and even modified by signal modifiers. For example, a sensor can be used to obtain a contaminant concentration within a zone, and a proportional control actuator can be used to adjust supply airflow into the zone based on the sensed concentration. </p>
+        <p><span style="font-family: 'Symbol';">·<span style="font-size: 8pt;font-family: ;">&#160;&#160;&#160;</span></span>Scheduled zone temperatures – Zone temperatures can now be varied through the use of user-defined schedules. This allows for the change in zone pressures due simply to the change in temperature within the zone according to the ideal gas relationship.</p>
+        <ul>
+            <li style="font-size: 8pt;" value="1">
+                <p>Contaminants</p>
+            </li>
+            <ul type="circle">
+                <li style="font-size: 8pt;" value="1">
+                    <p style="margin-left: 24.00pt;">Non-trace contaminants – You can now account for the impact of contaminant concentrations on the density of the air, e.g., water vapor.</p>
+                </li>
+                <li style="font-size: 8pt;" value="2">
+                    <p style="margin-left: 24.00pt;">Unlimited number of contaminants – CONTAM no longer restricts the number of contaminants you can simulate. The previous limitation was 10.</p>
+                </li>
+                <li style="font-size: 8pt;" value="3">
+                    <p style="margin-left: 24.00pt;">Contaminant-related libraries – Contaminant related elements can now be shared through CONTAM library files. These elements include contaminant species, filters, source/sinks and kinetic reactions.</p>
+                </li>
+            </ul>
+            <li style="font-size: 8pt;" value="2">
+                <p>Numerics</p>
+            </li>
+            <ul type="circle">
+                <li style="font-size: 8pt;" value="1">
+                    <p style="margin-left: 24.00pt;">Variable air density – CONTAM now provides the ability to simulate non-flow related processes that can lead to the accumulation/reduction of mass within building zones, e.g., due to non-trace contaminant sources and to variations in the zone pressure due to the change in zone temperature.</p>
+                </li>
+                <li style="font-size: 8pt;" value="2">
+                    <p style="margin-left: 24.00pt;">Improved numerical solver implementing sparse matrix techniques to greatly reduce transient simulation times for large problems.</p>
+                </li>
+                <li style="font-size: 8pt;" value="3">
+                    <p style="margin-left: 24.00pt;">Separated solver from graphical user interface to provide for batch execution of simulations and directly utilize .PRJ files.</p>
+                </li>
+            </ul>
+            <li style="font-size: 8pt;" value="3">
+                <p>Transient weather</p>
+            </li>
+            <ul type="circle">
+                <li style="font-size: 8pt;" value="1">
+                    <p style="margin-left: 24.00pt;">Separate transient weather and contaminant files – Weather files (WTH) no longer contain contaminant concentrations (except for outdoor humidity ratio). This means you don’t have to create different weather files depending on the types of contaminants you are simulating. CONTAM now provides you with the option of simulating transient ambient contaminant concentrations using a contaminant file (CTM).</p>
+                </li>
+                <li style="font-size: 8pt;" value="2">
+                    <p style="margin-left: 24.00pt;">Weather file creation/conversion software – NIST has developed a software tool that allows you to convert existing weather files to CONTAM 2.0 compatible weather files. You can convert your existing 1.0-compatible files, TMY2 and EnergyPlus weather files.</p>
+                </li>
+            </ul>
+            <li style="font-size: 8pt;" value="4">
+                <p>User interface</p>
+            </li>
+            <ul type="circle">
+                <li style="font-size: 8pt;" value="1">
+                    <p style="margin-left: 24.00pt;">Longer zone names – Zone names can now be up to 15 characters long.</p>
+                </li>
+                <li style="font-size: 8pt;" value="2">
+                    <p style="margin-left: 24.00pt;">SketchPad zooming feature – You can now reduce the icon size of the SketchPad to allow the display of larger projects on the screen.</p>
+                </li>
+                <li style="font-size: 8pt;" value="3">
+                    <p style="margin-left: 24.00pt;">Display of net inter-zonal airflow results for highlighted zones</p>
+                </li>
+                <li style="font-size: 8pt;" value="4">
+                    <p style="margin-left: 24.00pt;">Distinct simple air-handling system zones – The implicit zones of multiple simple air-handling system are now distinguished from each other to allow for the plotting of individual system zones.</p>
+                </li>
+                <li style="font-size: 8pt;" value="5">
+                    <p style="margin-left: 24.00pt;">Airflow direction indicators are now displayed in the Status Bar when viewing airflow path results.</p>
+                </li>
+            </ul>
+        </ul>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

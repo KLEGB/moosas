@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Species and Contaminants" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Species Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor96"></a>Species Properties</h3>
+        <p>This section provides detailed descriptions of the specific species properties. </p>
+        <p><span style="font-weight: bold;">Name:</span> You will use this name to refer to the species throughout the program. You must give each species a name that is unique to the current project.</p>
+        <p><span style="font-weight: bold;">Mol</span><span style="font-weight: bold;">a</span><span style="font-weight: bold;">r </span><span style="font-weight: bold;">Mass</span><span style="font-weight: bold;">:</span><span style="font-weight: bold;"> <![CDATA[ ]]></span>The molar mass in g/mol or kg/kmol. CONTAM uses this value to convert volumetric concentrations to mass fractions and to calculate the gas constant of the air mixture made up by non-trace contaminants. You must enter a value of at least 1.0.</p>
+        <p><span style="font-weight: bold;">Default Concentration:</span> CONTAM will apply this value as the default initial concentration for each zone that you create. You can revise the initial concentration for individual zones as per your requirements. This is also the ambient contaminant concentration during simulations which do not utilize contaminant data from one of the external contaminant data files (CTM or WPC).</p>
+        <p><span style="font-weight: bold;">Diffusion Coefficient:</span> This value will be used during simulations using the <span style="font-style: italic;">1D Duct Model</span> of the <span style="font-style: italic;">Short Time Step Method</span> (See <a href="../Simulation/IDH_UsingSIM_ParamsRunControl.htm">Run Control Properties</a> in the <a href="../Simulation/IDH_UsingSIM_Working_with_Simulations.htm">Working with Simulations</a> section). The dispersal coefficient will be calculated from this value depending on the Reynolds Number in a given duct segment.</p>
+        <p><span style="font-weight: bold;">Mean Diameter:</span><span style="font-weight: bold;"> <![CDATA[ ]]></span>Enter the mean particle diameter if this species is to be a particulate type species. CONTAM utilizes this value when converting between particle count units and particle mass and volume units and to determine filter efficiency of Simple Particle Filter elements for this size particle (See <a href="../Filters/IDH_FLTE_PF0.htm">Simple Particle Filter</a> in the <a href="IDH_UsingContaminants_Contaminant_Filters.htm">Working with Filters</a> section).</p>
+        <p>NOTE: This is not necessarily meant to be, for example, the aerodynamic diameter as the current contaminant source models do not treat particles different from gaseous contaminants.</p>
+        <p><span style="font-weight: bold;">Effective Density:</span><span style="font-weight: bold;"> <![CDATA[ ]]></span>Enter a density that you want CONTAM to use as the effective density of a species you want to consider to be a particulate type species. Currently, CONTAM only utilizes this value when converting between particle count units and particle mass and volume units.</p>
+        <p><span style="font-weight: bold;">Specific Heat:</span> The specific heat of a contaminant will used during simulation only when the <span style="font-style: italic;">Variable Junction Temperatures</span> method is selected.</p>
+        <p><span style="font-weight: bold;">Decay Rate:</span> This is an exponential decay constant based upon the half-life of the radioactive species calculated using the following equation:</p>
+        <p>Decay Rate = ln(2) / <span style="font-family: 'Symbol';font-size: 14pt;">t</span><span style="vertical-align: sub;font-size: 10pt;">1/2</span>,</p>
+        <p>where <span style="font-family: 'Symbol';font-size: 14pt;">t</span><span style="vertical-align: sub;font-size: 10pt;">1/2</span> is the half-life of the radioactive species in seconds.</p>
+        <p>ContamW will use this value to perform unit conversions for radioactive contaminants. Radioactive species are only distinguished from other species by the units associated with them, not by modeling the radioactive decay process. To model a radioactive decay, use a kinetic reaction (See <a href="IDH_KINETIC_REACTION.htm">Kinetic Reaction Data</a>).</p>
+        <p><span style="font-weight: bold;">UVGI Susceptibility Constant:</span> A species-dependent rate constant used to determine UVGI&#160;filter effectiveness for a specific contaminant [m<sup>2</sup>/J]. Values for several species are provided in [<a href="../IDH_References.htm#REF_Kowalski_2000">Kowalski, et al. 2000</a>] and they range from 10<sup>-3</sup> cm<sup>2</sup>/<span style="font-family: Symbol;">m</span>J to 10<sup>-6</sup> cm<sup>2</sup>/<span style="font-family: Symbol;">m</span>J. (new for version 3.2)</p>
+        <p><span style="font-weight: bold;">Non-Trace Contaminant:</span> Non-trace contaminants are those that can affect the density of the air, i.e., are considered components of the air. (See <a href="IDH_UsingContaminants_WaterVapor.htm">Non-trace Contaminants and Water Vapor</a>)</p>
+        <p><span style="font-weight: bold;">Use in Simulation:</span> This determines whether or not a species will be a contaminant. Checking "Use in Simulation" indicates that a species will be a contaminant and used in the simulation.</p>
+        <p><span style="font-weight: bold;">Description:</span> Use this to provide a more detailed description of the species.</p>
+        <p><span style="font-weight: bold;">Guideline Value:</span> Currently not implemented.</p>
+        <p><span style="font-weight: bold;">Guideline Description:</span> Currently not implemented.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

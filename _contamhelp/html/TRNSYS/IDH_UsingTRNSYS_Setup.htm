@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with TRNSYS" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>TRNSYS-CONTAM Utilities and Setup</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>TRNSYS-CONTAM Utilities and Setup</h2>
+        <p>In addition to Type98, a set of tools was developed to facilitate the TRNSYS-CONTAM coupling process. These tools enable development of coupled building models including the connectivity between the inputs and outputs of Type98 and Type56. The tools are available on the NIST Multizone Modeling website (<a href="https://www.nist.gov/el/energy-and-environment-division-73200/nist-multizone-modeling">https://www.nist.gov/el/energy-and-environment-division-73200/nist-multizone-modeling</a>). This section presents the tools and their associated input files along with instructions pertaining to where these files should be located on your Windows system in order to work with TRNSYS. In the file paths below, <i>Trnsys\</i> refers to the directory into which TRNSYS was installed.</p>
+        <h3>Software Components and Files</h3>
+        <p><b>Type98&lt;version&gt;.dll</b>
+        </p>
+        <p class="NormalCW2">Type98 dynamic link library file developed to TRNSYS specifications. It is the go-between that handles communication of TRNSYS commands and data to/from ContamX. The “&lt;version&gt;” portion of the file name will depend on the versions of TRNSYS and CONTAM and the operating system architecture for which the Type was compiled, e.g., “_t18_c33-x64” indicates the DLL is compatible with TRNSYS version 18, CONTAM version 3.3, and is a 64 bit Windows executable.</p>
+        <p>Copy the Type98 dll to the <i>Trnsys\Userlib\ReleaseDLLs</i> directory.</p>
+        <p><b>ContamX3.exe</b>
+        </p>
+        <p>This is the calculation engine (solver) of the CONTAM program. It utilizes socket communication to transfer commands and data with Type98. It is installed in the CONTAM installation folder. </p>
+        <p>Copy ContamX3.exe to the <i>Trnsys\Exe</i> directory.</p>
+        <p><b>Type98.bmp</b>
+        </p>
+        <p>Type98 icon that can be associated with static-dynamic proformas created during CONTAM-TRNSYS coupling method outlined below.</p>
+        <p>Copy Type98.bmp to the <i>Trnsys\Studio\Proformas\Utility\Calling External Programs\CONTAM</i> directory. This file is not critical, but usage is described in process below.</p>
+        <p><b>CONTAM3DExport.exe</b>
+        </p>
+        <p>This program enables the coupling of TRNSYS&#160;with CONTAM. It can be used to create a Trnsys3D file (.idf) by extruding CONTAM project files that have been drawn to scale using the new <i>pseudo-geometry</i> drawing features of ContamW. This tool also generates the files necessary to perform a coupled TRNSYS/CONTAM simulation including:</p>
+        <ul>
+            <li class="CW2" style="color: #000000;" value="1"> TRNSYS input or deck file (.dck) </li>
+            <li class="CW2" style="color: #000000;" value="2">Type98 dynamic static proforma (.tpf)</li>
+            <li class="CW2" style="color: #000000;" value="3">Type56 building file (.b17)</li>
+            <li class="CW2" style="color: #000000;" value="4">Variable exchange file (.vef)</li>
+        </ul>
+        <p>An installer for <i>CONTAM3DExport</i> is provided on the NIST Multizone Modeling website.</p>
+        <p class="NormalCW2">NOTE: The <i>Type56-98Coupler</i> tool is no longer needed for coupling beginning with TRNSYS18. The <i>CONTAM3DExporter</i> now generates a TRNSYS input file directly which includes the connectivity required between the INPUTS and OUTPUTS of Type56 and Type98. However, if the building geometry must be modified, e.g., to create sloped roof surfaces or add shading surfaces, then the coupling procedure provides a method to address these modifications.     <![CDATA[ ]]></p>
+        <p><b>Type98.log</b>
+        </p>
+        <p>This is a log file for Type98 in the same directory as the TRNSYS project file during a coupled simulation. This file will contain information associated with execution of Type98. You can use the logging flag of the <i>vef</i> file (see <a href="IDH_UsingResults_TRNSYS_Input_Files.htm#TRNSYS" title="TRNSYS Input Files" alt="TRNSYS Input Files">TRNSYS Input FIles</a>) to provide various levels of details to the Type98.log file that will be created. Set the value between 0 for no logging and 3 for detailed logging.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

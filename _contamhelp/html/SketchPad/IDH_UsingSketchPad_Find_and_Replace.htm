@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with the SketchPad" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Find and Replace Building Component Data</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor5"></a>Find and Replace Building Component Data</h3>
+        <p>ContamW provides the ability to perform both simple searches for building components and to perform find-and-replace operations. Both features involve the use of a dialog box that can be displayed simultaneously with the SketchPad to allow interaction between both the SketchPad and the dialog boxes.</p>
+        <p class="SubHeading1">Find</p>
+        <p>Use the Find feature to locate various building component icons on the SketchPad by either their <span style="font-style: italic;">Number</span> or <span style="font-style: italic;">Name</span> properties. Be aware that numbers may change whenever the total number of each type of component is modified by either adding or deleting components. Whenever the project file is saved, the components will be renumbered based on their SketchPad position starting from the top level and working from left to right then top to bottom on the SketchPad down through the building levels.</p>
+        <p>Menu Command:&#160;<span style="font-weight: bold;text-decoration: underline;">E</span><span style="font-weight: bold;">dit </span><span style="font-weight: bold;"></span>&#8594;<span style="font-weight: bold;"></span><span style="font-weight: bold;text-decoration: underline;"> F</span><span style="font-weight: bold;">ind…</span><br />Keyboard Shortcut:&#160;<span style="font-weight: bold;">Ctrl+F</span></p>
+        <p>
+            <img src="../../image/Find_221x230.gif" border="0" alt="image\Find.gif" style="width: 221; height: 230;" />
+        </p>
+        <p class="Caption">Figure – Find dialog box</p>
+        <p>Simply select the type of component icon you wish to locate, select either a number or name from the lists provided and click the <span style="font-style: italic;">Find</span> button. The icon will be located and highlighted on the SketchPad. If there are no components of a given type, the search controls will be disabled. </p>
+        <p>Searchable items:</p>
+        <ul>
+            <li style="font-size: 8pt;" value="1">
+                <p>Air Handling Systems</p>
+            </li>
+            <li style="font-size: 8pt;" value="2">
+                <p>Airflow Paths - including Supplies and Returns of Simple Air Handling Systems</p>
+            </li>
+            <li style="font-size: 8pt;" value="3">
+                <p>Control Nodes - sub-nodes of super nodes will defer to the super node</p>
+            </li>
+            <li style="font-size: 8pt;" value="4">
+                <p>Duct Junctions</p>
+            </li>
+            <li style="font-size: 8pt;" value="5">
+                <p>Duct Segments</p>
+            </li>
+            <li style="font-size: 8pt;" value="6">
+                <p>Occupants</p>
+            </li>
+            <li style="font-size: 8pt;" value="7">
+                <p>Source/Sinks</p>
+            </li>
+            <li style="font-size: 8pt;" value="8">
+                <p>Zones - including implicit supply and return zones of simple air handling systems</p>
+            </li>
+        </ul>
+        <p class="SubHeading1">Find and Replace</p>
+        <p>The <span style="font-style: italic;">Find and Replace</span> feature consists of a more advanced <span style="font-style: italic;">find</span> feature that enables you to generate lists of items based on user-selected ranges of property values. You can then replace parameters of the items in the list of items found.</p>
+        <p>Menu Command:&#160;<span style="font-weight: bold;text-decoration: underline;">E</span><b>dit</b>   &#8594;<span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="font-weight: bold;text-decoration: underline;">R</span><b>eplace…</b><br style="font-weight: bold;" />Keyboard Shortcut:&#160;<b>Ctrl+R</b></p>
+        <p class="Normal">
+            <img src="../../image/FindAndReplace_428x542.gif" border="0" alt="image\FindAndReplace.gif" style="width: 428; height: 542;" />
+        </p>
+        <p class="Caption">Figure – Find and Replace dialog box</p>
+        <p>There are two sections of the Find and Replace dialog box: Find and Replace. Use the dialog box controls within the Find section to generate a list of items that match the desired search criteria. Once you have generated a list of items found, then select the items within the Replace section to replace the desired parameters of the items within the list. You are not required to use the replace feature; you can simply use this tool to locate specific items within a project file.</p>
+        <p>Each type of building component has two predefined sets of parameters upon which searches can be performed: list-based and value-based. The list-based search parameters are accompanied by a list of each parameter type contained in the project, e.g., elements, schedules, filters, etc. You can either select from the list to search for an exact match or type in a case-sensitive search string of text to match all items that contain the search string. Value-based parameters allow you to search for items based on a range of values of the selected parameter. It is possible to search using either of these sets of parameters or both. Use the check boxes that are located adjacent to the search parameters to select which ones to use.</p>
+        <p>Once you have set your search criteria, click the <span style="font-style: italic;">Find All</span> button to initiate the search. This will generate a list of <span style="font-style: italic;">Items found</span>. You can then select items in the list to display a summary of their properties, or double-click to locate the item on the SketchPad. You can also remove individual items from the list by selecting the item and clicking the <span style="font-style: italic;">Remove</span> button. This allows you to refine the set of items for replacement.</p>
+        <table width="583" cellspacing="0" cellpadding="1" style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;" border="1">
+            <col style="width: 156px;" />
+            <col style="width: 152px;" />
+            <col />
+            <tr valign="top">
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableHeading">Building Component</p>
+                </td>
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableHeading">List Parameters</p>
+                </td>
+                <td width="33.74%" style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableHeading">Value Parameters</p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Air Handling System</p>
+                </td>
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Kinetic reaction in return</p>
+                    <p class="TableCellSmall">Kinetic reaction in supply
+                    </p>
+                    <p class="TableCellSmall">Outdoor air filter
+                    </p>
+                    <p class="TableCellSmall">Return air filter
+                    </p>
+                    <p class="TableCellSmall">Outdoor air schedule
+                    </p>
+                </td>
+                <td width="33.74%" style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Minimum outdoor airflow
+                    </p>
+                    <p class="TableCellSmall">Return system volume
+                    </p>
+                    <p class="TableCellSmall">Supply system volume
+                    </p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Air Handling System Supply and Return
+                    </p>
+                </td>
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Air handling system
+                    </p>
+                    <p class="TableCellSmall">Filter
+                    </p>
+                    <p class="TableCellSmall">Schedule
+                    </p>
+                </td>
+                <td width="33.74%" style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Airflow rate</p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Airflow Path
+                    </p>
+                </td>
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Airflow element
+                    </p>
+                    <p class="TableCellSmall">Filter
+                    </p>
+                    <p class="TableCellSmall">Schedule
+                    </p>
+                    <p class="TableCellSmall">Wind pressure option and Profile</p>
+                </td>
+                <td width="33.74%" style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Azimuth angle</p>
+                    <p class="TableCellSmall">Constant wind pressure value </p>
+                    <p class="TableCellSmall">Multiplier </p>
+                    <p class="TableCellSmall">Relative elevation</p>
+                    <p class="TableCellSmall">Wind speed modifier</p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Control Node *
+                    </p>
+                </td>
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Control type
+                    </p>
+                </td>
+                <td width="33.74%" style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">N/A
+                    </p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Duct Junction
+                    </p>
+                </td>
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Color<br />Schedule
+                    </p>
+                </td>
+                <td width="33.74%" style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Relative elevation
+                    </p>
+                    <p class="TableCellSmall">Temperature
+                    </p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Duct Segment
+                    </p>
+                </td>
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Color<br />Duct flow element
+                    </p>
+                    <p class="TableCellSmall">Filter
+                    </p>
+                    <p class="TableCellSmall">Schedule
+                    </p>
+                </td>
+                <td width="33.74%" style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Length
+                    </p>
+                    <p class="TableCellSmall">Loss coefficient
+                    </p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Duct Terminal
+                    </p>
+                </td>
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Balanced<br />Color
+                    </p>
+                    <p class="TableCellSmall">Filter
+                    </p>
+                    <p class="TableCellSmall">Schedule
+                    </p>
+                    <p class="TableCellSmall">Wind pressure option and Profile
+                    </p>
+                </td>
+                <td width="33.74%" style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Azimuth angle
+                    </p>
+                    <p class="TableCellSmall">Constant wind pressure value<br />Balance loss coefficient<br />Design flow rate<br />Free face area<br />Relative elevation<br />Temperature<br />Terminal loss coefficient
+                    </p>
+                    <p class="TableCellSmall">Wind speed modifier
+                    </p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Occupant
+                    </p>
+                </td>
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Inhalation schedule
+                    </p>
+                </td>
+                <td width="33.74%" style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Body weight
+                    </p>
+                    <p class="TableCellSmall">Multiplier
+                    </p>
+                    <p class="TableCellSmall">Peak inhalation rate
+                    </p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Source/Sink
+                    </p>
+                </td>
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Source/sink element
+                    </p>
+                    <p class="TableCellSmall">Schedule
+                    </p>
+                    <p class="TableCellSmall">Species
+                    </p>
+                </td>
+                <td width="33.74%" style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Multiplier
+                    </p>
+                </td>
+            </tr>
+            <tr valign="top">
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Zone
+                    </p>
+                </td>
+                <td style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">1D zone<br />Color<br />Kinetic reaction<br />Name<br />Schedule
+                    </p>
+                </td>
+                <td width="33.74%" style="border-top: 0.50pt solid black;border-bottom: 0.50pt solid black;border-left: 0.50pt solid black;border-right: 0.50pt solid black;">
+                    <p class="TableCellSmall">Floor area
+                    </p>
+                    <p class="TableCellSmall">Temperature
+                    </p>
+                    <p class="TableCellSmall">Volume
+                    </p>
+                </td>
+            </tr>
+        </table>
+        <p class="Normal"><span style="font-size: 10pt;">* Control nodes are not replaceable using this feature</span>
+        </p>
+        <p class="Caption">Table – Find and Replace options</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

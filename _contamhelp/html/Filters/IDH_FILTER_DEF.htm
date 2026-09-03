@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Filters" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Filter Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor104"></a>Filter Properties</h3>
+        <p><span style="font-weight: bold;">Filter Number:</span> This number is automatically assigned by ContamW and can change as you add and remove filters to or from a project. Each time you save a project, the filter numbers are reassigned. </p>
+        <p>Even though this is the actual filter number used by CONTAM, a different number will be used when presenting filter accumulation results in the <span style="font-style: italic;">contaminant summary file</span> (.csm file). This file will present filters according to the building component with which they are associated. For example, filters associated with airflow paths and air handling system supply and return points will be referenced by the path number and the letter "p" to indicate it is a path filter. Filters associated with ducts will be referenced by the duct segment number and the letter "d" or the terminal number and the letter "t" for terminal.</p>
+        <p><span style="font-weight: bold;">Filter </span><span style="font-weight: bold;">Element</span>
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Name:</span> &lt;required&gt; You may select a previously defined filter element from those contained in the Name list. Click the "New Element" button to define a new filter element. To view or modify filter element data click the "Edit Element" button. You can also access the CONTAM Library Manager to import filter elements from library files by clicking the "Library" button (See <a href="../Library/IDH_UsingLibs_Working_with_Data_and_Libraries.htm">Working with Data and Libraries</a>). Every filter must have a filter element associated with it.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Description</span><span style="font-weight: bold;">:</span> Displays the description of the filter element currently displayed in the Name field.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Type:</span> Displays the type of filter element for the filter currently displayed in the Name field.</p>
+        <p><span style="font-weight: bold;">Initial Filter Loading</span>
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Total Relative Load:</span> Set the initial loading of the filter relative to the mass of the filter. This can be set to zero to represent a "clean" filter at the beginning of a simulation; otherwise set the value to establish the total mass of contaminants (as a percent of the mass of the filter) accumulated on the filter at the start of a simulation. Relative load is only used for the Gaseous Filter element which is currently the only element for which efficiency is described as a function of filter loading.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with EnergyPlus" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>EnergyPlus-CONTAM Coupling Process</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>EnergyPlus-CONTAM Coupling Process</h2>
+        <p>The following outline describes the process of coupling a CONTAM project with EnergyPlus. It covers the basic method, but not all the details required for all possible coupling scenarios.  This process utilizes the <i>CONTAM3DExport</i> tool to generate an EnergyPlus IDF file from a CONTAM PRJ file. </p>
+        <p>It is not absolutely necessary to follow this process in order to develop a coupled project. One could develop a CONTAM project with corresponding thermal zones to an existing EnergyPlus IDF, generate an IDF file with the CONTAM3DExport tool, and merge parts of the generated IDF file into the EnergyPlus IDF file. However, coupling without this procedure will require care in providing subsurfaces to contain individual flow paths of the associated CONTAM project. Also, air loops and nodes of the generated and EnergyPlus IDF files will need to be coordinated.</p>
+        <p class="SubHeading1"><b>Create the CONTAM Project using ContamW</b>
+        </p>
+        <p>Use the following guidelines when creating your CONTAM project to be coupled with EnergyPlus. The table in the <a href="IDH_UsingEnergyPlus-WorkingWithEnergyPlus.htm">Working with EnergyPlus</a> section shows the objects created in the EnergyPlus model and the corresponding CONTAM entities.</p>
+        <p><b>Geometry</b>
+        </p>
+        <p>Utilize the <i>pseudo-geometry</i> mode of ContamW in order for CONTAM3DExport to generate the necessary geometry of the EnergyPlus model. For each zone in the CONTAM model a thermal zone will be created in the EnergyPlus model. </p>
+        <p><b>Airflow Paths</b>
+        </p>
+        <p>Airflow paths will be grouped to form inter-zone mixing and infiltration airflow rates in the EnergyPlus model.</p>
+        <p><b>Windows</b>
+        </p>
+        <p>To create a window for the purposes of thermal modeling via EnergyPlus, define an airflow path within the CONTAM project that utilizes a two-way airflow element having a name that contains the character string "wind" (not case-sensitive). Place the airflow path icon on the wall where you would like the center of the window to be located. Define the elevation of the bottom of the window via the airflow path Reference Elevation, and define the height and width of the window via the airflow element properties. If you do not want any airflow through the window during the coupled simulation, then set the path multiplier to zero. Upon export, the window will be created in the IDF file according to these properties. You must ensure that the windows are fully contained within the wall and do not overlap each other.</p>
+        <p><b>Simple Air Handling Systems</b>
+        </p>
+        <p>An air loop will be created in the EnergyPlus model for each simple air-handling system (AHS) in the CONTAM model except as noted below for exhaust-only and heat recovery ventilator (HRV) systems. In order to adhere to the EnergyPlus air loop paradigm, each thermal zone that is served by the air loop should have corresponding supply and return air terminals served by the associated "normal" simple AHS in the CONTAM building model. A zone can only be served by one air loop, so no more than one normal AHS should serve a zone in CONTAM. However, a zone can be served by one of each type of AHS: normal, exhaust-only and HRV; as described below.</p>
+        <p>Simple AHSs in CONTAM can be made to correspond to exhaust-only and energy recovery systems in EnergyPlus. The name of the simple AHS is used to trigger <i>CONTAM3DExport</i> to create these systems along with system-specific supply and return terminal requirements. Exhaust-only system names must contain "exh" (not case-sensitive), and should not have any supply air terminals associated with them. Energy recovery system names should contain "hrv" (not case-sensitive). <i>CONTAM3DExport</i> will perform checks on the PRJ file for these requirements. The exhaust-only and hrv simple AHSs do not have corresponding air loops associated with them in EnergyPlus. Instead, hrv systems will generate a <code>ZoneHVAC:EnergyRecoveryVentilator</code> and associated objects in the IDF file, and the exhaust-only system will generate a <code>Fan:ZoneExhaust</code> and associated objects in the IDF file.</p>
+        <p class="NormalCW2"><i>Contam3DExport</i> provides the option to either provide air loops associated with a Simple AHS that simply contain a fan to move air through the loop or to incorporate one of two types of thermal conditioning systems with the air loop. The user can select to include either a <i>AirLoopHVAC:UnitaryHeatCool</i> or <i>AirLoopHVAC:UnitaryHeatPump:AirToAir</i> with each air loop. This will provide the necessary components to condition the thermal zones associated with each air loop. Modifications of the exported IDF will likely be required complete the definition of the heating/cooling system. Modifications include setting the Controlling Zone or Thermostat Location of the unitary system, setting the <code>ZoneInfiltration:DesignFlowRate</code> and associated Zone List for system sizing, and any other properties of the exported systems as required for desired system performance.</p>
+        <p><b>Ducts</b>
+        </p>
+        <p>Ducts are currently not supported when coupling with EnergyPlus. CONTAM3DExport will not perform a check on this. </p>
+        <p><b>Controls</b>
+        </p>
+        <p class="NormalCW2">Controls can be used to pass data between CONTAM and EnergyPlus. This allows just about any information to be shared between the two programs, and it is up to the user to define what and how this data is utilized within the CONTAM controls network and the EnergyPlus energy management system (EMS). <i>CONTAM3DExport</i> will provide a foundation upon which the data transfer occurs as defined below.</p>
+        <p>In CONTAM <i>Constant</i> (or <i>Set</i>) type controls having a name are used to receive input control signals from EnergyPlus.  <i>Split</i> (or <i>Pass</i>) type controls having a name are used to send output signals to EnergyPlus from CONTAM. Prior to executing a simulation with a project that has controls, be sure to either run a CONTAM only simulation or at least a full building check via the Simulation-&gt;Run Building Check menu item to make sure that the controls are sequenced. This procedure must be followed after any new controls are added to a project, and the project must also be saved after the controls are sequenced.</p>
+        <p class="NormalCW2">An <code>ExternalInterface:FunctionalMockupUnitImport:From:Variable</code> object will be created for named <i>Constant</i> type controls, and an <code>ExternalInterface:FunctionalMockupUnitImport:To:Schedule</code> object will be created for named <i>Split</i> type controls. The following example IDF sections demonstrate the objects created for one of each type of control: a <i>Constant</i> control named <i><code style="font-style: italic; color: #00bfff;">eplusVar1</code></i> and a <i>Split</i> control named <code style="font-style: italic; color: #808080;">contamVarB</code>. These sets of objects enable a functioning exported EnergyPlus model including <code>EnergyManagementSystem:Programs</code> that can be readily modified to obtain the desired results during a simulation. For example, contaminant values can be provided from CONTAM to EnergyPlus, or EMS values can be sent to CONTAM to coordinate controls between the two programs.</p>
+        <h6>For the Constant control:</h6>
+        <div>
+            <p class="codeCW2">ExternalInterface:FunctionalMockupUnitImport:From:Variable,</p>
+            <p class="codeindentCW2">EMS,&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;!- Output:Variable Index Key Name</p>
+            <p class="codeindentCW2"><i><code style="font-style: italic; color: #00bfff;">eplusVar1</code></i>,&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;!- Output:Variable Name</p>
+            <p class="codeindentCW2">ContamFMU.fmu, &#160;&#160;&#160;!- FMU File Name</p>
+            <p class="codeindentCW2">ContamFMU, &#160;&#160;&#160;&#160;&#160;&#160;&#160;!- FMU Instance Name</p>
+            <p class="codeindentCW2">CTRL_I_<i><code style="font-style: italic; color: #00bfff;">eplusVar1</code></i>;&#160;!- FMU Variable Name</p>
+            <p class="codeindentCW2">&#160;</p>
+            <p class="codeCW2">Output:Variable,</p>
+            <p class="codeindentCW2">*,&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;!- Key Value</p>
+            <p class="codeindentCW2"><i><code style="font-style: italic; color: #00bfff;">eplusVar1</code></i>,&#160;&#160;!- Variable Name</p>
+            <p class="codeindentCW2">Timestep;&#160;&#160;&#160;!- Reporting Frequency</p>
+            <p class="codeindentCW2">&#160;</p>
+            <p class="codeCW2">EnergyManagementSystem:OutputVariable,</p>
+            <p class="codeindentCW2"><i><code style="font-style: italic; color: #00bfff;">eplusVar1</code></i>,&#160;&#160;&#160;&#160;&#160;!- Name</p>
+            <p class="codeindentCW2">g_<i><code style="font-style: italic; color: #00bfff;">eplusVar1</code></i>,&#160;&#160;&#160;!- EMS Variable Name</p>
+            <p class="codeindentCW2">Averaged, &#160;&#160;&#160;&#160;&#160;!- Type of Data in Variable</p>
+            <p class="codeindentCW2">ZoneTimestep; &#160;!- Update Frequency</p>
+            <p class="codeindentCW2">&#160;</p>
+            <p class="codeCW2">EnergyManagementSystem:GlobalVariable,</p>
+            <p class="codeindentCW2">g_<i><code style="font-style: italic; color: #00bfff;">eplusVar1</code></i>;&#160;&#160;!- Erl Variable 1 Name</p>
+            <p class="codeindentCW2">&#160;</p>
+            <p class="codeCW2">EnergyManagementSystem:Program,</p>
+            <p class="codeindentCW2">prog_eplus_to_contamVars,  !- Name</p>
+            <p class="codeindentCW2">SET g_<i><code style="font-style: italic; color: #00bfff;">eplusVar1</code></i> = 1.0; &#160;&#160;&#160;!- Program Line 1</p>
+            <p class="codeindentCW2">&#160;</p>
+        </div>
+        <h6>For the Split control:</h6>
+        <p class="codeCW2">&#160;</p>
+        <p class="codeCW2">ExternalInterface:FunctionalMockupUnitImport:To:Schedule,</p>
+        <p class="codeindentCW2">FmuSched_<code style="font-style: italic; color: #808080;">contamVarB</code>,&#160;!- Name</p>
+        <p class="codeindentCW2">Any Number,&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;!- Schedule Type Limits Names</p>
+        <p class="codeindentCW2">ContamFMU.fmu, &#160;&#160;&#160;&#160;&#160;&#160;!- FMU File Name</p>
+        <p class="codeindentCW2">ContamFMU,&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;!- FMU Instance Name</p>
+        <p class="codeindentCW2">CTRL_O_<code style="font-style: italic; color: #808080;">contamVarB</code>,&#160;&#160;&#160;!- FMU Variable Name</p>
+        <p class="codeindentCW2">0;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;!- Initial Value</p>
+        <p class="codeCW2">&#160;</p>
+        <p class="codeCW2">Output:Variable,</p>
+        <p class="codeindentCW2">*,&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;!- Key Value</p>
+        <p class="codeindentCW2"><code style="font-style: italic; color: #808080;">contamVarB</code>,&#160;!- Variable Name</p>
+        <p class="codeindentCW2">Timestep;&#160;&#160;&#160;!- Reporting Frequency</p>
+        <p class="codeCW2">&#160;</p>
+        <p class="codeCW2">EnergyManagementSystem:OutputVariable,</p>
+        <p class="codeindentCW2"><code style="font-style: italic; color: #808080;">contamVarB</code>,&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;!- Name</p>
+        <p class="codeindentCW2">Sensor_<code style="font-style: italic; color: #808080;">contamVarB</code>,&#160;!- EMS Variable Name</p>
+        <p class="codeindentCW2">Averaged,&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;!- Type of Data in Variable</p>
+        <p class="codeindentCW2">ZoneTimestep;&#160;&#160;&#160;&#160;&#160;&#160;!- Update Frequency</p>
+        <p class="codeCW2">&#160;</p>
+        <p class="codeCW2">EnergyManagementSystem:Sensor,</p>
+        <p class="codeindentCW2">Sensor_<code style="font-style: italic; color: #808080;">contamVarB</code>,&#160;&#160;&#160;!- Name</p>
+        <p class="codeindentCW2">FmuSched_<code style="font-style: italic; color: #808080;">contamVarB</code>,&#160;!- Output:Variable or Output:Meter Index Key Name</p>
+        <p class="codeindentCW2">Schedule Value;&#160;&#160;&#160;&#160; &#160;!- Output:Variable or Output:Meter Name</p>
+        <p class="codeindentCW2">&#160;</p>
+        <p class="codeCW2">EnergyManagementSystem:Program,</p>
+        <p class="codeindentCW2">prog_contamVars_to_eplus,&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; &#160;!- Name</p>
+        <p class="codeindentCW2">SET local_<code style="font-style: italic; color: #808080;">contamVarB</code> = Sensor_<code style="font-style: italic; color: #808080;">contamVarB</code>;&#160;!- Program Line 1</p>
+        <p class="codeindentCW2">&#160;</p>
+        <h6>Running CONTAM3DExport</h6>
+        <p class="SubHeading1">Create the EnergyPlus IDF File using <i>CONTAM3DExport</i></p>
+        <ol>
+            <li value="1">Run <i>CONTAM3DExport</i> and select the PRJ file to convert to EnergyPlus. </li>
+            <li value="2">Select an existing IDF file that contains the <span style="font-family: 'Courier New';"><span style="font-family: 'Times New Roman';"></span>Material</span> and <span style="font-family: 'Courier New';"><span style="font-family: 'Times New Roman';"></span>Construction</span> objects that you want to incorporate into the new IDF file. </li>
+            <p class="NormalIndentCW2">NOTE: <i>CONTAM3DExport</i> will create adjacent surfaces for floors and ceilings and interior walls, therefore constructions having reversed layers for these types of surfaces or symmetric layers if using the same constructions on both sides are beneficial to the coupling process. <i>CONTAM3DExporter</i> creates <code>BuildingSurface:Detailed</code> objects that utilize the Surface type Outside Boundary Conditions for these surfaces.</p>
+            <li value="3">Select which constructions you want to associate with each surface category.</li>
+            <li value="4">Select the <i>Building Coupled with CONTAM</i>&#160;&#160;Export Option.</li>
+            <li class="CW2" value="5">Select the desired Air Loop option. This option will be applied to each simple air-handling system (AHS) in the CONTAM project unless defined to be an exhaust or heat recovery AHS.<ol style="list-style-type: lower-alpha;"><li class="CW2" value="1">Fan Only - Create <code>AirLoopHVAC</code> <![CDATA[ ]]>with a fan but no heating or cooling components.</li><li class="CW2" value="2">Unitary Heat Cool - Include <code>AirLoopHVAC:UnitaryHeatCool</code> space conditioning systems.</li><li class="CW2" value="3">Air to Air Heatpump - Include <code>UnitaryHeatPump:AirToAir</code> space conditioning systems.</li></ol></li>
+            <li value="6">Click the Save EnergyPlus IDF button. You will be prompted when the export is complete.</li>
+        </ol>
+        <p class="SubHeading1">Files Created by <i>CONTAM3DExport</i></p>
+        <ul>
+            <li value="1"><b>IDF file</b> - contains the geometry, air loops, exhaust fans and FMU-related objects.</li>
+            <li value="2"><b>ContamFMU.fmu</b> - a compressed zip file that will be unpacked by EnergyPlus and used during a coupled EnergyPlus/CONTAM simulation. It contains the following files:
+			<ul style="list-style-type: circle;"><li value="1"><b>modelDescription.xml</b> - used by the EnergyPlus FMI co-simulation master algorithm to obtain data exchange parameters.</li><li value="2"><b>contam.vef</b> - <b>V</b>ariable <b>E</b>xchange <b>F</b>ile used by ContamX to obtain data exchange parameters.</li><li value="3"><b>contam.prj</b> - the CONTAM project file used to generate the corresponding EnergyPlus IDF file and used by ContamX during the co-simulation.</li><li value="4"><b>ContamFMU.dll</b> - dynamic link library utilized by the EnergyPlus master algorithm to implement FMI-based program control and data exchange with ContamX.</li><li value="5"><b>contamx3.exe</b> - the CONTAM simulation engine controlled by the EnergyPlus FMI co-simulation master algorithm via the ContamFMU.dll.</li></ul></li>
+        </ul>
+        <p class="SubHeading1">Modify IDF File</p>
+        <p class="NormalCW2">The IDF file generated by <i>CONTAM3DExport</i> contains the building geometry, surface materials and constructions, air loops, exhaust fans and external interface objects as described above. The file will also include the HVAC components associated with the generation or removal of energy, e.g., heating/cooling coils. While the coupled simulation should run as exported, it is not likely to perform as desired. It will not include internal gains, ground coupling, or water-related items, and the HVAC system may not incorporate all of the desired components, desired sizes of those created, e.g., coils and fans, and the thermostatic set-points should be modified as desired.</p>
+        <p class="NormalCW2">The IDF file can now be edited using the IDF Editor or other text-based editor to add or modify the desired components. The IDF file can also be viewed and edited using tools such as OpenStudio or its associated Sketchup plug-in  [<a href="../IDH_References.htm#REF_Guglielmetti_2011">Gugliemetti 2011</a>, <a href="../IDH_References.htm#NREL_2015">NREL 2015</a>]. For example, the IDF file can be imported into OpenStudio and the Geometry viewer can be used to verify the geometry, surface identifiers, and constructions of the exported IDF as well as any modifications made to the file. This is especially useful to verify modification of the rectangular elements that are created by <i>CONTAM3DExport</i>, including roofs that must be modified to have sloped surfaces and to add shading components to the building.</p>
+        <p class="SubHeading1">Run the Simulation</p>
+        <p>The IDF file and ContamFMU.fmu file must be located in the same directory. The files packaged within the ContamFMU.fmu file can be extracted and repackaged using a zip file decompression program. This may be necessary to modify run control parameters of the contam.prj file as outlined below.</p>
+        <ol>
+            <li value="1">Set the time step and the beginning and ending dates to be the same in the contam.prj file and the IDF file. </li>
+            <li class="CW2" value="2">If desired, the coupled simulation can be made to utilize a restart file. This may be beneficial to obtaining initial airflows and temperatures within the CONTAM model but may be undesirable for loading of contaminant sinks and filters. The simulation can be made to use the restart file by modifying the following line of the contam.prj via a text editor to set the restart flag to 1 and the date to the first day of the coupled simulation. It is no longer necessary to run the simulation via ContamW prior to setting the restart capability, but it is still a valid means of doing so. Once the contam.prj file has been modified, you must replace the existing PRJ file in the compressed Contam.FMU file.<br /></li>
+            <p class="codeCW2">!restart&#160;&#160;date&#160;&#160;time</p>
+            <p class="codeCW2">&#160;&#160;&#160;&#160;&#160;&#160;&#160;1&#160;Jan01&#160;&#160;24:00:00</p>
+            <li value="3">Use <i>EPLaunch</i> to select the IDF file and desired EnergyPlus weather (EPW) file and run the simulation. </li>
+            <li value="4">Once the simulation is complete, ContamW can be used to view/plot results of the contam.prj including temperatures.</li>
+        </ol>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

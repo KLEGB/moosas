@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with Project Files</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2><a name="kanchor8"></a>Working with Project Files</h2>
+        <p>All information related to the layout, building components, and occupant information of your CONTAM project are stored in a "project" file. When you save the project file, it will be stored with the ".PRJ" extension. CONTAM project file names must conform to the file naming conventions of the Windows operating system. This project name is displayed in the Title bar of the ContamW application window.</p>
+        <p>All project file operations are contained under the <span style="font-weight: bold;text-decoration: underline;">F</span><span style="font-weight: bold;">ile</span> menu. These operations include: <span style="font-weight: bold;text-decoration: underline;">N</span><span style="font-weight: bold;">ew Project</span>, <span style="font-weight: bold;text-decoration: underline;">O</span><span style="font-weight: bold;">pen Project…</span>, <span style="font-weight: bold;text-decoration: underline;">S</span><span style="font-weight: bold;">ave Project</span>, and <span style="font-weight: bold;">Save Project </span><span style="font-weight: bold;text-decoration: underline;">A</span><span style="font-weight: bold;">s…</span> Note that some of these file operations have keyboard short-cuts and/or tool bar buttons associated with them.</p>
+        <p class="SubHeading1">Creating a New Project</p>
+        <p>Menu Command:&#160;<span style="font-weight: bold;text-decoration: underline;">F</span><span style="font-weight: bold;">ile </span>&#8594;<span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="font-weight: bold;text-decoration: underline;">N</span><span style="font-weight: bold;">ew Project</span><br />Keyboard Shortcut: &#160;None<br />Toolbar Button:&#160;<img src="../../image/BtnFileNew.gif" border="0" height="22" width="23" alt="image\BtnFileNew.gif" /></p>
+        <p>Use this command if you are currently working on a project and you wish to create a new one. This command will clear the SketchPad and all data related to the current project from ContamW's program memory. If your current project has not been saved prior to executing this command, you will be asked whether or not you wish to save it prior to clearing it. </p>
+        <p>A dialog box will appear enabling you to enter a project description (See <span style="font-weight: bold;">Editing the Project File Description</span> below )</p>
+        <p class="SubHeading1">Opening an Existing Project</p>
+        <p>Menu Command:&#160;<span style="font-weight: bold;text-decoration: underline;">F</span><span style="font-weight: bold;">ile </span>&#8594;<span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="font-weight: bold;text-decoration: underline;">O</span><span style="font-weight: bold;">pen Project…</span><br />Keyboard Shortcut:&#160;<span style="font-weight: bold;">Ctrl+O</span><br />Toolbar Button: &#160;<img src="../../image/BtnFileOpen.gif" border="0" height="22" width="23" alt="image\BtnFileOpen.gif" /></p>
+        <p>OR</p>
+        <p class="Normal">Menu Command: <span style="font-weight: bold;text-decoration: underline;">F</span><span style="font-weight: bold;">ile </span>&#8594;<span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="font-weight: bold;">Recent <u>P</u>rojects</span></p>
+        <p>Use these menu items to open and existing CONTAM project file. This command will display the File Open dialog box typical of Windows applications. This dialog box is set to display only those files having the ".PRJ" extension in order to simplify your search for CONTAM project files. Follow the typical procedure for opening a file using the Windows operating system.</p>
+        <p>The Open dialog box provides you with both the Version and Description of the highlighted project file. You can edit the project file description via the<span style="color: #993300;"> <![CDATA[ ]]></span><span style="font-weight: bold;">File </span>&#8594;<span style="font-weight: bold;"> Project Description…</span> menu item.</p>
+        <p>When a project file is successfully read by ContamW, a backup copy of the project file is created with the name CONTAM.BKP in the program directory. </p>
+        <p class="SubHeading1"><a name="SupportFiles">Opening Project Support Files</a>
+        </p>
+        <p class="Normal">You can now open input and output files related to the current project, including the ContamW and ContamX log files, via the <span style="font-weight: bold;text-decoration: underline;">F</span><span style="font-weight: bold;">ile </span>&#8594;<span style="font-weight: bold;"> O</span><span style="font-weight: bold;">pen Project <u>I</u>nput Files</span> and <span style="font-weight: bold;text-decoration: none;">F</span><span style="font-weight: bold;">ile </span>&#8594;<span style="font-weight: bold;"> O</span><span style="font-weight: bold;">pen Project <u>O</u>utput Files</span> menu commands. The files will open according to the Windows file extension associations.</p>
+        <p class="SubHeading1">Converting Projects from Previous Versions</p>
+        <p>Menu Command: &#160;<span style="font-weight: bold;text-decoration: underline;">F</span><span style="font-weight: bold;">ile</span> <![CDATA[ ]]><![CDATA[ ]]>&#8594;       <![CDATA[ ]]><![CDATA[ ]]><span style="font-weight: bold;text-decoration: underline;">O</span><span style="font-weight: bold;">pen Project…</span><br />Keyboard Shortcut: &#160;<span style="font-weight: bold;">Ctrl+O</span></p>
+        <p>This is the same as opening an existing project. However, after you open a project of an earlier version it will be untitled, so you must give the project a name when saving it. Once you save a project with the most recent format, you will no longer be able to open it using an earlier version of CONTAM.</p>
+        <p>A utility is also provided on the NIST website that will enable you to quickly update a set of project files to the current version. For example PrjUp24.exe will upgrade to the CONTAM 2.4 format. To utilize this utility, copy prjup24.exe and the desired project file(s) to a new directory, select the projects to update and drag and drop them onto the prjup24.exe file. <u>This will replace the existing files with updated versions.</u></p>
+        <p class="SubHeading1">Editing the Project File Description</p>
+        <p>Menu Command: &#160;<span style="font-weight: bold;text-decoration: underline;">F</span><span style="font-weight: bold;">ile </span>&#8594;<span style="font-weight: bold;"> Project </span><span style="font-weight: bold;text-decoration: underline;">D</span><span style="font-weight: bold;">escription…</span></p>
+        <p>Use this feature to enter a project file description which is provided to help you manage your project files. This description will be available when you are opening project files from within ContamW. </p>
+        <p class="SubHeading1">Saving a Project</p>
+        <p>Menu Command: &#160;<span style="font-weight: bold;text-decoration: underline;">F</span><span style="font-weight: bold;">ile </span>&#8594;<span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="font-weight: bold;text-decoration: underline;">S</span><span style="font-weight: bold;">ave Project</span><br />Keyboard Shortcut: &#160;<span style="font-weight: bold;">Ctrl+S</span><br />Toolbar Button:&#160;<img src="../../image/BtnFileSave.gif" border="0" height="22" width="23" alt="image\BtnFileSave.gif" /></p>
+        <p>This option saves the building description to the project file under its current name.</p>
+        <p class="SubHeading1">Renaming a Project</p>
+        <p>Menu Command: &#160;<span style="font-weight: bold;text-decoration: underline;">F</span><span style="font-weight: bold;">ile </span>&#8594;<span style="font-weight: bold;"> Save Project </span><span style="font-weight: bold;text-decoration: underline;">A</span><span style="font-weight: bold;">s…</span><br />Keyboard Shortcut: &#160;None<br />Toolbar Button: &#160;None</p>
+        <p>Use this command to save a copy of the current project file under a new name. This will display the Windows "Save As" dialog box and allow you to specify both a storage location and a file name for the project file. ContamW will automatically append the ".prj" extension to the filename, so you do not have to give the file an extension. If you do give the file an extension, ".prj" will be appended as well as the extension you provide. If you specify the name of an existing file, you will be warned that saving the file will overwrite the existing file. If you try to save an untitled or new project file prior to giving it a name, the "Save As" dialog box will be displayed.</p>
+        <p class="SubHeading1">Exiting ContamW</p>
+        <p>Menu Command: &#160;<span style="font-weight: bold;text-decoration: underline;">F</span><span style="font-weight: bold;">ile </span>&#8594;<span style="font-weight: bold;"> E</span><span style="font-weight: bold;text-decoration: underline;">x</span><span style="font-weight: bold;">it</span><br />Keyboard Shortcut:&#160;None<br />Toolbar Button: &#160;None</p>
+        <p>You can also exit the program using the standard window-closing button located in the upper right-hand corner of the program window.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

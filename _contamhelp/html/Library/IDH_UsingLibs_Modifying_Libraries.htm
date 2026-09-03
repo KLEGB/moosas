@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Data and Libraries" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Modifying Libraries</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor124"></a>Modifying Libraries</h3>
+        <p>You modify CONTAM library files using the CONTAMW Library Manager. The CONTAMW Library Manager allows you to create new data elements within the library, copy data elements from the local project into the library, modify library data elements, and delete data elements from the library.</p>
+        <p class="SubHeading1">Creating Library Data Elements</p>
+        <p>You use the "New" button contained within the "Library Elements" section of the CONTAMW Library Manager to create a new data element. You can only create the type of data element that is currently being displayed by the Library Manager (e.g. airflow elements, duct flow elements, schedules, etc. ). The "New" button will activate the ContamW dialog box associated with creating the type of data element that you are currently working with.</p>
+        <p>Species must be available in order to create new contaminant-related elements such as Sources/Sinks, Filters and Kinetic reactions.</p>
+        <p class="SubHeading1"><a name="IDM_Copying_Library_Data_Elements"></a>Copying Library Data Elements (between the Project and Library)</p>
+        <p>You can either copy data element from a library to the local project or from the local project to the library. All copying is done between the local project and the library file that is currently indicated in the "Name" box of the Library File section of the CONTAMW Library Manager. If the name box is blank, then you are dealing with a new/unnamed library file. To copy data elements, you use the "Copy &#8594;" and "&#8592; Copy" buttons. These copy buttons indicate the direction of the copy operation. If an element exists in both the library file and the local project, then the copy buttons will be disabled to prevent you from overwriting elements with the same name. You may rename local data elements without affecting their associations with building components that refer to them in the local project.</p>
+        <p>Some elements rely on other types of elements for proper implementation, e.g., source/sinks require an associated species and week schedules require day schedules. If you copy one of these elements that requires a sub element, ContamW will prompt you to replace existing elements of the same name if they already exist within the destination file.</p>
+        <p class="SubHeading1">Modifying Library Data Elements</p>
+        <p>To modify a library data element, you must first highlight the Element Name within the list of elements in the Library Elements section of the CONTAMW Library Manager. You then click on the "Edit" button next to the list. This will activate the ContamW dialog box associated with displaying the properties of the type of data element with which you are currently working. You then make the desired changes and click the "OK" button to make the changes take effect.</p>
+        <p class="SubHeading1">Deleting Library Data Elements</p>
+        <p>To delete a library data element, you highlight the Element Name in the Library Elements section of the CONTAMW Library Manager then click on the "Delete" button next to the list. You will be prompted to confirm the deletion, and the data element will no longer be displayed in the list of Library Elements. However, the deletion will not be affected until you save the library file. You can retrieve the previously deleted data elements by reopening the library file as long as you don't save the file after deleting the elements.</p>
+        <p>Deleting data elements that have associated sub-elements will not delete the sub-elements. You must delete the sub-elements using a separate Library Manager operation.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

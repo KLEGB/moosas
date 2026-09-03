@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Controls" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Continuous Values File CVF Format</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Continuous Values File (CVF) Format</h3>
+        <p>You can use CVF&#160;files to implement schedules that are not limited to the twelve day types as are CONTAM schedules. CVF values are made available to ContamX through the continuous values file which has a CVF file name extension. During simulation, ContamX will linearly interpolate between the values provided in the CVF&#160;file. You create the text file according to the following format using an external program.</p>
+        <p class="NormalItalic">The first line of the CVF is used to identify the type of file. It is exactly: </p>
+        <p class="code">ContinuousValuesFile ContamW 2.1</p>
+        <p class="NormalItalic">The second line is a description of the file entered by the user:</p>
+        <p class="code">desc[]&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; // file description (I1) {W}; may be blank
+        </p>
+        <p class="NormalItalic">The next line defines the period covered by the file:</p>
+        <p class="code">StartDate&#160;&#160;&#160;&#160;&#160; // first date for DEF data (mm/dd <span style="font-family: Symbol;">®</span> IX)
+        </p>
+        <p class="code">EndDate&#160;&#160;&#160;&#160;&#160;&#160;&#160; // last date for DEF data (mm/dd <span style="font-family: Symbol;">®</span> IX)
+        </p>
+        <p class="NormalItalic">The next section specifies the control node names:</p>
+        <p class="code">_nbvfn&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; // number of CVF node names</p>
+        <p class="NormalItalic">followed by _nbvfn lines consisting of node names:</p>
+        <p class="code">name[]&#160;&#160;&#160;&#160;&#160;&#160;&#160; &#160;// node name (I1)</p>
+        <p class="NormalItalic">The remainder of the file consists of data for all nodes for each date and time from StartDate to EndDate:</p>
+        <p class="code"><span>date&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; &#160;&#160;// date (mm/dd </span><span style="font-family: Symbol;">®</span><span> IX)</span>
+        </p>
+        <p class="code">time&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; &#160;&#160;// time of day (hh:mm:ss <span style="font-family: Symbol;">®</span> I4)
+        </p>
+        <p class="code">value[1]&#160;&#160;&#160;&#160; &#160;&#160;// value [?] for name[1] (R4)</p>
+        <p class="code">...</p>
+        <p class="code">value[_nbvf] &#160;&#160;// value [?]for name[_nbvf] (R4)</p>
+        <p>The node data must start at time 00:00:00 on the StartDate and end at 24:00:00 on the EndDate.&#160; The times must be in consecutive order, but the difference between successive times need not be constant.
+        </p>
+        <p>The file description may not begin with a "<span style="font-family: 'Courier New';font-weight: bold;font-size: 10pt;">!</span>". The <span style="font-family: 'Courier New';font-size: 10pt;">StartDate</span> and <span style="font-family: 'Courier New';font-size: 10pt;">EndDate</span> are used to verify that the file data covers the entire period to be simulated. The <span style="font-family: 'Courier New';font-size: 10pt;">StartDate</span> may not be later than the <span style="font-family: 'Courier New';font-size: 10pt;">EndDate</span>. Data elements on a single line are separated by tabs. The data must be in time-sequential order. The file values must be in the units needed for the signal created by the control node.
+        </p>
+        <p>Node names may not include imbedded blanks. Data for nodes that are not in the project file will be ignored. If a CVF node name in the project file is not included in the CVF, a fatal error will result. ContamW will assist the user by checking node names. ContamX will perform the name check before simulation begins.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

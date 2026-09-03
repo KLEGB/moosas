@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Introduction" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Program Modifications</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>Program Modifications</h2>
+        <p><span style="color: #8b0000;">CONTAM 3.4</span> is the latest version in the line of CONTAM programs.  The history of major enhancements is provided below. The latest version of CONTAM is backwards compatible with previous versions, meaning you can open existing project files created with previous versions. Once updated to the latest version of the program, project files cannot be saved as or opened with previous versions. Therefore, you should maintain older copies of your existing project files.</p>
+        <p class="NormalCW2">Throughout this manual you will find new features (latest revision) of the program highlighted as illustrated by this paragraph. <br /></p>
+        <p class="SubHeading1"><b>Version 3.4.0.0</b>
+        </p>
+        <p class="NormalCW2">Modified PRJ to include multigrid CFD solution variables, but ContamW has not yet been modified to provide access to these variables. The solution method defaults to multigrid, and the PRJ file must be modified using a text editor to change the default solution method and associated values.</p>
+        <p class="SubHeading1"><b>Version 3.3.0.0</b>
+        </p>
+        <p class="NormalCW2">Most modifications to version 3.3 relate to bug fixes and coupling with external programs. The only major change related to CONTAM capabilities is the implementation of a multigrid CFD solver. However, the minor version, i.e., “.3” was updated due to changes in the PRJ format. Icon coloring was added to address icons beyond the previous zone and duct icon coloring. An additional icon color field was added for airflow paths, source sinks, simple air handling systems, occupant exposure and annotations. The use of outdoor air and zone humidity ratio was incorporated into the ContamX messaging scheme.</p>
+        <p class="NormalItalicCW2">ContamX Enhancements</p>
+        <ul>
+            <li class="CW2" value="1"><i>EnergyPlus Co-simulation</i>
+                <ul style="list-style-type: circle;">
+                    <li class="CW2" value="1">Implemented humidity ratio messages. ContamX calculates volumetric airflows using humidity ratio based on EnergyPlus density calculation method PsyRhoAirFnPbTdbW_Eplus().<br /></li>
+                    <li class="CW2" value="2">Enabled co-simulation to start without an initial CONTAM restart (.RST) file.<br /></li>
+                </ul>
+            </li>
+        </ul>
+        <ul>
+            <li class="CW2" value="1"><i>Coupled Multizone/CFD</i>
+                <ul style="list-style-type: circle;">
+                    <li class="CW2" value="1">Enabled simple air handling system supply and return paths to be placed within CFD zones.<br /></li>
+                    <li class="CW2" value="2">Implemented multigrid solution method.<br /></li>
+                </ul>
+            </li>
+        </ul>
+        <p class="NormalItalicCW2">ContamX Resolved Issues</p>
+        <ul>
+            <li class="CW2" value="1"><i>Pressure-driven Source – </i>Source was incorrectly using zone pressure instead of zone gage pressure to calculate emission rate. This has been corrected and a check has been added to ensure only negative gage pressures produce an emission rate.<br /></li>
+            <li class="CW2" value="2"><i>December-January crossover – </i>Enabled simulations to be run that crossover the Dec31 to Jan01 date. Issues were due to handling of external input files: WTH, CTM, WPC, CVF, and DVF. As a result, cyclical simulations are also now handled correctly. Results output to the controls log file are now handled correctly.<br /></li>
+            <li class="CW2" value="3"><i>Building Pressurization Simulation</i> – Allow two-way airflow elements to be open during Building Pressurization Simulations.<br /></li>
+            <li class="CW2" value="4"><i>Result Files Timestep</i> – The simulation time step was being written to some result files instead of the listing time step (EXP, ACH, AGE).<br /></li>
+            <li class="CW2" value="5"><i>Box-whisker Calculations – </i>Increased floating point resolution of box-whisker calculations to improve output accuracy.<br /></li>
+            <li class="CW2" value="6"><i>PI Control – </i>PI controller output was incorrect for inputs less than or equal to 0.0. Now coerces output to between 0 and 1.<br /></li>
+            <li class="CW2" value="7"><i>Cubic Spline Elements – </i>Fixed issue reading cubic spline airflow elements that was revealed when running the Linux version of ContamX.<br /></li>
+            <li class="CW2" value="8"><i>Running Average Control – </i>Corrected calculation.<br /></li>
+            <li class="CW2" value="9"><i>PATH_FLOW_UPDATE_MSG – </i>Corrected volume flow rate calculation (Vdot) to Mdot/AmbientDensity. Previously it was being calculated as Mdot/ZoneDensity. EnergyPlus reports the flow as Vdot*AmbientDensity/ZoneDensity.<br /></li>
+            <li class="CW2" value="10"><i>CONTROL_NODE_UPDATE_MSG and ADJ_CONTROL_NODE_MSG – </i>Corrected issues related to both input and output control messages.<br /></li>
+        </ul>
+        <p class="NormalItalicCW2">ContamW Enhancements</p>
+        <ul>
+            <li class="CW2" value="1"><i>Tracing Image – </i>Provide ability to import a bitmap, e.g., image of a floor plan, onto the SketchPad to allow tracing over the image. The image can be moved and resized on the SketchPad. Drawing of walls is no longer confined to odd rows and columns of the SketchPad.</li>
+        </ul>
+        <p class="NormalItalicCW2">Contam3DExporter Enhancements</p>
+        <ul>
+            <li class="CW2" value="1"><i>EnergyPlus – </i>Provide the option to create air loops associated with <i>Simple Air Handling Systems</i> that contain a fan to move air through the loop or to incorporate one of two types of thermal conditioning systems within the air loop, i.e., <code>AirLoopHVAC:UnitaryHeatCool</code> or <code>AirLoopHVAC:UnitaryHeatPump:AirToAir</code> system.<i></i></li>
+            <li class="CW2" value="2">TRNSYS – Streamlined coupling process and updated for TRNSYS version 18.</li>
+        </ul>
+        <p class="SubHeading1"><b><b><b><b>Version 3.2.0.3</b></b></b></b>
+        </p>
+        <p><i>Coupled EnergyPlus-CONTAM and TRNSYS-CONTAM</i> - Enabled coupled simulations to start on date other than Jan 01 and to cross the Dec/Jan end of year.</p>
+        <p class="SubHeading1"><b><b><b><b>Version 3.2</b></b></b></b>
+        </p>
+        <p><i>EnergyPlus-CONTAM Multizone Airflow, Heat Transfer and Contaminant Analysis </i>- This capability includes modifications to ContamX and the creation of a new dynamic link library (DLL) that implements co-simulation between EnergyPlus and ContamX via the Functional Mockup Interface (FMI). This includes the development of ContamFMU.dll and enhancing CONTAM3DExport.exe to enable the creation of EnergyPlus input files for the purposes of performing co-simulation.</p>
+        <p><i>Contaminant Exfiltration Result Files</i> - Added the ability to create result files that provide the mass of contaminants that are transported to ambient.</p>
+        <p><i>SQLite Database Result Files</i> - Added the ability to create a SQLite database file (.sqlite3) that contains the same results as the simulation results file (.sim).</p>
+        <p><i>UVGI Filter</i> - Added an ultra-violet germicidal irradiation filter element.</p>
+        <p><i>Direct Scheduling via CVF and DVF Controls</i> - Added the ability to directly schedule items, e.g., source/sinks and airflow paths, via external files without an associated controls networks drawn on the SketchPad.</p>
+        <p class="SubHeading1"><b><b><b><b>Version 3.1</b></b></b></b>
+        </p>
+        <p><i>TRNSYS-CONTAM Multizone Airflow, Heat Transfer and Contaminant Analysis </i>- This capability includes modifications to ContamW and ContamX and the creation of a new TRNSYS Type and the software utilities to provide a new coupling process that enables ContamX to be more directly coupled with TRNSYS Type56. </p>
+        <p class="NormalIndent"><i>ContamW Pseudo-geometry</i> - Provide ability to define scaling factor for drawing on the ContamW SketchPad and view wall dimensions on the SketchPad. This feature is an aid to utilities provided for the TRNSYS-CONTAM coupling that create three-dimensional representations for TRNSYS&#160;Type56 multizone heat transfer calculation.</p>
+        <p class="NormalIndent"><i>ContamW Temperature Plots</i> - Provide ability to plot temperatures in ContamW.</p>
+        <p class="NormalIndent"><i>ContamX</i> - Added socket communication messages that provide for the transfer of temperatures and airflow to/from ContamX.</p>
+        <p class="NormalIndent"><i>Type98</i> - Acts as a bridge between ContamX and Type56 for TRNSYS simulations.</p>
+        <p class="NormalIndent"><i>Utilities</i> - Created software utilities <i>CONTAM3DExport.exe</i> to extrude scaled CONTAM prj representations to form <i>Trnsys3d</i><i>idf</i> files and <i>Type56-98Coupler.exe</i>  to form the linkage between Type56 and Type98.</p>
+        <p><i>CVODE</i> - Implemented a variable time step solver for transient contaminant transport calculations. CVODE, is a general-purpose code for solving ordinary differential equations, that provides for variable time steps, high-order integration methods, and automatic error control.</p>
+        <p class="NormalItalic">Usability Enhancements</p>
+        <p class="NormalIndent"><i>Particle Plots</i> - Provide ability to plot particle distributions when simulating multiple size ranges with ContamW.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Result Mode Toolbar</font> - Provide toolbar buttons to manipulate result time step display.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Simulation Time Step Analysis</font> - Provide ability for user to check schedules and input files (WTH, CTM, DVF, CVF) for maximum time step required to capture all scheduled events.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Program/Project Configuration</font> - Modified ContamW configuration to separate out Program-related options from Project-related options. </p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Result File Output</font> - Provide user with control over output of simulation result files CSM, LOG, and SRF.</p>
+        <p class="NormalItalic">Resolved Program Issues</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Restart File</font> - Restart (rst) file did not properly account for Deposition/Resuspension source/sinks. Also, modified restart file behavior to only write restart data at the end of each day (24:00:00) and/or at the end of the last day if shorter than 24 hours. User is no longer required to select the time to use when utilizing the restart file, only the date.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">PLD File and Duct Terminals</font> - Duct terminals were not being output to the Path Location Data file (PLD).</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Results Display Window and Duct Leakage</font> - The results display window was not providing duct leakage airflow results for zones having junctions in them with associated duct leakage.</p>
+        <p class="NormalIndentCW2"><font style="font-style:italic; "></font>
+        </p>
+        <p class="SubHeading1"><b><b>Version 3.0a</b></b>
+        </p>
+        <p><i>Self-Regulating Vent</i> - A new airflow element has been added to CONTAM. The self-regulating vent limits the airflow rate in both directions through a flow path with user-defined limiting air pressure differences. CONTAM implements the self-regulating vent as described by Axley 2001 Residential Passive Ventilation Systems: Evaluation and Design.</p>
+        <p><i>Surface Node Results File</i> - Added new results file (SRF) for Boundary Layer and Deposition/Resuspension source/sink elements.</p>
+        <p><i>New Zone Color Option</i> - Now when revealing the level below there is an option to see the zone colors of the zones on the level below.</p>
+        <p class="NormalItalic">Resolved Program Issues</p>
+        <p class="NormalItalic">ContamW</p>
+        <p class="NormalIndent"><i>Fix</i> - crash could occur when deleting a level.</p>
+        <p class="NormalIndent"><i>Fix</i> - enable transient simulation times that span the Dec/Jan transition, i.e., allow simulations to start before December and end after January.</p>
+        <p class="NormalIndent"><i>Fix</i> - when replacing a wind pressure profile with the Find &amp; Replace dialog the wall azimuth and wind speed modifier should be set to the defaults.</p>
+        <p class="NormalIndent"><i>Fix</i> - allow plotting of results for a simulation that spans the Dec/Jan transition.</p>
+        <p class="NormalIndent"><i>Fix</i> - crash occurred when deleting zones having occupancy schedules that referenced them.</p>
+        <p class="NormalIndent"><i>Fix</i> - incorrect painting of the toolbar for some Windows themes.</p>
+        <p class="NormalIndent"><i>Fix</i> - cubic spline airflow element curves were not plotted correctly if their curves were invalid.</p>
+        <p class="NormalIndent"><i>Modification</i> - consolidated variable density airflow calculation parameters.</p>
+        <p class="NormalItalic">ContamX</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Fix </font>- Matrix reordering issue when large project files encountered fatal errors when matrix reordering was attempted due to size of index parameter.</p>
+        <p class="NormalIndent"><i>Fix</i> - Prevent intermittent program crash when running under Windows 7 64-bit OS.</p>
+        <p class="NormalIndent"><i>Fix</i> - Contaminant summary file (.csm) issues: values when working with non-trace boundary layer diffusion and deposition/resuspension source sinks were likely too high due to summation of the source contributions over multiple iterations of the variable density iterations within each time step; combinations of non-trace and trace contaminants could result in trace contaminant-related summations not being accounted for. However, these issue did not affect sim file results.</p>
+        <p class="NormalIndent"><i>Fix</i> - Issue related to non-trace contaminant calculations involving Boundary Layer Diffusion and Deposition/Resuspension sources whereby the contribution of mass added to the zone in which these source/sinks were located was incorrectly calculated.</p>
+        <p class="NormalIndent"><i>Fix</i> - Issues related to Deposition with Resuspension source/sink element when performing variable density calculations.</p>
+        <p class="NormalIndent"><i>Fix</i> - Power Law source/sink model was not utilizing the correct source/sink element function.</p>
+        <p class="NormalIndent"><i>Fix</i> - Enable DVF files to handle Dec/Jan transition.</p>
+        <p class="NormalIndent"><i>Fix</i> - Issues related to Decaying (exponential decay) source elements: generation rate was not reset when scheduling the source on/off, and the generation rate was being compounded when multiple Decaying sources were being used.</p>
+        <p class="NormalIndent"><i>Modification</i> - Improved variable density calculations.</p>
+        <p class="SubHeading1"><b><b>Version 3.0</b></b>
+        </p>
+        <p><i>Coupled Multizone/CFD </i> - Implemented the ability to simulate an internal zone using computational fluid dynamics (CFD). Details of this capability are provided via the NIST Multizone Modeling website.</p>
+        <p><i>Deposition/Resuspension Source/Sink Element</i> - Added a new source/sink element that accounts for both deposition and resuspension of particle contaminants to/from a surface.</p>
+        <p><font style="font-style:italic; ">Windows 7 64-bit</font> - ContamX crashed intermittently due to data copy error. </p>
+        <p class="NormalItalics">Usability Enhancements</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Editing Context Menu</font> - Right mouse button to provide cut, copy and paste functions.</p>
+        <p class="SubHeading1"><b>Version 2.4c</b>
+        </p>
+        <p><i>New control types</i> - Added new mathematical functions: exp, ln, log10, etc.</p>
+        <p><i>TCP/IP socket simulation control</i> - Enabled multi-day simulation control.</p>
+        <p class="NormalItalic">Operating System Compatibility</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">CONTAM Fonts</font> - ContamW SketchPad now utilizes internal bitmap patterns instead of font files.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">HTML Help</font> - The ContamW help system has been converted to HTML help for compatibility with the Windows Vista operating system.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">CONTAM Log Files</font> - The contamx2.log and contamw2.log files are now stored in the user's application directory (home directory for Linux version of ContamX).</p>
+        <p class="NormalItalic">Usability Enhancements</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">ContamX Non-Convergence Information</font> - If the ContamX airflow calculation fails to converge, a list of airflow nodes that failed to converge will be provided in the contamx2.log file.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Error List</font> - ContamW generates a list of problem icons that is displayed in the newly implemented <i>Building Check Problems</i> dialog box when a PRJ file does not pass the building check performed prior to a simulation. This includes airflow paths that do not have valid location data when working with WPC files.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Create WPC File Dialog</font> - The WPC dialog box has been modified to enable "manual" generation of PLD files to aid in the creation of WPC files, and the Weather page of the Simulation Parameters property sheet has been modified accordingly.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Recent file list</font> - Added list of recently opened project files to the File menu.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Open Project Input/Output Files</font> - Provided the ability to open CONTAM-related input and output files from the File menu. Files are opened based on file extension associations of Windows.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Result Plotting</font> - Right click on SketchPad icons when viewing results to activate result plotting.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">SketchPad Navigator</font> - Display a small icon SketchPad window to simplify navigation of the main SketchPad with larger icons: from main menu select View - SketchPad Navigator.</p>
+        <p class="NormalIndent"><i>Duct Results Display</i> - duct velocity calculated based on upstream air density.</p>
+        <p class="NormalIndent"><i>CSM&#160;File Format</i> - modified CSM file format to provide more detail related to source/sinks.</p>
+        <p class="NormalItalic">Resolved Program Issues</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Cubic Spline Elements</font> - Enabled the use of cubic spline elements in duct segments.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">CSM File</font> - WPC file contaminants filtered by envelope flow paths were not being accounted for in the Contaminant Summary File.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">DVF and WTH File</font> - WTH file records were being skipped when using both a DVF and a WTH file.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Duct Balancing</font> - After duct balance is performed the flow rates of "mass flow type" fans could be incorrectly set as though they were volume flow types.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Flow Limits</font> - Flow limits of airflow paths were set back to none upon file read.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">CVF/DVF Node Selection</font> - Node drop-down list was improperly sorted causing potential for setting of incorrect nodes.</p>
+        <p class="SubHeading1"><b>Version 2.4b</b>
+        </p>
+        <p class="NormalItalic">Building Controls</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Occupancy Sensor</font> - Added zone occupancy sensor type.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Gage Pressure Sensor</font> - Added gage pressure sensors for zones, duct junctions and terminals.</p>
+        <p class="NormalItalic">Source/Sink Elements</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">NRCC Sources</font> - Added powerlaw and peak contaminant source types based on NRCC material emission database.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Super Source/Sinks</font> - Implemented ability to combine multiple source/sink elements into a single super source/sink element.</p>
+        <p class="NormalItalic">Usability Enhancements </p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Enhanced deletion capabilities</font> - Provided ability to delete multiple items from the SketchPad with a single deletion operation.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Results display</font> - Improved control over selection of simulation time for results display.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Wind pressure display</font> - Provided ability to review transient wind pressures resulting from wind data provided by WPC files.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">SketchPad dragging</font> - Hold down the mouse wheel to drag the SketchPad when scroll bars are visible.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Library Manager</font> - Use the Ctrl and Shift keys to select multiple items from the element lists and perform copy and delete operations on them.</p>
+        <p><b>Version 2.4a</b>
+        </p>
+        <p><font style="font-style:italic; ">Number of building components</font> - The limit on the total number of each type of building component (i.e., zones, paths, ducts, sources/sinks, etc.) that can be created within a single project has been increased from 32 767 to 2 147 483 647.</p>
+        <p><font style="font-style:italic; ">Short time-step method</font> - A new simulation mode that solves contaminant dispersal equations using an explicit solution method. </p>
+        <p class="NormalIndent"><font style="font-style:italic; ">1D Zones</font> - The ability to simulate selected zones as one-dimensional convection/diffusion zones has been implemented. This provides the ability to more realistically simulate the transport of contaminants through "long" or "tall" zones, e.g., hallways and shafts, better accounting for transport times through these 1D zones.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">1D </font><font style="font-style:italic; ">duct m</font><font style="font-style:italic; ">odel</font> - Implementation of one-dimensional convection/diffusion elements in ductwork, thus providing more realistic contaminant transport results through the duct system. This requires the use of the short time-step method.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Duct temperature calculations</font> - When simulating 1D ducts in the short time-step mode, CONTAM can now calculate duct temperatures based on the "mixing" of air streams at the duct junctions and the source (zone) air temperatures from which air is introduced into the duct system.</p>
+        <p><font style="font-style:italic; ">Simulation results data</font> - Modified the <font style="font-style:italic; ">zone</font> and <font style="font-style:italic; ">junction pressures</font> as reported to the simulation results file to more closely resemble gage pressures. Zone pressures are now referenced to the ambient pressure at the level on which the zone is located. Junction static pressure is now referenced to the zone in which the junction is located at the height of the junction within the zone.</p>
+        <p><font style="font-style:italic; ">Automated duct balancing</font> - Added simulation option to automatically balance duct systems. This will greatly simplify the task of defining detailed duct systems in CONTAM.</p>
+        <p class="NormalItalic">Building model verification tests</p>
+        <p class="NormalIndent"><i>Building pressurization test</i> - Simulation option to automatically determine building envelope airtightness based on a simulated fan pressurization test.</p>
+        <p class="NormalIndent"><i>Building airflow test</i> - Simulation option that generates a set of data, mostly related to building ventilation, that can be used to gauge the reasonableness of model inputs before beginning analysis of a building.</p>
+        <p class="NormalItalic">Cubic spline airflow elements</p>
+        <p class="NormalItalic">Contaminant Filters</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">New filter models</font> - CONTAM has added <font style="font-style:italic; ">particle </font>and <font style="font-style:italic; ">gaseous </font>filter models that greatly increases the user-s flexibility to create models based on measured filter performance data, e.g., MERV and breakthrough curves.</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Filter super elements</font> - enables multiple filter models to be combined into a single filter element, e.g., a particle pre-filter combined with a gaseous filter.</p>
+        <p><font style="font-style:italic; ">Contaminant summary file</font> - This file is generated when simulating contaminants to provide information related to source/sink contaminant generation and removal, filter loading and breakthrough, and contaminant transport between building zones and ambient. </p>
+        <p><font style="font-style:italic; ">Deposition sink models</font> - Added Deposition Velocity and Deposition Rate sink models to simplify the definition of sinks based on more familiar deposition terminology.</p>
+        <p><font style="font-style:italic; ">Control super elements</font> - The task of creating building control systems has been improved by reducing the amount of user input required, increasing the amount of flexibility in defining control systems and enabling the sharing of control elements, e.g., sensors, within and between projects. </p>
+        <p><font style="font-style:italic; ">TCP/IP socket simulation control</font> - ContamX can be controlled via the TCP/IP Socket communication protocol based on a pre-defined set of messages that include control commands and data exchange. ContamX can also be compiled and run under Linux based operating systems, and a Linux-compatible executable is now available on the NIST web site.</p>
+        <p><font style="font-style:italic; ">Usability enhancements </font>
+        </p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Find</font> - search for items on SketchPad by Name and Number</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">Find-and-replace</font> - search for and replace properties of building components within a project</p>
+        <p class="NormalIndent"><font style="font-style:italic; ">SketchPad movement</font>
+            <br />Ctrl + arrow key =&gt; skip 10 cells in direction of arrow<br />Shift + arrow key =&gt; move to next icon in the direction of arrow<br />Mouse wheel for scrolling:</p>
+        <p class="NormalIndent2">Wheel =&gt; up/down   &#160;&#160;Shift+Wheel =&gt; page up/down</p>
+        <p class="NormalIndent2">Alt+Wheel =&gt;  left/right &#160;&#160;Shift+Alt+Wheel =&gt; page left/right</p>
+        <p><font style="font-style:italic; ">Keyboard icon placement</font> - use keyboard to place icons on the SketchPad</p>
+        <p><font style="font-style:italic; ">Floating status bar</font>
+        </p>
+        <p>User-defined <font style="font-style:italic; ">zone </font><font style="font-style:italic; ">colors</font></p>
+        <p>User-defined <font style="font-style:italic; ">duct colors</font> and <font style="font-style:italic; ">automated duct tracing/coloring tool</font></p>
+        <p>Generate <font style="font-style:italic; ">bitmap file</font> (.bmp) of SketchPad</p>
+        <p class="SubHeading1">Enhancements from version 2.0 to 2.1</p>
+        <p><font style="font-style:italic; ">Wind pressure and contaminant fields</font> - The ability to incorporate data from exterior airflow and pollutant transport models, e.g., plume and puff dispersion models, to utilize detailed ambient wind pressure and contaminant data fields to provide boundary conditions on the airflow paths of  the envelope of built structures</p>
+        <p><font style="font-style:italic; ">Control elements</font> - New control elements to simulate time delays associated with spin-up/down of fans and the opening/closing of dampers and to perform integration, peak determination of sensor output over time, maximum, minimum and exponential operations</p>
+        <p><font style="font-style:italic; ">Particle analysis</font> - Modified contaminant properties to simplify the analysis of airborne particles </p>
+        <p><font style="font-style:italic; ">Mass release calculation</font> - The calculation of total mass released by contaminant sources during a simulation</p>
+        <p><font style="font-style:italic; ">Program Documentation</font> - Programming documentation of the software was produced which can be obtained from the NIST website. This documentation includes details of CONTAM input and output file formats [<A href="../IDH_References.htm#REF_Walton_2003">Walton and Dols 2003</A>].</p>
+        <p class="SubHeading1">Enhancements from version 1.0 to 2.0</p>
+        <p><i>Building controls</i> - Controls include sensors, actuators, modifiers and links. Control actuators can be used to modify various characteristics of building components based on control signals obtained from sensors and even modified by signal modifiers. For example, a sensor can be used to obtain a contaminant concentration within a zone, and a proportional control actuator can be used to adjust supply airflow into the zone based on the sensed concentration. </p>
+        <p><i>Scheduled zone temperatures</i> - Zone temperatures can now be varied through the use of user-defined schedules. This allows for the change in zone pressures due simply to the change in temperature within the zone according to the ideal gas relationship.</p>
+        <p class="NormalItalic">Contaminants</p>
+        <p class="NormalIndent"><i>Non-trace contaminants</i> - You can now account for the impact of contaminant concentrations on the density of the air, e.g., water vapor.</p>
+        <p class="NormalIndent"><i>Unlimited number of contaminants</i> - CONTAM no longer restricts the number of contaminants you can simulate. The previous limitation was 10.</p>
+        <p class="NormalIndent"><i>Contaminant-related libraries</i> - Contaminant related elements can now be shared through CONTAM library files. These elements include contaminant species, filters, source/sinks and kinetic reactions.</p>
+        <p class="NormalItalic">Numerics</p>
+        <p class="NormalIndent"><i>Variable air density</i> - CONTAM now provides the ability to simulate non-flow related processes that can lead to the accumulation/reduction of mass within building zones, e.g., due to non-trace contaminant sources and to variations in the zone pressure due to the change in zone temperature.</p>
+        <p class="NormalIndent"><i>Sparse matrix techniques</i> implemented to greatly reduce transient simulation times for large problems.</p>
+        <p class="NormalIndent"><i>Separated solver from graphical user interface</i> to provide for batch execution of simulations and directly utilize .PRJ files.</p>
+        <p class="NormalItalic">Transient weather</p>
+        <p class="NormalIndent"><i>Separate transient weather and contaminant files</i> - Weather files (WTH) no longer contain contaminant concentrations (except for outdoor humidity ratio). This means you don-t have to create different weather files depending on the types of contaminants you are simulating. CONTAM now provides you with the option of simulating transient ambient contaminant concentrations using a contaminant file (CTM).</p>
+        <p class="NormalIndent"><i>Weather file creation/conversion software</i> - NIST has developed a software tool that allows you to convert existing weather files to CONTAM 2.0 compatible weather files. You can convert your existing 1.0-compatible files, TMY2 and EnergyPlus weather files.</p>
+        <p class="NormalItalic">User interface</p>
+        <p class="NormalIndent"><i>Longer zone names</i> - Zone names can now be up to 15 characters long.</p>
+        <p class="NormalIndent"><i>SketchPad zooming feature</i> - You can now reduce the icon size of the SketchPad to allow the display of larger projects on the screen.</p>
+        <p class="NormalIndentItalic">Results Display</p>
+        <p class="NormalIndent2"><i>Net inter-zone airflows</i> displayed for highlighted zones in Results Display Window</p>
+        <p class="NormalIndent2"><i>Airflow direction indicators</i> are now displayed in the Status Bar when viewing airflow path results</p>
+        <p class="NormalIndent2"><i>Distinct simple air-handling system zones</i> - The implicit zones of multiple simple air-handling system are now distinguished from each other to allow for the plotting of individual system zones</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

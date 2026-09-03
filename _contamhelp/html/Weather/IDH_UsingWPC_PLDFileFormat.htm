@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with WPC Files" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>PLD File Format</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>PLD File Format</h3>
+        <p>The PLD (Path Location Data) File will consist of the locations of any flow paths that connect the building to the external environment, as well as additional information for directing the behavior of the EWC File Converter. This file is created by ContamW and stored in the same directory as the project file having the same name as the project file but with the .pld extension replacing the .prj extension. It is created as needed for use in comparing WPC file information with that in the CONTAM project file. (See Working with WPC Files)</p>
+        <p>The file is in an ASCII line-delimited format. </p>
+        <p>The reference location, defined by (Xref,Yref,Zref), represents the EWC file location that is equivalent to the origin of the CONTAM coordinate system for the path locations.&#160; The user must coordinate between the EWC file and PRJ file to determine this location’s coordinate values.</p>
+        <p>The rotation angle is about the Z (vertical) axis.&#160; The user must coordinate the direction of rotation between EWC and PRJ file coordinates&#160; It is assumed&#160; there are no rotations about the X or Y axes.</p>
+        <p>The six coordinates on line 6 define a bounding box that surrounds the flow paths within this file, which could be used to assist the EWC File Converter in rapidly excluding unneeded points (e.g., that are too distant from the building) during the mapping process.&#160; Note that this bounding box does not necessarily surround the entire building.</p>
+        <p>The simulation time step provides a recommendation to the EWC File Converter for reducing the size of the WPC file, so that only the time steps that coincide with the simulation time step could be included (which could reduce interpolation required).&#160; </p>
+        <p>Each flow path is uniquely identified by a combination of flow path type and flow path ID values.</p>
+        <p>Comments begin with an exclamation point (’!’) and may begin at the start of any line (so that the entire line will be ignored) or after all fields of a line (so that the remainder of the line will be ignored).&#160; </p>
+        <p>For user readability, fields should be commented whenever possible.</p>
+        <p>The format of R4 data types may be interpreted similar to a C scanf() statement’s conversion specification.</p>
+        <p style="font-weight: bold;">Header Section:</p>
+        <p class="NormalItalic">First three lines:</p>
+        <p class="code">EWC filename&#160;&#160;&#160;// (I1 full path)</p>
+        <p class="code">WPC filename &#160;&#160;// (I1 full path)</p>
+        <p class="code">desc[]&#160;&#160;// file description (I1)</p>
+        <p class="NormalItalic">The next header line is exactly:</p>
+        <p class="code">! Xref&#160;&#160;&#160; Xref&#160;&#160;&#160; Yref&#160;&#160;&#160; angle</p>
+        <p class="NormalItalic">The next line contains reference coordinates in meters:</p>
+        <p class="code">Xref&#160;&#160;&#160;// (R4 %7.3f)</p>
+        <p class="code">Yref&#160;&#160;&#160;// (R4 %7.3f)</p>
+        <p class="code">Zref&#160;&#160;&#160;// (R4 %7.3f)</p>
+        <p class="code">rotation&#160;angle&#160;&#160;// Real format %8.3f</p>
+        <p class="NormalItalic">The next line contains latitude and longitude in units of degrees:</p>
+        <p class="code">latitude&#160;&#160;&#160;// (R4 %8.4f) positive for North</p>
+        <p class="code">longitude&#160;&#160;// (R4 %8.4f) positive for East</p>
+        <p class="NormalItalic">The next bounding box header line is exactly:</p>
+        <p class="code">! Xmin&#160;&#160;&#160; Xmax&#160;&#160;&#160; Ymin&#160;&#160;&#160; Ymax&#160;&#160;&#160;&#160; Zmin&#160;&#160;&#160; Zmax</p>
+        <p class="NormalItalic">The next line contains bounding box coordinates:</p>
+        <p class="code">Xmin&#160;&#160;&#160;// (R4 %7.3f)</p>
+        <p class="code">Xmax&#160;&#160;&#160;// (R4 %7.3f)</p>
+        <p class="code">Ymin&#160;&#160;&#160;// (R4 %7.3f)</p>
+        <p class="code">Ymax&#160;&#160;&#160;// (R4 %7.3f)</p>
+        <p class="code">Zmin&#160;&#160;&#160;// (R4 %7.3f)</p>
+        <p class="code">Zmax&#160;&#160;&#160;// (R4 %7.3f)</p>
+        <p class="NormalItalic">The next time step heading line is exactly:</p>
+        <p class="code">! step&#160; shift&#160;&#160;&#160;&#160; start&#160;&#160; end</p>
+        <p class="NormalItalic">The next line contains time step data:</p>
+        <p class="code">time step&#160;&#160;// (I4) [s]</p>
+        <p class="code">data shift //  (hh:mm:ss &#8594; I4) start time for EWC when converted to WPC</p>
+        <p class="code">start&#160;date&#160;// (mm/dd &#8594; IX)</p>
+        <p class="code">end date&#160;&#160;&#160;// (mm/dd &#8594; IX)</p>
+        <p class="NormalItalic">The next line contains:</p>
+        <p class="code">wind&#160;press&#160;flag &#160;&#160;&#160;// (I4) 1: include pressures in WPC, 0: don't</p>
+        <p class="code">number of species&#160;&#160;// (I4)</p>
+        <p class="code">species map tolerance // (R4 %7.3f) molar mass tolerance</p>
+        <p style="font-weight: bold;">Contaminant Definition Section:</p>
+        <p class="NormalItalic">The Contaminant Definition Section begins with a heading line of exactly:</p>
+        <p class="code">! name&#160; m.wt</p>
+        <p class="NormalItalic">The next <span style="font-family: 'Courier New';"><span style="font-size: 10pt;">(number of species)</span></span> lines contain for each species:</p>
+        <p class="codeindent">name[]&#160;&#160;&#160;&#160;// (I1 - 16 characters max)</p>
+        <p class="codeindent">molarmass&#160;// (R4 %6.2f)</p>
+        <p>
+            <p style="font-weight: bold;">Airflow Path Definition Section:</p>
+        </p>
+        <p class="NormalItalic">The first line of the Airflow Path Definition Section contains:</p>
+        <p class="code">number of flow paths // (I4)</p>
+        <p class="code">path map tolerance&#160;&#160;&#160;// (R4 %7.3f) [m]</p>
+        <p class="NormalItalic">The next heading line is exactly:</p>
+        <p class="code" style="margin-top: 1pt;">! id#&#160;&#160; X&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; Y&#160;&#160;&#160;&#160;&#160;&#160; Z</p>
+        <p class="NormalItalic">The next <span style="font-family: 'Courier New';"><span style="font-size: 10pt;">(number of flow paths)</span></span> lines contain for each airflow path:</p>
+        <p class="codeindent">path number&#160;&#160;&#160;&#160;// (IX)</p>
+        <p class="codeindent">x-coordinate&#160;&#160;&#160;// (R4) [m]</p>
+        <p class="codeindent">y-coordinate&#160;&#160;&#160;// (R4) [m]</p>
+        <p class="codeindent">z-coordinate&#160;&#160;&#160;// (R4) [m]</p>
+        <p class="NormalItalic">The last line of the file is exactly:</p>
+        <p class="code">-999</p>
+        <p class="code">&#160;</p>
+        <h6>Example:</h6>
+        <p class="code">C:\Program Files\Contamw2\Prjs\WPCcube.ewc ! EWC file</p>
+        <p class="code">C:\Program Files\Contamw2\Prjs\WPCcube1.wpc ! WPC file</p>
+        <p class="code">WPC description</p>
+        <p class="code">! Xref&#160;&#160;&#160; Xref&#160;&#160;&#160; Yref&#160;&#160;&#160; angle</p>
+        <p class="code">&#160; 0.000&#160;&#160; 0.000&#160;&#160; 0.000&#160;&#160; 0.00
+        </p>
+        <p class="code">&#160; 0.0000&#160; 0.0000&#160; ! no latitude/longitude</p>
+        <p class="code">! Xmin&#160;&#160;&#160; Xmax&#160;&#160;&#160; Ymin&#160;&#160;&#160; Ymax&#160;&#160;&#160;&#160; Zmin&#160;&#160;&#160; Zmax</p>
+        <p class="code">&#160; 0.000&#160;&#160; 5.000&#160;&#160; 2.500&#160;&#160; 10.000&#160;&#160; 1.000&#160;&#160; 1.000
+        </p>
+        <p class="code">! step&#160; shift&#160;&#160;&#160;&#160; start&#160;&#160; end</p>
+        <p class="code">&#160; 0&#160;&#160;&#160;&#160; 00:00:00&#160; 1/1&#160;&#160;&#160;&#160; 1/1
+        </p>
+        <p class="code">&#160; 1&#160;&#160;&#160;&#160; 2&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; 0.01 ! pressures flag, # species, mapping tolerance
+        </p>
+        <p class="code">! name&#160; m.wt</p>
+        <p class="code">&#160; CO&#160;&#160;&#160; 28.00</p>
+        <p class="code">&#160; CO2&#160;&#160; 44.00</p>
+        <p class="code">&#160; 4&#160;&#160;&#160;&#160; 1.00 ! number of flow paths and mapping tolerance</p>
+        <p class="code">! id#&#160;&#160; X&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; Y&#160;&#160;&#160;&#160;&#160;&#160; Z</p>
+        <p class="code">&#160; 1&#160;&#160;&#160;&#160; 5.000&#160;&#160;&#160;&#160; 10.000&#160; 1.000</p>
+        <p class="code">&#160; 2&#160;&#160;&#160;&#160; 0.000&#160;&#160;&#160;&#160; 7.500&#160;&#160; 1.000</p>
+        <p class="code">&#160; 3&#160;&#160;&#160;&#160; 0.000&#160;&#160;&#160;&#160; 5.000&#160;&#160; 1.000</p>
+        <p class="code">&#160; 4&#160;&#160;&#160;&#160; 0.000&#160;&#160;&#160;&#160; 2.500&#160;&#160; 1.000</p>
+        <p class="code">-999</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

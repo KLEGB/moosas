@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Theoretical Background|Airflow Analysis" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Doorways Large Openings</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4>Doorways (Large Openings)</h4>
+        <p style="">The powerlaw and quadratic models allow flow in only one direction at a time. Flows through large openings (e.g. doorways) tend to be more complex with the possibility of flows in opposite directions in different parts of the opening. The temperature and resulting density differences between two rooms may mean that the stack effect causes a positive pressure difference at the top of the doorway and a negative pressure difference at the bottom (or vice versa) allowing a two-way flow in the opening. A summary of research on heat transfer through doorways is presented in [<a href="../IDH_References.htm#REF_Barakat_1987">Barakat 1987</a>]. Most research has attempted to develop dimensionless correlations (using Nusselt, Prandlt, and Grashoff numbers) of the form </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000DB.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(63)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where <span style="font-style: italic;">b</span> is approximately 0.5 and <span style="font-style: italic;">C</span> lies between 0.22 and 0.33 depending on the temperature difference used for the correlation. It has been shown that such a heat transfer is equivalent to an airflow which can be modeled by powerlaw elements by dividing the total opening into several smaller openings having the same total area but configured to properly account for the magnitude and direction of airflows at different heights in the opening.
+        </p>
+        <p>An alternative approach is to create a single airflow element which accounts for the flow over the entire opening. A simple theory which estimates the stack induced air flow through a large opening in a vertical partition is given in [<a href="../IDH_References.htm#REF_Brown_1962">Brown and Solvason 1962</a>]. This model of a doorway tends to be faster than the multiple opening approach. However, it also complicates the assembly process for the Jacobian matrix because one or two flows may exist. More importantly, development of the doorway element model requires knowledge of the vertical temperature profile used in the node model (here assumed to be constant) in order to compute the pressure difference as a function of height across the opening. This requirement compromises the independence of the modularity of airflow network program.
+        </p>
+        <h5>Multiple Opening Model&#160;</h5>
+        <p style="">By assuming that the air density in each room is constant, the hydrostatic equation is used to relate pressures at various heights in each room:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000DC.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(64)</td>
+                </tr>
+            </tbody>
+        </table>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000DD.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(65)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="">where</p>
+        <p class="NormalIndent"><span style="font-style: italic;">P</span><span style="vertical-align: sub;font-size: 10pt">0</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">j</span>,<span style="font-style: italic;"> P</span><span style="vertical-align: sub;font-size: 10pt">0</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">i</span>pressure in zones j and i at y = 0, the reference elevation of the opening,<br></br><span style="font-family: Symbol;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">j</span>, <span style="font-family: Symbol;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">i</span>air densities of zones j and i,<br></br><span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">j</span>, <span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">i</span>reference pressures of zones j and i,<br></br><span style="font-style: italic;">h</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">j</span>, <span style="font-style: italic;">h</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">i</span>reference elevations of zones j and i, and<br></br><span style="font-style: italic;">h</span><span style="vertical-align: sub;font-size: 10pt">0</span>elevation of the center of the opening.
+        </p>
+        <p style="">Following [Brown and Solvason 1962] it is assumed that the velocity of the airflow as a function of height is given by the orifice equation:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000DE.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(66)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="">where </p>
+        <p class="NormalIndent"><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">d</span> <![CDATA[ ]]>= discharge coefficient, and</p>
+        <p class="NormalIndent"><span style="font-family: Symbol;">r </span>= density of the air going through the opening.
+        </p>
+        <p>The opening, <span style="font-style: italic;">H</span> high by <span style="font-style: italic;">W</span> wide, may be divided into multiple openings each representing a thin horizontal strip <span style="font-family: Symbol;">D</span><span style="font-style: italic;">y</span> high and <span style="font-style: italic;">W</span> wide. The mass flow through each strip would be
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000DF.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(67)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="">The coefficient for the powerlaw model (20) for each sub-opening is thus given by </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000E0.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(68)</td>
+                </tr>
+            </tbody>
+        </table>
+        <h5>Two Opening Model</h5>
+        <p>An approximate model can be constructed by considering an opening between two zones which have no flow paths to any other zones. Then the flow in each direction must be equal and <span style="font-style: italic;">P</span><span style="vertical-align: sub;font-size: 10pt">0</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">j</span> = <span style="font-style: italic;">P</span><span style="vertical-align: sub;font-size: 10pt">0</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">i</span>. Integration of equation (66) from <span style="font-style: italic;">y</span>=0 to <span style="font-style: italic;">y</span>=<span style="font-style: italic;">H</span>/2 using (65) to compute <span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span> gives the flow through the top half of the opening.
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000E1.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(69)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>This is equivalent to a simple powerlaw model with</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000E2.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(70)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>(a simple orifice with one half the total opening area) placed at an elevation of <span style="font-style: italic;">y </span>= 2<span style="font-style: italic;">H</span>/9. The two opening model is completed with an identical opening at <span style="font-style: italic;">y </span>= -2<span style="font-style: italic;">H</span>/9 elevation allowing an equal flow in the opposite direction. Since the orifice is being modeled with simple orifice openings, any additional pressure drop between the zones due to other forces is included in the two opening model. The model becomes less accurate as the neutral plane shifts from the center of the opening.
+        </p>
+        <h5>Single Opening Model&#160;</h5>
+        <p>A third approach is to create a single airflow element which accounts for the flow over the entire opening. Begin by defining the neutral height, <span style="font-style: italic;">Y</span>, where the velocity of the air is zero. From equation (66) this must occur when <span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">j</span>(<span style="font-style: italic;">y</span>) = <span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">i</span>(<span style="font-style: italic;">y</span>). From equations (65) this must be
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000E3.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(71)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>If |<span style="font-style: italic;">Y</span>| &lt; <span style="font-style: italic;">H</span>/2, there is two-way airflow through the opening. If <span style="font-family: Symbol;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">j</span> = <span style="font-family: Symbol;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">i</span>, the neutral height cannot be computed, but, since there is no possibility of two-way flow, the opening can be considered a simple orifice opening. 
+        </p>
+        <p>Define <span style="font-family: Symbol;">D</span><span style="font-family: Symbol;">r</span><span style="font-family: Symbol;">º</span><span style="font-family: Symbol;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">j</span> - <span style="font-family: Symbol;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">i</span> and a transformed height coordinate <span style="font-style: italic;">z </span><span style="font-family: Symbol;">º</span><span style="font-style: italic;"> y</span> - <span style="font-style: italic;">Y</span>. Then the pressure difference across the opening is given by
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000E4.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(72)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="">The mass flow through the opening above the neutral height is given by</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000E5.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(73)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="">and the mass flow below the neutral height by</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000E6.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(74)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Whether the subscript m should be j or i depends on the direction of flow. Integration of equations (73) and (74) gives several different solutions for the airflow depending on the value of <span style="font-style: italic;">Y</span> and the sign of <span style="font-family: Symbol;">D</span><span style="font-family: Symbol;">r</span>. Defining:
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/080000E7.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(75)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>gives the following equations for flows.</p>
+        <table class="Eqn">
+            <tr>
+                <td class="EqnCenter"><b>Case</b>
+                </td>
+                <td class="EqnCenter"><b><span style="font-family: Symbol;">Dr</span> &lt; 0</b>
+                </td>
+                <td class="EqnCenter"><b><span style="font-family: Symbol;">Dr</span> &lt; 0</b>
+                </td>
+                <td class="EqnCenter">&#160;</td>
+            </tr>
+            <tr>
+                <td class="EqnCenter">&#160;&#160;&#160;<img src="../../image/080000EA.png" alt="equation" />&#160;&#160;&#160;</td>
+                <td class="EqnCenter">&#160;&#160;&#160;<img src="../../image/080000EB.png" alt="equation" />&#160;&#160;&#160;</td>
+                <td class="EqnCenter">&#160;&#160;&#160;<img src="../../image/080000EC.png" alt="equation" />&#160;&#160;&#160;</td>
+                <td class="EqnNum">&#160;&#160;&#160;(76)</td>
+            </tr>
+            <tr>
+                <td class="EqnCenter">&#160;&#160;&#160;<img src="../../image/080000ED.png" alt="equation" />&#160;&#160;&#160;</td>
+                <td class="EqnCenter">&#160;&#160;&#160;<img src="../../image/080000EC.png" alt="equation" />&#160;&#160;&#160;</td>
+                <td class="EqnCenter">&#160;&#160;&#160;<img src="../../image/080000EB.png" alt="equation" />&#160;&#160;&#160;</td>
+                <td class="EqnNum">&#160;&#160;&#160;(77)</td>
+            </tr>
+            <tr>
+                <td rowspan="2" class="EqnCenter">&#160;&#160;&#160;<img src="../../image/080000EE.png" alt="equation" />&#160;&#160;&#160;</td>
+                <td class="EqnCenter">&#160;&#160;&#160;<img src="../../image/080000EF.png" alt="equation" />&#160;&#160;&#160;</td>
+                <td class="EqnCenter">&#160;&#160;&#160;<img src="../../image/080000F0.png" alt="equation" />&#160;&#160;&#160;</td>
+                <td class="EqnNum">&#160;&#160;&#160;(78)</td>
+            </tr>
+            <tr>
+                <td class="EqnCenter">&#160;&#160;&#160;<img src="../../image/080000F1.png" alt="equation" />&#160;&#160;&#160;</td>
+                <td class="EqnCenter">&#160;&#160;&#160;<img src="../../image/080000F2.png" alt="equation" />&#160;&#160;&#160;</td>
+                <td class="EqnNum">&#160;&#160;&#160;(79)</td>
+            </tr>
+        </table>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

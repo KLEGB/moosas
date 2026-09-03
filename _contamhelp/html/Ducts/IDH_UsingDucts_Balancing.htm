@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Ducts" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Balancing Duct Systems</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4>Balancing Duct Systems</h4>
+        <p>In CONTAM you can balance duct systems yourself by providing balance points, e.g., orifice flow elements, at desired locations, or you can have CONTAM balance the system for you. Versions of CONTAM prior to version 2.4 required you to balance the system manually by adjusting the resistance of duct flow elements or local loss coefficients at desired balancing points. Beginning with version 2.4, CONTAM provides the ability to automatically balance duct systems using CONTAM duct terminals. See <a href="IDH_JCT_P2.htm">Duct Junction and Terminal - Terminal Properties</a> and <a href="../Simulation/IDH_UsingSIM_Working_with_Simulations.htm">Working with Simulations</a>.</p>
+        <p class="SubHeading1">Automated Duct Balancing Procedure&#160;</p>
+        <p>Automated duct balancing is another mode of simulation in ContamX. When you initiate a balance, ContamW will perform a pre-simulation check on the PRJ file and, if the check is successful, save the PRJ file and execute ContamX. ContamX will perform its own set of pre-balance checks to determine if a valid set of conditions has been defined. If this check is successful, then the automated balancing mode of ContamX will be initiated. If the pre-check of ContamX is unsuccessful, an error message will be displayed indicating the nature of the pre-check failure.</p>
+        <p>The automated procedure establishes relationships between fan elements and duct terminals by first performing a steady state airflow simulation for the entire building system as defined, i.e., duct balance coefficients having not yet been modified. If there are no errors in the system configuration, it then replaces fan elements with constant flow balancing fans, initializes fan flow rates to the summation of design flows of associated terminals (the minimum flow required for balancing), performs an airflow simulation, and checks for convergence of the duct balance by comparing calculated airflows with design airflows for all balance terminals. If convergence is not met, then the balance coefficients are adjusted (only increased) and the procedure is repeated until either convergence or the maximum number of iterations are performed. Upon completion of the balancing, ContamX will create a simulation results file (SIM file) that contains the calculated airflow results of the balanced system (see items 0 and 1 below). </p>
+        <p>The automated balance procedure generates a <span style="font-style: italic;">duct </span><span style="font-style: italic;">balance re</span><span style="font-style: italic;">sult</span><span style="font-style: italic;"> file</span> which has the same name as the project file but having the BAL extension. The contents of the balance report file will vary depending on the results of the automated balance procedure (See <a href="../Results/IDH_UsingResults_ResultsFiles.htm">Results Files</a> in the <a href="../Results/IDH_UsingResults_Working_with_Results.htm">Working with Results</a> section). </p>
+        <p>The basic steps to use the duct balancing feature are outlined below:</p>
+        <ul>
+            <li style="font-size: 8pt;" value="1">
+                <p>Draw duct system – define segments, terminals and fans. Be sure to use separate fan flow elements for each fan, as the balance procedure may need to adjust the flow rates individually to achieve desired results. In order to obtain as realistic and reasonable results as possible, you should provide known loss coefficients at each terminal and junction throughout the system. Otherwise, the balancing procedure might not produce desired static pressures within the system – although design flows will be achieved.</p>
+            </li>
+            <li style="font-size: 8pt;" value="2">
+                <p>Designate balancing terminals and set design airflow rates for each.</p>
+            </li>
+            <li style="font-size: 8pt;" value="3">
+                <p>Select the <i>Duct Balance</i> airflow simulation method and run the simulation.</p>
+            </li>
+            <li style="font-size: 8pt;" value="4">
+                <p>Observe feedback from the balance procedure. There are six possible results. If one of the first two results (Success or Non-convergence) is obtained, a simulation results file will be created that contains the airflow rates calculated based on the calculated balance coefficients. If one of the four error results is obtained, then the simulation results are for the pre-balance steady state calculation of the system as defined. The following list provides the six different outcomes of the balance and their associated completion code as it will appear in the first line of the <span style="font-style: italic;">duct balance results file</span>. </p>
+            </li>
+        </ul>
+        <p class="NormalIndent"><b>0.&#160;Success:</b> The balance procedure completed successfully. You will be prompted to copy balance coefficients to terminals and balance flow rates to constant flow fan elements when using such elements to model fans. Once you have responded to the prompts, you can review the results of the balance on the SketchPad. Airflow rates from the terminals will be displayed via the SketchPad results display method. Balance coefficients will not be saved until you save the project, so you can maintain the original pre-balance file by saving the post-balance file under a new name.</p>
+        <p class="NormalIndent">Performance curve fan elements are treated differently from constant flow fan elements, because they cannot be directly modified to provide the balance flow rates. If using fan curve elements, consult the balance report file for setting the fan speed ratio to provide design flow rates. Use the value reported to provide a speed ratio via a control signal or schedule value to achieve the balance flow with the fan. If a value of 0.0 is reported, then the fan curve is not capable of providing the desired flow via a reasonable fan speed ratio and pressure rise. In this case it is likely that a different fan should be used.</p>
+        <p class="NormalIndent"><b>1.&#160;Non-convergence:</b> The balance procedure was not able to obtain the desired balance flow rates for all of the terminals within the preset number of iterations. You can choose to accept the calculated balance coefficients and run the balance procedure again with the modified coefficients as initial values. The balance report file will provide a relative flow coefficient equal to the calculated flow rate divided by the design flow rate.</p>
+        <p class="NormalIndent"><b>2.&#160;Error:</b> <![CDATA[ ]]>No terminals to balance: There are no terminals having the <span style="font-style: italic;">Balance Terminal</span> option selected. Be sure to check the <span style="font-style: italic;">Balance Terminal</span> check box to designate terminals to be balanced.</p>
+        <p class="NormalIndent"><b>3.&#160;Error:</b> Invalid flow direction(s): This error occurs when the balance terminals associated with a single fan have opposing design flow directions. Be sure the design flow direction of all terminals matches that of the associated fan: positive design flow rates are out of the terminal into the zone in which the terminal is located, and negative design flow rates are into the terminal from the zone. The fan flow direction is user-selectable via the duct segment icon of the associated fan.</p>
+        <p class="NormalIndent"><b>4.&#160;Error:</b> Failed to terminate link(s) at a fan: This error occurs when one or more balance terminals cannot be traced back through the duct system (links) to a forced flow element (fan) within the duct system.</p>
+        <p class="NormalIndent"><b>5.&#160;Error:</b> Fan system includes supply and return terminal: This error occurs when a given fan has balance terminals both upstream and downstream of the fan. Be sure to only attempt to balance terminals on either the upstream or downstream side of a fan.</p>
+        <p><b>DUCT BALANCING NOTES:</b>
+        </p>
+        <ul>
+            <li style="font-size: 8pt;" value="1">
+                <p>Duct balancing is performed under consideration of the entire building system. When the airflow calculation is performed during each iteration of the balancing procedure, the resistances between zones are included. Interzone resistances that are relatively high can impact the balancing results. </p>
+            </li>
+            <li style="font-size: 8pt;" value="2">
+                <p>During duct balancing, all junction temperatures are set to 20 ºC. Ambient conditions are established by the steady state weather data with the exception that wind is set to 0 m/s. </p>
+            </li>
+            <li class="CW2" value="3">If you modify a duct system that has already been balanced, e.g., adding new ducts or changing existing duct elements, you may want to reinitialize the <i>balance loss coefficients</i> to zero before rebalancing the system. This can be done using the ContamW search and replace features.</li>
+        </ul>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

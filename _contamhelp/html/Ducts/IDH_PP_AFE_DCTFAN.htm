@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Ducts|Defining Ducts|Duct Segment Properties|Duct Flow Element Types" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Fan Model - Performance Curve</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5><a name="kanchor83"></a>Fan Model: Performance Curve</h5>
+        <p>This airflow element allows you to create a fan based on a fan performance curve. You provide ContamW with a set of pressure rise and airflow rate data points, and ContamW performs a polynomial curve fit to the data point.</p>
+        <p><span style="font-weight: bold;">Name:</span> Enter a unique name you want to use to identify the duct flow element. The element will be saved within the current project and can be associated with multiple duct segments.</p>
+        <p><span style="font-weight: bold;">Fan off conditions:</span> These values specifies how the fan is modeled when the speed of the fan is insufficient to provide a flow.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Cut-off Ratio:</span> The <span style="font-style: italic;">fan speed ratio</span> is the actual speed (RPM) of the fan divided by the rated speed of the fan (fan is defined for a speed ratio of 1.0). When the fan speed ratio is below the specified <i>cut-off ratio</i> the fan is modeled as a simple orifice based on the "equivalent orifice" defined for this fan element. During a simulation, ContamX obtains the actual ratio from the control value being applied (in the form of a schedule or control signal) to the airflow path with which this fan element is associated and compares it to the <span style="font-style: italic;">cut-off ratio</span>. See Chapter 18 Fans in [<a href="../IDH_References.htm#REF_ASHRAE_2004">ASHRAE 2004</a>].</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Equivalent Orifice:</span> The size of the orifice used to model the fan opening when the schedule or control value drops below the specified cut-off ratio.</p>
+        <p><span style="font-weight: bold;">Description:</span> Field for entering a more detailed description of the specific airflow element.</p>
+        <p><span style="font-weight: bold;">Fan Performance Data:</span> Click the "Edit Fan Curve Data" to input/modify the fan curve for this duct flow element. A detailed explanation of this data is given in the <a href="../AirflowPaths/IDH_AFE_FAN_DATA.htm">Fan Performance Data</a> section under <a href="../AirflowPaths/IDH_UsingPaths_WorkingWithAirflowPaths.htm">Working with Airflow Paths</a>.</p>
+        <p><span style="font-weight: bold;">Shape Size and Leakage:</span> You must enter data to physically describe each duct airflow element. You input these values on the <a href="IDH_PP_AFE_DCTSHAPE.htm">Shape Size and Leakage</a> property page associated with each duct airflow element.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

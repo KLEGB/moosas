@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with WPC Files" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Create WPC File</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Create WPC File Dialog</h3>
+        <P>The Create WPC File dialog box is a tool that can aid in the creation of WPC and associated files. You can use this dialog box whether you are creating WPC text files using an external editor or using an <FONT style="font-style:italic; ">EWC File Converter</FONT>. Access this dialog box via the <FONT style="font-weight:bold; "><u>W</u>eather &#8594; <u>C</u>reate WPC File...</FONT> menu item.</P>
+        <P class="Normal"><b>NOTE:</b> WPC files can be used during a simulation in conjunction with the transient weather and transient contaminant files as follows: </P>
+        <UL>
+            <LI value="1">If using wind pressures from a WPC file, you may not use a WTH file. </LI>
+            <LI value="2">If using contaminant concentrations from a WPC file, you may not use a CTM file.</LI>
+        </UL>
+        <p>
+            <FONT style="font-weight:bold; ">Name of WPC File to create:</FONT> This is the name of the WPC file to create using the <FONT style="font-style:italic; ">EWC File Converter</FONT>. You can either use the <FONT style="font-style:italic; ">Browse...</FONT> button to select an existing file, or enter a new name.
+</p>
+        <p>
+            <FONT style="font-weight:bold; ">WPC Description:</FONT> <![CDATA[ ]]>Enter a description you want an <FONT style="font-style:italic; ">EWC File Converter</FONT> to write when creating a new WPC file.
+</p>
+        <p>
+            <FONT style="font-weight:bold; ">EWC File Name:</FONT> <![CDATA[ ]]>The <FONT style="font-weight:bold; font-style:italic; ">E</FONT><FONT style="font-style:italic; ">xternal </FONT><FONT style="font-weight:bold; font-style:italic; ">W</FONT><FONT style="font-style:italic; ">ind Pressure and </FONT><FONT style="font-weight:bold; font-style:italic; ">C</FONT><FONT style="font-style:italic; ">ontaminant</FONT> (EWC) file contains the external contaminant concentrations and pressures that the <FONT style="font-style:italic; ">EWC File Converter</FONT> (which must be developed for your specific application) will convert into a WPC file. Use the <FONT style="font-style:italic; ">Browse...</FONT> button to select an existing EWC file.</p>
+        <p>
+            <FONT style="font-weight:bold; ">WPC File Creation Program:</FONT> Use the <FONT style="font-style:italic; ">Browse...</FONT> button to select a program to use to create a WPC File for example an <FONT style="font-style:italic; ">EWC File Converter</FONT>.
+</p>
+        <p><span style="font-weight: bold;">Coordinate Transformation Data</span>
+        </p>
+        <p>These parameters can be used by an <FONT style="font-style:italic; ">EWC File Converter</FONT> to establish the relationship between the coordinates of the EWC file and the CONTAM project file. No transformation is required if the coordinate systems for the PRJ and EWC files are consistent. These values are stored in the PLD file by ContamW.</p>
+        <p class="NormalIndent">
+            <FONT style="font-weight:bold; ">Origin (X, Y and Z):</FONT> The location of the origin of the CONTAM PRJ file with respect to the origin of the EWC file.</p>
+        <p class="NormalIndent">
+            <FONT style="font-weight:bold; ">Rotation Angle:</FONT> The rotation of the x and y axes of the EWC coordinate system about the z axis to align with the x and y axes of the CONTAM coordinate system. Counter-clockwise is considered the positive direction.</p>
+        <p><span style="font-weight: bold;">Conversion Tolerance</span>&#160;</p>
+        <p>These are the tolerances that an <FONT style="font-style:italic; ">EWC File Converter</FONT> might use to determine how closely information in the EWC file and the PLD file must match in order to resolve contaminant (species) and location data. These values are stored in the PLD file by ContamW.</p>
+        <p class="NormalIndent">
+            <FONT style="font-weight:bold; ">Species:</FONT> Species can be resolved by their molar mass, i.e., the molar mass of each species defined in ContamW and the WPC file must not differ by more than this amount to be considered the same species.</p>
+        <p class="NormalIndent">
+            <FONT style="font-weight:bold; ">Location:</FONT> Locations can be resolved by their distance as determined by an <FONT style="font-style:italic; ">EWC File Converter</FONT>, e.g., distance to center of a grid cell. Units within the PLD file are in meters.</p>
+        <p><span style="font-weight: bold;">Date and Time</span>
+        </p>
+        <p>These parameters can be used by an <FONT style="font-style:italic; ">EWC File Converter</FONT> to determine the date and time values written to the WPC file for the convenience of working according to CONTAM's schedules. These values are stored in the PLD file by ContamW.</p>
+        <p class="NormalIndent">
+            <FONT style="font-weight:bold; ">Data Time Shift:</FONT> The format for this value is hh:mm:ss. An <FONT style="font-style:italic; ">EWC File Converter </FONT>could add this value to the EWC file time. For example an <FONT style="font-style:italic; ">EWC File Converter </FONT>could create a file that begins at 00:00:00 and set the next time to be the <FONT style="font-style:italic; ">Data Time Shift</FONT> you enter here. The data for these two times would be the initial values in the EWC file.</p>
+        <p class="NormalIndent">
+            <FONT style="font-weight:bold; ">Start and End Date:</FONT> The format for this value is mmmdd. For example, enter January 1 as Jan01. An <FONT style="font-style:italic; ">EWC File Converter </FONT>could use this to output the date(s) to use when running transient simulations.</p>
+        <p><span style="font-weight: bold;">Include in WPC File</span>
+        </p>
+        <p class="NormalIndent">
+            <FONT style="font-weight:bold; ">Wind Pressures:</FONT> Check this box to have a converter create a WPC file that contains wind pressure data. </p>
+        <p class="NormalIndent">
+            <FONT style="font-weight:bold; ">Contaminant Concentrations:</FONT> Check this box to have the converter create a WPC file that contains contaminant data. During a simulation contaminant concentrations in the WPC file take precedence over other transient contaminant settings. For those contaminants that are defined within the PRJ file but not included in the WPC file, the steady-state contaminant data will be used, i.e., the default concentrations.</p>
+        <p><span style="font-weight: bold;">Generate WPC File:</span> Use this button to activate the user-developed WPC Creation Program. This will first perform checks on the PRJ file and generate a PLD&#160;file if all envelope openings are properly defined.          <![CDATA[ ]]></p>
+        <p class="Normal"><span style="font-weight: bold;">Generate PLD File:</span> Use this button to manually generate a PLD file. The PLD file will be stored in the same location as the PRJ&#160;file and have the same name as the PRJ file but a PLD extension. This file is useful for  creating a WPC file with an external editor.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

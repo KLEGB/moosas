@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Sources and Sinks|Source Sink Element Types" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Source Sink Element Constant Coefficient Model</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Source/Sink Element: Constant Coefficient Model</h5>
+        <p>This is a generic source/sink element that provides for direct input of a contaminant generation and removal rate. Units are provided in default calculation units.</p>
+        <p class="NormalIndent"><i>S</i><span style="font-family: Symbol; vertical-align: sub; font-style: italic; font-size: 10pt;">a</span>(<i>t</i>) = <sub style="font-style: italic;"></sub><i></i>mult<sub style="font-style: italic;"></sub>·ctrl·<i>G</i> - <i></i>mult<i><sub style="font-style: italic;"></sub></i>·ctrl·<i>R</i> C<span style="font-family: Symbol; vertical-align: sub; font-style: italic; font-size: 10pt;">a</span>(<i>t</i>)</p>
+        <p style="font-style: normal;"><i></i>
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">G</span> = Generation rate [kg<span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span>/s]
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">R</span> = Effective removal rate [kg<sub>air</sub>/s]
+        </p>
+        <p class="NormalIndent2">Determine by multiplying the first-order removal rate of the contaminant [1/s] by air density [kg<sub>air</sub>/m<sup>3</sup>] and volume [m<sup>3</sup>] of the zone in which the source is to be located.</p>
+        <p class="NormalIndent"><span style="font-style: italic;">C<span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span></span>(<span style="font-style: italic;">t</span>)<span style="font-style: italic;"></span> = Concentration of contaminant <span style="font-family: Symbol;">a</span> in the zone [kg<span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span>/kg<sub>air</sub>]
+</p>
+        <p class="NormalIndent">mult = Source/sink multiplier [no units]</p>
+        <p class="NormalIndent">ctrl = Schedule or control value [no units]</p>
+        <p><span style="font-weight: bold;">Name:</span> Enter a unique name you want to use to identify the source/sink element. The element will be saved within the current project and can be associated with multiple source/sinks.
+        </p>
+        <p><span style="font-weight: bold;">Generation Rate:</span> The rate at which the contaminant is introduced into the zone.
+        </p>
+        <p><span style="font-weight: bold;">Removal Rate:</span> The rate at which the contaminant is removed from the zone.
+        </p>
+        <p><span style="font-weight: bold;">Species:</span> Select a previously defined species from the drop-down box.
+        </p>
+        <p><span style="font-weight: bold;">Description:</span> Field for entering a more detailed description of the specific sink/source element.
+        </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

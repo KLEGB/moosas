@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Airflow Paths|Defining Airflow Paths|Airflow Element Types|One-way Flow using Quadratic Models" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Quadratic Model: dP = aQ + bQ²</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h6><span style="font-weight: bold;">Quadratic Model: </span><span style="font-family: 'Symbol';font-weight: bold;">D</span><span style="font-weight: bold;">P = aQ + bQ²</span>
+        </h6>
+        <p>This model allows you to directly enter the coefficients, a and b, into the volume flow version of the quadratic flow model. Where <span style="font-family: 'Symbol';color: black;">D</span>P is the pressure drop and Q is the volumetric flow rate.</p>
+        <p><span style="font-weight: bold;">Name:</span> Enter the name you want to use to identify the airflow element. The airflow element will be saved within the current project and can be associated with multiple airflow paths.</p>
+        <p><span style="font-weight: bold;">Coefficients:</span> The coefficients must be expressed in SI units because of the way ContamW handles unit conversions. The units of the coefficients at standard conditions, i.e., sm<sup>3</sup>/s, are as follows:</p>
+        <p>a [Pa<span style="font-size: 8pt;"> • </span>s/sm<sup>3</sup>] </p>
+        <p>b  [Pa<span style="font-size: 8pt;"> • </span>(s/sm<sup>3</sup>)<sup>2</sup>]</p>
+        <p>To convert from volume flow Q in units of  m<sup>3</sup>/s at density <span style="font-family: Symbol;">r</span> to sm<sup>3</sup>/s at density <span style="font-family: Symbol;">r</span><sub>s</sub>, multiply Q by <span style="font-family: Symbol;">r</span>/<span style="font-family: Symbol;">r</span><sub>s</sub>, where <span style="font-family: Symbol;">r</span><sub>s</sub> equals 1.2041 kg/m<sup>3</sup> at 20 °C.</p>
+        <p><span style="font-weight: bold;">Description:</span> Field for entering a more detailed description of the specific airflow element.</p>
+        <p><span style="font-weight: bold;">Icon:</span> Choose either the small or large opening icon as appropriate for the specific airflow element. The icon has no effect on the simulations.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

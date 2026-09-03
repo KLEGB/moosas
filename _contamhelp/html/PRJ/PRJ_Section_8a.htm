@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix A - PRJ File Format" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Section 8a: Filter Elements</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Section 8a: Filter Elements</h5>
+        <p>Filter element data are read by the flte_read( ) function and saved by the flte_save( ) function. The data are stored in the FLT_ELT structures that are defined in contam.h for ContamW and simdat.h for ContamX.</p>
+        <p class="NormalItalic">The filter element section starts with: </p>
+        <p class="code">_nflte // number of filter elements (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">This is followed by data for all <span style="font-family: 'Courier New';font-size: 10pt;">_nflte</span> filters.</p>
+        <p class="NormalItalic">For each element the first data line includes:</p>
+        <p class="codeindent">nr // element number (<span style="color: red;">IX</span>); in order from 1 to _nflte</p>
+        <p class="codeindent">ftype // element data type (string ? I2)</p>
+        <p class="codeindent" style="margin-top: 0;margin-bottom: 0;">          // type names are stored in _flte_names in ftype order.&#160;</p>
+        <p class="codeindent">area // face area of filter [m] (R4) </p>
+        <p class="codeindent">depth // depth of filter [m] (R4) </p>
+        <p class="codeindent">dens // density of filter material [kg/m^3] (R4)</p>
+        <p class="codeindent" style="margin-top: 0;margin-bottom: 0;">          // note: area * depth * dens = filter mass [kg]&#160;</p>
+        <p class="codeindent">ual // units of area and depth (I2) {W}</p>
+        <p class="codeindent">ud // units of density (I2) {W}</p>
+        <p class="codeindent">name[] // element name (I1) {W}</p>
+        <p class="NormalItalic">and the second line has:</p>
+        <p class="codeindent">desc[] // filter description (I1) {W} may be blank</p>
+        <p class="NormalItalic">This is followed by lines of data that depend on the element data type.</p>
+        <p class="NormalItalic">The introductory lines that follow give the type number, the program macro defined as that number, the type name from _flte_names, and the data structures to hold the data. The data structures are defined in celmts.h in ContamW and selmts.h in ContamX. Type numbers can change as long as the ordering in _flte_names and related arrays reflect that order.</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 0 [FL_CEF] "cef" stored in structure CEF_DAT.</p>
+        <p class="NormalItalic">The constant efficiency filter data consist of:</p>
+        <p class="codeindent">nspcs // number of species (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">This is followed by <span style="font-family: 'Courier New';font-size: 10pt;">nspcs</span> lines of filter efficiency data:</p>
+        <p class="codeindent">spcs[] // species name (I1) </p>
+        <p class="codeindent">eff // filter efficiency [-] (R4)</p>
+        <p class="NormalItalic">Element type 1 [FL_PF0] "pf0" stored in structure PF0_DAT.</p>
+        <p class="NormalItalic">The simple particle filter data consist of:</p>
+        <p class="codeindent">npts // number of data points (I2)</p>
+        <p class="codeindent">usz // units of particle size (I2) {W}</p>
+        <p class="NormalIndentItalic">This is followed by <span style="font-family: 'Courier New';font-size: 10pt;">npts</span> lines of filter efficiency data:</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">size // particle size [m] (R4) </p>
+        <p class="codeindent" style="text-indent: 36.00pt;">eff // filter efficiency [-](R4)</p>
+        <p class="NormalItalic">Element type 2 [FL_GF0] "gf0" stored in structure GF0_DAT.</p>
+        <p class="NormalItalic">The simple gas filter data consiss of:</p>
+        <p class="codeindent">nspcs // number of species (IX)</p>
+        <p class="NormalItalic">This is followed by <span style="font-family: 'Courier New';font-size: 10pt;font-style: normal;">nspcs</span><span style="font-style: normal;"> <![CDATA[ ]]></span>sections consisting of:</p>
+        <p class="codeindent">spcs[] // species name (I1)</p>
+        <p class="codeindent">bthru[] // break through eff (R4) {Contam 2.4}
+        </p>
+        <p class="codeindent">npts // number of data points (I2)</p>
+        <p class="NormalIndentItalic">Each of which is followed by <span style="font-family: 'Courier New';font-size: 10pt;">npts</span> lines of filter efficiency data:</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">load // relative total loading [-] (R4) </p>
+        <p class="codeindent" style="text-indent: 36.00pt;">eff // filter efficiency for this species[-] (R4)</p>
+        <p class="NormalItalic">Element type 3 [FL_SPF] "spf" stored in structure SPF_DAT.</p>
+        <p class="NormalItalic">The super filter data consist of:</p>
+        <p class="codeindent">nselmt&#160;// number of sub-elements(I2)</p>
+        <p class="NormalIndentItalic">Then a line of data containing a list of the number of each sub-element in flow order:</p>
+        <p class="codeindent" style="text-indent: 36.00pt;">elmt[]&#160;// sub-element numbers (IX) – converted to pointers</p>
+        <p class="NormalItalic">The filter element section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data</p>
+        <h5>&#160;</h5>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with Zones</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2><a name="kanchor21"></a>Working with Zones</h2>
+        <p>A <span style="font-style: italic;">zone</span> is a volume of air separated from other volumes of air by walls, floor and ceiling. Generally, zones are characterized by having a uniform temperature and pressure (that varies hydrostatically) and contaminant concentration. However, the concentration within user-selected zones can be allowed to vary in one dimension (See <a href="IDH_PP_ZONEPARMS2_CFD.htm">1D Zone Data Properties</a> within this section) via the 1D convection/diffusion model (See the <a href="../Theory/IDH_Theory_Background.htm">Theoretical Background</a> section). In addition, there are three different types of zone icons: <span style="font-style: italic;">normal</span>, <span style="font-style: italic;">phantom </span>and <span style="font-style: italic;">ambient</span>. A <span style="font-style: italic;">normal</span> zone icon represents a zone that is separated by a floor from the zone below. A <span style="font-style: italic;">phantom </span>zone is used to indicate that there is no floor below the enclosed region on a given level. That is, the region on this level is actually part of the zone below and has the same temperature and contaminant concentration. An <span style="font-style: italic;">ambient</span> zone icon represents the outdoor air. The ambient zone, which surrounds the building, is already identified by default by the icon at the upper-left corner of the SketchPad.</p>
+        <p>You create zones on the SketchPad by first drawing walls that enclose a region, placing a single zone icon within the enclosed region, and then defining the zone icon. Eventually, every zone must be connected to either the ambient zone or a constant pressure zone either directly or indirectly via any set of paths that prevents the zone from being <span style="font-style: italic;">isolated</span> from a zone of "known" pressure. <b style="color: #8b0000;">NOTE:</b><span style="color: #8b0000;"> Failure to make these connections to avoid isolated zones will result in an error when trying to perform simulations.</span></p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

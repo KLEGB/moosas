@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Sources and Sinks|Source Sink Element Types" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Deposition Rate Sink Model</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Deposition Rate Sink Model</h5>
+        <p>This sink model is provided as a convenient means to create a sink using deposition rates. This model is dependent on the mass of air in the zone in which the source/sink is located and will behave similar to that of a kinetic reaction having the same reaction rate.
+ Units are provided in default calculation units. </p>
+        <p><i>R</i><span style="font-family: Symbol; vertical-align: sub; font-style: italic; font-size: 10pt;">a</span>(<i>t</i>) = mult<i><sub style="font-style: italic;"></sub></i>·ctrl<i>·</i><span style="font-family: Symbol;font-style: italic;"><span style="font-family: 'Times New Roman';">k</span></span><sub style="font-style: italic;">d</sub><i> V</i><sub style="font-style: italic;">z</sub><span style="font-family: Symbol;font-style: italic;"> r</span><sub style="font-style: italic;">air</sub>(<i>t</i>) C<span style="font-family: Symbol; vertical-align: sub; font-style: italic; font-size: 10pt;">a</span>(<i>t</i>)</p>
+        <p>where:</p>
+        <p class="NormalIndent"><span style="font-style: italic;">R</span><span style="font-family: Symbol;vertical-align: sub;"><span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span></span>(<span style="font-style: italic;">t</span>) = Removal rate (by deposition) at time <span style="font-style: italic;">t</span> [kg<span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span>/s]</p>
+        <p class="NormalIndent"><span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">z</span> = Zone volume [m<span style="vertical-align: super;font-size: 10pt;">3</span>]</p>
+        <p class="NormalIndent"><span style="font-style: italic;">k</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">d</span>&#160; = Deposition rate [1/s]</p>
+        <p class="NormalIndent"><span style="font-style: italic;">&#961;</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">air</span>(<span style="font-style: italic;">t</span>) = Density of air in the source zone at time <i>t</i> [kg<span style="vertical-align: sub;font-size: 10pt;">air</span>/m<span style="vertical-align: super;font-size: 10pt;">3</span>]</p>
+        <p class="NormalIndent"><span style="font-style: italic;">C</span><span style="font-family: Symbol;vertical-align: sub;"><span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span></span> (<span style="font-style: italic;">t</span>) = Concentration of contaminant <span style="font-family: Symbol;">a</span><span style="font-family: Symbol;"></span>at time <i>t</i> [kg<span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span>/kg<span style="vertical-align: sub;font-size: 10pt;">air</span>]</p>
+        <p class="NormalIndent">mult = Source/sink multiplier [no units]</p>
+        <p class="NormalIndent">ctrl = Schedule or control value [no units]</p>
+        <p><b>Name:</b> Enter a unique name you want to use to identify the source/sink element. The element will be saved within the current project and can be associated with multiple source/sinks.
+</p>
+        <p><b>Deposition Rate:</b> Enter deposition rate and units. The volume and density will be obtained at the time of simulation from the zone in which the source/sink icon is located.
+</p>
+        <p><b>Species:</b> Select a previously defined species from the drop-down box.
+</p>
+        <p><b>Description:</b> Field for entering a more detailed description of the specific sink/source element.
+</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

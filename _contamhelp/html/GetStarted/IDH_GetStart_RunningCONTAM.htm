@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Getting Started" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Running CONTAM</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>Running CONTAM</h2>
+        <p>As indicated in the <a href="IDH_GetStart_InstallingContamW.htm">Installing CONTAM</a> section, CONTAM actually consists of two executable programs: ContamW and ContamX. ContamW is the graphical user interface and ContamX is the simulation engine. Typically you will activate ContamX via a menu command from within ContamW. However, ContamX can be utilized as a command-line tool and even utilized within script or batch files.</p>
+        <p class="SubHeading1">Running ContamW</p>
+        <p class="NormalCW2">Run ContamW by selecting <code>CONTAM #.#.#.#</code> (where # indicate the program version, e.g., 3.4.0.0) from the Start menu.</p>
+        <p class="SubHeading1">Running ContamX as a Command-line Program</p>
+        <p class="NormalCW2">The easiest way to run ContamX as a command-line program is by copying the contamx3.exe file and related projects and supporting files to a common directory. The options for running ContamX can be shown by typing:</p>
+        <p class="codeindentCW2">contamx3 --help</p>
+        <p class="NormalCW2">This will display the following output:</p>
+        <p class="codeCW2">ContamX - Multizone Airflow and Contaminant Transport Analysis Software</p>
+        <p class="codeCW2">Usage: contam-x [input-file] [options]</p>
+        <p class="codeindentCW2">-h, --help            show this help message and exit</p>
+        <p class="codeindentCW2">-v, --Version         show the version of this program and exit</p>
+        <p class="codeindentCW2">-b, --Bridge=&lt;str&gt;    run ContamX in bridge mode with optional &lt;ip_address:port&gt;</p>
+        <p class="codeindentCW2">-w, --Wind            ContamX calculates wind pressures based on wind speed and</p>
+        <p class="codeindentCW2">&#160;&#160;&#160;&#160;&#160;&#160;direction obtained via ADJ_WTH_MSGTYPE</p>
+        <p class="codeindentCW2">-f, --volumeFlow      ContamX outputs volume airflow rates via bridge in [m3/s]</p>
+        <p class="codeindentCW2">-c, --Console         run ContamX with an interactive console</p>
+        <p class="codeindentCW2">-d, --Dialog          run ContamX with a windows dialog box</p>
+        <p class="codeindentCW2">-t, --TestInput       Test input only</p>
+        <p class="codeindentCW2">[input-file] is a path to a CONTAM PRJ file.</p>
+        <p class="codeindentCW2">&#160;&#160;&#160;&#160;If omitted with no other options, you will be prompted to enter a file name.</p>
+        <p class="codeindentCW2">&#160;&#160;&#160;&#160;The file can be specified in Windows Explorer by dragging</p>
+        <p class="codeindentCW2">&#160;&#160;&#160;&#160;the project file icon onto the ContamX program icon.</p>
+        <p class="SubHeading1">Running ContamX with TCP/IP Socket Communication</p>
+        <p>ContamX can be run in a TCP/IP socket communication mode that enables run-time control over the simulation including execution control and data transfer via TCP/IP sockets.   See <a href="../Appendices/AppE.htm">Appendix B</a> for details and a complete description of the TCP/IP messaging structure.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

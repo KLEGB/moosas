@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Special Applications of CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Shafts</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2><a name="_Toc143425671"></a><a name="_Toc143425455"></a><a name="_Toc114381076"></a>Shafts</h2>
+        <p>Buildings contain several architectural features which offer very low resistance to airflow between building levels. These features include atria, elevator shafts, and stairwells. CONTAM provides two ways of modeling such a low resistance path: the phantom zone and the low-resistance (or large) opening. Select the most appropriate model based on how this path interacts with the rest of the model.</p>
+        <p>This interaction can be understood by using three flow resistances in series to model a shaft between two levels. There is a resistance to flow through the shaft and resistances representing the paths (doors) connecting the shaft to the two different levels. Using the powerlaw relationship, Q = C(<span style="font-family: Symbol;">D</span>P)<sup>0.5</sup>, and assuming C = 3.10 for the shaft, 1.55 for an open door, and 0.01 for a closed door, the following equivalent flow coefficients, Ce = ( <span style="font-family: Symbol;font-size: 14pt;">S</span>1/Ci<span style="vertical-align: super;"></span><sup>2</sup>)<sup>-0.5</sup>, are computed for four different assumptions:
+        </p>
+        <ol>
+            <li value="1">both doors closed, ignore shaft resistance: Ce = 0.007070
+            </li>
+            <li value="2">both doors closed, include shaft resistance: Ce = 0.007066
+            </li>
+            <li value="3">both doors open, ignore shaft resistance: Ce = 1.096
+            </li>
+            <li value="4">both doors open, include shaft resistance: Ce = 0.984
+            </li>
+        </ol>
+        <p>Cases (1) and (2) show that when flow resistance is dominated by the closed doors, it is not necessary to include the shaft flow resistance. Cases (3) and (4) show that when the resistances at the (open) doors is of the same order as the shaft resistance, it is important to include the shaft resistance in the model. For a quick estimate of relative flow coefficients, remember that the flow coefficient is usually roughly proportional to the opening area.</p>
+        <h3>Atria</h3>
+        <p>If an atrium were modeled as individual zones on each level, the inter-level flow resistances would be very low. A cursory comparison of the inter-level opening areas to the sum of all openings from the atrium to other zones will usually indicate that an atrium should be modeled using phantom zones. This is done by placing a standard zone icon at the atrium's lowest level. You use this zone icon to define the atrium temperature and total volume.  You should ignore the floor area of the normal zone icon that is used to define the atrium zone.  Place a phantom zone icon at all higher levels which contain parts of the atrium.  A phantom zone icon indicates that the region within the walls on this level are actually part of the zone on the level below the icon.  If it is necessary to have different temperature or contaminant concentrations at the different levels in an atrium, then those levels must be modeled as normal zones connected by flow paths with very large openings.</p>
+        <h3>Stairwells</h3>
+        <p>Data to describe the airflow characteristics of a stairwell in terms of an equivalent orifice is provided in [<a href="../IDH_References.htm#REF_Achakji">Achakji and Tamura 1988</a>]. This representation is very well suited to being implemented by CONTAM, which allows you to create a powerlaw flow element from the physical characteristics of the stairwell. Stairwell characteristics include the cross-sectional (horizontal) area of the stairwell shaft, whether the fronts of the stair treads are open or closed, and the number of people on the stairs.  This last item might be important in an evacuation scenario.  Since the equivalent orifice area of the shaft is on the same order as it's cross-sectional area, and this area is likely to be smaller than the sum of the areas of the doors entering the stairwell, it is generally best to model a stairwell as individual zones on each level connected by openings which have been defined using the CONTAM stairwell airflow element that implements the Achakji/Tamura model.
+</p>
+        <h3>Elevator Shafts
+</h3>
+        <p>Elevator shafts (hoistways) will generally lie in some modeling regime that falls between stairwells and atria.  Measured data for the flow resistance of an elevator shaft have not yet been identified. CONTAM provides a powerlaw flow element based on flow resistance from the Darcy/ Colebrook model of a conduit or duct. A significant difference between an elevator shaft and a stairwell is that the door between the shaft and the building is never fully open because, when it is open, air must flow through openings in the elevator car to pass between the building and the shaft.  Table 6.1 of [<a href="../IDH_References.htm#REF_Klote_and_Milke_2002">Klote and Milke 2002</a>] presents orifice areas for closed elevator doors which tend to be fairly small compared to the cross-sectional area of the shaft, especially for hoistways with multiple cars, so it is likely that the airflow in most elevator shafts can be modeled with sufficient accuracy by phantom zones. However, it may be necessary to split the shaft into several sections to achieve sufficient accuracy in modeling contaminant transport. 
+</p>
+        <h3>Chimneys
+</h3>
+        <p>You can use a duct to create a simple chimney model. At its simplest this will involve only a single duct connecting the inside of the building to the outside with the Darcy-Colebrook duct element used to model the flow resistance of the chimney. The height of the duct terminal points must reflect the height of the chimney and a special high temperature zone must be created around the inside terminal point so that the proper stack effect will result. Be sure to allow an appropriate low resistance path from this special zone to the rest of the building.
+
+ 
+</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

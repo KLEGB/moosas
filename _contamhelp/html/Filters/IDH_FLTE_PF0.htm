@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Filters|Filter Element Types" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Simple Particle Filter</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4><a name="kanchor107"></a>Simple Particle Filter</h4>
+        <p>The <span style="font-style: italic;">simple particle filter</span> element consists of a single efficiency vs. particle size curve. In this manner, a single filter element can be used to filter multiple particle contaminants based on particle size alone. This can be used to define filters based on MERV test data [<a href="../IDH_References.htm#REF_ASHRAE_1999a">ASHRAE 1999a</a>]. Only those species considered particle types and which you have selected to be contaminants will be filtered when you perform simulations. </p>
+        <p><span style="font-weight: bold;">Name:</span> A unique name you want to use to identify the filter element.</p>
+        <p><span style="font-weight: bold;">Area:</span> The face area and units of the filter element. </p>
+        <p><span style="font-weight: bold;">Depth:</span> The depth of the filter element along the axis of airflow.</p>
+        <p><span style="font-weight: bold;">Density:</span> The density of the filter media. </p>
+        <p>Area, Depth and Density are currently used to calculate the mass of the filter media which is only relevant for the Simple Gaseous Filter model.</p>
+        <p><span style="font-weight: bold;">Description:</span> Use this field to provide a more detailed description of the filter element.</p>
+        <p><span style="font-weight: bold;">Edit Element Data:</span> Select to define the specific properties of the filter element. </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Filter Curve Data:</span> This is a list of <span style="font-style: italic;">particle size</span> and <span style="font-style: italic;">filter efficienc</span><span style="font-style: italic;">y</span> data pairs used to define the filter curve. Once you have entered at least three data points, ContamW will attempt to calculate a cubic spline fit to the points. If there are any errors in the spline fit procedure, you will be notified and the offending portion of the curve will be highlighted.</p>
+        <p class="NormalIndent">Use the <span style="font-weight: bold;">Particle Size</span> and <span style="font-weight: bold;">Efficiency</span> fields to set and modify the <span style="font-style: italic;">Filter Curve Data</span> list along with the <span style="font-weight: bold;">Add</span>, <span style="font-weight: bold;">Replace</span> and <span style="font-weight: bold;">Delete</span> command buttons.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Particle Size</span><span style="font-weight: bold;">:</span> Use this to enter the particle size and units for which to define a <span style="font-style: italic;">filter </span><span style="font-style: italic;">curve</span> data point. This corresponds to the <span style="font-style: italic;">M</span><span style="font-style: italic;">ean Diameter </span>property of a species. </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Efficiency:</span> Use this to enter the <span style="font-style: italic;">filter efficiency</span> for the associated particle size. Filter efficiencies must be between 0.0 and 1.0. </p>
+        <p class="NormalIndent">At the beginning of a simulation, ContamX will use the curve to establish a filter efficiency for each particle contaminant having a mean diameter in the range of the filter curve. </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

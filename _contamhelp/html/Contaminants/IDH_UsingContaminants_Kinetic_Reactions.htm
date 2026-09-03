@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Kinetic Reactions</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2><a name="kanchor109"></a>Working with Kinetic Reactions</h2>
+        <p>CONTAM provides the ability to model chemical reactions among project contaminants within zones of a building including the implicit supply and return nodes of a simple air-handling system (See Air Handling System). Kinetic reactions in CONTAM are modeled as first-order exponential functions between species that contain the paired first-order reaction rate coefficients between the reactant and product contaminants. See <a href="../IDH_References.htm#REF_Axley_1988">Axley [1988]</a> and <a href="../IDH_References.htm#REF_Axley_1995">Axley [1995]</a> for a detailed presentations of the kinetic reaction simulation method employed by ContamX. The production or destruction of a contaminant <span style="font-family: 'Symbol';">a</span> is given by</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_KRRate_128x37.png" border="0" alt="equation" style="width: 128; height: 37;" />
+        </p>
+        <p>where</p>
+        <p class="EqnParams"><span style="font-style: italic;">R</span><span style="font-family: 'Symbol';font-size: 10pt;font-style: italic;vertical-align: sub;">a</span> &#160;&#160;rate of production or destruction of contaminant <span style="font-family: 'Symbol';">a</span></p>
+        <p class="EqnParams"><span style="font-style: italic;">K</span><span style="font-family: 'Symbol';font-size: 10pt;font-style: italic;vertical-align: sub;">a</span><span style="font-size: 10pt;font-style: italic;vertical-align: sub;">,</span><span style="font-family: 'Symbol';font-size: 10pt;font-style: italic;vertical-align: sub;">b</span> &#160;reaction rate coefficients between contaminants <span style="font-family: 'Symbol';">a</span> and <span style="font-family: 'Symbol';">b</span>, in units of 1/s</p>
+        <p class="EqnParams"><span style="font-style: italic;">C</span><span style="font-family: 'Symbol';font-size: 10pt;font-style: italic;vertical-align: sub;">b</span> &#160;&#160;concentration of a reactant</p>
+        <p>CONTAM uses the convention that positive reaction coefficients produce an increase in species concentration and negative coefficients decrease species concentrations. The units of concentration are kg_species / kg_air (See <a href="IDH_UsingContaminants_Contaminant_Files.htm#IDMID_ConcentrationConversions">Concentration Conversions</a>).</p>
+        <p>Kinetic reactions can occur within zones of a building. To use kinetic reactions, you must have at least one species for the project. Kinetic reactions can be associated with one or more zones within a project. You can access the kinetic reaction data dialog box via the property sheets of the zones that provide a kinetic reaction definition section (i.e. zones and simple air-handling systems). </p>
+        <p>You can also access the <a href="IDH_KINETIC_REACTION.htm">Kinetic Reaction Data</a> dialog box using the CONTAMW Data and Library Manager: Kinetic Reactions to create and edit local project data or to share kinetic reactions between CONTAM projects using contaminant libraries.</p>
+        <p>When you are defining building zones, you will be able to select a currently defined kinetic reaction to associate with it, define new, modify existing or import kinetic reactions from species-related CONTAM library files (i.e. LB0 library files). All kinetic reactions are defined and modified using the <a href="IDH_KINETIC_REACTION.htm">Kinetic Reaction Data</a> dialog box as described in the following section.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

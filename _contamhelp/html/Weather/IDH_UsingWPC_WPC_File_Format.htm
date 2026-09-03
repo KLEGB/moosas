@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with WPC Files" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>WPC File Format</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>WPC File Format</h3>
+        <P>This file provides ambient pressure and contaminant concentrations values for every flow path that connects to ambient.</P>
+        <P>There are two versions of the WPC file 2.1 and 2.4. For version 2.1, pressures must be input as absolute pressures in units of Pa. Wind pressure will be computed from the ambient pressure and density provided at each time interval in the WPC file and the absolute pressure and elevation of each flow path as follows:</P>
+        <P>P<FONT style="vertical-align:sub; ">wind</FONT> = P<FONT style="vertical-align:sub; ">path</FONT> - P<FONT style="vertical-align:sub; ">ambt</FONT> + <FONT style="font-family:'Symbol'; ">r</FONT>•g•Z<FONT style="vertical-align:sub; ">path</FONT></P>
+        <P>&#160;</P>
+        <P>For 2.4 version files the pressure in the WPC file will be the wind pressure itself in units of Pa.</P>
+        <P>Contaminant concentrations must be provided in units of kg of contaminant per kg of air. See <A href="../Contaminants/IDH_UsingContaminants_Contaminant_Files.htm#IDMID_ConcentrationConversions">Concentration Conversions</A> in the <A href="../Contaminants/IDH_UsingContaminants_Contaminant_Files.htm">Contaminant Files</A> subsection of the <A href="../Contaminants/IDH_UsingContams_WorkingWithContaminants.htm">Working with Species and Contaminants</A> section for conversion factors.</P>
+        <P>-----</P>
+        <P class="NormalItalic">The first line of the WPC file is used to identify the type of file. For a 2.1 format WPC file it is exactly: </P>
+        <P class="code">WPCFile ContamW 2.1</P>
+        <P class="NormalItalic">Or for a 2.4 format WPC file it is exactly: </P>
+        <P class="code">WPCFile ContamW 2.4</P>
+        <P class="NormalItalic">The second line is a description of the file entered by the user:</P>
+        <P class="code">desc[] // file description (I1) {W}; may be blank</P>
+        <P class="NormalItalic">Succeeding lines contain:</P>
+        <P class="code">nPath // number of flow paths (I2)</P>
+        <P class="code">nCtm  // number of contaminants (species) (I2) [0 possible]</P>
+        <P class="code">UsePres // 1 = use pressures, 0 = don't (I2)</P>
+        <P class="code">dtmin  // minimum time step (I2)(not used by ContamX)</P>
+        <P class="code">StartDate // first date for WPC data (mm/dd &#8594; IX)</P>
+        <P class="code">EndDate // last date for WPC data (mm/dd &#8594; IX)</P>
+        <P class="code">I1 Name[1] // name of contaminant 1 (I1 - 16 characters max)</P>
+        <P class="code">I1 Name[2] // name of contaminant 2 (I1)</P>
+        <P class="code">...</P>
+        <P class="code">Name[nCtm] // name of contaminant NumCont (I1)</P>
+        <P class="NormalItalic">The next NumPath lines describe each flow path:</P>
+        <P class="codeindent">number // sequence number (I2)</P>
+        <P class="codeindent">X // X-coordinate (R4)</P>
+        <P class="codeindent">Y // X-coordinate (R4)</P>
+        <P class="codeindent">Z // Z-coordinate (R4)</P>
+        <P class="codeindent">map // mapping [0 = OK; 1 = error] (I2)</P>
+        <P class="NormalIndentItalic">For each day StartDate to EndDate:</P>
+        <p class="NormalIndentItalic">For each time 00:00:00 to 24:00:00 of each date:</p>
+        <p class="NormalIndentItalic">First line:</p>
+        <p class="codeindent">date // date (mm/dd &#8594; IX)</p>
+        <p class="codeindent">time // time of day (hh:mm:ss &#8594; I4)</p>
+        <p class="codeindent">Pamb // ambient pressure [Pa] (R4) (if pressures are used)</p>
+        <p class="codeindent">dens // air density [kg/m3] (R4) (if pressures are used)</p>
+        <p class="NormalIndentItalic">Second line: (if pressures are used)</p>
+        <p class="codeindent">P[1]     // pressure at path[1] [Pa] (R4)</p>
+        <p class="codeindent">...</p>
+        <p class="codeindent">P[nPath] // pressure at path[nPath] [Pa](R4)</p>
+        <p class="NormalIndentItalic">Third line (for first contaminant, if <span style="font-family: 'Courier New';"><span style="font-size: 10pt;vertical-align: baseline;"><span style="font-size: 12pt;">n</span></span></span><span style="font-family: 'Courier New';font-size: 10pt;vertical-align: baseline;"><span style="font-size: 12pt;">Ctm</span></span><FONT style="font-family:'Courier New'; font-size:10pt; "> &gt; 1</FONT>):</p>
+        <p class="codeindent">C[1]     // concentration at path[1] [kg/kg air] (R4)</p>
+        <p class="codeindent">...</p>
+        <p class="codeindent">C[nPath] // concentration at path[nPath] [kg/kg air] (R4)</p>
+        <p class="NormalIndentItalic">Fourth line (for second contaminant, if needed):</p>
+        <p class="codeindent">...</p>
+        <p class="NormalIndentItalic">Last line (for contaminant <span style="font-family: 'Courier New';"><span style="font-size: 10pt;vertical-align: baseline;"><span style="font-size: 12pt;">n</span></span></span><span style="font-family: 'Courier New';font-size: 10pt;vertical-align: baseline;"><span style="font-size: 12pt;">Ctm</span></span>, if needed):</p>
+        <p class="codeindent">C[1]      // concentration at path[1] [kg/kg air] (R4)</p>
+        <p class="codeindent">...</p>
+        <p class="codeindent">C[nPath]  // concentration at path[nPath] [kg/kg air] (R4)</p>
+        <P class="code">&#160;</P>
+        <P>The file description may not begin with a "<FONT style="font-family:'Courier New'; ">!</FONT>". The StartDate and EndDate are used to verify that the file data covers the entire period to be simulated.  The StartDate may not be later than the EndDate.  </P>
+        <P>The data must start at time 00:00:00 on the StartDate and end at 24:00:00 on the EndDate.  The times must be in consecutive order, but the difference between successive times need not be constant.  </P>
+        <H6>Example:</H6>
+        <p class="code">WPCfile ContamW 2.1</p>
+        <P class="code">For WPCtest3.prj</P>
+        <P class="code">2 ! flowpaths</P>
+        <P class="code">1 ! contaminants</P>
+        <P class="code">1 ! use pressure flag</P>
+        <P class="code">0 ! time step</P>
+        <P class="code">01/01 ! start date</P>
+        <P class="code">01/01 ! end date</P>
+        <P class="code">C1</P>
+        <P class="code">!nr X Y Z map</P>
+        <P class="code">1 0.000 4.000 1.500 0</P>
+        <P class="code">2 8.000 4.000 1.500 0</P>
+        <P class="code">01/01 00:00:00 101325 1.204</P>
+        <P class="code">101308.30 101306.30</P>
+        <P class="code">0.0 1.0e-6</P>
+        <P class="code">01/01 24:00:00 101325 1.2041</P>
+        <P class="code">101308.30 101306.30</P>
+        <P class="code">0.0 1.5e-6</P>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Weather and Wind|Defining Weather and Wind" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Defining Transient Weather and Wind</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4><a name="kanchor127"></a>Defining Transient Weather and Wind</h4>
+        <p>In order to implement transient weather and wind, you must create a CONTAM-compatible weather file. You must create the weather file external to CONTAM. NIST provides a utility program, WEATHER 2.0, to create CONTAM-compatible weather files. </p>
+        <p>WEATHER 2.0 enables you to convert existing CONTAM 1.0 weather files to the 2.0 format weather and ambient contaminant files. You can also convert TMY2 and EnergyPlus (.EPW) weather files to the CONTAM 2.0 weather file format and create weather file templates into which you can place your own data (e.g., experimental data). Both weather and ambient contaminant files are ASCII text files that can be created and edited using spreadsheet software according to the formats provided within this manual.</p>
+        <p class="SubHeading1"><a name="Weather_File_Format"></a>Weather File Format</p>
+        <p>The CONTAM weather file is a tab-delimited ASCII text file. These files are easily created, imported and modified using typical spreadsheet applications. They can be saved as tab-delimited text files for use with CONTAM. It is described below because it may be necessary for the you to create a weather file from sources not already provided. In the listing below <span style="font-family: 'Courier New';">I1</span> indicates a character string, <span style="font-family: 'Courier New';">I2</span> indicates a short integer and <span style="font-family: 'Courier New';">R4</span> indicates a four-byte real number. Individual lines of data are separated by dashes (these dashes are only shown here for format presentation purposes and should not be included in the actual files). <span style="color: #a52a2a;">Each day must begin with time 00:00:00, and an annual weather file should end with time 12/31 24:00:00 to enable simulations that cross over the Dec/Jan time frame. </span>The time interval between 00:00:00 and 24:00:00 can be either regular or irregular – ContamX will interpolate as necessary. Comments are allowed and are indicated by an "!" (exclamation point). Anything that appears on a line following a comment indicator is ignored by the weather file reader. Comments are provided by the weather file creation software (Weather 2.0) that show header information for the data in the file.</p>
+        <p style="margin-top: 0;margin-bottom: 0;">&#160;</p>
+        <p class="code">WeatherFile ContamW 2.0 ! file and version identification</p>
+        <p class="code">-----</p>
+        <p class="code">I1 descr[] ! weather file description</p>
+        <p class="code">-----</p>
+        <p class="code">I1 start _date ! day of year (1/1 – 12/31)</p>
+        <p class="code">I1 end_date ! day of year (1/1 – 12/31)</p>
+        <p class="code">-----</p>
+        <p class="code">!Date DofW Dtype DST Tgrnd  </p>
+        <p class="code">-----</p>
+        <p class="code">! for each day: start_date – end_date</p>
+        <p class="code">&#160;I1 date ! date (1/1 – 12/31)</p>
+        <p class="code">   I2 dayofwk ! day of week Sun – Sat (1 - 7)&#160;</p>
+        <p class="code">   I2 daytype ! type of day for schedule reference (1 – 12)&#160;</p>
+        <p class="code">   I2 DST ! daylight savings time indicator (0 or 1)&#160;</p>
+        <p class="code">   R4 Tground ! ground temperature [K] &#160;</p>
+        <p class="code">-----</p>
+        <p class="code">!Date Time Ta Pb Ws Wd Hr Ith Idn Ts Rn Sn</p>
+        <p class="code">-----</p>
+        <p class="code">! for each day: start_date – end_date</p>
+        <p class="code">! for each time: 00:00:00 - 24:00:00 increment may be variable</p>
+        <p class="code">   I1 date ! date (1/1 – 12/31)&#160;</p>
+        <p class="code">   I1 time ! time of day (HH:MM:SS)&#160;</p>
+        <p class="code">   R4 tmpambt ! ambient temperature [K]&#160;</p>
+        <p class="code">   R4 barpres ! barom. pressure(Pa) NOT corrected to sea level&#160;</p>
+        <p class="code">   R4 windspd ! wind speed [m/s]&#160;</p>
+        <p class="code">   R4 winddir ! wind direction [deg]: 0=N, 90=E, 180=S, ...&#160;</p>
+        <p class="code">   R4 humratio ! humidity ratio [g H20/kg dry-air]&#160;</p>
+        <p class="code">   R4 solhtot ! total solar flux on horizontal surface [W/m^2]&#160;</p>
+        <p class="code">   R4 solhdif ! diffuse solar flux on horizontal surface [W/m^2]&#160;</p>
+        <p class="code">   R4 tskyeff ! effective sky temperature [K]&#160;</p>
+        <p class="code">   I2 rain ! rain indicator 0 or 1&#160;</p>
+        <p class="code">   I2 snow ! snow indicator 0 or 1&#160;</p>
+        <p class="code">-----</p>
+        <p>The Tground, solar, sky, rain and snow values are not used in CONTAM. They are reserved for thermal analysis, if it is added to the program.</p>
+        <p class="SubHeading1">Editing Weather Files</p>
+        <p>You can import weather files into a spreadsheet program for editing. However you must make sure that the date format is compatible with CONTAM when you save the file. One well-known spreadsheet program will convert the CONTAM date format of mm/dd into the mmm-dd form. For example the CONTAM date format for January 1 is "1/1", but the spreadsheet program will convert it to "Jan-01" unless you "force" it to import the first column of data – the one that contains date information – as text. Another option is to accept the default importing option then change the cell format for each date to the CONTAM format mm/dd prior to saving the file as tab-delimitted.</p>
+        <p class="SubHeading1">Example Weather File</p>
+        <div>
+            <p class="codeCW2">WeatherFile ContamW 2.0</p>
+            <p class="codeCW2">Jan 1 &amp; 2, 5 &amp; 1 m/s, 0 - 360 deg by 15</p>
+            <p class="codeCW2">1/1  !start-of-file date</p>
+            <p class="codeCW2">1/2  !end-of-file date</p>
+            <p class="codeCW2">!Date  DofW  Dtype  DST  Tgrnd [K]</p>
+            <p class="codeCW2">1/1    1     1      0    281.6</p>
+            <p class="codeCW2">1/2    2     2      0    281.6</p>
+            <p class="codeCW2">!Date  Time      Ta [K]  Pb [Pa]  Ws [m/s]  Wd [deg]  Hr [g/kg]  Ith [kJ/m^2]  Idn [kJ/m^2]  Ts [K]  Rn [-]  Sn [-]</p>
+            <p class="codeCW2">1/1    00:00:00  293.15  101325   5           0       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    01:00:00  293.15  101325   5          15       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    02:00:00  293.15  101325   5          30       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    03:00:00  293.15  101325   5          45       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    04:00:00  293.15  101325   5          60       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    05:00:00  293.15  101325   5          75       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    06:00:00  293.15  101325   5          90       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    07:00:00  293.15  101325   5         105       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    08:00:00  293.15  101325   5         120       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    09:00:00  293.15  101325   5         135       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    10:00:00  293.15  101325   5         150       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    11:00:00  293.15  101325   5         165       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    12:00:00  293.15  101325   5         180       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    13:00:00  293.15  101325   5         195       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    14:00:00  293.15  101325   5         210       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    15:00:00  293.15  101325   5         225       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    16:00:00  293.15  101325   5         240       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    17:00:00  293.15  101325   5         255       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    18:00:00  293.15  101325   5         270       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    19:00:00  293.15  101325   5         285       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    20:00:00  293.15  101325   5         300       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    21:00:00  293.15  101325   5         315       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    22:00:00  293.15  101325   5         330       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/1    23:00:00  293.15  101325   5         345       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    00:00:00  293.15  101325   1           0       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    01:00:00  293.15  101325   1          15       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    02:00:00  293.15  101325   1          30       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    03:00:00  293.15  101325   1          45       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    04:00:00  293.15  101325   1          60       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    05:00:00  293.15  101325   1          75       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    06:00:00  293.15  101325   1          90       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    07:00:00  293.15  101325   1         105       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    08:00:00  293.15  101325   1         120       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    09:00:00  293.15  101325   1         135       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    10:00:00  293.15  101325   1         150       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    11:00:00  293.15  101325   1         165       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    12:00:00  293.15  101325   1         180       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    13:00:00  293.15  101325   1         195       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    14:00:00  293.15  101325   1         210       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    15:00:00  293.15  101325   1         225       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    16:00:00  293.15  101325   1         240       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    17:00:00  293.15  101325   1         255       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    18:00:00  293.15  101325   1         270       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    19:00:00  293.15  101325   1         285       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    20:00:00  293.15  101325   1         300       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    21:00:00  293.15  101325   1         315       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    22:00:00  293.15  101325   1         330       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    23:00:00  293.15  101325   1         345       0.000      0             0             0       0       0</p>
+            <p class="codeCW2">1/2    24:00:00  293.15  101325   1           0       0.000      0             0             0       0       0</p>
+        </div>
+        <p>&#160;</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

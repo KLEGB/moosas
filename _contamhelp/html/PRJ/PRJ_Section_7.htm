@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix A - PRJ File Format" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Section 7: Kinetic Reactions</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Section 7: Kinetic Reactions</h5>
+        <p>Kinetic reaction data are read by the kinetic_read( ) function and saved by the kinetic_save( ) function. The data are stored in the KNR_DSC structures that are defined in contam.h for ContamW and simdat.h for ContamX.</p>
+        <p class="NormalItalic">The kinetic reactions section starts with: </p>
+        <p class="code">_nkinr // number of kinetic reactions (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">This is followed by a data header comment line and then data for all _nkinr reactions.</p>
+        <p class="NormalItalic">For each reaction the first data line includes:</p>
+        <p class="codeindent">nr // reaction number (<span style="color: red;">IX</span>); in order from 1 to _nkinr</p>
+        <p class="codeindent">nkrd // number of reactions (I2)</p>
+        <p class="codeindent">name[] // reaction name (I1) {W}</p>
+        <p class="NormalItalic">and the second line has:</p>
+        <p class="codeindent">desc[] // reaction description (I1) {W} may be blank</p>
+        <p class="NormalIndentItalic">This is followed by nkrd lines of reaction data:</p>
+        <p class="code">&#160;&#160;prod[] // product species name (I1) </p>
+        <p class="code">&#160;&#160;src[] // source species name (I1)</p>
+        <p class="code">&#160;&#160;coef // reaction coefficient (R4)</p>
+        <p class="NormalItalic">The kinetic reactions section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data</p>
+        <p class="code">&#160;</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

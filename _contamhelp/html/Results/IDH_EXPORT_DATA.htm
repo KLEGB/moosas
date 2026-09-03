@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Results|Exporting Results" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Export Data</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4><a name="kanchor151"></a>Export Data</h4>
+        <p><a name="kanchor152"></a>This section provides detailed descriptions of the specific properties associated with generating result reports and exporting results to external files. </p>
+        <p><span style="font-weight: bold;">Transient Results:</span>
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Results available from/to:</span> This shows the range of dates/times for which results are available in the simulation results file (.SIM) of the latest simulation. </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Export transient results from/to:</span> Select the range for the data to be exported. Enter the date as the first 3 letters of the month followed by the day of the month with or without spaces, e.g., Jan01, followed by the time in the following format HH:MM:SS.</p>
+        <p><span style="font-weight: bold;">Airflow Data:</span> Options for reporting/exporting airflow data. Airflow rates will be reported in the <span style="font-style: italic;">Default Units of Flow</span> as selected via the Project Configuration properties (See <a href="../Config/IDH_CONFIGPARMS_ALL.htm">Configuring ContamW</a>).</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Report airflows of all paths for date/time:</span> Create a text file formatted for ease of reading that lists the airflows and pressure differences for all paths, zone pressures and temperatures at the selected date and time.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Export airflows of all zones for date/time:</span> Create a tab-delimitted file containing a table of the total airflows between each zone of the building. The leftmost column lists the level and name of the zones from which airflows and the topmost row lists the level and names of the zones into which air flows. Therefore, all airflows are listed as positive values.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Export transient flow for airflow path number:</span> Create a tab-delimitted file listing all the airflow data for a specific airflow path. Select the airflow path number(s) for which you want to output the airflow and pressure drop data for the range of time you select in the "Export transient results from/to" dates and times indicated above.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Export average transient flow for each zone between export result times:</span> Create a tab-delimitted file listing the average airflow rates between zones averaged over the range of time you select in the "Export transient results from/to" dates and times indicated above.</p>
+        <p><span style="font-weight: bold;">Contaminant Concentration Data:</span> Options for reporting and exporting contaminant results. Concentrations will be reported in the units associated with the default concentration of each species/contaminant (See <a href="../Contaminants/IDH_UsingContaminants_SpeciesProperties.htm">Species Properties</a>).</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Report transient concentrations of all zones for date/time:</span> Create a text file formatted for ease of reading that lists the contaminant concentrations for all zones and contaminants at the selected date and time.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Report transient concentrations of all zones:</span> Create a text file formatted for ease of reading that lists the contaminant concentrations for all zones at the selected date and time.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Export transient concentrations of all zones:</span> Create a tab-delimitted file listing the transient contaminant concentrations for all zones and contaminants for the range of time you select in the "Export transient results from/to" dates and times indicated above.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Export transient concentrations for zone:</span> Create a tab-delimitted file listing the transient contaminant concentrations for each contaminant in the selected zone for the range of time you select in the "Export transient results from/to" dates and times indicated above.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

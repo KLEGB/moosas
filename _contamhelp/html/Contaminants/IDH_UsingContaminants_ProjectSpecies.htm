@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Species and Contaminants" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Project Species</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor95"></a>Project Species</h3>
+        <p>Species must be defined before any related elements (e.g. source/sinks, filters and kinetic reactions) can be defined. From the Project Species page any previously defined species may be viewed, edited, or deleted and new species may be defined. The following describes the information that appears on the Project Species dialog box.</p>
+        <p><span style="font-weight: bold;">Species:</span> This is a list of the species that are currently defined within the current project.</p>
+        <p><span style="font-weight: bold;">Species Properties:</span> These are the properties of the currently highlighted species.</p>
+        <p><span style="font-weight: bold;">Contaminants:</span> This is a list of the project species for which the "Use in Simulation" property is set to "Use," i.e., these are selected to be contaminants in the simulation.</p>
+        <p><span style="font-weight: bold;">Contaminant Summary:</span> This is a summary of contaminant-related information including the number of non-trace contaminants and the summation of the default concentrations of the non-trace contaminants which must be 1.0. </p>
+        <p><b>NOTE:</b> If the project contains water vapor, H2O, then its default concentration is not included in this summation at this point, however, it will be accounted for by ContamX during simulation if initial concentrations are set to ambient (see <a href="../Simulation/IDH_UsingSIM_ParamsAirNumerics.htm">Simulation - Airflow Numerics Properties</a>).</p>
+        <p><span style="font-weight: bold;">New, Edit and Delete:</span> Click the "New" button to create a new species, or use the "Library..." button to import/export species from/to a species library file. To modify the properties of an existing species, highlight the species in the species list and click the "Edit" button. Click the "Delete" button to delete the selected species.</p>
+        <p><span style="font-weight: bold;">IMPORTANT:</span> Changing the number of contaminants, i.e. those species used in the simulation, will reset the initial concentrations of all zones to the default contaminant concentrations. You can reset all of these concentrations via the Run Control Properties of the simulation parameters or via the <a href="../Zones/IDH_PP_ZONEPARMS1.htm">Contaminant Data</a> properties of the individual zones.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

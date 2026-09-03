@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication|ContamX TCP/IP Message Formats" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>ZONE_INFO_MSGTYPE</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>ZONE_INFO_MSGTYPE</h3>
+        <p>Provides zone information in the order in which concentrations will be sent back by ContamX via the <span style="font-family: 'Courier New';">CONC_UPDATE_MSGTYPE</span>.  This list of zones includes those of the two implicit zones (supply and return) of each simple air handling system.</p>
+        <p class="code">Message Header;</p>
+        <p class="code"><span style="color: blue;">int </span>num_zones;       <span style="color: #008100;">// number of zones in the PRJ file</span></p>
+        <p class="code"><span style="color: blue;">int </span>level[num_zones];   <span style="color: #008100;">// level number on which zone is located</span></p>
+        <p class="code"><span style="color: blue;">int </span>ahs[num_zones];   <span style="color: #008100;">// 0 = not simple ahs zone, 1 = implicit ahs zone</span></p>
+        <p class="code"><span style="color: blue;">float </span>volume[num_zones];   <span style="color: #008100;">// volume of each zone [m3]</span></p>
+        <p class="code"><span style="color: blue;">char</span> *name[num_zones];  <span style="color: #008100;">// zone names (null-terminated strings)</span></p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

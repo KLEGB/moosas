@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" class="" MadCap:lastBlockDepth="2" MadCap:lastHeight="800" MadCap:lastWidth="762">
+    <head><title>Section 14: Zones</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" type="text/css" />
+    </head>
+    <body>
+        <h5>Section 14: Zones</h5>
+        <p>Zone data are read by the zone_read( ) function and saved by the zone_save( ) function. The data are stored in the ZONE_DSC structures that are defined in contam.h for ContamW and simdat.h for ContamX.</p>
+        <p class="NormalItalic">The zone section starts with: </p>
+        <p class="code">_nzone // number of zones (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">This is followed by a data header comment line and then data for all _nzone zones.</p>
+        <p class="NormalItalic">For each zone the data line includes:</p>
+        <p class="codeindent">nr // zone number (<span style="color: red;">IX</span>); in order from 1 to _nzone</p>
+        <p class="codeindent">flags // zone flags – bits defined in contam.h (U2)</p>
+        <p class="codeindent">ps // week schedule index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">pc // control node index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">pk // kinetic reaction index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">pl // building level index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">relHt // zone height [m] (R4)</p>
+        <p class="codeindent">Vol // zone volume [m^3] (R4)</p>
+        <p class="codeindent">T0 // initial zone temperature [K] (R4)</p>
+        <p class="codeindent">P0 // initial zone pressure [Pa] (R4)</p>
+        <p class="codeindent">name[] // zone name (I1) {W}</p>
+        <p class="codeindent">color // zone fill color (I2) {W} {Contam 2.4}</p>
+        <p class="codeindent">u_Ht // units of height (I2) {W}</p>
+        <p class="codeindent">u_V // units of volume (I2) {W}</p>
+        <p class="codeindent">u_T // units of temperature (I2) {W}</p>
+        <p class="codeindent">u_P // units of pressure (I2) {W}</p>
+        <p class="codeindent">cdaxis // conv/diff axis – (0=no cd, 1-4 =&gt; cd axis direction) (I2)</p>
+        <p class="codeindent">cfd // cfd zone (0=no, 1=yes) (I2)</p>
+        <p class="NormalItalic">If cfd = 1 then the line continues to include:
+</p>
+        <p class="codeindent">name[] // cfd zone id (I1)
+</p>
+        <p class="NormalItalic">If cdaxis &gt; 0 then the line continues to include:</p>
+        <p class="codeindent">"1D:" // string indicating 1D data follows</p>
+        <p class="codeindent">X1&#160;&#160;&#160;&#160;&#160;&#160;&#160; // X coordinate of one end of cdaxis</p>
+        <p class="codeindent">Y1&#160;&#160;&#160;&#160;&#160;&#160;&#160; // Y&#160;&#160;&#160;&#160; "&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; "</p>
+        <p class="codeindent">H1&#160;&#160;&#160;&#160;&#160;&#160;&#160; // Relative Height&#160;&#160;&#160; "</p>
+        <p class="codeindent">X2&#160;&#160;&#160;&#160;&#160;&#160;&#160; // X coordinate of other end of cdaxis</p>
+        <p class="codeindent">Y2&#160;&#160;&#160;&#160;&#160;&#160;&#160; // Y&#160;&#160;&#160;&#160; "&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; "</p>
+        <p class="codeindent">H2&#160;&#160;&#160;&#160;&#160;&#160;&#160; // Relative Height&#160;&#160;&#160; "</p>
+        <p class="codeindent">celldx // length of c/d cell [m] (R4)</p>
+        <p class="codeindent">axialD // axial diffusion coeff [m^2/s] (R4)</p>
+        <p class="codeindent">u_aD // units of axial diffusion (I2)</p>
+        <p class="codeindent">u_L // units of c/d axis limits (I2)</p>
+        <p class="NormalItalic">The zones section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data</p>
+        <p class="code">&#160;</p>
+    </body>
+</html>

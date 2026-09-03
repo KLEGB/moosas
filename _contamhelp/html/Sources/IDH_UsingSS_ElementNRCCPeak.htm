@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Sources and Sinks|Source Sink Element Types" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>NRCC - Peak Model</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>NRCC - Peak Model</h5>
+        <p>This is an empirically based model provided for compatibility with NRCC Material Emission Database [<a href="../IDH_References.htm#REF_Howard-Reed_2004">Howard-Reed 2004</a> and <a href="../IDH_References.htm#REF_Howard-Reed_2006">2006</a>].</p>
+        <p><i>S<span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span></i>(<i>t</i>) = mult·<i>a</i>·exp{-0.5[(1/<i>b</i>)<i>·</i>ln(<i>t/t<sub>p</sub></i>)<i></i>]<sup>2</sup>}</p>
+        <p>where:</p>
+        <p class="NormalIndent"> <![CDATA[ ]]><span style="font-style: italic;">a</span>, <span style="font-style: italic;">b</span> and <span style="font-style: italic;">t</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">p</span> are empirical coefficients typically determined from emission chamber measurements. <br />The emission rate, <i>S<span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span></i>(<i>t</i>) [kg<i><span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span></i>/s]<i></i>, will increase up until time <span style="font-style: italic;">t</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">p</span> at which point it will begin to decay.
+</p>
+        <p class="NormalIndent">mult = Source/sink multiplier [no units]        </p>
+        <p><span style="font-weight: bold;">NOTE: </span>This type of source can only be triggered once per simulation. If using a schedule, the first non-zero schedule value will trigger the source, otherwise it will begin emitting immediately.
+        </p>
+        <p><span style="font-weight: bold;">Name: </span>Enter a unique name you want to use to identify the source/sink element. The element will be saved within the current project and can be associated with multiple source/sinks.
+        </p>
+        <p><span style="font-weight: bold;">Peak Emission Factor: </span>Enter the peak emission factor <span style="font-style: italic;">a</span>. This is the value of <span style="font-style: italic;">S(t)</span> when time <span style="font-style: italic;">t</span> = <span style="font-style: italic;">t</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">p</span>.
+        </p>
+        <p><span style="font-weight: bold;">Fitting Parameter: </span> Enter a value for the parameter <span style="font-style: italic;">b</span> in the above equation.
+        </p>
+        <p><span style="font-weight: bold;">Time of Peak: </span>Enter the time <span style="font-style: italic;">t</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">p</span> at which the peak emission factor is achieved.
+        </p>
+        <p><span style="font-weight: bold;">Description: </span>Field for entering a more detailed description of the specific source/sink element.
+        </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

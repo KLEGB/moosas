@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Weather and Wind|Defining Weather and Wind|Weather and Wind Properties" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Wind Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4>Weather and Wind – Wind Properties</h4>
+        <p>The wall height, terrain and exponent are used to calculate the wind speed modifier. </p>
+        <p class="NormalCW2"><span style="font-weight: bold;">Relative North:</span> The direction to relative north will be used relating wall azimuth angles on the SketchPad to true north for determining wind direction effects. Enter the angle between -180 degrees (couner-clockwise) and +180 degrees (clockwise) from vertical on the ContamW SketchPad to true north.</p>
+        <p class="NormalCW2">
+            <img src="../../image/RelativeNorth_296x207.png" title="Image of relative north on SketchPad" alt="image of relative north on SketchPad" style="width: 296; height: 207;" />
+        </p>
+        <p><span style="font-weight: bold;">Roof or Wall Height:</span> Enter the height of the upwind wall of the building. This is the value of H in the equations presented in the section <a href="IDH_UsingWTH_Working_with_Weather_and_Wind.htm">Working with Weather and Wind</a>. Entering a value of zero will reduce the wind speed modifier to zero. This will cause computed wind pressures to be zero no matter what the wind speed, unless you override the wind pressure coefficients of exterior airflow paths. Figure 4 in Chapter 16 of the 2005 ASHRAE Fundamentals Handbook [<a href="../IDH_References.htm#REF_ASHRAE_2005">ASHRAE 2005</a>] shows relative wind pressures on the face of a building based on the local wind pressure at the top of the wall.</p>
+        <p><span style="font-weight: bold;">Terrain &amp; Exponent:</span> Enter the values that describe the wind speed profile for the type of region in which your building is located. Figure 4 in Chapter 14 of the 1993 ASHRAE Fundamentals Handbook [<a href="../IDH_References.htm#REF_ASHRAE_1993">ASHRAE 1993</a>] shows terrain constants and velocity profile exponents for representative areas.</p>
+        <p>An updated method, from that presented in <a href="../IDH_References.htm#REF_ASHRAE_1993">ASHRAE 1993</a>, of accounting for local terrain effects is presented Chapter 16 of <a href="../IDH_References.htm#REF_ASHRAE_2005">ASHRAE 2005</a>. Refer to <a href="IDH_UsingWTH_Working_with_Weather_and_Wind.htm">Working with Weather and Wind</a> for details on how to implement this method within CONTAM.</p>
+        <p><span style="font-weight: bold;">Modifier:</span> This is the wind speed modifier, <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">h</span>, calculated by ContamW based on the Wall Height, Terrain and Exponent values above. This value will be the default provided for each envelope airflow path that you create on the SketchPad and for which you select the variable wind pressure option. See section <a href="IDH_UsingWTH_Working_with_Weather_and_Wind.htm">Working with Weather and Wind</a> for a more detailed explanation of this term.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

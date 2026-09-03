@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Theoretical Background|Airflow Analysis" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Solving the Equations</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Solving the Equations</h3>
+        <p>The steady-state airflow analysis for multiple zones requires the simultaneous solution of equation (5) for all zones. Since the function in equation (1) may be, and usually is, nonlinear, a method is needed for the solution of simultaneous nonlinear algebraic equations. The Newton-Raphson (N-R) method [<a href="../IDH_References.htm#REF_Conte_1972">Conte and&#160; de Boor 1972</a> p. 86] solves the nonlinear problem by an iteration of the solutions of linear equations. In the N-R method a new estimate of the vector of all zone pressures, {<span style="font-weight: bold;">P</span>}<span style="vertical-align: super;font-size: 10pt">*</span>, is computed from the current estimate of pressures, {<b>P</b>}, by 
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">{<b>P</b>}<span style="vertical-align: super;">*</span> = {<b>P</b>} - {<b>C</b>}</td>
+                    <td class="EqnNum">(6)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where the correction vector, {<b>C</b>}, is computed by the matrix relationship
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">[<b>J</b>]{<b>C</b>} = {<b>B</b>}</td>
+                    <td class="EqnNum">(7)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where {<b>B</b>} is a column vector with each element given by
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/08000091.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(8)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>and [<span style="font-weight: bold;">J</span>] is the square (i.e. N by N for a network of N zones) Jacobian matrix whose elements are given by
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/08000092.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(9)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>In equations (8) and (9) <span style="font-style: italic;">F</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">j,i</span> and <span style="font-family: Symbol;">¶</span><span style="font-style: italic;">F</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">j,i</span>/<span style="font-family: Symbol;">¶</span><span style="font-style: italic;">P</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">j</span> are evaluated using the current estimate of pressure {<span style="font-weight: bold;">P</span>}. The ContamX program contains subroutines for each airflow element which return the mass flow rates and the partial derivative values for a given pressure difference input. 
+        </p>
+        <p>Equation (7) represents a set of linear equations which must be set up and solved for each iteration until a convergent solution of the set of zone pressures is achieved. In its full form [<span style="font-weight: bold;">J</span>] requires computer memory for N<span style="vertical-align: super;font-size: 10pt">2</span> values, and a standard Gauss elimination solution has execution time proportional to N<span style="vertical-align: super;font-size: 10pt">3</span>. Sparse matrix methods can be used to reduce both the storage and execution time requirements. A skyline solution process following the method presented in [<a href="../IDH_References.htm#REF_Dhatt_1984">Dhatt 1984</a>] was chosen. This method can be used to solve equations with symmetric or asymmetric matrices. It stores no zero values above the highest nonzero element in the columns above the diagonal and no zero values to the left of the first nonzero value in each row below the diagonal. In this case the Jacobian matrix is symmetric. CONTAM provides two solution methods for the linear equations: Skyline (also called profile method) and Pre-conditioned Conjugate Gradient (PCG). PCG may be useful for problems with many zones and junctions.
+        </p>
+        <p>Analysis of the element models will show that </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/08000093.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(10)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p style="">This condition allows a solution without pivoting, although scaling may be useful. Note that the degree of sparsity of the Jacobian matrix after factoring is dependent on the ordering of the zones. Ordering can be improved by various algorithms or rules-of-thumb. In AIRNET it was easy to define an airflow network which had no unique solution. The ContamW user interface insures the correct interconnection of the airflow elements in the network.</p>
+        <p>CONTAM allows zones with either known or unknown pressures. The constant pressure zones are included in the system of equations and equation (7) is processed so as to not change those zone pressures. This gives flexibility in defining the airflow network while maintaining the symmetric set of equations. A sufficient condition for the Jacobian to be nonsingular [<a href="../IDH_References.htm#REF_Axley_1987">Axley 1987</a>] is that all of the unknown pressure zones be linked by pressure dependent flow paths to (a) constant pressure zone(s). In CONTAM the ambient (or outdoor) air is treated as a constant pressure zone. The ambient zone pressure is assumed to be zero for the flow calculation causing the computed zone pressures to be values relative to the true ambient pressure and helping to maintain numerical significance in calculating <span style="font-family: Symbol;">D</span><span style="font-style: italic;">P</span>. 
+        </p>
+        <p style="">Conservation of mass at each zone provides the convergence criterion for the N-R iterations. That is, when equation (4) is satisfied for all zones for the current system pressure estimate, the solution has converged. Sufficient accuracy is attained by testing for relative convergence at each zone:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/08000094.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(11)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>with a test (<span style="font-family: Symbol;">S</span><span style="font-family: Symbol;">|</span><span style="font-style: italic;">F</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt">j,i</span><span style="font-family: Symbol;">|</span> &lt; <span style="font-family: Symbol;">e</span>1, the absolute convergence factor) to prevent division by zero. The magnitude of <span style="font-family: Symbol;">e</span> can be established by considering the use of the calculated airflows, such as in an energy balance. In any case, round-off errors may prevent perfect convergence (<span style="font-family: Symbol;">e</span> = 0).
+        </p>
+        <p style="">Numerical tests of the N-R method solution indicated occasional instances of very slow convergence as the iterations almost oscillate between two different sets of values. In AIRNET, this was handled by a Steffensen acceleration process. More recent tests by the author and by Wray [<a href="../IDH_References.htm#REF_Wray_1993">Wray 1993</a>] indicate that the use of a simpler constant under-relaxation coefficient produces a faster, reliable convergence acceleration process. Equation (6) for the iteration process becomes </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">{<b>P</b>}<sup>*</sup> = {<b>P</b>} - <span style="font-family: Symbol;">w</span>{<b>C</b>}
+                    </td>
+                    <td class="EqnNum">(12)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where <span style="font-family: Symbol;">w</span> is the relaxation coefficient. A relaxation coefficient of 0.75 has been found to be usable for a broad range of airflow networks. This value is not a true optimum but appears to work quite well without the computational cost of finding the theoretically optimum value. 
+        </p>
+        <p>When convergence is progressing rapidly, under-relaxation (<span style="font-family: Symbol;">w</span> &lt; 1) slows convergence compared to no relaxation. To prevent this a global convergence value is computed:
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/08000096.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(13)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>When <span style="font-family: Symbol;">g</span><span style="vertical-align: super;font-size: 10pt">*</span> &lt; <span style="font-family: Symbol;">a</span><span style="font-family: Symbol;">g</span>, <span style="font-family: Symbol;">w</span> is set to 1. Currently CONTAM uses <span style="font-family: Symbol;">a</span> = 30%. This often reduces the number of iterations. This is simple under-relaxation. CONTAM also may alternatively use a simple trust region method implemented by David M. Lorenzetti based on [<a href="../IDH_References.htm#REF_Dennis_and_Schnabel_1996">Dennis and Schnabel 1996</a>].
+        </p>
+        <p style="">Newton's method requires an initial set of values for the zone pressures. These may be obtained by including in each airflow element model a linear&#160; approximation relating the flow to the pressure drop:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/08000097.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(14)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Conservation of mass at each zone leads to a set of linear equations of the form</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">[<b>A</b>]{<b>P</b>} = {<b>B</b>}</td>
+                    <td class="EqnNum">(15)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Matrix [<b>A</b>] in equation (15) has the same sparsity pattern as [<b>J</b>] in equation (7) allowing use of the same sparse matrix solution process for both equations. This initialization handles stack effects very well and tends to establish the proper directions for the flows. The linear approximation is conveniently provided by the laminar regime of the element models used by CONTAM. When solving a set of similar problems, as when approximating a transient solution by successive steady-state solutions, it tends to be preferable to use the previous solution for the zone pressures as the initial values for the new problem.
+        </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

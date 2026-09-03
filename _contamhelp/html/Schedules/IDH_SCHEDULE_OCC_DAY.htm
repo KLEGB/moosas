@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Schedules" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Occupant Day Schedule</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor141"></a>Occupant Day Schedule Properties</h3>
+        <p>These are the properties and methods you use to define occupant day schedules. </p>
+        <p><span style="font-weight: bold;">Name:</span> This is the name you give to this occupant day schedule. This name must be unique among the occupant day schedules within this project.</p>
+        <p><span style="font-weight: bold;">Description:</span> Field for entering a more detailed description of the specific schedule.</p>
+        <p><span style="font-weight: bold;">Schedule Data:</span>  These are the time/location data points that you set to define an occupancy day schedule. The times are entered in the hh:mm:ss format, and you must provide leading and trailing zeros; for example 9:30 am would be entered as 09:30:00 not as 9:30:00. The location consists of a level and zone in which the occupant resides for the indicated time period. Select a value of "null" from the zone list to indicate the occupant is not in the building for a given time period. </p>
+        <p>Location data will also include zone coordinates if the occupant enters a 1D convection diffusion zone. For such cases, enter the X, Y and Relative Elevation (Z) coordinates and units for each 1D zone the occupant enters. X and Y are absolute coordinates and Rel Elevation is relative to the level of each1D zone that the occupant enters.</p>
+        <p><span style="font-weight: bold;">To insert a new data point</span>
+            <br />Enter the new time and location data in the "Modify Data" block, press the "&lt;&lt; Insert &lt;&lt;" button and the data point will be inserted into the schedule in the correct sequence. </p>
+        <p><span style="font-weight: bold;">To modify an existing data point</span>
+            <br />Select the data point that you wish to modify from the list, enter the revised data, and press the "&lt;&lt; Insert &lt;&lt;" button to overwrite the previously entered data point. </p>
+        <p><b>To delete an existing data point</b>
+            <br />Select the data point you want to delete from the list and click the "Delete" button. You cannot delete 00:00:00 or 24:00:00.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

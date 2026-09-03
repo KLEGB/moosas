@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Controls" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Control Super Elements</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Control Super Elements</h3>
+        <p class="Normal">Prior to CONTAM version 2.2, ContamW required you to draw all control networks directly on the main SketchPad even if they shared the same logic and control elements, leading to the potential for much repetitive work. In order to minimize user input and to allow sharing of control logic between different project files, controls have been enhanced to enable the creation of <span style="font-style: italic;">Control Super Elements</span>. <span style="font-style: italic;">Super Elements</span><span style=""> can be saved in the project file as well as in a new CONTAM Library file type LB5.</span></p>
+        <p class="Normal" style="font-weight: bold;">Terminology</p>
+        <p class="Normal"><span style="font-style: italic;font-weight: bold;">Super Element</span> - named control logic diagram and accompanying control elements (<span style="font-style: italic;">sub-nodes</span>) from the previously presented list of control elements. In object-oriented programming terms this is similar to a class in that it is not actually used until it is instantiated as an object.
+	    </p>
+        <p class="Normal"><span style="font-style: italic;font-weight: bold;">Super Node</span> - an instantiated <span style="font-style: italic;">Super Element</span>. In object-oriented programming terms this would be an object or instance of a user-defined class.
+	    </p>
+        <p class="SubHeading1">Control Super Element / Super Node SketchPad</p>
+        <p class="Normal">With the advent of the new <span style="font-style: italic;">control super element</span>, comes another use of the SketchPad to create and edit <span style="font-style: italic;">super elements</span> and <span style="font-style: italic;">super nodes</span>. When working with super elements only the controls drawing tool is enabled, along with the ability to define the control network icons. This SketchPad is activated via the <span style="font-weight: bold;text-decoration: underline;">D</span><span style="font-weight: bold;">ata</span>&#8594;<b>Co</b><span style="font-weight: bold;text-decoration: underline;">n</span><span style="font-weight: bold;">trols</span>&#8594;<span style="font-weight: bold;text-decoration: underline;">S</span><span style="font-weight: bold;">uper Elements...</span> menu item. When the Super Element SketchPad is active, the upper left corner of the SketchPad will display "<span style="font-family: 'Courier New';font-weight: bold;font-size: 10pt;">Super Element:</span>" followed by the name of the super element currently displayed on the SketchPad. When working with super elements the "Control Super Elements" dialog box will also be displayed as shown below.
+	    </p>
+        <p class="Normal" style="margin-left: 5pt;margin-right: 5pt;text-align: center;">
+            <img src="../../image/Control_SE_SketchPad.gif" style="visibility: visible;mso-wrap-style: square;" />
+        </p>
+        <p class="Normal">The Super Node SketchPad enables only the modification of existing control sub-node icons, so the control drawing tool will be disabled as will the ability to delete control network icons. The Super Node SketchPad is activated by <span style="font-style: italic;">instantiating</span> an existing <span style="font-style: italic;">control super element</span> or double-clicking on a Super Node icon. When the Super Node SketchPad is active, the upper left corner of the SketchPad will display "<span style="font-family: 'Courier New';font-weight: bold;font-size: 10pt;">Super Node:</span>" followed by the name of the super node currently displayed on the SketchPad. When working with super nodes the "Super Node" dialog box will also be displayed as shown below.
+	    </p>
+        <p class="Normal" style="margin-left: 5pt;margin-right: 5pt;text-align: center;">
+            <img src="../../image/Control_SN_SketchPad.gif" style="visibility: visible;mso-wrap-style: square;" />
+        </p>
+        <p class="SubHeading1">Defining Super Elements</p>
+        <p class="Normal">To create a super element you activate the Super Element SketchPad. Unlike other library element types, all super elements must be created and edited within a CONTAM project file. Initiating the super element editing mode activates both the Super Element SketchPad and the Control Super Elements dialog box shown below. Use the SketchPad to draw the <span style="font-style: italic;">super element diagram</span> and define control sub-node types in much the same way as is done for controls on the main SketchPad. The dialog box is provided to name, save and set other super element properties described below.</p>
+        <p class="SubHeading1">Deleting Super Elements</p>
+        <p class="Normal">You can delete super elements via the CONTAMW Library Manager. Only those super elements that are currently not referenced by a Super Node can be deleted. You can determine whether or not a super element is referenced by the <span style="font-style: italic;">super node reference count</span> provided on the Control Super Element dialog box when displaying a particular super element on the Super Element SketchPad.</p>
+        <p class="SubHeading1">Modifying Super Elements</p>
+        <p class="Normal">Modifying Super Elements consists of modifying the drawing (i.e., adding and deleting control links and sub-nodes), modifying the properties of individual sub-nodes and modifying the Super Element Properties.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Modifying the drawing</span> <![CDATA[ ]]>– You can only modify the drawing if the <span style="font-style: italic;">super node reference count</span> is 0. This limitation is in effect, because all instances of a <span style="font-style: italic;">super element </span>(i.e., <span style="font-style: italic;">super nodes</span>) reference the sketch data and list of sub-nodes of the super element.
+	    </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Modifying sub-node properties</span> <![CDATA[ ]]>– You can modify the properties of sub-nodes as you desire. This will not affect existing instances of the super element; however, this will change the default properties of new instances of the super element.
+	    </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Modifying Super Element properties</span> <![CDATA[ ]]>– You can modify the super element properties as you so desire. This will not affect existing instances as super nodes simply reference the super element properties, but do not create new instances of them.
+	    </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

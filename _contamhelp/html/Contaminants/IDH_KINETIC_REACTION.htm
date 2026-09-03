@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Kinetic Reactions" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Kinetic Reaction Data</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Kinetic Reaction Data</h3>
+        <p>Kinetic reaction elements are made up of source/product species pairs. You can define any number of pairs per element you desire. Only those species that you have selected to be contaminants will be accounted for when you perform simulations. These are the properties that describe a kinetic reaction.</p>
+        <p><span style="font-weight: bold;">Name:</span> Enter a unique name you want to use to identify the reaction matrix. You will use this name to associate this element with zones within the project.</p>
+        <p><span style="font-weight: bold;">Description:</span> Use this to provide a more detailed description of the kinetic reaction.</p>
+        <p><span style="font-weight: bold;">Reactant</span>&#8594;<span style="font-weight: bold;">Product Pairs: </span>This is a list of the reactant/product pairs and their associated reaction coefficients that are currently defined for the current kinetic reaction element.</p>
+        <p><span style="font-weight: bold;">Edit Reactant</span>&#8594;<span style="font-weight: bold;">Product Pair:</span> Use this section to edit the highlighted Reactant<span style="font-family: 'Symbol';">®</span>Product pair or create new ones. Use the Add, Replace and Delete buttons accordingly. </p>
+        <p><span style="font-weight: bold;">Reactant Species:</span><span style="font-size: 12pt;"> This is a list of all the species in either the current project or library file depending on how this dialog box was accessed. Select a species to be the reactant in the R</span><span style="font-family: 'Symbol';font-size: 12pt;font-weight: bold;">®</span><span style="font-size: 12pt;">P Pair.</span>
+        </p>
+        <p><span style="font-weight: bold;">Product Species:</span><span style="font-size: 12pt;"> This is a list of all the species in either the current project or library file depending on how this dialog box was accessed. Select a species to be the product in the R</span><span style="font-family: 'Symbol';font-size: 12pt;font-weight: bold;">®</span><span style="font-size: 12pt;">P Pair.</span>
+        </p>
+        <p><span style="font-weight: bold;">Reaction Coefficient:</span><span style="font-size: 12pt;"> Use this edit field to set the reaction coefficient for the currently highlighted R</span><span style="font-family: 'Symbol';font-size: 12pt;font-weight: bold;">®</span><span style="font-size: 12pt;">P Pair. The units of the coefficient are s</span><span style="font-size: 12pt;vertical-align: super;">-1</span><span style="font-size: 12pt;">.</span>
+        </p>
+        <h5>Examples</h5>
+        <p>The following are examples of kinetic reactions as implemented within CONTAMW.</p>
+        <p class="SubHeading1">Kinetic Reaction Example 1</p>
+        <p>To simulate the first-order decay of a species, you would set the coefficient of the Reactant&#8594;Product Pair to the negative of the reaction rate in units of 1/s.</p>
+        <p class="footnote-text">
+            <img src="../../image/ebx_-1364897423.gif" border="0" alt="image\ebx_-1364897423.gif" />
+        </p>
+        <p>This figure shows kinetic reaction coefficients for two species reactions that will yield exponential decays of each species according to the following equation:</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_KRDecay.PNG" border="0" alt="equation" />
+        </p>
+        <p>Where,</p>
+        <p class="EqnParams"><i>C<sub style="font-size: 9pt;">j</sub></i>(<i>t</i>)&#160;=&#160;concentration of product contaminant <i>j</i> at time <i>t</i></p>
+        <p class="EqnParams"><i>C</i><i><sub style="font-size: 9pt;">i</sub></i>(0)&#160;=&#160;initial concentration of reactant contaminant <i>i</i> at time 0</p>
+        <p class="EqnParams"><i>K</i><i><sub style="font-size: 9pt;">ji</sub></i> &#160;= reaction rate coefficient between product <i>j</i> and reactant <i>i</i> (time constant)</p>
+        <p>In the above example, the reaction rate coefficients are as follows:</p>
+        <p class="NormalIndent"><i>K<sub style="font-size: 9pt;">11</sub></i>&#160;= -0.0001388/s<br /><i>K<sub style="font-size: 9pt;">22</sub></i>&#160;= -0.00003472/s </p>
+        <p>If the reaction is the only means of species removal, i.e., there is no dilution due to airflow, then species C1 would decay at a rate of </p>
+        <p class="NormalIndent">0.0001388 * 3600 = 0.5/h,</p>
+        <p>and C2 would decay at a rate of</p>
+        <p class="NormalIndent">0.00003472 * 3600 = 0.125/h.</p>
+        <p class="SubHeading1">Kinetic Reaction Example 2</p>
+        <p>This example illustrates the first-order decay of species C1 (reactant and product) and the first order build-up of another species C2 (product) based on C1(reactant).</p>
+        <p class="footnote-text">
+            <img src="../../image/ebx_1414453937.gif" border="0" alt="image\ebx_1414453937.gif" />
+        </p>
+        <p>This figure above shows the parameters for the "kr1" kinetic reaction element. This element provides for two reactions that will yield an exponential decay of contaminant C1 according to the equation</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_KR1.PNG" border="0" height="24" width="109" alt="equation" />, </p>
+        <p>and the build-up of contaminant C2 according to </p>
+        <p>
+            <img src="../../Resources/Images/Eqn_KR2.PNG" border="0" alt="equation" />
+        </p>
+        <p>In the above example, the reaction rate coefficients are as follows:</p>
+        <p class="NormalIndent"><span style="font-style: italic;"></span><i>K<sub style="font-size: 9pt;">11</sub></i> = -0.0001389/s  <br /><i>K<sub style="font-size: 9pt;">21</sub></i> = 0.0001389/s<span style="vertical-align: super;font-size: 10pt;"> <![CDATA[ ]]></span></p>
+        <p>Note that both the decay and build-up are dependent on the species of C1.</p>
+        <p class="SubHeading1">Kinetic Reaction Example 3</p>
+        <p>You can also use the kinetic reaction to simulate a consecutive first-order reaction series. (The radioactive decay chain of Radon gas is an example of such a reaction.)</p>
+        <p>A two-step consecutive reaction series involving a single reactant at each step is indicated as</p>
+        <p>C1 <span style="font-family: 'Symbol';">®</span> C2<br />C2 <span style="font-family: 'Symbol';">®</span> products</p>
+        <p>You would model this reaction chain by inputting coefficients based on the half-life of the radioactive reactants. Convert half-life <span style="font-family: 'Symbol';">t</span><i><sub style="font-size: 9pt;">1/2</sub></i><span style="font-size: 9pt;vertical-align: sub;">&#160;</span> to a first-order reaction coefficient, <span style="font-style: italic;"><i><i>K<sub style="font-size: 9pt;">21</sub></i></i></span>, using the following equation:</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_KR3.PNG" border="0" alt="equation" />
+        </p>
+        <p>In CONTAM, you would require two species C1 and C2 (if interested in contaminant C2) and three reactant/product pairs have the following reaction coefficients characteristics:</p>
+        <p class="NormalIndent"><span style="font-style: italic;"></span><i>K<sub style="font-size: 9pt;">11</sub></i> would have negative non-zero values (decay of C1)</p>
+        <p class="NormalIndent"><span style="font-style: italic;"><span style="font-style: italic;"></span></span><i>K<sub style="font-size: 9pt;">21</sub></i> would have a non-zero positive value (build-up of C2 from C1)</p>
+        <p class="NormalIndent"><span style="font-style: italic;"><span style="font-style: italic;"></span><i>K<sub style="font-size: 9pt;">22</sub></i></span> would have negative non-zero values (decay of C2)</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

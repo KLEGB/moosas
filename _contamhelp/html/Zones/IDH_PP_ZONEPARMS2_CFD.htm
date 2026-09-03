@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Zones|Defining Zones|Zone Properties" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Detailed Zone Data</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4><a name="kanchor32"></a>Zone – Detailed Zone Properties</h4>
+        <p><a name="kanchor33"></a>These are the properties used to define 1D convection/diffusion zones, in which contaminant concentrations can vary along a user-specified axis. This option is provided for cases in which you need to account for the delay in contaminant transport within long or tall zones. If this feature is enabled, ContamX will subdivide this zone along the specified axis into multiple cells or sub-nodes for the purposes of contaminant transport calculations. </p>
+        <p><span style="font-weight: bold;">Zone Name:</span> This is the symbolic name of the zone as entered on the Zone Data property page.</p>
+        <p><span style="font-weight: bold;">Zone Type</span>
+        </p>
+        <ul>
+            <li value="1">Normal Zone: well-mixed zone</li>
+            <li value="2">1D Zone: 1D convection/diffusion zone</li>
+            <li value="3">CFD&#160;Zone: Only one CFD&#160;zone is allowed per CONTAM project. Use the CFD0 Editor (available via the NIST Multizone Modeling website) to define the CFD properties of the zone, e.g., zone mesh and boundaries.</li>
+        </ul>
+        <p><span style="font-weight: bold;">1D Zone Data</span>
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Axial Dispersion Coef:</span> Enter the axial dispersion coefficient and units for the zone. Note that the zone dispersion coefficient is zone specific and is not necessarily the molecular diffusion properties of the defined contaminants. This coefficient is empirically based and should account for turbulent mixing as well.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Axis End Point Coordinates: </span>Define the end points, <span style="font-weight: bold;">Point 1</span> and <span style="font-weight: bold;">Point 2</span>, of the axis of the 1D zone. These coordinates will define the direction along which contaminant transport will be calculated when treating this zone as a 1D convection diffusion zone. These values are required to establish the relationship of other building components with respect to this zone, i.e., flow paths, duct junctions and terminals, simple air-handling unit supply and return points, contaminant source/sinks, sensors and occupants.</p>
+        <p class="NormalIndent">While the coordinate system is user-defined, ContamW will verify the relationship of 1D zones to associated building components prior to running a simulation to ensure that the coordinates "match up." This verification is performed automatically when you select either the <span style="font-weight: bold;text-decoration: underline;">R</span><span style="font-weight: bold;">un Simulation</span> or <span style="font-weight: bold;">Create a Contam</span><span style="font-weight: bold;text-decoration: underline;">X</span><span style="font-weight: bold;"> Input File</span> command from the <span style="font-weight: bold;text-decoration: underline;">S</span><span style="font-weight: bold;">imulation</span> menu. If there are discrepancies, messages will be displayed notifying you of the nature of the discrepancies.</p>
+        <p class="NormalIndent2"><span style="font-weight: bold;">X and Y:</span> The X and Y values are in absolute coordinates. These values can be based on scale drawings and/or a user-defined coordinate system. Unlike walls on the SketchPad, axes are not required to be rectilinear, i.e., you may specify axes that are not horizontal or vertical in the x-y plane. </p>
+        <p class="NormalIndent2"><span style="font-weight: bold;">Rel Elevation:</span> Enter the Z-coordinate as the height relative to the base of the zone.</p>
+        <p class="NormalIndent2"><span style="font-weight: bold;">Cell Size:</span> This is the cell size into which ContamX will sub-divide the zone during simulation if the zone is to be treated as a 1D convection/diffusion zone. If the axis length is not evenly divisible by the cell size, then the cell size will be adjusted as needed. While there is no strict guidance on the selection of cell size, it should generally be on the order of the flow velocity along the axis times the simulation time step. </p>
+        <p class="NormalIndent2"><span style="font-weight: bold;">Units:</span> Set the units of the above items.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Axis Orientation on the SketchPad: </span>The orientation of the axis on the SketchPad is useful when using a results viewing tool such as CONTAM Results Viewer (ContamRV). ContamRV can display the variation of concentration within 1D zones if the simulation output options are set to write to the 1D results files (See Simulation - Output Properties in the <a href="../Simulation/IDH_UsingSIM_Simulation_Parameters.htm">Simulation Parameters</a> section). Mass fractions of 1D zone cells are written to the 1D results file in the order from Point 1 to Point 2 of the Axis End Points. The "Axis Orientation" enables ContamRV to color the rectilinear region of the zone on the SketchPad even if the axis endpoints specify an axis that is not actually horizontal or vertical in the plan view, e.g., a slanted hallway.</p>
+        <p><span style="font-weight: bold;">CFD Zone Data</span>
+        </p>
+        <p class="NormalIndent"><b>CFD&#160;Zone ID:</b> This identifier is used to name the CFD&#160;files associated with this project. These files will be generated by the CFD0 Editor and ContamX. For example, using the CFD0 Editor you import a PRJ file that contains a CFD Zone. Once you have used the CFD0 Editor to define the CFD domain, you will use the CFD0 Editor to generate a CFD file having the same name as the PRJ file but with the CFD Zone ID appended to it, e.g., MyProject_CfdZone.cfd. Running a coupled simulation will generate more similarly named files having various extensions.</p>
+        <p class="NormalIndent"> <![CDATA[ ]]></p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

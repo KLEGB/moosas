@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Airflow Paths|Defining Airflow Paths" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Airflow Element Types</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4><a name="kanchor48"></a>Airflow Element Types</h4>
+        <p>This is a list of available airflow elements or mathematical models that provide the relationship between airflow and pressure difference for airflow paths. See Airflow Analysis in the <a href="../Theory/IDH_Theory_Background.htm">Theoretical Background</a> section of the manual for mathematical details.</p>
+        <p class="SubHeading1">One-way Flow using Powerlaw Models</p>
+        <p>These one-way flow models permit flow in the direction of the pressure drop. CONTAM provides you with the following powerlaw flow models.</p>
+        <ol>
+            <li value="1">
+                <p><a href="IDH_AFE_PLQCN.htm">Q = C(<span style="font-family: 'Symbol';">D</span>P)^n</a>: This is the general form of the powerlaw model in volumetric flow form that allows you to directly input the coefficient, <span style="font-style: italic;">C</span>, and exponent, <span style="font-style: italic;">n</span>.</p>
+            </li>
+            <li value="2">
+                <p><a href="IDH_AFE_PLFCN.htm">F = C(<span style="font-family: 'Symbol';">D</span>P)^n</a>: This is the general form of the powerlaw model in mass flow form that allows you to directly input the coefficient, <span style="font-style: italic;">C</span>, and exponent, <span style="font-style: italic;">n</span>.</p>
+            </li>
+            <li value="3">
+                <p><a href="IDH_AFE_PLLEAK.htm">Leakage Area Data</a>: This model refers to effective leakage areas as described in Chapter 26 of the <span style="font-style: italic;">2001</span><span style="font-style: italic;"> ASHRAE Handbook of Fundamentals</span>. </p>
+            </li>
+            <li value="4">
+                <p><a href="IDH_AFE_PLCONN.htm">Connection (ASCOS) Data</a>: Refers to the airflow description used in the ASCOS program [<a href="../IDH_References.htm#REF_Klote_1982">Klote 1982</a>].</p>
+            </li>
+            <li value="5">
+                <p><a href="IDH_AFE_PLORFC.htm">Orifice Area Data</a>: Relates the opening description to the orifice area data. </p>
+            </li>
+            <li value="6">
+                <p><a href="IDH_AFE_PLCRACK.htm">Crack Description</a>: A narrow opening described by its length and width.</p>
+            </li>
+            <li value="7">
+                <p><a href="IDH_AFE_PLTEST1.htm">Test Data (1-point)</a>: Uses a single flow rate and pressure drop along with an estimate for the pressure exponent, <span style="font-style: italic;">n</span>.</p>
+            </li>
+            <li value="8">
+                <p><a href="IDH_AFE_PLTEST2.htm">Test Data (2-points)</a>: Uses two flow rates with their corresponding pressure drops to define the flow using the powerlaw model.</p>
+            </li>
+            <li value="9">
+                <p><a href="IDH_AFE_PLSTAIR.htm">Stairwell</a>: Data corresponding to a stairwell is fit to the powerlaw model.</p>
+            </li>
+            <li value="10">
+                <p><a href="IDH_AFE_PLSHAFT.htm">Shaft</a>: Describes the flow in a large shaft.</p>
+            </li>
+        </ol>
+        <p class="SubHeading1">One-way Flow using Quadratic Models</p>
+        <p>These models permit flow in only one direction through the path based on the pressure drop. </p>
+        <ol>
+            <li value="1">
+                <p><a href="IDH_AFE_QFQAB.htm"><span style="font-family: 'Symbol';">D</span>P = aQ + bQ^2</a> and <a href="IDH_AFE_QFFAB.htm"><span style="font-family: 'Symbol';">D</span>P = aF + bF^2</a>: These models allow you to directly input the "a" and "b" coefficients for the Quadratic models.</p>
+            </li>
+            <li value="2">
+                <p><a href="IDH_AFE_QFCRACK.htm">Crack Description</a>: This model describes a narrow opening in greater detail than the powerlaw version of the crack model.</p>
+            </li>
+            <li value="3">
+                <p><a href="IDH_AFE_QFTEST2.htm">Test Data (2- point)</a>: This model uses two flow rates and their corresponding pressure drops to define the flow using the quadratic model.</p>
+            </li>
+        </ol>
+        <p class="SubHeading1">Two-way Flow Models</p>
+        <p>These models are used to represent tall openings where temperature differences across the opening may cause two-way flow across the opening, e.g., doorways. </p>
+        <ol>
+            <li value="1">
+                <p><a href="IDH_AFE_DORDOR.htm">Single Opening Model with 2-way Flow</a>: This models the flow through a path as a single large opening.</p>
+            </li>
+            <li value="2">
+                <p><a href="IDH_AFE_DORPL2.htm">Two-opening Model</a>: This model divides an opening vertically and models the flow using two powerlaw models, one for each opening. Results are obtained in the form of the net flow rate in each direction.</p>
+            </li>
+        </ol>
+        <p class="SubHeading1">Backdraft Damper Flow Models</p>
+        <p>The models allow you to model a feature that has different resistances depending on the direction of the pressure drop, e.g., a smoke control damper. CONTAM implements both a volume flow and a mass flow version of the backdraft damper model, both of which are based on the powerlaw model.</p>
+        <ol>
+            <li value="1">
+                <p><a href="IDH_AFE_PLBDF.htm">Backdraft Damper Model: F = C(<span style="font-family: 'Symbol';">D</span>P)^n</a>: This is the volumetric flow form of the Backdraft Damper model. You input separate values of C and n depending on the sign of the pressure drop across the damper.</p>
+            </li>
+            <li value="2">
+                <p><a href="IDH_AFE_PLBDQ.htm">Backdraft Damper Model: Q = C(dP)^n</a>: This is the mass flow form of the Backdraft Damper model. You input separate values of C and n depending on the sign of the pressure drop across the damper.</p>
+            </li>
+            <li value="3"><a href="IDH_AFE_PLBDQ.htm">Self-regulating Vent</a>: This element limits the airflow rate in both directions through a flow path with user-defined limiting air pressure differences. CONTAM implements the self-regulating vent as described in [<a href="../IDH_References.htm#REF_Axley_2001">Axley 2001</a>]<a href="../IDH_References.htm#REF_Axley_2001"></a>.</li>
+        </ol>
+        <p class="SubHeading1">Fan and Forced Flow Models</p>
+        <p>These models allow you to create airflow paths that represent fans or other paths for which you want to designate a flow rate.</p>
+        <ol>
+            <li value="1">
+                <p><a href="IDH_AFE_FNCMF.htm">Constant Mass Flow Fan</a>: This model provides for a constant mass flow rate. </p>
+            </li>
+            <li value="2">
+                <p><a href="IDH_AFE_FNCVF.htm">Constant Volume Flow Fan</a>: This model provides for a constant volumetric flow rate, but the mass flow will vary based on the actual density.</p>
+            </li>
+            <li value="3">
+                <p><a href="IDH_AFE_FNFAN.htm">Cubic Polynomial Fan Model</a>: This model implements a user-defined fan performance curve to relate pressure vs. flow rate.</p>
+            </li>
+        </ol>
+        <p class="SubHeading1">Cubic Spline Flow Models</p>
+        <p>These models provide the ability to create user-defined airflow elements based on a set of data points to which a cubic spline curve is fit. There are four versions that relate either mass flow or volume flow to pressure difference across the flow element (or vice versa). The cubic spline curve fit ensures that the relationship between flow and pressure is differentiable as required by the CONTAM airflow solver. </p>
+        <ol>
+            <li value="1">
+                <p><a href="IDH_AFE_CubicSpline.htm">F vs P</a>: <span style="font-style: italic;">Mass flow rate</span> as a function of <span style="font-style: italic;">Pressure difference</span></p>
+            </li>
+            <li value="2">
+                <p><a href="IDH_AFE_CubicSpline.htm">Q vs P</a>: <span style="font-style: italic;">Volume </span><span style="font-style: italic;">flow rate</span> as a function of <span style="font-style: italic;">Pressure difference</span></p>
+            </li>
+            <li value="3">
+                <p><a href="IDH_AFE_CubicSpline.htm">P vs F</a>:<span style="font-style: italic;"> Pressure difference </span>as a function of <span style="font-style: italic;">Mass flow rate</span></p>
+            </li>
+            <li value="4">
+                <p><a href="IDH_AFE_CubicSpline.htm">P vs Q</a>:<span style="font-style: italic;"> Pressure difference </span>as a function of <span style="font-style: italic;">Volume </span><span style="font-style: italic;">flow rate</span></p>
+            </li>
+        </ol>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

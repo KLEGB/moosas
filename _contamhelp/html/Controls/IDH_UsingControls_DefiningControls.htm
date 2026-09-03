@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Controls" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Defining Controls</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Defining Controls</h3>
+        <p>You must define all <span style="font-style: italic;">control nodes</span> and <span style="font-style: italic;">sensor</span> icons in order to perform a simulation. Control links will be defined automatically upon definition of the node or sensor from which they emanate. Generally, you should define control nodes in the direction of information flow indicated by the link arrows. Define <span style="font-style: italic;">control nodes</span> and <span style="font-style: italic;">sensors</span> using the icon definition procedure (See <a href="../SketchPad/IDH_UsingSketchPad_DefiningBuildingComponentIcons.htm">Defining Building Component Icons</a>) to display and edit their properties.</p>
+        <p class="SubHeading1">Sensors</p>
+        <p>When you double-click an undefined sensor icon, the Control Sensor definition dialog box will appear. The parameters will either be those for a <span style="font-style: italic;">zone sensor</span> or <span style="font-style: italic;">flow path sensor</span> depending on the building component with which the sensor is associated.</p>
+        <p>As noted in the Drawing Controls section above, sensor icons can be placed automatically when you begin drawing a control link on a sensible icon, e.g., zone or flow path. With CONTAM version 2.4, you can now define zone sensors within any blank cell inside of a zone. This increases the previous limit of four zone sensors per zone and is done by selecting the "Sensor" control element type when defining a control node as presented in the following sub-section.</p>
+        <p class="SubHeading1">Control Nodes</p>
+        <p>Double-clicking on an undefined control node icon will display the Control Element Types dialog box from which you select the type of control element you wish to define. Control elements can be categorized by the number of inputs that can be associated with them: unary, binary and multiple. Therefore, when the Control Element Types dialog is displayed, various types will be enabled/disabled for selection depending on the number of inputs that you have drawn into the currently selected node.</p>
+        <p>Once you select the type of element you want to create, you assign values to the parameters of the control elements. All control elements have an optional <span style="font-style: italic;">Name</span> parameter with the exception of the phantom for which the <span style="font-style: italic;">Name</span> parameter will be used to reference the name of another existing element. The name parameter is only required if you want to reference the element with a phantom node.</p>
+        <p>Each element also has an optional <span style="font-style: italic;">Description</span> field, which is filled in with a default value when you create an element, but you may change the description. The description will be displayed in the status bar when you highlight the control node on the SketchPad. Many of the elements do not have any parameters other than the <span style="font-style: italic;">Name</span> and <span style="font-style: italic;">Description</span>, because they simply perform a predetermined operation on the input(s) to the node, e.g., the "+ Add" element simply takes two inputs, adds them and provides the results as an output signal. Other control elements have additional parameters required to define their behavior, e.g., the "Constant" element has a value parameter use to specify the constant value of the output signal from the control node.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" class="h2" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Configuring ContamW</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>Configuring ContamW</h2>
+        <p>The Program and Project options of ContamW are available from the <span style="font-weight: bold;text-decoration: underline;">V</span><span style="font-weight: bold;">iew</span> menu. Program options can be saved to the CONTAM.CFG file located in the CONTAM Program Directory. Upon startup, ContamW looks for this file and loads the saved settings if the file exists. This way you can set ContamW to start with the same default settings each time you run the program. Project options are saved with the current project file.</p>
+        <p>NOTE: The path name of the EWC-to-WPC file converter does not appear in the configuration dialog boxes; however, if a converter is selected when you click the Save button it will be saved to the CONTAM.CFG file. The value saved will be that which you have set in the <span style="font-weight: bold;">WPC </span><span style="font-weight: bold;text-decoration: underline;">F</span><span style="font-weight: bold;">ile…</span> selection of the <span style="font-weight: bold;text-decoration: underline;">W</span><span style="font-weight: bold;">eather</span> menu. To reset the converter name back to "null," you must edit the configuration file manually.</p>
+        <h3><span style="color: #8b0000;"><a name="ConfigContamW_ProjectOptions"></a></span>Project Configuration Properties<span style="color: #8b0000;"></span></h3>
+        <p>All of these settings are saved within the CONTAM project file.</p>
+        <h4>Units</h4>
+        <p>The following parameters define the units and temperature that will be used by default throughout the project when you are providing input to the program. You do not have to use these units throughout the project; however, you should select the primary set of units for convenience when entering data throughout a project. You can change these defaults at any time while working with a project, and you can select different units for individual parameters as you enter them.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">System of Units:</span> You can select the appropriate radio button to set the system of units that you would like the program to use. You can either select the International System of Units (SI) or the Inch-Pound (IP) system of units.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Units of Flow:</span> You can select the appropriate radio button for the most commonly used units of flow in the current project. These are the units in which airflow simulation results will be displayed within the status bar. ContamW converts all airflow rates to and performs all calculations in mass flow units of kg/s. Note that all volumetric airflow rate units are at standard temperature and pressure.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Default Zone and Junction Temperature:</span> This value will be the default temperature used whenever you create a new zone, duct junction or terminal within the current project. If you change this value, you will be prompted as to whether or not you would like to update the temperatures of all existing zones, junctions and terminals.</p>
+        <h4>SketchPad Dimensions</h4>
+        <p class="NormalIndent"><span style="font-weight: bold;">Size:</span> This is the <i>Width</i> and <i>Height</i> of the SketchPad. These dimensions are presented in both cell units and units of length as defined by the Scaling Factor below. The SketchPad is made up of square cells that represent each space wherein an icon may be placed. The default (and minimum) values are 66 cells wide and 58 cells high.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Scaling Factor:</span>  Sets the cell dimension used to calculate SketchPad locations as well as wall length, wall area and zone floor area. These values will be displayed  on the SketchPad, in the units selected here, when the <i>Show Pseudo-Geometry</i> option is activated.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Show Pseudo-Geometry:</span>  The pseudo-geometry drawing mode provides SketchPad coordinates and wall dimensions in the Status Bar based on the Scaling Factor. Pseudo-geometry is useful in defining scaled representations of a building as well as setting airflow path multipliers, using displayed wall areas, and defining new zones that will be automatically provided with a floor area based on the Scaling Factor. The extents of items (dx and dy) will also be displayed in the Status Bar as you draw them. Scaled drawings are useful when defining models to be coupled with TRNSYS or EnergyPlus (See <a href="../TRNSYS/IDH_UsingTRNSYS-WorkingWithTRNSYS.htm#top">Working with TRNSYS</a> and <a href="../EnergyPlus/IDH_UsingEnergyPlus-WorkingWithEnergyPlus.htm">Working with EnergyPlus</a>). </p>
+        <p class="NormalIndentCW2">As of CONTAM 3.3, you can import a bitmap image over which can be drawn or traced a CONTAM floor plan. This is referred to as a <i style="font-weight: bold;">tracing image</i>. See the Tools menu for commands that allow you to import, remove, size and move the image on the SketchPad. The tracing image is not saved with the project file.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Origin:</span>  Sets the location (column and row) of the origin to be used when calculating the position of items on the SketchPad. A special icon will appear on the SketchPad at the specified location. By default the origin represents the bottom-left of the SketchPad grid (column 1, row 56) and y-values are positive above the origin. You can invert the y-axis so that y-values are negative above the origin.</p>
+        <p class="NormalIndent">NOTE: You can also set the origin by right-clicking on the SketchPad and selecting "Set Origin" from the context menu. You can move the origin around the SketchPad to simplify drawing walls relative to the location of the origin.</p>
+        <h3><a name="ProgramConfigurationProperties"></a>Program Configuration Properties</h3>
+        <p>These settings are saved to the CONTAM.CFG file and are loaded each time you run ContamW.</p>
+        <h4>Default Units</h4>
+        <p>These properties define the units and temperature that will used to populate the Project units (presented above) when you create a new project file.</p>
+        <h4><a name="SketchPad_Display"></a>SketchPad Display</h4>
+        <p class="NormalIndentCW2"><b>Show Icon Colors:</b> Check associated box to display colors of specific types of icons or zone fill on the SketchPad. </p>
+        <p class="NormalIndentCW2" style="font-weight: bold;"><span style="font-weight: bold;">Origin Scale</span>
+        </p>
+        <p class="NormalIndentCW2-2"><span style="font-weight: bold;">Show Scale:</span> Check this to modify the Origin icon to show the <i>Scale Length</i>, defined below, on the SketchPad.</p>
+        <p class="NormalIndentCW2-2"><span style="font-weight: bold;">Scale Length:</span> Set the length and units of the Scale to display on the SketchPad. This can be useful when establishing the size of the <i>Tracing Image</i> on the SketchPad. Set this to be a multiple of the <i>Scaling Factor</i>, though it will be displayed as such on the SketchPad anyway.</p>
+        <p class="NormalIndentCW2"><span style="font-weight: bold;">Tracing Image Adjustment (pixels)</span>
+        </p>
+        <p class="NormalIndentCW2-2">Set these values to be utilized when adjusting the size and location of the <i>Tracing Image</i> on the SketchPad. You can access the <i>Tracing Image Adjustment</i> controls via the <span style="font-weight: bold;text-decoration: underline;">T</span><span style="font-weight: bold;">ools</span> menu.<br />NOTE: The image size will change in proportion to the width and height of the bitmap file, so you should ensure that these proportions reflect those of the image you are scaling.</p>
+        <p class="NormalIndent"><b>Miscellaneous</b>
+        </p>
+        <p class="NormalIndent2"><span style="font-weight: bold;">Show Floating Status:</span> Check this box to display the Floating Status box on the SketchPad. You can also turn the floating status box on and off via the <span style="font-weight: bold;text-decoration: underline;">V</span><span style="font-weight: bold;">iew </span>&#8594;              <span style="font-weight: bold;">Floa</span><span style="font-weight: bold;text-decoration: underline;">t</span><span style="font-weight: bold;">ing Status (Ctrl+T)</span> menu command.</p>
+        <p class="NormalIndent2"><span style="font-weight: bold;">Maximize ContamW at startup:</span> Check this box to maximize the ContamW window when the you start the program.</p>
+        <h4>Cell/Icon Size</h4>
+        <p class="NormalIndent"><span style="font-weight: bold;">Current Cell/Icon Size:</span><a name="kanchor9"></a> There are seven options for displaying icons on the SketchPad (1x1, 2x2, 3x3, 4x4, 5x5, 8x8, and 16x16). The default option is 8x8. This is a "zooming" feature that provides a visual aid to enable you to view sketches in more detail or to fit larger sketches within the program window. The cell size has no effect on the project simulation. There are two "zooming" buttons provided on the toolbar to quickly increase and decrease the cell size according to the available cell sizes below. </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Available Cell Sizes:</span> Use these check boxes to select which sizes you want available. The 1x1 size causes problems with some versions of the Window 98 operating system. If this is the case for you, then deselect the 1x1 check box and click the "Save Configuration" button.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Cell Jump:</span> Use this to set the number of SketchPad cells the cursor will jump when you use the <b>Shift + Arrow Keys</b> to maneuver around the SketchPad.</p>
+        <h4>Colors</h4>
+        <p class="NormalIndent"><span style="font-weight: bold;">Palettes: </span>ContamW provides the ability to modify the color of items displayed on the SketchPad. You can select one of four available palettes. You cannot modify the colors of the "Default" palette, but you can modify the other three "User Palettes." Select a palette to display the colors of the palette in the <span style="font-weight: bold;">Palette Colors</span> section below.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Palette Colors:</span> These are the colors use to display items on the SketchPad. Click the color box to change the color used to display each type of item. Only the colors of the User Palettes can be changed. The following is a brief description of each category.</p>
+        <p class="NormalIndent2"><i>Foreground</i> - Defined icons including walls</p>
+        <p class="NormalIndent2"><i>Background</i> - Background of SketchPad cells, default zone fill and fill of all zones when <span style="font-weight: bold;">Color Zones</span> option is not active.</p>
+        <p class="NormalIndent2"><i>Flow Results</i> - Lines displaying scaled flow results for airflow paths and duct terminals</p>
+        <p class="NormalIndent2"><i>Pres Results</i> - Lines displaying scaled pressure difference results across airflow paths in the Results and Wind Pressure view modes</p>
+        <p class="NormalIndent2"><i>Drawing Line</i> - Cell highlight when drawing on the SketchPad</p>
+        <p class="NormalIndent2"><i>Undefined</i> - Undefined icons</p>
+        <p class="NormalIndent2"><i>Controls</i> - Defined control icons</p>
+        <p class="NormalIndent2"><i>Ducts</i> - Default color of defined ducts and color of all defined ducts when <span style="font-weight: bold;">Color Ducts</span> view option is not active</p>
+        <p class="NormalIndent2"><i>Errors</i> - Background color of cells when an error condition is being highlighted on the SketchPad. Errors are indicated when a building check fails. Building checks are performed when you choose <span style="font-weight: bold;text-decoration: underline;">R</span><span style="font-weight: bold;">un Simulation</span> or <span style="font-weight: bold;">Create Contam</span><span style="font-weight: bold;text-decoration: underline;">X</span><span style="font-weight: bold;"> Input File</span> from the <span style="font-weight: bold;text-decoration: underline;">S</span><span style="font-weight: bold;">imulation</span> menu. </p>
+        <p class="NormalIndent2"><i>Cursor</i> - SketchPad drawing and icon selection cursor</p>
+        <p class="NormalIndent2"><i>Highlight</i> - Icon highlighting color for find operation</p>
+        <p class="NormalIndent2"><i>Sub Level</i> - All icons on sub-level when sub-level display option is activated via the <span style="font-weight: bold;text-decoration: underline;">L</span><span style="font-weight: bold;">evel </span>&#8594;<span style="font-weight: bold;"> Reveal Level </span><span style="font-weight: bold;text-decoration: underline;">B</span><span style="font-weight: bold;">elow (Ctrl+Shift+B)</span> menu command.</p>
+        <h4>Results Display</h4>
+        <p class="NormalIndent"><span style="font-weight: bold;">Results Lines</span><span style="font-weight: bold;"><span style="font-weight: bold;">:</span></span>You can select whether or not to display the airflow rates and pressure differences across airflow paths on the SketchPad when in the <i>Results Display Mode</i>.</p>
+        <p class="NormalIndent2"><b>Both Pressure and Flow</b>: Display both the airflow rates (green lines) and pressure differences (red lines).</p>
+        <p class="NormalIndent2"><b>Pressure Only</b>: Display only the pressure difference lines.</p>
+        <p class="NormalIndent2"><b>Flow Only</b>: Display only the airflow lines.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Time Step Navigation</span><span style="font-weight: bold;"><span style="font-weight: bold;">:</span></span>Set the number of simulation time steps to skip when using the Results Navigation jump commands. </p>
+        <p class="NormalIndent">See <a href="../Results/IDH_UsingResults_Viewing.htm">Viewing Results</a> in the <a href="../Results/IDH_UsingResults_Working_with_Results.htm">Working with Results</a> section.</p>
+        <h3>&#160;</h3>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Simulations|Simulation Parameters" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Simulation Weather Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4><a name="_Ref134340045"></a>Simulation – Weather Properties</h4>
+        <p><span style="font-weight: bold;">Steady State Weather Data:</span> This is a summary of the steady state weather data settings. You can change this data by pressing the "Edit Weather Data…" button which will display the weather and wind related property sheet (see <a href="../Weather/IDH_UsingWTH_Defining_Steady_State_Weather_and_Wind.htm">Defining Steady State Weather and Wind</a>). You can have CONTAM use steady state weather data for both steady state and transient simulations. Note that a transient simulation that uses steady state weather or WPC file will still cycle through the first seven days of <span style="font-style: italic;">schedules</span> beginning on the <span style="font-style: italic;">day type</span> provided by the steady state weather data.</p>
+        <p><span style="font-weight: bold;">Transient Weather Data:</span> Dynamic weather data can be in the form of a <span style="font-style: italic;">CONTAM weather file</span> (WTH file) or a <span style="font-style: italic;">wind pressure and contaminant file</span> (WPC file).</p>
+        <p>Select a WTH file by pressing the associated "Use WTH&#160;File…" button and finding the file you want to use during the simulation. Once you have selected a weather file, the date range for the particular file will be displayed in the Weather data from ___ to ___ fields. You can also check the "Use Steady State" button to reset the simulation to use the steady state data as opposed to a transient weather file. Note that if a WTH file is being used, then <span style="font-style: italic;">schedule</span> values are determined from the <span style="font-style: italic;">day type</span> data provided within the WTH file.</p>
+        <p><span style="font-weight: bold;">Transient Contaminant Data:</span> Dynamic contaminant data can be in the form of a <span style="font-style: italic;">CONTAM contaminant file</span> (CTM file).</p>
+        <p>Select an ambient contaminant file to be used by pressing the "Use CTM File…" button and finding the file you want to use during the simulation. Once you have selected a contaminant file, the date range for the particular file will be displayed in the Contaminant data from ___ to ___ fields. You can also check the "Use Steady State" button to reset the simulation to use the steady state data as opposed to a transient contaminant file. </p>
+        <p><span style="font-weight: bold;">Wind Pressure and Contaminant (WPC) Data:</span> <![CDATA[ ]]>Transient weather and contaminant data can also be in the form of a <span style="font-style: italic;"></span>WPC file. Click the "Use WPC File..." to browse for and select an existing WPC file (see <a href="../Weather/IDH_UsingWPC_WorkingWithWPCFiles.htm">Working with WPC Files</a>).&#160; </p>
+        <p>A check box is provided to "<span style="font-weight: bold;">Only allow</span><span style="font-weight: bold;"> WPC and DVF files to trigger airflow calculations</span>." Normally, when using a WPC file, ContamX interpolates between entries of the WPC file if the timing of the entries in the WPC file does not match the simulation time step. This interpolation will typically lead to variations in wind pressures on the building envelope from one simulation time step to the next.&#160; This in turn leads to the recalculation of the building pressures and airflows even if the interpolated WPC pressures are only slightly different from the previous time step. If working with very large project files, this can be very time consuming. Checking this box will allow for airflow calculations to be triggered only at those time steps for which there are corresponding entries in the WPC file that are different from those of the previously used entry of the WPC file. In a similar manner, an entry in the DVF file can be used to trigger an airflow calculation. Under this method of triggering airflow calculations, schedule and control values will be ignored except when an airflow calculation has been triggered. In essence, the airflow remains at steady state between WPC and DVF entries.</p>
+        <p><span style="font-weight: bold;">NOTE</span><span style="font-weight: bold;">S on Using WPC Files</span>
+            <br />Note that WPC files can be used during a simulation in conjunction with the transient weather and transient contaminant files as follows: </p>
+        <ul>
+            <li value="1">If using wind pressures from a WPC file, you may not use a WTH file. </li>
+            <li value="2">If using contaminant concentrations from a WPC file, you may not use a CTM file.</li>
+        </ul>
+        <p>If the simulation is set to use a WPC file then <span style="font-style: italic;">schedule</span> values will be obtained by cycling through the first seven days of schedules beginning on the <span style="font-style: italic;">day type</span> provided by the steady state weather data.</p>
+        <p>When performing a cyclic simulation and using a WPC file, the WPC file must contain only one day having the same date as indicated for <span style="font-style: italic;">Steady &amp; Cyclic Simulations</span>.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

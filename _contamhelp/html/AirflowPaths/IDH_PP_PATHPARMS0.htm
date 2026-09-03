@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Airflow Paths|Defining Airflow Paths|Airflow Path Properties" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Airflow Path Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5><a name="kanchor43"></a>Airflow Path – Flow Path Properties</h5>
+        <p><span style="font-weight: bold;">Relative Elevation:</span> The elevation of the path will determine how it responds to, and influences, the building stack effect. Enter the elevation of the flow path relative to the elevation of the building level on which it is located.</p>
+        <p>For most flow paths (those not associated with a two-way flow model) enter the elevation of the mid-height of the flow path. Enter the elevation of the bottom of the opening for flow paths associated with a two-way flow element (See <a href="IDH_AFE_MODELS.htm">Airflow Element Types</a>). </p>
+        <p><span style="font-weight: bold;">Multiplier:  </span>The multiplier is a constant value allowing you, for example, to use a flow element description of one window and a multiplier of 5 to describe 5 windows in a particular wall. If you have specified a "leakage area" flow element, complete the description here by giving the reference area, length, or number of units.</p>
+        <p class="NormalCW2"><span style="font-weight: bold;">Color:  </span>Set the color of the icon. This allows you to distinguish different icons on the SketchPad. Activate the display of icon colors via the<b><u></u> <![CDATA[ ]]><ins>V</ins>iew -&gt; Icon <u>C</u>oloring</b> menu item.</p>
+        <p><span style="font-weight: bold;">Positive Flow Direction:</span> In the cases of fans and flow/pressure limits (see below) it is necessary to know which direction is defined as positive. The arrows indicate the positive direction for flow of fans (forced flow element types) and flow and pressure drop for flow/pressure limits. </p>
+        <p><span style="font-weight: bold;">Limits:</span>  In the design of smoke control systems there are often limits on the maximum and minimum pressure or flow on a path. For example, a stairwell door can require a minimum pressure drop from the stairwell to the zone to prevent smoke entering the evacuation route, but there is also a maximum pressure drop above which some people may not be able to open the door. You may specify either type of limits (default: no limits) and set the values. When you display the results of a simulation, those paths with pressures or flows outside the limits will be highlighted. </p>
+        <p><span style="font-weight: bold;">Location</span><span style="font-weight: bold;">:</span> These are the absolute X and Y coordinates and units for the selected airflow path. The Z coordinate will be taken as the <span style="font-style: italic;">Relative Elevation</span> of the airflow path with respect to the building level on which the path is located. </p>
+        <p>These values are required for flow paths through the building envelope when using a <span style="font-style: italic;">Wind Pressure and Contaminant (WPC)</span> file (see Wind Pressure and Ambient Contaminant Files) or for any path that connects to a <span style="font-style: italic;">1D convection/diffusion zone</span> (see <a href="../Zones/IDH_PP_ZONEPARMS2_CFD.htm">1D Zone Data</a>). These coordinates will be verified by ContamW against a WPC file or the axis of the 1D zones to which the path connects. This verification is performed automatically when you select either the <span style="font-weight: bold;text-decoration: underline;">R</span><span style="font-weight: bold;">un Simulation</span> or <span style="font-weight: bold;">Create a Contam</span><span style="font-weight: bold;text-decoration: underline;">X</span><span style="font-weight: bold;"> Input File</span> command from the <span style="font-weight: bold;text-decoration: underline;">S</span><span style="font-weight: bold;">imulation</span> menu.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix A - PRJ File Format" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Section 10: Airflow Elements</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Section 10: Airflow Elements</h5>
+        <p>Airflow elements are read by the afelmt_read( ) function and saved by the afelmt_save( ) function. The data are stored in the AFE_DAT structures that are defined in contam.h for ContamW and simdat.h for ContamX. AFE_DAT includes a pointer to the element specific data structure.</p>
+        <p class="NormalItalic">The airflow elements section starts with: </p>
+        <p class="code">_nafe // number of airflow elements (IX)</p>
+        <p class="NormalItalic">This is followed by a data header comment line and then data for all _nafe elements.</p>
+        <p class="NormalItalic">For each element the first data line includes:</p>
+        <p class="codeindent">nr // element number (IX); in order from 1 to _nafe</p>
+        <p class="codeindent">icon // icon used to represent flow path (R4) {W}</p>
+        <p class="codeindent">dtype // element data type (string ? I2)</p>
+        <p class="code">             // element type names are stored in _afe_dnames in dtype order.&#160;</p>
+        <p class="codeindent">name[] // element name (I1) {W}</p>
+        <p class="NormalItalic">and the second line has:</p>
+        <p class="codeindent">desc[] // element description (I1) {W} may be blank</p>
+        <p class="NormalItalic">This is followed by one or more lines of data that depend on the element data type.</p>
+        <p class="NormalItalic">The introductory lines that follow give the type number, the program macro defined as that number, the type name from _afe_dnames, and the data structures to hold the data. The data structures are defined in celmts.h in ContamW and selmts.h in ContamX. Type numbers can change as long as the ordering in _afe_dnames and related arrays reflect that order.</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 0 [PL_ORFC] "plr_orfc" stored in structure PLR_ORF.</p>
+        <p class="NormalItalic">The orifice data consist of:</p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="codeindent">area // actual area [m^2] (R4) {X}</p>
+        <p class="codeindent">dia // hydraulic diameter [m] (R4) {X}</p>
+        <p class="codeindent">coef // flow coefficient (R4) {X}</p>
+        <p class="codeindent">Re // laminar/turbulet transition Reynolds number [-](R4) {X}</p>
+        <p class="codeindent">u_A // units of area (I2) {X}</p>
+        <p class="codeindent">u_D // units of diameter (I2) {X}</p>
+        <p class="NormalItalic">Element type 1 [PL_LEAK1] "plr_leak1" stored in structure PLR_LEAK.</p>
+        <p class="NormalItalic">Element type 2 [PL_LEAK2] "plr_leak2" stored in structure PLR_LEAK.</p>
+        <p class="NormalItalic">Element type 3 [PL_LEAK3] "plr_leak3" stored in structure PLR_LEAK.</p>
+        <p class="NormalItalic">The leakage area data consist of:</p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="codeindent">coef // flow coefficient (R4) {W}</p>
+        <p class="codeindent">pres // reference pressure drop [Pa] (R4) {W}</p>
+        <p class="codeindent">area1 // leakage area per item [m^2] (R4) {W}</p>
+        <p class="codeindent">area2 // leakage area per unit length [m^2/m] (R4) {W}</p>
+        <p class="codeindent">area3 // leakage area per unit area [m^2/m^2] (R4) {W}</p>
+        <p class="codeindent">u_A1 // units of area1 [m^2] (I2) {W}</p>
+        <p class="codeindent">u_A2 // units of area2 [m^2/m] (I2) {W}</p>
+        <p class="codeindent">u_A3 // units of area3 [m^2/m^2] (I2) {W}</p>
+        <p class="codeindent">u_dP // units of pressure (I2) {W}</p>
+        <p class="NormalItalic">Element type 4 [PL_CONN] "plr_conn" stored in structure PLR_CONN.</p>
+        <p class="NormalItalic">The (ASCOS compatible) connection data consist of:</p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent - 0.5 (R4)</p>
+        <p class="codeindent">area // actual area [m^2] (R4) {W}</p>
+        <p class="codeindent">coef // flow coefficient (R4) {W}</p>
+        <p class="codeindent">u_A // units of area (I2) {W}</p>
+        <p class="NormalItalic">Element type 5 [PL_QCN] "plr_qcn" stored in structure PLR_QCN.</p>
+        <p class="NormalItalic">The volume flow powerlaw data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="NormalItalic">Element type 6 [PL_FCN] "plr_fcn" stored in structure PLR_FCN.</p>
+        <p class="NormalItalic">The mass flow powerlaw data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="NormalItalic">Element type 7 [PL_TEST1] "plr_test1" stored in structure PLR_TEST1.</p>
+        <p class="NormalItalic">The single test point powerlaw data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="codeindent">dP // pressure drop [Pa] (R4) {W}</p>
+        <p class="codeindent">Flow // flow rate [kg/s] (R4) {W}</p>
+        <p class="codeindent">u_P // units of pressure drop {W}</p>
+        <p class="codeindent">u_F // units of flow (I2) {W}</p>
+        <p class="NormalItalic">Element type 8 [PL_TEST2] "plr_test2" stored in structure PLR_TEST2.</p>
+        <p class="NormalItalic">The two test points powerlaw data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="codeindent">dP1 // point 1 pressure drop [Pa] (R4) {W}</p>
+        <p class="codeindent">F1 // point 1 flow rate [kg/s] (R4) {W}</p>
+        <p class="codeindent">dP2 // point 2 pressure drop [Pa] (R4) {W}</p>
+        <p class="codeindent">F2 // point 2 flow rate [kg/s] (R4) {W}</p>
+        <p class="codeindent">u_P1 // units of pressure drop (I2) {W}</p>
+        <p class="codeindent">u_F1 // units of flow (I2) {W}</p>
+        <p class="codeindent">u_P2 // units of pressure drop (I2) {W}</p>
+        <p class="codeindent">u_F2 // units of flow (I2) {W}</p>
+        <p class="NormalItalic">Element type 9 [PL_CRACK] "plr_crack" stored in structure PLR_CRACK.</p>
+        <p class="NormalItalic">The crack powerlaw data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="codeindent">length // crack length [m] (R4) {W}</p>
+        <p class="codeindent">width // crack width [m] (R4) {W}</p>
+        <p class="codeindent">u_L // units of length (I2) {W}</p>
+        <p class="codeindent">u_W // units of width (I2) {W}</p>
+        <p class="NormalItalic">Element type 10 [PL_STAIR] "plr_stair" stored in structure PLR_STAIR.</p>
+        <p class="NormalItalic">The stairwell powerlaw data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="codeindent">Ht // distance between levels [m] (R4) {W}</p>
+        <p class="codeindent">Area // cross-sectional area [m^2] (R4) {W}</p>
+        <p class="codeindent">peo // density of people [pers/m^2] (R4) {W}</p>
+        <p class="codeindent">tread // 1 = open tread 0 = closed {W}</p>
+        <p class="codeindent">u_A // units of area (I2) {W}</p>
+        <p class="codeindent">u_D // units of distance (I2) {W}</p>
+        <p class="NormalItalic">Element type 11 [PL_SHAFT] "plr_shaft" stored in structure PLR_SHAFT.</p>
+        <p class="NormalItalic">The shaft powerlaw data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="codeindent">Ht // distance between levels [m] (R4) {W}</p>
+        <p class="codeindent">area // cross-sectional area [m^2] (R4) {W}</p>
+        <p class="codeindent">perim // perimeter [m] (R4) {W}</p>
+        <p class="codeindent">rough // roughness [m] (R4) {W}</p>
+        <p class="codeindent">u_A // units of area (I2) {W}</p>
+        <p class="codeindent">u_D // units of distance (I2) {W}</p>
+        <p class="codeindent">u_P // units of perimeter (I2) {W}</p>
+        <p class="codeindent">u_R // units of roughness (I2) {W}</p>
+        <p class="NormalItalic">Element type 12 [PL_BDQ] "plr_bdq" stored in structure PLR_BDQ.</p>
+        <p class="NormalItalic">The volume flow powerlaw backdraft damper data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient {R4}</p>
+        <p class="codeindent">Cp // turbulent flow coefficient ( dP &gt; 0 ) {R4}</p>
+        <p class="codeindent">xp // pressure exponent ( dP &gt; 0 ) {R4}</p>
+        <p class="codeindent">Cn // turbulent flow coefficient ( dP &lt; 0 ) {R4}</p>
+        <p class="codeindent">xn // pressure exponent ( dP &lt; 0 ) {R4}</p>
+        <p class="NormalItalic">Element type 13 [PL_BDF] "plr_bdf" stored in structure PLR_BDF.</p>
+        <p class="NormalItalic">The mass flow powerlaw backdraft damper data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient {R4}</p>
+        <p class="codeindent">Cp // turbulent flow coefficient ( dP &gt; 0 ) {R4}</p>
+        <p class="codeindent">xp // pressure exponent ( dP &gt; 0 ) {R4}</p>
+        <p class="codeindent">Cn // turbulent flow coefficient ( dP &lt; 0 ) {R4}</p>
+        <p class="codeindent">xn // pressure exponent ( dP &lt; 0 ) {R4}</p>
+        <p class="NormalItalic">Element type 14 [QFR_QAB] "qfr_qab" stored in structure QFR_QAB.</p>
+        <p class="NormalItalic">The volume flow quadratic data consist of: </p>
+        <p class="codeindent">a // dP = a*Q + b*Q*Q {R4} </p>
+        <p class="codeindent">b // {R4}</p>
+        <p class="NormalItalic">Element type 15 [QFR_QAF] "qfr_fab" stored in structure QFR_FAB.</p>
+        <p class="NormalItalic">The mass flow quadratic data consist of: </p>
+        <p class="codeindent">a // dP = a*F + b*F*F {R4} </p>
+        <p class="codeindent">b // {R4}</p>
+        <p class="NormalItalic">Element type 16 [QFR_CRACK] "qfr_crack" stored in structure QFR_CRACK.</p>
+        <p class="NormalItalic">The crack mass flow quadratic data consist of: </p>
+        <p class="codeindent">a // dP = a*F + b*F*F {R4} </p>
+        <p class="codeindent">b // {R4}</p>
+        <p class="codeindent">length // crack length [m] {R4}</p>
+        <p class="codeindent">width // crack width [m] {R4}</p>
+        <p class="codeindent">depth // crack depth [m] {R4}</p>
+        <p class="codeindent">nB // number of bends </p>
+        <p class="codeindent">u_L // units of length </p>
+        <p class="codeindent">u_W // units of width </p>
+        <p class="codeindent">u_D // units of depth </p>
+        <p class="NormalItalic">Element type 17 [QFR_TEST2] "qfr_test2" stored in structure QFR_TEST2.</p>
+        <p class="NormalItalic">The two test points mass flow quadratic data consist of: </p>
+        <p class="codeindent">a // dP = a*F + b*F*F {R4} </p>
+        <p class="codeindent">b // {R4}</p>
+        <p class="codeindent">dP1 // point 1 pressure drop [Pa] (R4) {W}</p>
+        <p class="codeindent">F1 // point 1 flow rate [kg/s] (R4) {W}</p>
+        <p class="codeindent">dP2 // point 2 pressure drop [Pa] (R4) {W}</p>
+        <p class="codeindent">F2 // point 2 flow rate [kg/s] (R4) {W}</p>
+        <p class="codeindent">u_P1 // units of pressure drop (I2) {W}</p>
+        <p class="codeindent">u_F1 // units of flow (I2) {W}</p>
+        <p class="codeindent">u_P2 // units of pressure drop (I2) {W}</p>
+        <p class="codeindent">u_F2 // units of flow (I2) {W}</p>
+        <p class="NormalItalic">Element type 18 [DR_DOOR] "dor_door" stored in structure AFE_DOR.</p>
+        <p class="NormalItalic">The single opening doorway data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="codeindent">dTmin // minimum temperature difference for two-way flow [C] (R4)</p>
+        <p class="code">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;// Not used since version 2.4.</p>
+        <p class="codeindent">ht // height of doorway [m] (R4)</p>
+        <p class="codeindent">wd // width of doorway [m] (R4)</p>
+        <p class="codeindent">cd // discharge coefficient</p>
+        <p class="codeindent">u_T // units of temperature (I2) {W}</p>
+        <p class="codeindent">u_H // units of height (I2) {W}</p>
+        <p class="codeindent">u_W // units of width (I2) {W}</p>
+        <p class="NormalItalic">Element type 19 [DR_PL2] "dor_pl2" stored in structure DR_PL2.</p>
+        <p class="NormalItalic">The double opening doorway data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="codeindent">dH // distance above | below midpoint [m] {R4}</p>
+        <p class="codeindent">ht // height of doorway [m] (R4) {W in v. 2.0}</p>
+        <p class="codeindent">wd // width of doorway [m] (R4) {W}</p>
+        <p class="codeindent">cd // discharge coefficient [-] (R4) {W}</p>
+        <p class="codeindent">u_H // units of height (I2) {W}</p>
+        <p class="codeindent">u_W // units of width (I2) {W}</p>
+        <p class="NormalItalic">Element type 20 [FN_CMF] "fan_cmf" stored in structure AFE_CMF.</p>
+        <p class="NormalItalic">The constant mass flow fan data consist of: </p>
+        <p class="codeindent">Flow // design flow rate [kg/s] (R4)</p>
+        <p class="codeindent">u_F // units of flow (I2) {W}</p>
+        <p class="NormalItalic">Element type 21 [FN_CVF] "fan_cvf" stored in structure AFE_CVF.</p>
+        <p class="NormalItalic">The constant volume flow fan data consist of: </p>
+        <p class="codeindent">Flow // design flow rate [m^3/s] (R4)</p>
+        <p class="codeindent">u_F // units of flow (I2) {W}</p>
+        <p class="NormalItalic">Element type 22 [FN_FAN] "fan_fan" stored in structure AFE_FAN.</p>
+        <p class="NormalItalic">The first line of performance curve fan data consists of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="codeindent">rdens // reference fluid density [kg/m^3] {R4}</p>
+        <p class="codeindent">fdf // free delivery flow (prise = 0) [kg/s] {R4}</p>
+        <p class="codeindent">sop // shut-off pressure (flow = 0) [Pa] {R4}</p>
+        <p class="codeindent">off // fan is off if (RPM/rated RPM) &lt; off {R4}</p>
+        <p class="NormalItalic">The second line consists of:  </p>
+        <p class="codeindent">fpc[4] // fan performance polynomial coefficients {R4}</p>
+        <p class="codeindent">npts // number of mesaured data points (I2) {W}</p>
+        <p class="codeindent">Sarea // shut-off orifice area [m^2] {R4} {W}</p>
+        <p class="codeindent">u_Sa // units of shut-off area (I2) {W}</p>
+        <p class="NormalIndentItalic">The next npts lines consists of:  </p>
+        <p class="codeindent">mF // measured flow rates [kg/s] (R4) {W}</p>
+        <p class="codeindent">u_mF // units of measured flows (I2) {W}</p>
+        <p class="codeindent">dP // measured pressure rises [Pa] (R4) {W}</p>
+        <p class="codeindent">u_dP // units of pressure rises (I2) {W}</p>
+        <p class="codeindent">rP // revised pressure rises [Pa] (R4) {W}</p>
+        <p class="codeindent">u_rP // units of revised pressures (I2) {W}</p>
+        <p class="NormalItalics">Element type 23 [CS_FSP] "csf_fsp" stored in structure AFE_CSF.
+        </p>
+        <p class="NormalItalics">Element type 24 [CS_QSP] " csf_qsp " stored in structure AFE_ CSF.
+        </p>
+        <p class="NormalItalics">Element type 25 [CS_PSF] " csf_psf " stored in structure AFE_ CSF.
+        </p>
+        <p class="NormalItalics">Element type 26 [CS_PSQ] " csf_psq " stored in structure AFE_ CSF.
+        </p>
+        <p class="NormalItalics">The first line of cubic spline fit element data consists of: 
+        </p>
+        <p class="code">npts&#160;// number of data points (I2)
+        </p>
+        <p class="code">u_x&#160;// units for x (I2)
+        </p>
+        <p class="code">u_y&#160;// units for y (I2)
+        </p>
+        <p class="NormalIndentItalic">followed by npts lines of x, y pairs of data
+        </p>
+        <p class="codeindent">x&#160;&#160;// value of independent variable (R4)
+        </p>
+        <p class="codeindent">y&#160;&#160;// value of dependent variable (R4)
+        </p>
+        <p class="NormalItalic">Element type 27 [AF_SUP] "sup_afe" stored in structure AFE_SUP.
+        </p>
+        <p class="NormalItalic">The first line of super airflow element data consists of: 
+        </p>
+        <p class="code">nse&#160;// number of sub-elements(I2)
+        </p>
+        <p class="code">sched&#160;// scheduled sub-element number (IX) (only one)
+        </p>
+        <p class="code">u_H&#160;// units of relative height (I2)
+        </p>
+        <p class="NormalIndentItalic">followed by nse lines of sub-element data
+        </p>
+        <p class="codeindent">nr&#160;&#160;// sub-element number (IX)
+        </p>
+        <p class="codeindent">relHt&#160;// relative height of sub-element (R4)
+        </p>
+        <p class="codeindent">filt&#160;// 1= filtered, 0= not (I2)
+        </p>
+        <p class="NormalItalic">The airflow element section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data</p>
+        <h6>&#160;</h6>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with Weather and Wind</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>Working with Weather and Wind</h2>
+        <p>CONTAM enables you to incorporate the effects of weather on a building. Weather parameters include ambient temperature, barometric pressure, wind speed, wind direction and also outdoor contaminant levels. The type of weather data you require for a simulation depends on the type of simulation you are performing, whether you want to account for the effects of wind, and whether or not you are simulating contaminants. If you are performing a steady-state airflow simulation, you will only need steady state weather and wind data. If you are performing a transient airflow simulation, you can use either steady state or transient weather data. Transient weather data is implemented through the use of weather files or WTH files. If you are performing transient contaminant simulations, you can use either steady-state or transient ambient contaminant data as well. Transient ambient contaminant data is implemented via the use of ambient contaminant files or CTM files (See <a href="../Contaminants/IDH_UsingContaminants_Contaminant_Files.htm">Contaminant Files</a>).</p>
+        <p><b>NOTE:</b> Both the WTH and CTM files assume a single set of values for the ambient zone at any given point in time, i.e., there is no spatial variation in either the pressure or contaminant fields. However, CONTAM also allows the use of transient wind pressure and contaminant files (WPC file) with which you can account for spatial variation in both the pressures and contaminant concentrations over the surface of a building envelope (See Working with WPC Files).</p>
+        <p class="SubHeading1">Steady State Weather</p>
+        <p>When you use steady state weather data, ContamX keeps the ambient temperature, barometric pressure, wind speed and direction and relative humidity constant during a simulation. Detailed descriptions of these parameters are given in the following sections.</p>
+        <p class="SubHeading1">Transient Weather</p>
+        <p>You can use transient weather data to simulate the changing outdoor weather and wind conditions when performing a transient simulation. Transient weather data is stored in a weather file that you must create according to a special format as specified under the <a href="IDH_UsingWTH_Defining_Transient_Weather_and_Wind.htm#Weather_File_Format">Weather File Format</a> section that follows. Weather files contain ambient temperature, pressure, wind speed and direction and humidity ratio for discrete intervals of each day for at least one day and up to one year. If the intervals between data in the weather file don't match the simulation time step, ContamX will linearly interpolate the weather data to obtain a value at the required timestep.</p>
+        <p class="SubHeading1">Wind</p>
+        <p>Wind pressure can be a significant driving force for air infiltration through a building envelope. It is a function of wind speed, wind direction, building configuration, and local terrain effects. CONTAM enables you to account for the effects of wind pressure on flow paths through the building envelope (external airflow paths). You define how you want to account for wind effect for each external flow path on a case-by-case basis. In ContamW, you can either choose to ignore the effects of wind on an envelope penetration, define wind pressure to be constant for each envelope penetration, or implement variable wind pressures for envelope penetrations. </p>
+        <p>CONTAM provides a general approach to handling the variable effects of wind on the building envelope. This approach requires you to provide CONTAM with information related to the determination of a local wind pressure coefficient for the building surface.</p>
+        <p>For a general introduction to the effects of wind pressure on buildings, see Chapter 16, Air flow Around Buildings, in the 2005 ASHRAE Fundamentals Handbook [<a href="../IDH_References.htm#REF_ASHRAE_2005">ASHRAE 2005</a>]. The following is an overview of how CONTAM handles these effects.</p>
+        <p>The equation for wind pressure on the building surface is</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_Wind1.PNG" border="0" alt="equation" />
+        </p>
+        <p>where </p>
+        <p class="NormalIndent"><span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">H</span> &#160;&#160;&#160;Approach wind speed at the upwind wall height (usually the height of the building)</p>
+        <p class="NormalIndent"><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">p</span>&#160;&#160;&#160;Wind pressure coefficient</p>
+        <p>The wind pressure coefficient can be further generalized in terms of a local terrain effects coefficient and the direction of the wind relative to the wall under consideration. The following equation is that used by CONTAM when calculating wind pressures on the building.</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_Wind2.PNG" border="0" alt="equation" />
+        </p>
+        <p>where</p>
+        <p class="NormalIndent"><span style="font-family: 'Symbol';font-style: italic;">r</span> &#160;&#160;&#160;&#160;&#160;&#160;ambient air density</p>
+        <p class="NormalIndent"><span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">met</span><span style="font-family: 'Symbol';"><span style="font-size: 8pt;font-family: ;">&#160;&#160;</span></span>wind speed measured at meteorological station</p>
+        <p class="NormalIndent"><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">h</span><span style="font-family: 'Symbol';"> <![CDATA[ ]]></span> &#160;&#160;&#160;wind speed modifier coefficient accounting for terrain and elevation effects</p>
+        <p class="NormalIndent"><span style="font-style: italic;">f</span><span style="font-family: 'Symbol';">(</span><span style="font-family: 'Symbol';font-style: italic;">q</span><span style="font-family: 'Symbol';">)</span> &#160;&#160;&#160;coefficient that is a function of the relative wind direction. CONTAM refers to this function as the <span style="font-style: italic;">wind pressure profile</span>.</p>
+        <p>The relative wind direction is given by</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_Wind3.PNG" border="0" alt="equation" />
+        </p>
+        <p>where</p>
+        <p><span style="font-family: 'Symbol';font-style: italic;">q</span><span style="color: black;font-style: italic;vertical-align: sub;">w</span>&#160;&#160;wind azimuth angle (N = 0<span style="font-family: 'Symbol';">°</span>, E = 90<span style="font-family: 'Symbol';">°</span>, etc.), and</p>
+        <p><span style="font-family: 'Symbol';font-style: italic;">q</span><span style="color: black;font-style: italic;vertical-align: sub;">s</span> &#160;&#160;surface azimuth angle.</p>
+        <p><span style="font-family: 'Symbol';font-style: italic;">r</span><span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: super;">2</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">met </span><span style="font-family: 'Symbol';">/ 2 </span>in the above equation is computed by ContamX from the steady state or weather file temperature, pressure and wind speed data.</p>
+        <p><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">p</span>, the pressure coefficient used by ASHRAE, is equivalent to <span style="font-style: italic;">f</span>(<span style="font-family: 'Symbol';font-style: italic;">q</span> ) in the CONTAM formulation. In ContamW, you must define the function <span style="font-style: italic;">f</span>(<span style="font-family: 'Symbol';font-style: italic;">q</span><span style="font-family: 'Symbol';"> <![CDATA[ ]]></span>) in the form of <span style="font-style: italic;">wind pressure profiles</span> as explained later. See page 27.5 of the 2005 ASHRAE Fundamentals Handbook [<a href="../IDH_References.htm#REF_ASHRAE_2005">ASHRAE 2005</a>] for details relating to pressure coefficient data. There are some examples of wind pressure profiles available in the form of CONTAM library files on the NIST Multizone Modelingwebsite.</p>
+        <p>The wind pressure modifier, <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">h</span>, accounts for the difference between <span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">met</span> and <span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">H</span>. The value for <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">h</span> will typically be constant for all openings on a given building. However, ContamW allows you to define a default value that will be used for each flow path connected to the ambient (See <a href="IDH_PP_WTH_WIND.htm">Wind Properties</a>) or to set this value individually for each of these paths. ContamW uses the following formula to compute the value of <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">h</span>:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../Resources/Images/Eqn_Wind4.PNG" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(1)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where <span style="font-style: italic;">H</span> is the wall height and <span style="font-style: italic;">A</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">o</span> and <span style="font-style: italic;">a</span> depend on the terrain around the building [<a href="../IDH_References.htm#REF_ASHRAE_1993">ASHRAE 1993</a>, p 14.3]:</p>
+        <p>&#160;</p>
+        <table>
+            <tr>
+                <td class="HeadCenterBold">Terrain<br />Type</td>
+                <td class="HeadCenterBold">Coefficient<br />(<span style="font-style: italic;">A</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">o</span>)</td>
+                <td class="HeadCenterBold">Exponent<br />(<i>a</i>)</td>
+            </tr>
+            <tr>
+                <td>Urban</td>
+                <td class="Center">0.35</td>
+                <td class="Center">0.40</td>
+            </tr>
+            <tr>
+                <td>Suburban</td>
+                <td class="Center">0.60</td>
+                <td class="Center">0.28</td>
+            </tr>
+            <tr>
+                <td>Airport</td>
+                <td class="Center">1.00</td>
+                <td class="Center">0.15</td>
+            </tr>
+        </table>
+        <p>&#160;</p>
+        <p>The wind speed, <span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">met</span>, is usually measured at an airport (open terrain) at an elevation, <span style="font-style: italic;">H</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">met</span> = 10m, above the ground. The wind speed, <span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">o</span>, at that same elevation at the building site is given by</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_Wind5.PNG" border="0" alt="equation" />
+        </p>
+        <p>The wind speed, <span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">H</span>, at the top of the wall, elevation <span style="font-style: italic;">H</span>, is then given by</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_Wind6.PNG" border="0" alt="equation" />
+        </p>
+        <p>An updated method, from that presented in <a href="../IDH_References.htm#REF_ASHRAE_1993">ASHRAE 1993</a>, of accounting for local terrain effects is presented Chapter 16 of <a href="../IDH_References.htm#REF_ASHRAE_2005">ASHRAE 2005</a>. Using this method, <i>V</i><sub style="font-style: italic;">H</sub> <![CDATA[ ]]><span style="vertical-align: sub;font-size: 10pt;"></span>is calculated according to the following equation:</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_Wind7.PNG" border="0" alt="equation" />
+        </p>
+        <p>where </p>
+        <p class="NormalIndent"><span style="font-family: 'Symbol';font-style: italic;">d</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">met&#160;</span>&#160;Wind boundary layer thickness for the meteorological station</p>
+        <p class="NormalIndent"><span style="font-family: 'Symbol';font-style: italic;">d</span> &#160;&#160;&#160;&#160;&#160;&#160;Wind boundary layer thickness for the local building terrain</p>
+        <p class="NormalIndent"><span style="font-style: italic;">a</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">met&#160;</span>&#160;Wind boundary layer exponent for the meteorological station</p>
+        <p class="NormalIndent"><span style="font-style: italic;">a</span> &#160;&#160;&#160;&#160;&#160;&#160;Wind boundary layer exponent for the local building terrain</p>
+        <p>Table 1 in Chapter 16 of <a href="../IDH_References.htm#REF_ASHRAE_2005">ASHRAE 2005</a> contains values for the above parameters. ContamW calculates <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">h</span> according to equation (1) above and provides for the input of the <span style="font-style: italic;">local terrain </span><span style="font-style: italic;">constant</span>, <span style="font-style: italic;">A</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">o</span>, but not <span style="font-family: 'Symbol';font-style: italic;">d</span>. Therefore, in order to implement the updated method, you must adjust the value of <span style="font-style: italic;">A</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">o</span> according to the following equation:</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_Wind8.PNG" border="0" alt="equation" />
+        </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

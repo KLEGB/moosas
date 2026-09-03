@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with WPC Files</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>Working with WPC Files</h2>
+        <p>Wind Pressure and Contaminant (WPC) files can be used to account for the variation of external wind pressures and outdoor contaminant concentrations over the building envelope. This method addresses the need to allow for the use of general, spatially varying wind pressure and ambient contaminant concentrations such as those from wind tunnel experiments or atmospheric models, e.g., plume or puff dispersion simulation tools. The WPC file provides exterior pressure and/or contaminant concentrations time histories for every flow path that connects to the ambient zone including duct terminals and outdoor air intakes of simple air handling systems.</p>
+        <p>The WPC files are created externally to CONTAM, however their creation can be assisted by ContamW that can generate a Path Location Data (PLD) file listing the location of all the airflow paths that are connected to the ambient zone. The following figure illustrates the interaction between CONTAM and the WPC file. The dashed lines in the figure represent optional components. The WPC file is an ASCII file that could be created using conventional means, e.g., spreadsheet converted to text. One could also develop a WPC File Converter program to create the files from External Wind Pressure and Contaminant data files created by a separate tool, e.g., exterior CFD program. A converter could then work with the PLD file to create a WPC file specific to the building in question, i.e., the PRJ file. ContamW provides a means to activate a user-selectable converter. The details of the WPC and PLD file formats are presented in the sections titled <a href="IDH_UsingWPC_WPC_File_Format.htm">WPC File Format</a>, and <a href="IDH_UsingWPC_PLDFileFormat.htm">PLD File Format</a> respectively. CONTAM does not include either an EWC file creation tool or an EWC-to-WPC converter tool.</p>
+        <p class="CaptionCenter">
+            <img src="../../image/WPC_FileConversionDiagram.gif" />
+        </p>
+        <p class="CaptionCenter">Figure - WPC File Implementation Schematic</p>
+        <p>&#160;</p>
+        <p>Steps to implement WPC files:</p>
+        <ol>
+            <li value="1">Enter Location coordinates for each penetration of the building envelope, i.e., connections between indoor and outdoor zones, including: <a href="../AirflowPaths/IDH_PP_PATHPARMS0.htm">airflow paths</a>, <a href="../Ducts/IDH_JCT_P0.htm">duct terminals</a> and <a href="../AHS/IDH_UsingAHS_Properties_AHS.htm">outdoor air intakes</a> of simple air handling systems.</li>
+            <li value="2">Create a WPC File according to the <a href="IDH_UsingWPC_WPC_File_Format.htm">WPC File Format</a> provided later in this section using either an external editor or a user-developed <i>EWC File Converter</i> program.</li>
+            <p class="BulletAfter1">If using an external editor, you can use the Create WPC File dialog box to generate a list of path location data that contains the locations of all the building envelope openings. You can also have ContamW call your EWC File Converter program via the <a href="IDH_UsingWPC_WPC_Usage_Parameters.htm">Create WPC File</a> dialog box that is presented later in this section and activated via the <b><u>W</u>eather&#8594;<u>C</u>reate WPC File...</b> menu command.</p>
+            <li value="3">Set the simulation to utilize the WPC file (see <a href="../Simulation/IDH_UsingSIM_ParamsWeather.htm">Simulation Weather Properties</a> in the <a href="../Simulation/IDH_UsingSIM_Working_with_Simulations.htm">Working with Simulations</a> section).</li>
+            <li value="4">Verify WPC file</li>
+            <p class="BulletAfter1">If you have created the WPC file using an external editor, you should verify that its contents match that of the project file. You can do this using the <b><u>V</u>iew</b> &#8594; <b><u>W</u>ind Pressure Mode</b> to display the WPC wind pressure type  (see <A href="IDH_UsingWTH_Defining_Steady_State_Weather_and_Wind.htm#IDM_CheckingWind">Checking Wind</A> in the <A href="IDH_UsingWTH_Defining_Weather_and_Wind.htm">Defining Weather and Wind</A> section) or initiating the pre-simulation checks by selecting either the <font style="font-weight:bold; text-decoration:underline;">R</font><font style="font-weight:bold; ">un Simulation</font> or<font style="font-weight:bold; ">&#160;</font><font style="font-weight:bold; ">Create Contam</font><font style="font-weight:bold; text-decoration:underline;">X</font><font style="font-weight:bold; "> Input File</font> from the <font style="font-weight:bold; text-decoration:underline;">S</font><font style="font-weight:bold; ">imulation</font> menu<font style="font-weight:bold; "></font><font style="font-weight:bold; "></font><font style="font-weight:bold; "></font>.Either option will compare the WPC and PLD files and provide notification of discrepancies between them including location data and contaminant data that do not match. If you use and EWC&#160;file converter program, then the verification step will occur automatically. If there are any flow paths that do not map to a location in the WPC file, they will be highlighted on the SketchPad and a list of these locations will be written to the CONTAMW3.LOG file. Look for list of Paths/Terminals/Junctions not found in WPC file.</p>
+            <li value="5">Run simulation</li>
+            <p class="BulletAfter1">If there are errors between the WPC file and the PLD file, then ContamX will not be able to run a simulation.  ContamW will not initiate ContamX. If ContamX is run from the command line on a project having discrepancies, it will also exit with an error message.</p>
+        </ol>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with Species and Contaminants</title>
+        <link href="../../SkinSupport/MadCap.css" rel="stylesheet" />
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2><a name="kanchor91"></a>Working with Species and Contaminants</h2>
+        <p>Airborne contaminants are dispersed throughout buildings due to multiple transport mechanisms. These include air movements into, out of, and within a building system; heating, ventilating, and air-conditioning (HVAC) systems; removal by filtration, deposition, and sorption; generation and resuspension; chemical reaction; and radio-chemical decay. CONTAM provides you with the ability to simulate these methods of dispersal of airborne contaminants within built structures.  </p>
+        <p><span style="font-style: italic;">Species</span> is a general term used (by CONTAM) to identify substances that can be used as contaminants during a simulation, i.e., contaminants are those species you designate to be used in a simulation. You can include as many species/contaminants as you need within a project.</p>
+        <p>CONTAM handles both <span style="font-style: italic;">trace and non-trace contaminants</span>. Trace contaminants are those that exist at concentrations that do not cause a "significant" change in the density of air. Non-trace contaminants are those that can affect the density of the air. The mass fractions of non-trace contaminants will always sum to 1 kg/kg, i.e., they are the constituents of the air.</p>
+        <p>In versions prior to CONTAM 2.4 an underlying assumption of the model was that each zone is considered to have a single concentration value at any given time. This assumption is sometimes referred to as the "well-mixed" zone assumption. With respect to contaminant analysis, this means that there are no spatial concentration gradients within a given zone. However, beginning with version 2.4, zones can be pre-configured by the user to be one-dimensional convection/diffusion zones in which contaminants can vary along a user-defined axis and simulated using the <i>short time step</i> method (See <a href="../Simulation/IDH_UsingSIM_ParamsRunControl.htm" target="" title="" alt="" class="MCXref">Working with Controls</a> and <a href="../Theory/IDH_TheoryCont_One_Dimensional_Convection_Diffusion_Flow.htm" target="" title="" alt="" class="MCXref">Working with Controls</a>). Beginning with CONTAM version 3.0, a single region of a building/project can be considered as a computational fluid dynamics (CFD) zone (<a href="../Zones/IDH_PP_ZONEPARMS2_CFD.htm">Detailed Zone Properties</a>). A CFD calculation is used to determine three-dimensional pressure, airflow and contaminant concentration fields within the CFD zone.</p>
+        <p>You can use CONTAM to perform steady state, transient, and cyclical contaminant analysis. Steady state analysis refers to the determination of contaminant concentrations under steady flow conditions. Transient analysis refers to the determination of the time history of contaminant concentrations within each zone for a set of discrete time-steps. With a transient analysis you can implement the effects of varying ambient contaminants using a contaminant file (See <a href="IDH_UsingContaminants_Contaminant_Files.htm">Contaminant Files</a>). A cyclic analysis determines the time history of contaminant concentrations for a 24 h period such that the concentrations at the beginning and end of the 24 h period are the same for each zone.</p>
+        <p>With CONTAM you must define contaminants in order to utilize the features that CONTAM provides to simulate the generation of contaminants by sources, the removal by sinks (including filters and kinetic reactions), and to determine occupant exposures. Contaminants must be created/defined prior to implementing any of these contaminant-dependent features of CONTAM. Prior to implementing contaminants within a project, you can first define the building layout on the SketchPad, define all airflow paths (including ducts) and test your building model by performing a steady state airflow simulation.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

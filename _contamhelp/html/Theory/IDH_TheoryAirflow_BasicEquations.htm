@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Theoretical Background|Airflow Analysis" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Basic Equations</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Basic Equations</h3>
+        <p>The air flow rate from zone j to zone i, <span style="font-style: italic;">F</span><span style="font-style: italic;vertical-align: sub;"><span style="font-size: 10pt;vertical-align: sub;">j,i</span></span><span style="font-style: italic;"></span>[kg/s], is some function of the pressure drop along the flow path,&#160; <span style="font-style: italic;">P</span><span style="font-style: italic;font-size: 10pt;vertical-align: sub;">j</span> - <span style="font-style: italic;">P</span><span style="font-style: italic;font-size: 10pt;vertical-align: sub;">i</span>:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/0800008A.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(1)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>The mass of air, <span style="font-style: italic;">m</span><span style="font-style: italic;vertical-align: sub;">i</span> [kg], in zone i is given by the ideal gas law</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/0800008B.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(2)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where</p>
+        <p class="NormalIndent"><span style="font-style: italic;">V<sub>i</sub></span> = zone volume [m<sup>3</sup>],<br /><span style="font-style: italic;">P<sub>i</sub></span>= zone pressure [Pa],<br /><span style="font-style: italic;">T<sub>i</sub></span><span style="font-style: italic;vertical-align: sub;"></span>= zone temperature [K], and<br /><span style="font-style: italic;">R</span>= 287.055 [J/kg<span style="font-family: Symbol;">×</span>K] (gas constant for air).</p>
+        <p>For a transient solution the principle of conservation of mass states that</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/0800008C.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(3)</td>
+                </tr>
+            </tbody>
+        </table>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/0800008D.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(4)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where </p>
+        <p class="NormalIndent"><span style="font-style: italic;">m</span><span style="font-style: italic;vertical-align: sub;">i</span>= mass of air in zone i, 
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">F</span><span style="font-style: italic;vertical-align: sub;">j,i</span>= airflow rate [kg/s] between zones j and zone i:&#160; positive values indicate flows from j to i and negative values indicate flows from i to j, and
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">F</span><span style="font-style: italic;vertical-align: sub;">i</span>&gt;= non-flow processes that could add or remove significant quantities of air from the zone.
+        </p>
+        <p>CONTAM 1.0 did not provide for such non-flow processes and flows were evaluated by assuming quasi-steady conditions leading to the following equation</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/0800008E.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(5)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>CONTAM can now provide for such non-flow processes by allowing the density to vary during time steps when performing transient simulations. </p>
+        <p>You can activate this option with the <span style="font-style: italic;">Vary Density During Time Step</span> setting under the <a href="../Simulation/IDH_UsingSIM_ParamsAirNumerics.htm">Airflow Numerics Simulation Parameters</a>. If this parameter is set then, equation 3 is implemented when performing airflow calculations; otherwise equation 5 is used.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

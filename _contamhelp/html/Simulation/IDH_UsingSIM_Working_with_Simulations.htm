@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with Simulations</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>Working with Simulations</h2>
+        <p>CONTAM allows you to perform several types of simulations. The type of simulation you wish to perform depends on the goal of your analysis. You can perform simulations to determine just inter-zone airflow rates and pressure differences, or you can also have CONTAM solve for contaminant concentrations within each zone of a building. CONTAM provides the ability to perform several combinations of steady state, transient and cyclical simulations of both airflow and contaminant dispersal. </p>
+        <p>The following table shows the different combination of simulation methods you can apply using CONTAM.</p>
+        <div align="center">
+            <table class="center">
+                <col />
+                <col />
+                <col />
+                <tr>
+                    <td class="SmallCenter" style="font-weight: bold;">Airflow Simulation</td>
+                    <td class="SmallCenter" style="font-weight: bold;">Contaminant<br />Simulation</td>
+                    <td class="SmallCenter" style="font-weight: bold;">Purpose</td>
+                </tr>
+                <tr>
+                    <td class="Small">Steady State</td>
+                    <td class="Small">None</td>
+                    <td class="Small">Used to obtain airflow rates and pressure differentials under constant building system and/or weather conditions.</td>
+                </tr>
+                <tr>
+                    <td class="Small">Steady State</td>
+                    <td class="Small">Steady State</td>
+                    <td class="Small">Used to obtain equilibrium contaminant concentrations under conditions of steady airflow.</td>
+                </tr>
+                <tr>
+                    <td class="Small">Steady State</td>
+                    <td class="Small">Transient</td>
+                    <td class="Small">Used to obtain a time history of contaminant concentrations under conditions of steady airflow. This is similar to the previous table entry but will allow you to observe the contaminant concentrations for each time step leading up to the final time step.</td>
+                </tr>
+                <tr>
+                    <td class="Small">Steady State</td>
+                    <td class="Small">Cyclic</td>
+                    <td class="Small">Used when it's important for initial contaminant concentrations to match the final concentrations under steady airflow conditions. This provides a method of simulating a typical pattern of operation by simulating only a representative time period (e.g. one day).</td>
+                </tr>
+                <tr>
+                    <td class="Small">Transient</td>
+                    <td class="Small">None</td>
+                    <td class="Small">Used to obtain a time history of airflow rates and pressure differentials under changing building system and/or weather conditions.</td>
+                </tr>
+                <tr>
+                    <td class="Small">Transient</td>
+                    <td class="Small">Steady State</td>
+                    <td class="Small">Not allowed</td>
+                </tr>
+                <tr>
+                    <td class="Small">Transient</td>
+                    <td class="Small">Transient</td>
+                    <td class="Small">Used to obtain time histories of airflow rates, pressure differentials and contaminant concentrations under changing building system and/or weather conditions.</td>
+                </tr>
+                <tr>
+                    <td class="Small">Transient</td>
+                    <td class="Small">Cyclic</td>
+                    <td class="Small">Used when it's important for initial contaminant concentrations to match the final concentrations under transient airflow conditions. This provides a method of simulating a typical pattern of operation by simulating only a representative time period (e.g., one day).</td>
+                </tr>
+                <tr>
+                    <td class="Small">Steady State<br />OR<br />Transient</td>
+                    <td class="Small">Short Time Step Method (Transient OR Cyclic)</td>
+                    <td class="Small">The <i>short time step</i> contaminant solution method is available beginning with version 2.4. This is an explicit solution method useful when interested in rapidly changing conditions that require short time steps to capture. It is required when using the 1D zone and duct models.</td>
+                </tr>
+                <tr>
+                    <td style="color: #8b0000;" class="Small"><span><span style="color: #000000;">Steady State</span></span>
+                        <br style="color: #000000;" /><span><span style="color: #000000;">OR</span></span>
+                        <br style="color: #000000;" /><span><span style="color: #000000;">Transient</span></span>
+                    </td>
+                    <td class="Small" style="color: #8b0000;"><span style="color: #000000;">CVODE</span>
+                        <br style="color: #000000;" /><span style="color: #000000;">(Transient only)</span>
+                    </td>
+                    <td style="color: #8b0000;" class="Small"><span style="color: #000000;">This variable time step ordinary differential equation solver may provide a more accurate solution, especially in cases with stiff contaminant transport systems. Stiff systems are those with wide variations in system dynamics, e.g., air change rates or kinetic reactions.</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="Small">Duct Balance</td>
+                    <td class="Small">n/a</td>
+                    <td class="Small">Use this feature to have ContamX adjust duct terminal balancing coefficients to provide user-defined design airflow rates at each balancing terminal. This does not perform a simulation per-say; it balances the system for upcoming simulations.</td>
+                </tr>
+                <tr>
+                    <td class="Small">Building Airflow Test</td>
+                    <td class="Small">n/a</td>
+                    <td class="Small">Generates a set of data, mostly related to building ventilation, that enables you to review the reasonableness of your building model and the input values.</td>
+                </tr>
+                <tr>
+                    <td class="Small">Pressurization Test</td>
+                    <td class="Small">n/a</td>
+                    <td class="Small">Performs an automated, idealized fan pressurization test to determine building envelope tightness of your building model.</td>
+                </tr>
+            </table>
+        </div>
+        <p style="margin-top: 0;margin-bottom: 0;">&#160;</p>
+        <p>To perform a simulation, you <span style="font-style: italic;">set the simulation parameters</span>, <span style="font-style: italic;">run the simulation</span>, and <span style="font-style: italic;">view simulation results</span>. Simulation parameters are categorized by <span style="font-style: italic;">run control</span>, <span style="font-style: italic;">numerics</span>, and <span style="font-style: italic;">output properties</span>. <span style="font-style: italic;">Run control</span> properties include the simulation methods, simulation dates and times, type of weather to use (steady or transient), and simulation time step. <span style="font-style: italic;">Output properties</span> are used to set the type and amount of data you wish to have sent to the simulation results files. <span style="font-style: italic;">Numerics properties</span> include convergence criteria, maximum iterations and relaxation coefficients for both airflow and contaminant equation solvers. ContamW provides default settings for these parameters. However, you will probably work more with the r<span style="font-style: italic;">un </span><span style="font-style: italic;">c</span><span style="font-style: italic;">ontrol</span> and <span style="font-style: italic;">o</span><span style="font-style: italic;">utput parameters</span> than the <span style="font-style: italic;">numerics parameters</span>.</p>
+        <p class="SubHeading1">Setting Simulation Parameters</p>
+        <p>To set simulation parameters you use the <span style="font-weight: bold;">Set Simulation </span><span style="font-weight: bold;text-decoration: underline;">P</span><span style="font-weight: bold;">arameters…</span> selection of the <span style="font-weight: bold;text-decoration: underline;">S</span><span style="font-weight: bold;">imulation</span> menu or the <span style="font-weight: bold;">F4</span> keyboard shortcut. This will display the "Simulation Parameters" property sheet.  Detailed descriptions of all simulation properties are given in the <a href="IDH_UsingSIM_Simulation_Parameters.htm">Simulation Parameters</a> section of this documentation.</p>
+        <p class="SubHeading1">Running Simulations via ContamW</p>
+        <p>Once you have set the simulation parameters, you can run the simulation. To run a simulation select <span style="font-weight: bold;text-decoration: underline;">R</span><span style="font-weight: bold;">un Simulation</span> from the <span style="font-weight: bold;text-decoration: underline;">S</span><span style="font-weight: bold;">imulation</span> menu. This actually launches a separate program, ContamX, which in turn displays the "CONTAMX Simulation Control" dialog box.</p>
+        <p>While there are many factors that can affect the ability of ContamX to quickly and successfully obtain a solution (<span style="font-style: italic;">converge</span>), there are situations that can cause the simulation to not converge or to converge very slowly. The relative magnitudes of the flow coefficients have some effect on the convergence of the nonlinear equation solver of ContamX [<a href="../IDH_References.htm#REF_Wray_1993">Wray and Yuill 1993</a>]. Airflow networks containing paths whose resistances differ by many orders of magnitude will typically require more iterations than networks with paths of similar resistances. Reducing the relaxation coefficient from its default value of 0.75 to a value nearer one-half can often help convergence of these more difficult cases. The maximum number of iterations can also be increased. However, the most effective way to improve convergence is to remove those very low resistance paths that are not likely to effect the computed airflow rates. For example, when simulating a shaft (see <a href="../Applications/IDH_Apps_Shafts.htm">Shafts</a>), represent a shaft using phantom zones as opposed to using airflow elements with large cross-sectional areas between zones on adjacent levels.</p>
+        <p class="SubHeading1">Running Simulations via Command Line</p>
+        <p>CONTAM utilizes the ContamX stand-alone simulation engine, <code>contamx3.exe</code>. ContamX utilizes the same .PRJ file that you create using ContamW. With the ContamX program, you can perform batch mode operations to process multiple project files. Or you can create your own file processor to modify project files, for example to perform sensitivity analysis by performing multiple runs while varying desired building parameters. If you wish to modify the .PRJ file in such a manner, you should become familiar with the .PRJ file format that is now annotated with comment lines to improve the legibility of the file. (see <a href="../Appendices/Appendix_A.htm">Appendix A - PRJ File Format</a>)</p>
+        <p>To obtain a PRJ file for command-line use, you can simply create and save the project in the usual manner using ContamW. To check that the project is “well formed”, you can either use ContamW to run a simulation with the file, or use the <b>Run Building C<u>h</u>eck</b> selection of the <b><u>S</u>imulation</b> menu. This is especially important if new controls have been added to the project, because ContamW must determine the proper evaluation sequence of the controls. Sequence values will be saved to the project file for each control.</p>
+        <p class="NormalCW2">For details on running ContamX from the command line, you can run <code>contamx3 </code>from the Command Prompt with the help option as follows:</p>
+        <p class="codeindentCW2">CP\&gt;contamx3 -h</p>
+        <p class="SubHeading1">Building Check</p>
+        <p>Note this building check is also performed prior to initiating a simulation from within ContamW via the <span style="font-weight: bold;text-decoration: underline;">S</span><span style="font-weight: bold;">imulation </span>&#8594;<span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="font-weight: bold;text-decoration: underline;">R</span><span style="font-weight: bold;">un Simulation</span> menu command. If during the <span style="font-style: italic;">building check</span> routine ContamW detects problems with your project, it will provide you with feedback to assist you in correcting the problems. This feedback will be provided by displaying the <b>Building Check</b> dialog box which will display a list problems found and allow you to highlight problematic icons on the SketchPad as necessary.</p>
+        <p class="SubHeading1">Viewing Simulation Results</p>
+        <p>Once you have successfully run a simulation, you can use ContamW to view simulation results or to create files that can be imported into a spreadsheet. These capabilities are explained in the <a href="../Results/IDH_UsingResults_Working_with_Results.htm">Working with Results</a> section.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

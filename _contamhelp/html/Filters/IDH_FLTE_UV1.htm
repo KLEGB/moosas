@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Filters|Filter Element Types" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Penn State UVGI Filter</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4>Penn State UVGI Filter</h4>
+        <p>The <span style="font-style: italic;">Penn State UVGI</span> element implements an ultra-violet germicidal irradiation filter model based on work performed by the Pennsylvania State University [<a href="../IDH_References.htm#REF_Lau_2009a" class="Hyperlink">Lau 2009a</a>, <a href="../IDH_References.htm#REF_Lau_2009b">Lau 2009b</a>]. The filter efficiency, i.e., UV output,  is a function of temperature, velocity (airflow rate), the age of the filter relative and design UV output rate. The units provided below are those utilized internally by ContamX.     <![CDATA[ ]]></p>
+        <p><span style="font-weight: bold;">Name:</span> A unique name you want to use to identify this filter element.</p>
+        <p>Area, Depth and Density are used to calculate the mass of the filter media, which is not used for this UVGI filter model, so these inputs can be ignored.</p>
+        <p><span style="font-weight: bold;">Description:</span> Use this field to provide a more detailed description of the filter element.</p>
+        <p><span style="font-weight: bold;">Edit </span><span style="font-weight: bold;">Element</span><span style="font-weight: bold;"> Data:</span> Select to define the specific properties of this filter element. Units are provided in the default calculation units.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Design Survivability, <i>S<sub>design</sub></i></span><span style="font-weight: bold;">:</span> Enter the desired survivability of the filter as a fraction between 0 and 1.0. The single pass filter inactivation efficiency is equal to 1 - S.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Design Velocity, <i>u</i><sub style="font-style: italic;">design</sub> <![CDATA[ ]]></span>[m/s]<span style="font-weight: bold;">:</span> Enter the design maximum velocity expected through the filter flow region.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Design Organism-Specific Rate Constant, <i style="font-family: 'Cambria Math';">k</i><sub style="font-style: italic;">design</sub> [</span>m<sup>2</sup><span style="font-weight: bold;"></span>/J]<span style="font-weight: bold;">:</span> Enter the design minimum microorganism-specific rate constant. This will be used to determine the design UV dose. You will also need to enter a value for each species that you want filtered by this UVGI&#160;filter element (see <a href="../Contaminants/IDH_UsingContaminants_SpeciesProperties.htm">Species Properties</a>).</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Design Mass Flow Rate, <i>F</i><sub style="font-style: italic;">des</sub> <![CDATA[ ]]></span>[kg/s]<span style="font-weight: bold;">: </span>Enter the design maximum airflow rate expected through the filter flow region. This will be used along with the Design Velocity to calculate the Cross-Sectional Flow Area.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Cross-sectional Flow Area, <i>A </i><b></b>[</span>m<sup>2</sup><span style="font-weight: bold;"></span><b>]</b><span style="font-weight: bold;"><i></i>:</span> <![CDATA[ ]]><i>A</i> = <i>F</i><sub style="font-style: italic;">design</sub> / (<span style="font-family: Symbol;font-style: italic;">r</span><sub style="font-style: italic;">std</sub><i> u</i><sub style="font-style: italic;">design</sub>)</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Design Dose, (<i>It</i>)<i></i><sub style="font-style: italic;">design</sub> [</span>J/m<span style="font-weight: bold;"><sup style="font-weight: normal;">2</sup></span>]<span style="font-weight: bold;">:</span> (<i>It</i>)<i></i><sub style="font-style: italic;">design</sub>= ln(<i>S</i><sub style="font-style: italic;">design</sub>)/-<span style="font-style: italic; font-family: 'Cambria Math';">k</span><sub style="font-style: italic;">design</sub></p>
+        <p class="NormalIndent"><span style="font-weight: bold;">TU Constants:</span> <![CDATA[ ]]>C0 through C4 are used to determine the output as a percentage of design, <i>OUT</i><sub style="font-style: italic;">TU</sub>, based on current conditions including flow velocity and temperature.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Use Age Model:</span> Select this option to have the output also determined as a function of lamp age.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Age Constants:</span> K0 and K1 are the coefficients used to determine the percentage of output, <i>OUT</i><sub style="font-style: italic;">age</sub>, based on the lamp age function.</p>
+        <p class="SubHeading1">Background</p>
+        <p>In its simplest form, survivability of an airborne microorganism exposed to UV-C radiation, <i>S</i>, presented in equation (uv-1), is approximated by a single-stage exponential decay equation [<a href="../IDH_References.htm#REF_Lee_2013">Lee and Bahnfleth 2013</a>].</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/eqn-uvgi/uvgi-1.png" />
+                    </td>
+                    <td class="EqnNum">(uv-1)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Efficiency is then 1 minus the survivability.</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/eqn-uvgi/uvgi-2.png" />
+                    </td>
+                    <td class="EqnNum">(uv-2)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>The UV dose is the irradiance over a period of time, <i>I</i><span style="font-family: Symbol;font-style: italic;">t</span>. For design purposes, one might specify a design survivability, <i>S</i><sub style="font-style: italic;">design</sub>, and a design minimum microorganism-specific rate constant, <span style="font-family: Symbol;font-style: italic;">k</span><sub style="font-style: italic;">design</sub>, to determine the design UV dose required:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/eqn-uvgi/uvgi-3.png" />
+                    </td>
+                    <td class="EqnNum">(uv-3)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Any microorganism having an associated rate constant greater than or equal to <span style="font-style: italic; font-family: 'Cambria Math';">k</span><sub style="font-style: italic;">design</sub> would have at most a survivability of <i>S</i><sub style="font-style: italic;">design</sub>.</p>
+        <p>UV output is determined as a percentage of rated output using two relationships: one based on current conditions of the airflow around the lamps, i.e., temperature and velocity, and the other based on the age of the lamps [<a href="../IDH_References.htm#REF_Lau_2009a" class="Hyperlink">Lau 2009a</a>, <a href="../IDH_References.htm#REF_Lau_2009b">Lau 2009b</a>]. These relationships are presented in equations (uv-4) and (uv-5), respectively. Temperatures for airflow paths and ducts are obtained from the upstream zone or junction respectively, based on the user-defined positive airflow direction.</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/eqn-uvgi/uvgi-4.png">
+                        </img>
+                    </td>
+                    <td class="EqnNum">(uv-4)</td>
+                </tr>
+            </tbody>
+        </table>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/eqn-uvgi/uvgi-5.png">
+                        </img>
+                    </td>
+                    <td class="EqnNum">(uv-5)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Equations (uv-4) and (uv-5) are multiplied to provide the fractional UV output <i>OUT<sub>uv1</sub></i> provided in equation (uv-6). <i>OUT</i><sub style="font-style: italic;">age</sub> is maintained at the default value of 1.0 until elapsed simulation time reaches <i>t</i><sub style="font-style: italic;">100</sub> as defined by equation (uv-7).</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/eqn-uvgi/uvgi-6.png">
+                        </img>
+                    </td>
+                    <td class="EqnNum">(uv-6)</td>
+                </tr>
+            </tbody>
+        </table>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/eqn-uvgi/uvgi-7.png">
+                        </img>
+                    </td>
+                    <td class="EqnNum">(uv-7)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>During simulation the UV efficiency will be calculated based on the output relative to design conditions according to equation (uv-2) whereby <i>I</i><span style="font-family: Symbol;font-style: italic;">t</span><i>(T,U)</i> will be determined by the following equation (uv-8) or as a function of airflow rate presented in equation (uv-9).</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/eqn-uvgi/uvgi-8.png">
+                        </img>
+                    </td>
+                    <td class="EqnNum">(uv-8)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/eqn-uvgi/uvgi-9.png">
+                        </img>
+                    </td>
+                    <td class="EqnNum">(uv-9)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

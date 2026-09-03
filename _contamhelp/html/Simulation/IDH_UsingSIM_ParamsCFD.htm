@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Simulations|Simulation Parameters" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Simulation Run Control Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4><a name="_Ref119727171"></a>Simulation - CFD Numerics
+        </h4>
+        <p>These parameters are used to control the multizone/CFD coupling method.
+Theoretical background on the multizone/CFD coupling method is available in Wang [<a href="../IDH_References.htm#REF_Wang_2007">2007</a>] and Wang and Chen [<a href="../IDH_References.htm#REF_Wang_Chen_2007a">2007a</a>]. Further background including validation and demonstration cases is provided in Wang and Chen [<a href="../IDH_References.htm#REF_Wang_Chen_2007b">2007b</a>], Wang [<a href="../IDH_References.htm#REF_Wang_2008">2008</a>, <a href="../IDH_References.htm#REF_Wang_2010">2010</a>], and Wang, et al. [<a href="../IDH_References.htm#REF_Wang_Dols_Chen_2010">2010</a>].</p>
+        <p><span style="font-weight: bold;">Number of Coupled Zones:</span> This shows the number of CFD&#160;Zones in the project. This version of CONTAM only allows for one such zone.</p>
+        <p><span style="font-weight: bold;">Coupling Method:</span>
+        </p>
+        <ul>
+            <li value="1"><span style="font-weight: bold;">CONTAM Only:</span> Perform only a multizone simulation - no CFD calculations will be performed.</li>
+            <li value="2"><span style="font-weight: bold;">CONTAM -&gt; CFD:</span> <![CDATA[ ]]>Run multizone calculation then provide the results as boundary conditions for the CFD&#160;calculation. No information is passed back from the CFD calculation to the multizone calculation.
+        </li>
+            <li value="3"><span style="font-weight: bold;">CONTAM -&gt; CFD -&gt; CONTAM:</span> The same as above, but the CFD&#160;results are passed back for use as boundary conditions for the multizone calculation. The data is exchanged in each <i>direction</i> only once.
+            </li>
+            <li value="4"><span style="font-weight: bold;">CONTAM &lt;-&gt; CFD:</span> This is the fully dynamic coupling method. The multizone and CFD calculations provide boundary conditions iteratively to each other during each time step until either they reach convergence with each other at the multizone-CFD boundaries, or the <i>Maximum Coupling Iterations</i> is exceeded. The iteration process begins and ends with a multizone calculation.</li>
+        </ul>
+        <p><span style="font-weight: bold;">Numerical Parameters:</span> <![CDATA[ ]]></p>
+        <p class="NormalIndent"><b>Maximum Coupling Iterations:</b> This is the maximum number of times, at each time step, that boundary conditions will be exchanged between the multizone and CFD calculations.</p>
+        <p class="NormalIndent"><b>Output Frequency of Coupling Results:</b> Controls how often the coupled simulation results are saved to the CMO file. This file is useful for monitoring the progress of the coupled simulation. These results are also output to the console during simulation.</p>
+        <p class="NormalIndent"><b>Convergence Factor for Airflow Coupling:</b> Convergence criteria for the dynamic coupling method.</p>
+        <p class="NormalIndent"><b>Restart Coupling:</b> Whenever a CFD airflow simulation is performed, a VAR file will be saved in the same location as the PRJ file. The VAR file contains the airflow results of the last time step for which a CFD calculation was performed. Check this option to run a contaminant simulation using the steady airflow results contained in the VAR file.</p>
+        <p class="NormalIndent" style="color: #a52a2a;">&#160;</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

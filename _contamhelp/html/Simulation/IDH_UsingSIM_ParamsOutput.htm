@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Simulations|Simulation Parameters" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Simulation Output Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4><a name="_Ref134950263"></a>Simulation – Output Properties</h4>
+        <p>When you run a simulation, results are saved to files as the simulation proceeds. Detailed results for airflows and/or zone contaminant concentrations are saved to the SIM file that is created whenever a simulation is run. The SIM file is a binary file which is not "human-readable" as opposed to human-readable text files. The data in the SIM file will be used by ContamW to display airflow results on the SketchPad, to display contaminant concentrations in the results display window, to create export and report files, and to generate charts of transient simulation results. Output is created at every <span style="font-style: italic;">output time step</span>. Shorter <span style="font-style: italic;">time steps</span> allow you to see the results in more detail, but lead to larger simulation result files. ContamX can create several result files in addition to the SIM file (See <a href="../Results/IDH_UsingResults_Working_with_Results.htm">Working with Results</a>), and you can control the data that will be saved during a simulation with the following parameters. 
+        </p>
+        <p>In most cases, ContamX can generate both <span style="font-weight: bold;">detailed</span> and/or <span style="font-weight: bold;">box-whisker</span> results. Detailed results are written to the corresponding file at each <span style="font-style: italic;">output time step</span>. Box-whisker results include daily average, standard deviation, maximum and minimum values. Maximum and minimums are also accompanied by the time of day at which they occur for daily results, or the day on which they occur for the simulation summary results. Note that box-whisker data is based on calculations performed at the <span style="font-style: italic;">calculation time step</span> but can require significantly less storage space. They can be of use when performing long simulations to find days and times of particular interest which can then be simulated in greater detail in conjunction with the <span style="font-style: italic;">restart</span> (RST) file.
+            </p>
+        <p><span style="font-weight: bold;">Airflow Simulation Results:</span> These are the results available related to airflow calculations.
+            </p>
+        <ul>
+            <li value="1"><span style="font-weight: bold;">Airflow Rates: </span>Output airflows through and pressure differences across each flow link (airflow paths, duct segments, duct leakage paths, airflow terminals and simple air handler supplies and returns) to the SIM file. This data is necessary to display or export results of airflow and pressures including those presented as SketchPad results and charts.
+You can also have these results written to a SQLite database file.</li>
+            <li value="2"><span style="font-weight: bold;">Building Air Change Rate: </span>Output the whole building air change rate to the ACH file. Select <span style="font-weight: bold;">Use Standard Density</span> to have ContamX use standard air density for the incoming outdoor air in the air change rate calculations, otherwise the outdoor air density will be based on the outdoor temperature.</li>
+            <li value="3"><span style="font-weight: bold;">Ages of Air: </span>Output age of air for each zone to the AGE file.<br />WARNING: This calculation involves the inversion of the flow matrix and could be quite demanding on computational resources for projects involving a large number of zones.
+            </li>
+        </ul>
+        <p><span style="font-weight: bold;">Contaminant Simulation Results:</span> These are the results available related to contaminant calculations.
+        </p>
+        <ul>
+            <li value="1"><span style="font-weight: bold;">Contaminant Concentrations:</span> Output contaminant concentrations of each contaminant node (zones and duct junctions) to the SIM file. This data is necessary to display or export results of contaminant concentrations including those presented as SketchPad results and charts. You can also have these results written to a SQLite database file. For 1D zones the average concentrations of all sub-cells will be saved to the SIM file. To obtain concentration time histories at specific locations in 1D zones, you can use zone sensors and report control nodes to output data to the <span style="font-style: italic;">Controls LOG file</span> (see <a href="../Results/IDH_UsingResults_ResultsFiles.htm">Results Files</a>).</li>
+            <li value="2"><span style="font-weight: bold;">Occupant Exposure:</span> Output occupant exposure data to the EBW file. This data is necessary to display occupant exposure summary information when you highlight an exposure icon. You can still plot transient exposure data without this summary information.
+            </li>
+            <li value="3"><b>Contaminant Exfiltration:</b> These files provide the amount of contaminant mass that is transported to the ambient. Two types of files can be created. The "Basic" file provides the total mass transported to ambient during each time step. The "Detailed" option creates a file for each contaminant and provides the mass of contaminant transported through each individual connection to the ambient. The basic file will simply have a CEX extension and the detailed files will have the contaminant name appended to the PRJ file name followed by the CEX extension.</li>
+            <li value="4"><b>Surface File:</b> The SRF file contains contaminant concentrations for source/sinks that include a reversible storage node. Unlike most source/sinks, these contribute a contaminant node to the system of contaminant equations. Currently there are two types: boundary layer diffusion  and deposition/resuspension.</li>
+        </ul>
+        <p><span style="font-weight: bold;">Short Time Step Results:</span> These are the results when using the <span style="font-style: italic;">Short Time St</span><span style="font-style: italic;">ep</span> contaminant simulation method and the project contains one-dimensional convection diffusion zones (see <a href="../Zones/IDH_UsingZones_WorkingWithZones.htm">Working with Zones</a>). Four results files can be created, each having the same name as the PRJ file but with a different extension. These files are all binary files. NIST provides two utilities that you can use to "view" these files: ContamRV and 1DZRead. ContamRV is the results viewer that can provide a colorized view of the contaminant concentrations within the zones including the variations of concentrations within 1D convection/diffusion zones, and 1DZRead is a command-line program that can convert the 1D results files to tab-delimited files. File formats are provided in the Working with Results section.</p>
+        <ul>
+            <li value="1"><span style="font-weight: bold;">RXR File:</span> This is a cross reference file that is created anytime at least one of the others is created.</li>
+            <li value="2"><span style="font-weight: bold;">RZF </span><span style="font-weight: bold;">File:</span> This file contains the temperature, gage pressure and density of the zones.</li>
+            <li value="3"><span style="font-weight: bold;">RZM</span><span style="font-weight: bold;"> File:</span> This file contains the average mass fractions of each contaminants in each zone.</li>
+            <li value="4"><span style="font-weight: bold;">RZ1</span><span style="font-weight: bold;"> File:</span> This file contains the mass fractions of each contaminant in each cell of each 1D zone.</li>
+        </ul>
+        <p><span style="font-weight: bold;">Building Airflow Test Results:</span> These options control which sections of data are written to the VAL file when you run the <span style="font-style: italic;">Building Airflow Tests</span> simulation mode. See the Results Files section in the Working with Simulation Results section for detailed description of the VAL file.</p>
+        <ul>
+            <li value="1"><span style="font-weight: bold;">Zones:</span> Write the "Zones" section that provides various air change rates for each zone to the VAL file.</li>
+            <li value="2"><span style="font-weight: bold;">Ducts:</span> Write the "Junctions" section that provides information related to the duct junctions and terminals to the VAL file. </li>
+            <li value="3"><span style="font-weight: bold;">Classified Flows:</span> Write the "Classified Zone Airflows" section to the VAL file. This section provides detailed mass flow rates to and from all zones categorized by various types of airflow sources, e.g., duct system, outdoor air, etc.</li>
+        </ul>
+        <p><span style="font-weight: bold;">CONTAMX Display and Logging Options:</span> These properties control the manner in which the simulation engine, ContamX, appears during execution and the amount of data written to the <span style="font-style: italic;">&lt;project name&gt;.XLOG</span> file during a simulation.
+        </p>
+        <ul>
+            <li value="1"><span style="font-weight: bold;">CONTAMX Display Mode:</span> Select whether you want to interact with ContamX via a Windows dialog box or Console window (DOS window). The dialog box method is the typical choice, but you might want to run it in a console window if you have trouble with ContamX executing properly particularly for large project files. </li>
+            <li value="2"><span style="font-weight: bold;">CONTAMX Log Mode:</span> Select the level of detail to output to the XLOG file. This is provided mainly for diagnostic purposes (for program developers) in the event that a problem is occurring during simulation (see <a href="../IDH_UsingHLP_Getting_Help.htm">Getting Help</a>).</li>
+            <li value="3"><span style="font-weight: bold;">Echo .PRJ as read to .LOG:</span> Check this box to output the project file to the XLOG file. This is mainly provided for diagnostic purposes.</li>
+        </ul>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

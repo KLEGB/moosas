@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Sources and Sinks|Source Sink Element Types" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Source Sink Element Boundary Layer Diffusion Model</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Source/Sink Element: Boundary Layer Diffusion Model</h5>
+        <p>The boundary layer diffusion controlled reversible sink/source model with a linear sorption isotherm follows the descriptions presented in [<a href="../IDH_References.htm#REF_Axley_1991">Axley 1991</a>]. The boundary layer refers to the region above the surface of a material through which a concentration gradient exists between the near-surface concentration and the air-phase concentration. The rate at which a contaminant is transferred onto a surface (sink) is defined by the following equation. Units are provided in the default calculation units.
+        </p>
+        <p><i>S</i><span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span>(<i>t</i>) = <i></i>ctrl<i>·h·d·A<sub>s</sub></i>[<i>C</i><span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span>(t) - <i>C<sub>s</sub></i>(<i>t</i>)/<i>k</i>]</p>
+        <p>where:</p>
+        <p class="NormalIndent"><span style="font-style: italic;">h&#160;&#160; </span>= film mass transfer coefficient over the sink [m/s]<br /><span style="font-style: italic;">d</span>&#160;&#160; = film density of air [kg<sub>air</sub>/m<sup>3</sup>]<br /><span style="font-style: italic;">A<sub>s</sub></span>&#160;&#160; = surface area of the adsorbent [m<sup>2</sup>]<br /><span style="font-style: italic;">C</span><sub><i></i><span style="font-family: Symbol; vertical-align: sub;">a</span></sub>&#160; = concentration in air [kg<i></i><span style="font-family: Symbol; vertical-align: sub; font-size: 10pt;">a</span>/kg<sub>air</sub>]<br /><span style="font-style: italic;">C</span><sub>s</sub> = concentration in the adsorbent<br /><span style="font-style: italic;">k</span>&#160;&#160; = Henry adsorption constant or the partition coefficient
+[kg<i></i><sub>air</sub>/kg<sub>surface</sub>]       </p>
+        <p class="NormalIndent">ctrl = Schedule or control value [no units]</p>
+        <p><span style="font-weight: bold;">Name:</span> Enter a unique name you want to use to identify the source/sink element. The element will be saved within the current project and can be associated with multiple source/sinks.
+        </p>
+        <p><span style="font-weight: bold;">Film Transfer Coefficient:</span> The average mass transfer coefficient of the contaminant within the boundary layer (or film) above the surface of the adsorbent.
+        </p>
+        <p><span style="font-weight: bold;">Film Density of Air:</span> This is the average of the bulk air density and the near-surface density.
+        </p>
+        <p><span style="font-weight: bold;">Surface Mass:</span> Enter the mass for a unit surface area and use the source/sink multiplier to enter the total area of the adsorbent.
+        </p>
+        <p><span style="font-weight: bold;">Partition Coefficient:</span> Coefficient that relates the concentration of the contaminant in the bulk-air to that at the surface of the adsorption material.
+        </p>
+        <p><span style="font-weight: bold;">Species:</span> Select a previously defined species from the drop-down box.
+        </p>
+        <p><span style="font-weight: bold;">Description:</span> Field for entering a more detailed description of the specific sink/source element.
+</p>
+        <p>NOTE: The surface area, A<sub>s</sub>, is provided by the source/sink multiplier in units of m<sup>2</sup>.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

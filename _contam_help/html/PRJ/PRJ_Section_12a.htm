@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix A - PRJ File Format" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Section 12a: Control Super Elements</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Section 12a: Control Super Elements</h5>
+        <p>Control Super Element data are read by the ctrlse_read( ) function and saved by the ctrlse_save( ) function in ContamW. The data are stored in the CTRLSE_DAT structures that are defined in contam.h for ContamW. Super Element data are not read in by ContamX, only the nodes which are instantiated from Control Super Elements are read in by ContamX as described in the following Section 12b. </p>
+        <p class="NormalItalic">The Super Elements section starts with: </p>
+        <p class="code">_nselmt // number of super elements (IX)</p>
+        <p class="NormalItalic">This is followed by data for all _nselmt super elements.</p>
+        <p class="NormalItalic">For each super element the first data line includes:</p>
+        <p class="codeindent">nr // element number (IX); in order from 1 to _nselemt</p>
+        <p class="codeindent">flags&#160;&#160; // if( flags &amp; CF_DEF ) super element is defined (U2)</p>
+        <p class="codeindent">&#160;&#160;&#160; // if( flags &amp; CF_SNS ) super element is a sensor</p>
+        <p class="codeindent">in // input node number (IX)</p>
+        <p class="codeindent">out // output node number (IX)</p>
+        <p class="codeindent">nn // number of sub-nodes (IX)</p>
+        <p class="codeindent">ni // number of sketch icons (IX)</p>
+        <p class="codeindent">name[] // element name (I1)</p>
+        <p class="NormalItalic">and the second line has:&#160;</p>
+        <p class="codeindent">desc[] // element description (I1) may be blank</p>
+        <p class="NormalItalic">This is followed by a section that contains sub-node data of the Super Element. This will be very similar to the "control nodes:" section of the project file (see Section 12b below) and repeated within section 12b for each super node that is instantiated from a super element. However, the actual parameters of the instantiated super nodes may vary from those of the super element sub-nodes.</p>
+        <p class="NormalItalic">This is followed by lines of data that contain the SketchPad icon parameters of the Super Element sketch and will follow the "<span style="font-family: 'Courier New';font-size: 10pt;">levels plus icon data:</span>" section of the project file but only for a single "level" of data that represents the Super Element sub-node icons (see Section 3).</p>
+        <p class="NormalItalic">The Super Elements section is terminated with:</p>
+        <p class="code">-999</p>
+        <p class="code">&#160;</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

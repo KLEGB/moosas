@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with the SketchPad" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Deleting Building Component Icons</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Deleting Building Component Icons</h3>
+        <p>There are two general methods of deleting building components from the SketchPad: one-at-a-time (single component) or in groups (multiple components). CONTAM must be in the <span style="font-style: italic;">n</span><span style="font-style: italic;">ormal </span>SketchPad mode in order to delete icons.</p>
+        <p class="SubHeading1">Single Component Deletion</p>
+        <p>To delete individual building components, you simply highlight the icon by either clicking (<span style="font-weight: bold;">LMB</span>) on the icon or moving the caret to the icon using the arrow keys then either press the <span style="font-weight: bold;">Delete</span> key or use the <span style="font-weight: bold;text-decoration: underline;">E</span><span style="font-weight: bold;">dit </span>&#8594;<span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="font-weight: bold;text-decoration: underline;">D</span><span style="font-weight: bold;">elete</span> menu command. </p>
+        <p class="SubHeading1">Multiple Component Deletion</p>
+        <p>ContamW provides the ability to delete multiple building components in a single deletion operation. This is done by first using one of three methods to select a region on the SketchPad then activating the <span style="font-weight: bold;text-decoration: underline;">E</span><span style="font-weight: bold;">dit </span>&#8594;<span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="font-weight: bold;text-decoration: underline;">D</span><span style="font-weight: bold;">elete</span> menu command (or pressing the <span style="font-weight: bold;">Delete </span>key). </p>
+        <p>Use one of the following three deletion tools to select a region of the SketchPad to work with:</p>
+        <ul>
+            <li value="1">Delete by region<br />Menu command: <span style="font-weight: bold;text-decoration: underline;">T</span><span style="font-weight: bold;">ool </span>&#8594;<span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="font-weight: bold;text-decoration: underline;"></span><span style="font-weight: bold;">Delete by </span><span style="font-weight: bold;text-decoration: underline;">R</span><span style="font-weight: bold;">egion</span> <![CDATA[ ]]><br />Tool bar button: <img src="../../image/BtnDelRegion.PNG" title="Delete by Region deletion tool" alt="Delete by Region deletion tool" style="width: 20px;height: 20px;" /><br /></li>
+            <li value="2">Delete by box: <br />Menu command: <span style="font-weight: bold;text-decoration: underline;">T</span><span style="font-weight: bold;">ool </span>&#8594;<span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="font-weight: bold;text-decoration: underline;"></span><span style="font-weight: bold;">Delete by </span><span style="font-weight: bold;text-decoration: underline;">B</span><span style="font-weight: bold;">ox</span> <![CDATA[ ]]><br />Tool bar button: <img src="../../image/BtnDelBox.PNG" title="Delete by Box deletion tool" alt="Delete by Box deletion tool" style="width: 20px;height: 20px;" /></li>
+            <li value="3">Delete by coordinates<br />Menu command: <span style="font-weight: bold;text-decoration: underline;">T</span><span style="font-weight: bold;">ool </span>&#8594;<span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="font-weight: bold;text-decoration: underline;"></span><span style="font-weight: bold;">Delete by </span><span style="font-weight: bold;text-decoration: underline;">C</span><span style="font-weight: bold;">oordinates</span> <![CDATA[ ]]><br /><img src="../../image/DeleteByCoordinates.PNG" /><br /></li>
+        </ul>
+        <p>&#160;</p>
+        <p>Then press <span style="font-weight: bold;">Delete</span> <![CDATA[ ]]>to display the Multiple Icon Deletion Options dialog box shown below. Use the check boxes to select the types of icons you want to delete, select the level(s) from which you want to delete the icons using the Ctrl and Shift keys to select multiple levels from the list, then click the OK button to perform the deletion.</p>
+        <p class="center"><span style="font-weight: bold;"><img src="../../image/Delete_MultiIcons_437x341.gif" border="0" alt="image\Delete_MultiIcons.gif" style="width: 437; height: 341;" /></span>
+        </p>
+        <p class="CaptionCenter">Figure - Multiple Icon Deletion Options dialog box</p>
+        <p>&#160;</p>
+        <p><span style="font-weight: bold;">NOTE</span><span style="font-weight: bold;">: </span>Some deletion operations will invalidate existing relationships between items in the project file. This can lead to the inability of ContamW to save the project file and/or ContamX to perform a simulation on the project file. For example, deleting a zone that is referenced by an occupant schedule will prevent ContamW from saving the project file. However, an error message will be provided to notify you when you attempt to save. For this reason,<span style="font-weight: bold;font-style: italic;"> you should always create a backup copy prior to performing major deletion operations.</span></p>
+        <p class="SubHeading1">Network Deletion (Ducts and Controls)</p>
+        <p>You can delete a set of connected ducts or controls using a single command. Highlight any icon within the network you wish to delete and select <span style="font-weight: bold;text-decoration: underline;">E</span><span style="font-weight: bold;">dit </span>&#8594;<span style="font-weight: bold;"> Delete</span><span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="font-weight: bold;text-decoration: underline;">N</span><span style="font-weight: bold;">etwork</span> from the menu or use the <span style="font-weight: bold;">Ctrl+Delete </span>keyboard shortcut. If deleting a control network, you may be prompted whether to delete or undefine phantom nodes that reference the network being deleted.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

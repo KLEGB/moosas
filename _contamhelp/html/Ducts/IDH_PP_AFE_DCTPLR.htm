@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Ducts|Defining Ducts|Duct Segment Properties|Duct Flow Element Types" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Powerlaw Model Orifice Area</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5><a name="kanchor80"></a>Powerlaw Model: Orifice Area</h5>
+        <p>This airflow element allows you to describe the airflow through an orifice, and ContamW converts it to a powerlaw relationship.</p>
+        <p><span style="font-weight: bold;">Name:</span> Enter a unique name you want to use to identify the duct flow element. The element will be saved within the current project and can be associated with multiple duct segments.</p>
+        <p><span style="font-weight: bold;">Description:</span> Field for entering a more detailed description of the specific duct flow element.</p>
+        <p><span style="font-weight: bold;">Flow Exponent (n):</span> Flow exponents vary from 0.5 for large openings where the flow is dominated by dynamic effects, and 1.0 for narrow openings dominated by viscous effects. Measurements usually indicate a flow exponent of 0.6 to 0.7 for typical infiltration openings.</p>
+        <p><span style="font-weight: bold;">Discharge Coefficient (C):</span> The discharge coefficient is related to the dynamic effects and is typically close to 0.6 for an orifice and slightly higher for other openings in buildings.</p>
+        <p><span style="font-weight: bold;">Hydraulic Diameter:</span> The hydraulic diameter is equal to (4 <span style="font-family: 'Symbol';">× </span>Area / Perimeter). For square openings this equals the square root of the area, and for long thin openings it is two times the width.</p>
+        <p><span style="font-weight: bold;">Reynolds Number:</span> The transition from laminar flow to turbulent flow occurs over a broad range of Reynolds numbers with the flow being fully laminar approximately below 100.</p>
+        <p class="NormalItalics">Note: The hydraulic diameter and Reynolds number have little impact on the calculations. Generally you should use the default values except for special circumstances where they need to be modified. The values above describe the flow characteristics of an orifice in typical operation. At extremely low pressure drops the use of the powerlaw model leads to a division by zero during the network solution process. ContamX avoids this problem by changing to a linear model in this region. The model is based conceptually on the flow changing from turbulent to laminar at low pressures. The Hydraulic diameter and Reynolds number are used to determine a point where the model changes from the powerlaw to linear.</p>
+        <p><span style="font-weight: bold;">Shape Size and Leakage:</span> You must enter data to physically describe each duct airflow element. You input these values on the <a href="IDH_PP_AFE_DCTSHAPE.htm">Shape Size and Leakage</a> property page associated with each duct airflow element.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

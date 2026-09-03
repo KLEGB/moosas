@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Theoretical Background|Contaminant Analysis" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Contaminant Source/Sink Elements</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Contaminant Source/Sink Elements</h3>
+        <p>CONTAM allows you to define the generation, <span style="font-style: italic;">G</span><span style="font-family: 'Symbol';vertical-align: sub;font-size: 10pt;">a</span>, and removal, <span style="font-style: italic;">R</span><span style="font-family: 'Symbol';vertical-align: sub;font-size: 10pt;">a</span>, coefficients for some simple cases. </p>
+        <p class="SubHeading1">Constant Coefficient Model</p>
+        <p>The constant coefficient or general source/sink model uses the following equation:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../Resources/Images/Eqn_Theory15.PNG" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(15)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where <span style="font-style: italic;">S</span><span style="font-family: 'Symbol';vertical-align: sub;font-size: 10pt;">a</span> is called the contaminant <span style="font-family: 'Symbol';">a</span> "source strength". The CONTAM internal units for the terms in equation (16) are:  <span style="font-style: italic;">C</span><span style="font-family: 'Symbol';vertical-align: sub;font-size: 10pt;">a</span> [kg<span style="font-family: 'Symbol';vertical-align: sub;font-size: 10pt;">a</span> / kg<span style="vertical-align: sub;font-size: 10pt;">air</span>], <span style="font-style: italic;">G</span><span style="font-family: 'Symbol';vertical-align: sub;font-size: 10pt;">a</span>, <span style="font-style: italic;">S</span><span style="font-family: 'Symbol';vertical-align: sub;font-size: 10pt;">a</span> [kg<span style="font-family: 'Symbol';vertical-align: sub;font-size: 10pt;">a</span> / s], and <span style="font-style: italic;">R</span><span style="font-family: 'Symbol';vertical-align: sub;font-size: 10pt;">a</span> [kg<span style="vertical-align: sub;font-size: 10pt;">air</span> / s]. You may express these values in a large number of units with automatic conversion to the internal values. </p>
+        <p>For a room air filtering device, <span style="font-style: italic;">G</span> = 0.0 and <span style="font-style: italic;">R</span> = <span style="font-style: italic;">f</span>•<span style="font-style: italic;">e</span> where <span style="font-style: italic;">f</span> is the flow rate of the room air passing through the filter and <span style="font-style: italic;">e</span> is the single pass removal efficiency of the device.</p>
+        <p class="SubHeading1">Pressure Driven Model</p>
+        <p>The pressure driven source/sink model is intended to model contaminant sources which are governed by the inside-outside pressure difference, such as radon or soil gas entry into a basement. In this case the source equation is:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../Resources/Images/Eqn_Theory16.PNG" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(16)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="SubHeading1">Cutoff Concentration Model</p>
+        <p>For volatile organic compounds the source equation is sometimes expressed in the form</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../Resources/Images/Eqn_Theory17.PNG" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(17)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">cutoff</span> is the cutoff concentration at which emission ceases.</p>
+        <p class="SubHeading1">Decaying Source Model</p>
+        <p>Another source equation for volatile organic compounds is the exponentially decaying source which is expressed in the form</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../Resources/Images/Eqn_Theory18.PNG" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(18)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where</p>
+        <p class="NormalIndent"><span style="font-style: italic;">S</span><span style="font-family: 'Symbol';font-style: italic;vertical-align: sub;">a</span> &#160;= the contaminant source strength,<br /><span style="font-style: italic;">G</span><span style="font-family: 'Symbol';font-style: italic;vertical-align: sub;">a</span> &#160;= the initial emission rate, <br /><span style="font-style: italic;">t</span> &#160;= the time since the start of emission, and <br /><span style="font-style: italic;">t</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">c</span> &#160;= the decay time constant.</p>
+        <p class="SubHeading1">Boundary Layer Diffusion Controlled Model</p>
+        <p>The boundary layer diffusion controlled reversible source/sink model follows the descriptions presented by <a href="../IDH_References.htm#REF_Axley_1991">Axley 1991</a>. The rate at which a contaminant is transferred into the sink is</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../Resources/Images/Eqn_Theory19.PNG" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(19)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where</p>
+        <p class="NormalIndent"><span style="font-style: italic;">h</span> &#160;= average film mass transfer coefficient over the sink,<br /><span style="font-family: 'Symbol';font-style: italic;">r</span> &#160;= film density of air, average of bulk &amp; surface densities,<br /><span style="font-style: italic;">A</span> &#160;= surface area of the adsorbent,<br /><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">i</span> &#160;= concentration in the air,<br /><span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">s</span> &#160;= concentration in the adsorbent, and<br /><span style="font-style: italic;">k</span> &#160;= Henry adsorption constant or partition coefficient.</p>
+        <p class="SubHeading1">Burst Source Model</p>
+        <p>A user-specified mass of contaminant is added to a zone in a single time step, effectively an instantaneous addition – nothing can be resolved at less than one time step.</p>
+        <p class="SubHeading1">Deposition Velocity Sink Model</p>
+        <p>The deposition velocity model provides for the input of a sink’s characteristic in the familiar term of deposition velocity. The deposition velocity model equation is:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/DepVelModel.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(20)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where</p>
+        <p class="EqnParams">R<span style="font-family: 'Symbol';font-style: italic;vertical-align: sub; font-size: 10pt;">a</span>(<span style="font-style: italic;">t</span>)&#160;= removal rate at time t</p>
+        <p class="EqnParams"><span style="font-family: 'Symbol';font-style: italic;">n</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">d</span><span style="vertical-align: sub;font-size: 10pt;"> <![CDATA[ ]]></span>&#160;= deposition velocity</p>
+        <p class="EqnParams"><span style="font-style: italic;">A</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">s</span>&#160;= deposition surface area</p>
+        <p class="EqnParams"><span style="font-style: italic;">m</span>&#160;= element multiplier</p>
+        <p class="EqnParams"><span style="font-family: 'Symbol';font-style: italic;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">air</span><span style="font-style: italic;">(t)</span>&#160;= density of air in the source zone at time <span style="font-style: italic;">t</span></p>
+        <p class="EqnParams"><span style="font-style: italic;">C</span><span style="font-family: 'Symbol';font-style: italic;vertical-align: sub; font-size: 10pt;">a</span>(<span style="font-style: italic;">t</span>)&#160;= concentration of contaminant <span style="font-family: 'Symbol';font-style: italic;">a</span> at time <span style="font-style: italic;">t</span> [M<span style="font-family: 'Symbol';font-style: italic;vertical-align: sub;">a</span> / M<span style="vertical-align: sub;font-size: 10pt;">air</span>]</p>
+        <p class="EqnParams"><span style="font-style: italic;">s(t)</span>&#160;= schedule or control signal value at time <span style="font-style: italic;">t</span> [-]</p>
+        <p class="SubHeading1">Deposition Rate Sink Model</p>
+        <p>The deposition rate model provides for the input of a sink’s characteristic in the familiar term of deposition or removal rate. The deposition rate model equation is:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/DepRateModel.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(21)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where</p>
+        <p class="EqnParams"><span style="font-style: italic;">k</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">d</span>&#160;= Deposition rate [1/T]</p>
+        <p class="EqnParams"><span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">z</span>&#160;= Zone volume [M<span style="vertical-align: super;font-size: 10pt;">3</span>]</p>
+        <p class="EqnParams">other terms are the same as for the Deposition Velocity Sink Model.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

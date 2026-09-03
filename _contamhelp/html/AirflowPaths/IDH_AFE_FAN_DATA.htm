@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Airflow Paths|Defining Airflow Paths|Airflow Element Types|Fan and Forced-Flow Models|Fan Performance Curve" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Fan Performance</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h6><a name="kanchor64"></a>Fan Performance Data</h6>
+        <p>Between four and ten data points are required for ContamW to fit a cubic polynomial to create a performance curve for the fan. The fitted curve may not contain a point of contraflecture; if it does an error message will be displayed. If this error message is displayed the pressure rise data must then be modified to eliminate the point of contraflecture.</p>
+        <p class="SubHeading1">Entering Fan Curve Data Points</p>
+        <p>You only need to fill in the "Flow rate" and "Pressure rise" data entry when entering fan curve data. When adding a new data point, the flow rate must be entered in the "Flow rate" edit box and the pressure rise must be entered in the "Pressure rise" edit box. Use the "Revised dP" box when making changes to a pressure rise that has already been entered. This will preserve the original data point but use the revised value when performing the curve fit. After entering the flow rate and the pressure rise into the appropriate edit boxes, the next step is to press the "&lt;&lt; Insert &lt;&lt;" button. Once you have entered four data points a cubic fit will automatically be generated and displayed as a line on the graph. </p>
+        <p class="SubHeading1">Revising Fan Curve Data Points</p>
+        <p>To edit existing data points, highlight the line of data to revise in the list of Fan Curve Data to the left of the Insert, Replace and Delete buttons. The values from that data set will then appear in the edit boxes to the right of the buttons.</p>
+        <p>If you need to modify the flow rate, enter the new flow rate in the "Flow rate" edit box and then press the "&lt;&lt; Replace &lt;&lt;" button. The new data will now replace the old data.</p>
+        <p>If the Pressure Rise needs to be modified there are two available options:</p>
+        <ol>
+            <li value="1">Replace the data point completely. To overwrite an existing pressure rise and refit the fan curve, select the data set to be modified by highlighting it in the data list and then type the new pressure rise in the "Pressure rise" edit box then press the "&lt;&lt; Replace &lt;&lt;" button. </li>
+            <li value="2">Change the point used to fit the cubic polynomial but leave the marker for the original data point intact. With this option you may "tweak" the curve in the event there is some issue with the originally entered fan curve, such as a point of contraflecture.</li>
+        </ol>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

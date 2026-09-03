@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Sources and Sinks|Source/Sink Properties" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Source Sink Multiplier Schedule Location Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Source/Sink - Multiplier and Location Properties</h5><span style="font-weight: bold;"></span><span style="font-weight: bold;"></span>
+        <p><span style="font-weight: bold;">Source/Sink Number:</span> This is the number that appears in the status bar when you highlight an icon.
+        </p>
+        <p><span style="font-weight: bold;">Multiplier:</span> A constant value by which the source strength will be multiplied during simulation. With this feature you could define a <span style="font-style: italic;">source/sink element</span> having a source strength per unit area then use the multiplier as the area of the zone for each source/sink that uses the per unit area source/sink element.
+</p>
+        <p>NOTE: The multiplier serves as the surface area for the Boundary Layer Diffusion Model, and should be entered in units of m<sup>2</sup>.</p>
+        <p><span style="font-weight: bold;">Initial Concentration:</span> Some source/sinks are reversible in that they enable storage within or on the surface and re-emission or resuspension of contaminant from the surface. These source/sinks actually contribute a contaminant node to the contaminant transport equations. Currently, there are two such element types: <i>Boundary Layer Diffusion Controlled</i> and <i>Deposition with Resuspension</i>. 
+      The <i>Initial Concentration</i> properties will be enabled for these element types, and you can set the values and units of these initial loadings.      </p>
+        <p class="NormalCW2"><b>Color:</b> Set the color of the icon. This allows you to distinguish different icons on the SketchPad. Activate display of icon colors via the <b><u>V</u>iew -&gt; Icon <u>C</u>oloring</b> menu item.</p>
+        <p><span style="font-weight: bold;">Location:</span> These are the X, Y and Relative Elevation (Z) coordinates and units for the selected source/sink. X and Y are absolute coordinates and Rel Elevation is relative to the level on which the source/sink is located. To create a point source, set the Minimum and Maximum values to be the same. To create a source which distributes emissions along the 1D axis of the zone, enter Minimum and Maximum values that span the desired region of the zone in which the source is located.
+        </p>
+        <p>These values are required for any source/sink that is located within a <span style="font-style: italic;">1D convection/diffusion zone</span> (see <a href="../Zones/IDH_PP_ZONEPARMS2_CFD.htm">1D Zone Data</a>). These coordinates will be verified by ContamW against the axis of the 1D zone in which it is located. This verification will be performed automatically when you select either the <span style="font-weight: bold;text-decoration: underline;">R</span><span style="font-weight: bold;">un Simulation</span> or <span style="font-weight: bold;">Create a Contam</span><span style="font-weight: bold;text-decoration: underline;">X</span><span style="font-weight: bold;"> Input File</span> command from the <span style="font-weight: bold;text-decoration: underline;">S</span><span style="font-weight: bold;">imulation</span> menu.
+        </p>
+        <p><span style="font-weight: bold;">CFD&#160;Source ID:</span> Each source/sink that is located within a CFD zone must be given a unique identifier. This id will be used to identify the source/sink within the CFD0 Editor that is used to define the location of the interface paths with respect to the CFD zone.                  </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

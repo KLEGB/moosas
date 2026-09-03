@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" class="">
+    <head><title>Section 19: Duct Segments</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" type="text/css" />
+    </head>
+    <body>
+        <h5>Section 19: Duct Segments</h5>
+        <p>Duct data are read by the duct_read( ) function and saved by the duct_save( ) function. The data are stored in the DCT_DSC structures that are defined in contam.h for ContamW and simdat.h for ContamX.</p>
+        <p class="NormalItalic">The duct segment section starts with: </p>
+        <p class="code">_ndct // number of ducts (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">This is followed by a data header comment line and then data for all _ndct ducts.</p>
+        <p class="NormalItalic">For each duct the data line includes:</p>
+        <p class="code">nr // duct number (<span style="color: red;">IX</span>); in order from 1 to _ndct</p>
+        <p class="code">flags // duct flag values (I2)</p>
+        <p class="code">pjn // junction n index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="code">pjm // junction m index (<span style="color: red;">IX</span>); converted to pointer </p>
+        <p class="code">pe // duct flow element index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="code">pf // filter index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="code">ps // schedule index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="code">pc // control node index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="code">dir // positive flow direction on sketchpad (U1) {W}</p>
+        <p class="code">length // length of the duct segment [m] (R4)</p>
+        <p class="code">Ain // flow area at inlet end [m^2] - future (R4)</p>
+        <p class="code">Aout // flow area at outlet end [m^2] - future (R4)</p>
+        <p class="code">sllc // sum of local loss coefficients (R4)</p>
+        <p class="code">color // icon color (I2) {W} {Contam 2.4}</p>
+        <p class="code">u_L // units for length (I2) {W}</p>
+        <p class="code">u_A // units for flow area (I2) {W}</p>
+        <p class="NormalItalic">The duct segment section is terminated with:</p>
+        <p class="code">-999</p>
+        <p class="code">&#160;</p>
+    </body>
+</html>

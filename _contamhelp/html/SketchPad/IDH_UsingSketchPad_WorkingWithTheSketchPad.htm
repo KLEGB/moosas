@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with the SketchPad</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2><a name="kanchor1"></a>Working with the SketchPad</h2>
+        <p>The SketchPad is the region of the ContamW screen where you draw the schematic representation of a building you wish to analyze. This representation is in the form of a set of simplified floor plans that represent the levels of a building. The SketchPad consists of an invisible array of cells into which you place various icons to form your schematics of a building. The SketchPad is used to establish the geometric relationships of the relevant building features and is not necessarily intended to produce a scaled representation of a building. It should be used to create a simplified model where the walls, zones, and airflow paths are topologically similar to the actual building. </p>
+        <p class="SubHeading1">Pseudo-Geometry</p>
+        <p>While ContamW does not require you to draw building floor plans to scale, the SketchPad does provide the ability to assign a scale value to the SketchPad cells. You can choose to display this so-called <i>pseudo-geometry</i> <![CDATA[ ]]>via the <a href="../Config/IDH_CONFIGPARMS_ALL.htm#ConfigContamW_ProjectOptions">Project Options</a>&#160;of the ContamW Configuration. This will provide dimensions in the status bar as you draw on the SketchPad. It will also provide you with scaled information for walls, zones and ducts. It will provide wall areas when you highlight wall icons, which can be useful when defining multipliers of airflow path icons associated with the wall. When the pseudo-geometry mode is activated, default values will be provided for zone volume (based on scaled floor area) and duct lengths. In order to distinguish between pseudo-geometry values and actual values as saved in the prj file, scaled values will be enclosed in "{}" when presented in the SketchPad <a href="../GetStarted/IDH_GetStart_OverviewOfGUI.htm#StatusBar">Status Bar</a>. This feature is intended to simplify the coupling with energy analysis software, e.g., TRNSYS and EnergyPlus, which require geometric information in order to perform energy related calculations (See <a href="../TRNSYS/IDH_UsingTRNSYS-WorkingWithTRNSYS.htm">Working with TRNSYS</a>).</p>
+        <p class="SubHeading1">The Caret</p>
+        <p>When working with ContamW you will notice a blinking square on the SketchPad. This is known as the system <span style="font-style: italic;">caret</span>, and it is the size of a single SketchPad cell. This <span style="font-style: italic;">caret</span> is the same thing as the blinking vertical bar that is common to many word processing applications. The <span style="font-style: italic;">caret</span> indicates the currently selected cell of the SketchPad. Any icon-related information that appears in the status bar is associated with the location of the <span style="font-style: italic;">caret</span>. </p>
+        <p class="SubHeading1">Moving the Caret</p>
+        <p class="Normal">To move the <span style="font-style: italic;">caret</span> around the SketchPad you can use the keyboard arrow keys or you can move the system cursor with the mouse and click the <span style="font-style: italic;">left mouse button</span> to set the caret position. You can also use the arrow keys in conjunction with the <span style="font-weight: bold;">Shift</span> and <span style="font-weight: bold;">Ctrl</span> keys to move the <span style="font-style: italic;">caret</span> more quickly.</p>
+        <p class="Normal"><span style="font-weight: bold;">Shift + Arrow Key</span> moves the <span style="font-style: italic;">caret</span> 10 cells in the direction of the arrow. The number of cells to move can be modified within the ContamW Configuration (See <a href="../Config/IDH_CONFIGPARMS_ALL.htm">Cell/Icon Size</a> in the <a href="../Config/IDH_CONFIGPARMS_ALL.htm">Configuring ContamW</a> section).</p>
+        <p class="Normal"><span style="font-weight: bold;">Ctrl + Arrow Key</span> moves the <span style="font-style: italic;">caret</span> to the next icon in the direction of the arrow</p>
+        <p class="SubHeading1">SketchPad Operations</p>
+        <p>The specific operations that you will perform using the SketchPad are as follows:</p>
+        <ol>
+            <li value="1">
+                <p><a href="IDH_UsingSketchPad_DrawingWallsandDucts.htm">Drawing Walls, Ducts and Controls</a>
+                </p>
+            </li>
+            <li value="2">
+                <p><a href="IDH_UsingSketchPad_DrawingBuildingComponents.htm">Drawing building component icons</a>
+                </p>
+            </li>
+            <li value="3">
+                <p><a href="IDH_UsingSketchPad_DefiningBuildingComponentIcons.htm">Defining building component icons</a>
+                </p>
+            </li>
+            <li value="4">
+                <p><a href="IDH_UsingSketchPad_ViewingResultsOnSketchPad.htm">Viewing results</a>
+                </p>
+            </li>
+            <li value="5">
+                <p><a href="IDH_UsingSketchPad_ViewingEnvelopeWindPressureDifferentials.htm">Viewing envelope pressure differentials due to wind effects</a>
+                </p>
+            </li>
+        </ol>
+        <p class="SubHeading1">SketchPad Modes</p>
+        <p>There are three basic modes of the SketchPad: <span style="font-style: italic;font-weight: bold;">normal</span>, <span style="font-style: italic;font-weight: bold;">results</span> and <span style="font-style: italic;font-weight: bold;">wind pressure</span>. The SketchPad mode basically refers to the type of information that is displayed upon the SketchPad. You can tell what mode the program is in by looking at the items in the <span style="font-weight: bold;">View</span> menu to see which one has a mark next to it.</p>
+        <ul>
+            <li value="1">In the <span style="font-style: italic;">normal</span> mode ContamW displays only the building component icons. In this mode you can add, delete, copy, and move icons.</li>
+            <li value="2">In the <span style="font-style: italic;">results</span> mode, ContamW displays simulation results upon the SketchPad. <b>In this mode you will not be allowed to add, delete, copy and move icons upon the SketchPad</b> (See <a href="../Results/IDH_UsingResults_Viewing.htm">Viewing Results</a>). </li>
+            <li value="3">The <span style="font-style: italic;">wind pressure</span> mode is provided to verify wind speed and direction information visually on the SketchPad  (See <a href="../Weather/IDH_UsingWTH_Defining_Steady_State_Weather_and_Wind.htm#IDM_CheckingWind">CheckingWind Pressure Data</a>).</li>
+        </ul>
+        <p class="SubHeading1">Control Super Element / Super Node SketchPad
+</p>
+        <p>With the advent of the new control super element, comes another use of the SketchPad to create and edit super elements and super nodes (See <a href="../Controls/IDH_UsingControls_ControlSuperElements.htm">Control Super Elements</a> in the <a href="../Controls/IDH_UsingControls_WorkingWithControls.htm">Working with Controls</a> section). When working with super elements only the controls drawing tool is enabled, along with the ability to define the control network icons. This SketchPad is activated via the <b>Data&#8594;Controls&#8594;Super Elements…</b> menu item. When the Super Element SketchPad is active, the upper left corner of the SketchPad will display "Super Element:" followed by the name of the super element currently displayed on the SketchPad. When working with super elements the "Control Super Elements" dialog box will also be displayed.
+The Super Node SketchPad enables only the modification of existing control sub-node icons, so the control drawing tool will be disabled as will be the ability to delete control network icons. The Super Node SketchPad is activated by instantiating an existing control super element or double-clicking on a Super Node icon. When the Super Node SketchPad is active, the upper left corner of the SketchPad will display "Super Node:" followed by the name of the super node currently displayed on the SketchPad. When working with super nodes the "Super Node Data" dialog box will also be displayed (See Control Super Nodes).
+</p>
+        <p class="SubHeading1">Zooming the SketchPad</p>
+        <p>You can change the size of the cells in which icons appear on the SketchPad in order to zoom the floor plan in and out on the SketchPad. The amount of information that will appear on your screen is dependent on the resolution and the cell size. Zooming can be accomplished using the two zoom buttons on the toolbar and their associated keyboard shortcuts shown below or changing the Current Cell/Icon Size on the Cell/Icon Size page of the Project Configuration Properties dialog box accessible via the <span style="font-weight: bold;text-decoration: underline;">V</span><span style="font-weight: bold;">iew&#8594;</span><span style="font-weight: bold;text-decoration: underline;">O</span><span style="font-weight: bold;">ptions...</span> menu selection (see <a href="../Config/IDH_CONFIGPARMS_ALL.htm">Cell/Icon Size</a>).</p>
+        <p class="NormalIndent">
+            <img src="../../image/BtnZoom.gif" border="0" height="24" width="48" alt="image\BtnZoom.gif" />
+        </p>
+        <p class="Normal">Keyboard Shortcuts:</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Ctrl + PageUp</span> to increase cell size</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Ctrl + PageDown</span>&#160;to decrease cell size</p>
+        <p class="SubHeading1"><a name="Printing_the_SketchPad"></a><a name="kanchor2"></a>Printing SketchPad Images</p>
+        <p>You can obtain images of your SketchPad drawings to print or edit using the Windows print screen feature. To do this, size the ContamW window and press <span style="font-weight: bold;">Alt+PrintScrn</span> on the keyboard to copy the current window to the Windows clipboard. Then you can immediately paste the image into the desired program. For example, you can paste the image into the Windows Paint program for editing or directly into a word processing program. You can then print the image from either of these programs.</p>
+        <p class="SubHeading1"><a name="PCX_Graphics_Files"></a>Exporting .BMP SketchPad Files</p>
+        <p>You can save a SketchPad image of the currently displayed level to a Windows bitmap (.BMP) file using the <span style="font-weight: bold;">File&#8594;Save SketchPad to .BMP File...</span> menu item. The Save As dialog box will appear allowing you to name the file. The file will contain the entire SketchPad based on the current cell/icon size and color settings.
+        </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

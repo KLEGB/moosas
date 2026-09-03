@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" class="">
+    <head><title>Section 16: Airflow Paths</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" type="text/css" />
+    </head>
+    <body>
+        <h5>Section 16: Airflow Paths</h5>
+        <p>Path data are read by the path_read( ) function and saved by the path_save( ) function. The data are stored in the PATH_DSC structures that are defined in contam.h for ContamW and simdat.h for ContamX.</p>
+        <p class="NormalItalic">The path section starts with: </p>
+        <p class="code">_npath // number of paths (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">This is followed by a data header comment line and then data for all _npath paths.</p>
+        <p class="NormalItalic">For each path the data line includes:</p>
+        <p class="codeindent">nr // path number (<span style="color: red;">IX</span>); in order from 1 to _npath</p>
+        <p class="codeindent">flags // airflow path flag values (I2)</p>
+        <p class="codeindent">pzn // zone N index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">pzm // zone M index (<span style="color: red;">IX</span>); converted to pointer </p>
+        <p class="codeindent">pe // flow element index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">pf // filter index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">pw // wind coefficients index (<span style="color: red;">IX</span>); converted to pointer </p>
+        <p class="codeindent">pa // AHS index (<span style="color: red;">IX</span>); converted to pointer </p>
+        <p class="codeindent">ps // schedule index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">pc // control node index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">pld // level index (<span style="color: red;">IX</span>); converted to pointer</p>
+        <p class="codeindent">X // X-coordinate of envelope path [m] (R4) {Contam 2.1}</p>
+        <p class="codeindent">Y // Y-coordinate of envelope path [m] (R4) {Contam 2.1}</p>
+        <p class="codeindent">relHt // height relative to current level [m] (R4)</p>
+        <p class="codeindent">mult // element multiplier (R4)</p>
+        <p class="codeindent">wPset // constant wind pressure [Pa] (pw==NULL) (R4)</p>
+        <p class="codeindent">wPmod // wind speed(?) modifier (pw!=NULL) (R4)</p>
+        <p class="codeindent">wazm // wall azimuth angle (pw!=NULL) (R4)</p>
+        <p class="codeindent">Fahs // AHS path flow rate [kg/s] (pw==NULL) (R4)</p>
+        <p class="codeindent">Xmax // flow or pressure limit - maximum (R4) {W}</p>
+        <p class="codeindent">Xmin // flow or pressure limit - minimum (R4) {W}</p>
+        <p class="codeindent">icon // icon used to represent flow path (U1) {W}</p>
+        <p class="codeindent">dir // positive flow direction on sketchpad (U1) {W}</p>
+        <p class="codeindent">u_Ht // units of height (I2) {W}</p>
+        <p class="codeindent">u_XY // units of X and Y (I2) {W}</p>
+        <p class="codeindent">u_dP // units of pressure difference (I2) {W}</p>
+        <p class="codeindent">u_F // units of flow (I2) {W}</p>
+        <p class="codeindent">cfd // cfd path (0=no, 1=yes) (I2)
+ {CONTAM 3.0}</p>
+        <p class="NormalItalic">If cfd = 1 then the line continues to include:
+
+ {CONTAM 3.0}</p>
+        <p class="codeindent">name[] // cfd path id (I1)</p>
+        <p class="codeindent">cfd_ptype // boundary condition type (0=mass flow, 1=pressure) (I2)</p>
+        <p class="codeindent">cfd_btype // pressure bc type (if ptype = 1, 0=linear, 1=stagnation pressure) (I2)</p>
+        <p class="codeindent">cfd_capp //
+coupling approach (1=pressure-pressure) (I2)</p>
+        <p class="NormalItalic">The paths section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data</p>
+        <p class="code">&#160;</p>
+    </body>
+</html>

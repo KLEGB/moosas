@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication|ContamX TCP/IP Message Formats" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>CX_READY_MSGTYPE</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>CX_READY_MSGTYPE</h3>
+        <p>This message will be sent by ContamX to indicate that it is in the <i>ready mode</i> and is prepared to receive messages through the bridge.  This will occur for the first time after ContamX has finished sending all of the <i>project information messages</i>, performed the steady state initialization calculation and sent <b>all</b> of the <i>simulation result messages</i> (<span style="font-family: 'Courier New';">_UPDATE_MSGTYPE</span>). It will be sent again after each <span style="font-family: 'Courier New';">CX_ADVANCE_MSGTYPE</span> has been handled and the <i>simulation result messages</i> have been sent as requested via the <span style="font-family: 'Courier New';">option</span> flag of <span style="font-family: 'Courier New';">CX_ADVANCE_MSGTYPE</span>.</p>
+        <p class="code">Message Header;</p>
+        <p class="code"><span style="color: blue;">int </span>time;       <span style="color: #008100;">// time of day in seconds at which ContamX performed its most recent calculation</span></p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

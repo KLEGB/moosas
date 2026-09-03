@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Simple Air-Handling Systems" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Defining Air—handling Systems</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Defining Air-handling Systems</h3>
+        <p>After you place an <span style="font-style: italic;">AHS-related</span> icon (<span style="font-style: italic;">AHS</span>, <span style="font-style: italic;">Supply</span> and <span style="font-style: italic;">Return</span>) onto the SketchPad you must define them using the icon definition procedure (see <a href="../SketchPad/IDH_UsingSketchPad_DefiningBuildingComponentIcons.htm">Defining Building Component Icons</a>) to display and edit the properties of the icon. This will display the property sheet associated with the icon. Detailed descriptions of all AHS properties are given in the <a href="IDH_UsingAHS_Properties_AHS.htm">Air-handling System Properties</a> section of this manual.</p>
+        <p>This list shows the various AHS-related icons and provides a brief description of each.</p>
+        <table>
+            <tr>
+                <td class="IconLeft"><b>Icon</b>
+                </td>
+                <td class="IconRight"><b>Description</b>
+                </td>
+            </tr>
+            <tr>
+                <td class="IconLeft">
+                    <img src="../../image/Icon_AHSlarge.gif" />
+                </td>
+                <td class="IconRight">Air-handling system</td>
+            </tr>
+            <tr>
+                <td class="IconLeft">
+                    <img src="../../image/Icon_Inlet.gif" />
+                </td>
+                <td class="IconRight">Room air supply (inlet) of an air-handling system</td>
+            </tr>
+            <tr>
+                <td class="IconLeft">
+                    <img src="../../image/Icon_Outlet.gif" />
+                </td>
+                <td class="IconRight">Room air return (outlet) of an air-handling system</td>
+            </tr>
+        </table>
+        <p>&#160;</p>
+        <p class="SubHeading1">Air-handling System Icon</p>
+        <p>The properties associated with each AHS include outdoor air intake data, supply and return contaminant information, and system filters. Outdoor air intake data consists of a minimum outdoor air intake rate, W<span style="vertical-align: sub;font-size: 10pt;">oa_min</span> and a schedule for varying the outdoor air intake rate as a percentage of the supply airflow rate. The schedule will set the value of f<span style="vertical-align: sub;font-size: 10pt;">o</span> in the algorithm above. The default value of f<span style="vertical-align: sub;font-size: 10pt;">o</span> is 1.0 (i.e., 100 % outdoor air) if you don't use a schedule. Supply and return system data refer to the implicit zones that are created for each AHS. Just as for any zone you create, you can provide a zone volume, initial zone concentration and a kinetic reaction for each contaminant defined for the project. You can also associate contaminant filters with the implicit outdoor and recirculation flow paths.</p>
+        <p class="SubHeading1">Supply and Return Icons</p>
+        <p>The properties associated with each AHS include airflow rate and contaminant filtration information. You must enter a design airflow rate for each supply and return icon that you create. Enter the design maximum value that you anticipate requiring. You can also provide a schedule to the design airflow rate to adjust down the design flow rate. As with other airflow paths, you can provide a contaminant filter to these items. Be careful not to place filters in both the individual returns and the recirculation path of the air handling system unless this is what you really intend to do.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

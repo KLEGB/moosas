@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication|ContamX TCP/IP Message Formats" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>TERM_INFO_MSGTYPE</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>TERM_INFO_MSGTYPE</h3>
+        <p>Provides information on those junctions that are terminal types.  The id[] array provides the order in which airflow rates will be provided by ContamX via <span style="font-family: 'Courier New';">TERM_FLOW_UPDATE_MSGTYPE</span>.  If the ambient_index is 0, this terminal is not an infiltration point. Otherwise, ambient_index specifies the order in which terminal concentrations are to be sent to ContamX using <span style="font-family: 'Courier New';">ADJ_WPC_MSGTYPE</span>.</p>
+        <p class="code">Message Header;</p>
+        <p class="code"><span style="color: blue;">int </span>num_terms;            <span style="color: #008100;">// number of duct terminals in the PRJ</span></p>
+        <p class="code"><span style="color: blue;">int </span>id[num_terms];           <span style="color: #008100;">// for each terminal: index according to ContamX</span></p>
+        <p class="code"><span style="color: blue;">int </span>ambient_index[num_terms]       <span style="color: #008100;">// for each terminal: 0/1 = not connected / connected to ambient</span></p>
+        <p class="code"><span style="color: blue;">float </span>x[num_terms];                <span style="color: #008100;">// for each terminal: absolute coordinates [m]</span></p>
+        <p class="code"><span style="color: blue;">float </span>y[num_terms];</p>
+        <p class="code"><span style="color: blue;">float </span>z[num_terms];</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

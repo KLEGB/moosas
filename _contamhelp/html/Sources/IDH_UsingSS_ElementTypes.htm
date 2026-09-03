@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Sources and Sinks" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Source Sink Element Types</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Source/Sink Element Types</h5>
+        <p>These are the source/sink element types or models that you can implement with CONTAM. Refer to the related information for each specific model to obtain detailed descriptions of them. For the so-called surface elements, a surface results file can be generated that will provide the transient loadings for each of these surface types (see <a href="../Results/IDH_UsingResults_ResultsFiles.htm">Results Files</a> in <a href="../Results/IDH_UsingResults_Working_with_Results.htm">Working with Results</a>).</p>
+        <p><b>CONTAM Elements:</b>
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Constant Coefficient Model:</span> The general source/sink model allows constant contaminant generation and deposition rates.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Pressure Driven Model:</span> This model is for contaminant sources that are governed by the pressure differences between zones.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Cutoff Concentration Model:</span> This model will reduce emissions as the concentration within the zone in which it is implemented approaches a specified cutoff concentration. This model may be appropriate for some sources of Volatile Organic Compound (VOC).</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Decaying Source Model:</span> This model provides a source that will exponentially decay with time according to a user-defined time constant. This model may also be appropriate for some VOC sources.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Boundary Layer Diffusion Model:</span> Used to model reversible diffusion of a contaminant through the air-phase boundary layer of a material surface and the sorption of the contaminant into a sink with a linear sorption isotherm.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Burst Source Model:</span> Used to model an instantaneous release of a mass of contaminant within a zone.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Deposition Velocity Sink Model:</span> Used to model contaminant deposition onto a surface as specified by a <span style="font-style: italic;">deposition velocity</span>.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Deposition Rate Sink Model:</span> Used to model contaminant deposition onto a surface as specified by a <span style="font-style: italic;">deposition rate</span>.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Deposition with Resuspension Model:</span> Used to model contaminant deposition and resuspension to and from a surface.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Super Source/Sink Element</span>: The super element allows multiple elements of the other types to be combined into a single element. This can reduce repetitious work required to create multiple sources throughout a building by allowing multiple sources to be represented by a single icon on the SketchPad.</p>
+        <p><span style="font-weight: bold;">NRCC Elements:</span> These sources are provided for compatibility with the Material Emissions Database developed by the National Research Council Canada (NRCC) that is largely based on material emission test chamber data [<a href="../IDH_References.htm#REF_Howard-Reed_2004">Howard-Reed 2004</a> and <a href="../IDH_References.htm#REF_Howard-Reed_2006">2006</a>]. </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Power Law Model</span>: Constant emission rate until specified time after which time the emission rate decays according to the power law relationship.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Peak Model</span>: Constant emission rate until specified time at which the peak emission rate is obtained after which time the emission rate decays according to the peak model relationship.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

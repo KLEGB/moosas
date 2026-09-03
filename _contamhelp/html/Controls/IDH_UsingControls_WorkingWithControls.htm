@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with Controls</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2><a name="top"></a>Working with Controls</h2>
+        <p>Controls allow the characteristics of one building element to be modified during transient simulations in response to a change in characteristics of another building element. You can also use controls to simply monitor building performance by polling building components for values and logging them to a control log file during a simulation.</p>
+        <p>Controls include sensors, links, modifiers and actuators. Sensors are control elements that are used to obtain a value, calculated during simulation, of a building component and then provide it to a control network. You can use sensors to obtain contaminant concentrations and temperatures of zones, duct junctions and duct terminals and to obtain pressure differences and airflow rates of airflow paths, duct segments and duct terminals. You can use actuators to control schedulable items including airflow paths, duct segments, junctions and terminals, simple air-handling systems, and contaminant source/sinks. Note that actuator input to a controlled building component overrides schedules associated with the component.</p>
+        <p>The connection between sensors and other nodes in a control network are made up of control links. Control modifiers are nodes within the control network that are used to change or modify their input signals. Control actuators are used to modify various characteristics of building components based on control signals obtained from sensors and even modified by signal modifiers. For example, a sensor can be used to obtain a contaminant concentration within a zone, and a proportional control actuator can be used to adjust supply airflow through a supply airflow path into the zone based on the sensed concentration.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

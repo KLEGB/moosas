@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>ContamX TCP/IP Message Formats</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>ContamX TCP/IP Message Formats</h2>
+        <p>This section provides the detailed messages and formats. There are currently four categories of messages: <i>Project information</i>, <i>Execution control</i>, <i>Project modification</i> and <i>Simulation result</i>. <i>Project information</i> messages provide information related to the PRJ file in order for a server to establish the type and number of building components contained in a CONTAM project. These messages will all be sent by ContamX immediately upon execution of ContamX in the bridge mode. <i>Execution control</i> messages provide the ability to advance the simulation to selected simulation times until simulation is complete, to notify the server that ContamX is ready to receive messages, and to terminate the simulation. <i>Project modification</i> messages are those received by ContamX in order to adjust various properties of the building during simulation including zone contaminant concentrations, temperatures of zones and duct junctions, control node values, weather data and other items detailed below. <i>Simulation result</i> messages are sent by ContamX to provide the results of the simulation for the current time step.</p>
+        <p>In the following messages, any value of type <code>int</code> will be converted to network byte order before being packaged into the message, but values of type <code>char</code> and <code>float</code> will not. Server software written to work with ContamX will need to manage conversion of data as needed depending on the computer architecture/operating systems involved, but this should not be an issue if both the server and ContamX are running on the same computer.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

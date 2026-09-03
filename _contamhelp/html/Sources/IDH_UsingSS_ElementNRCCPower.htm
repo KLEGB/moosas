@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Sources and Sinks|Source Sink Element Types" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>NRCC – Power Law Model</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>NRCC – Power Law Model</h5>
+        <p style="">This is an empirically based model provided for compatibility with NRCC Material Emission Database [<a href="../IDH_References.htm#REF_Howard-Reed_2004">Howard-Reed 2004</a> and <a href="../IDH_References.htm#REF_Howard-Reed_2006">2006</a>].&#160; </p>
+        <p>For <span style="font-style: italic;">t </span><span style="font-family: Symbol;">£</span><span style="font-style: italic;"> t</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">p</span> the initial emission factor is
+</p>
+        <p class="NormalIndent"><i>S<sub>o</sub></i>(<i>t</i>) = <i></i>mult<i>·a</i> <![CDATA[ ]]><i>t</i><sub style="font-style: italic;">p</sub><sup>-<i style="vertical-align: super;">b</i></sup></p>
+        <p>and for <span style="font-style: italic;">t</span> &gt; <span style="font-style: italic;">t</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">p</span></p>
+        <p class="NormalIndent"><i>S</i>(<i>t</i>) = mult<i>·</i><i>a</i> <![CDATA[ ]]><i>t</i><sub style="font-style: italic;">&#160;</sub><sup>-<i style="vertical-align: super;">b</i></sup></p>
+        <p><span style="font-family: Arial;font-weight: bold;font-size: 11pt;">NOTE:</span> This type of source can only be triggered once per simulation. If using a schedule, the first non-zero schedule value will trigger the source, otherwise it will begin emitting immediately.
+        </p>
+        <p><span style="font-weight: bold;">Name:</span> Enter a unique name you want to use to identify the source/sink element. The element will be saved within the current project and can be associated with multiple source/sinks.
+        </p>
+        <p><span style="font-weight: bold;">Initial Emission Factor: </span>Enter the initial emission factor <span style="font-style: italic;">S<sub>0</sub></span> and its units [kg/s]. 
+        </p>
+        <p><span style="font-weight: bold;">Coefficient: </span>This corresponds to <span style="font-style: italic;">a</span> in the above equation. It will be calculated based on <span style="font-style: italic;">S<sub>0</sub></span>, <span style="font-style: italic;">t<sub>p</sub></span> and <span style="font-style: italic;">b</span>. The value of <span style="font-style: italic;">a</span> will be provided by the NRCC Data Base and stored by CONTAM, but the Initial Emission Factor is provided as a more intuitive means for defining the model.
+        </p>
+        <p><span style="font-weight: bold;">Exponent: </span>Enter a value for the exponent <span style="font-style: italic;">b</span> in the above equation.
+        </p>
+        <p><span style="font-weight: bold;">PL Model Time: </span>Enter the time <span style="font-style: italic;">t<sub>p</sub></span> until which the initial emission rate applies.
+        </p>
+        <p><span style="font-weight: bold;">Description: </span>Field for entering a more detailed description of the specific sink/source element.
+</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

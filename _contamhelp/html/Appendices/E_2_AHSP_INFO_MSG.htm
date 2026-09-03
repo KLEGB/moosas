@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication|ContamX TCP/IP Message Formats" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>AHSP_INFO_MSGTYPE</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>AHSP_INFO_MSGTYPE</h3>
+        <p>Provides information related to simple air handling system airflow paths. AHS paths include return, supply and implicit airflow paths (recirculation, outdoor air and exhaust) of simple air handling systems. Supply and return airflow paths will come before all of the implicit airflow paths which will come in groups of three: recirculation, outdoor air and exhaust flow paths for each air handler. This is apparent when viewing the ContamW airflow plotting dialog box. The <span style="font-family: 'Courier New';">id[]</span> array provides the order in which airflows will be provided by ContamX via the <span style="font-family: 'Courier New';">AHSP_FLOW_UPDATE_MSGTYPE</span>. If the <span style="font-family: 'Courier New';">ambient_index</span> is 0, the path is not a building envelope path.  Otherwise, the ambient_index specifies the order in which path concentrations are to be sent using the <span style="font-family: 'Courier New';">ADJ_WPC_MSGTYPE</span>. Only implicit outdoor air intake paths can be considered envelope paths.</p>
+        <p class="code">Message Header;</p>
+        <p class="code"><span style="color: blue;">int </span>num_ahsp;        <span style="color: #008100;">// number of AHS airflow paths in the PRJ file</span></p>
+        <p class="code"><span style="color: blue;">int </span>id[<span style="color: blue;"></span>num_ahsp];       <span style="color: #008100;">// index of each AHS&#160;path according to ContamX</span></p>
+        <p class="code"><span style="color: blue;">int </span>ambient_flag[num_paths]       <span style="color: #008100;">// 0 = not connected to ambient</span></p>
+        <p class="code"><span style="color: blue;">float </span>x[num_paths];                <span style="color: #008100;">// x coordinate [m]</span></p>
+        <p class="code"><span style="color: blue;">float </span>y[num_paths];<span style="color: #008100;"> // y coordinate [m]</span></p>
+        <p class="code"><span style="color: blue;">float </span>z[num_paths];<span style="color: #008100;"> // if ambient_index &gt; 0 then absolute height, else relative to level [m]</span></p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

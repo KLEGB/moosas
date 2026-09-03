@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Ducts" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Defining Ducts</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor74"></a>Defining Ducts</h3>
+        <p>After you draw a duct, you must define each duct segment, junction, and terminal point. Each of these duct components is defined using the icon definition procedure (See <a href="../SketchPad/IDH_UsingSketchPad_DefiningBuildingComponentIcons.htm">Defining Building Component Icons</a>) to display and edit the properties of the component.</p>
+        <p class="SubHeading1">Defining Duct Segments</p>
+        <p>You define each duct segment by using the icon definition procedure on any portion of an undefined duct segment. This will display the "Duct Segment Properties" property sheet. Detailed descriptions of all duct segment properties are given in the <a href="IDH_UsingDucts_Duct_Segment_Properties.htm">Duct Segment Properties</a> section of this manual. Once you have defined the properties of a duct segment, a special icon will be displayed indicating the positive flow direction of the duct segment (see <a href="#IDM_DuctSegIcons">Directional Duct Segment Icons</a>). From now on, you use this icon to access the properties of the duct segment.</p>
+        <p>When defining a duct segment, you must associate the segment with a duct flow element. CONTAM combines duct flow element data with segment specific data such as length and dynamic losses to determine the frictional resistance, volume, and leakiness of a particular duct segment. </p>
+        <p>You can also define contaminant filtering properties of duct segments. You can define a filter for each contaminant contained in your CONTAM project. A duct filter could be used, for example, to simulate the deposition of particles on the inside surface of a duct.</p>
+        <p>As previously mentioned, duct flow elements contain duct leakage information. The CONTAM model implements all leakage at the junctions and terminals of a duct segment. This means that half of the leakage associated with a duct segment occurs at each end of the segment. The leakage between a junction and the zone in which the junction is located (as determined on the SketchPad) is a function of the duct element leakage characteristics and the pressure difference between the junction and the zone. You should consider this leakage model when accounting for leakage of a duct that passes through multiple zones. You should put a least one junction (or terminal) in each zone within which you want to account for duct leakage.</p>
+        <p class="SubHeading1"><a name="IDM_DuctSegIcons"></a>Directional Duct Segment Icons</p>
+        <p>These are the icons that indicate a defined duct segment. The direction that the small arrow points indicates the positive flow direction of the duct segment.</p>
+        <p>
+            <img src="../../image/Icon_DuctSegDir.gif" border="0" height="23" width="88" alt="image\Icon_DuctSegDir.gif" />
+        </p>
+        <p class="SubHeading1">Defining Duct Junctions and Terminals</p>
+        <p>You define each duct junction and terminal by using the icon definition procedure on a duct junction or terminal icon. This will display the "Duct Junction Properties" property sheet. If a terminal icon is located in the ambient zone, a Wind Pressure property page will be displayed to allow you to account for the effects of wind pressure on the exterior terminal. The Wind Pressure property page will not be displayed for junction and terminal icons located within non-ambient zones. Detailed descriptions of duct junction properties are given in the <a href="IDH_UsingDucts_DuctJunctionAndTerminalProperties.htm">Duct Junction and Terminal Properties</a> section of this manual. Once you have defined the properties of a duct junction, a special icon will be displayed indicating the specific type of junction you have selected (see the following list). From now on, you use this icon to access the properties of the duct junction.</p>
+        <p class="SubHeading1"><a name="Junction_and_Terminal_Icons"></a>Junction and Terminal Icons</p>
+        <table width="90%">
+            <tr>
+                <td class="IconLeft"><b>Icon</b>
+                </td>
+                <td class="IconRight"><b>Description</b>
+                </td>
+            </tr>
+            <tr>
+                <td class="IconLeft">
+                    <img src="../../image/Icon_JuncA.gif" border="0" height="23" width="23" alt="image\Icon_JuncA.gif" />
+                </td>
+                <td class="IconRight">Junction connected to ducts on the same level</td>
+            </tr>
+            <tr>
+                <td class="IconLeft">
+                    <img src="../../image/Icon_JuncB.gif" border="0" height="23" width="23" alt="image\Icon_JuncB.gif" />
+                </td>
+                <td class="IconRight">Junction connected to the vertical duct of a junction on the level above</td>
+            </tr>
+            <tr>
+                <td class="IconLeft">
+                    <img src="../../image/Icon_JuncC.gif" border="0" height="23" width="23" alt="image\Icon_JuncC.gif" />
+                </td>
+                <td class="IconRight">Junction and downward vertical duct connected to a junction on the level below</td>
+            </tr>
+            <tr>
+                <td class="IconLeft">
+                    <img src="../../image/Icon_JuncD.gif" border="0" height="23" width="23" alt="image\Icon_JuncD.gif" />
+                </td>
+                <td class="IconRight">Junction and downward vertical duct connected to a junction on the level below and connected to the vertical duct of a junction on the level above</td>
+            </tr>
+            <tr>
+                <td class="IconLeft">
+                    <img src="../../image/Icon_TerminalA.gif" border="0" height="23" width="23" alt="image\Icon_TerminalA.gif" />
+                </td>
+                <td class="IconRight">Terminal connected to a duct on the same level</td>
+            </tr>
+            <tr>
+                <td class="IconLeft">
+                    <img src="../../image/Icon_TerminalB.gif" border="0" height="23" width="23" alt="image\Icon_TerminalB.gif" />
+                </td>
+                <td class="IconRight">Terminal connected to the vertical duct of a junction on the level above</td>
+            </tr>
+            <tr>
+                <td class="IconLeft">
+                    <img src="../../image/Icon_TerminalC.gif" border="0" height="23" width="23" alt="image\Icon_TerminalC.gif" />
+                </td>
+                <td class="IconRight">Terminal and downward vertical duct connected to a junction on the level below</td>
+            </tr>
+        </table>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Ducts" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Drawing Ducts</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor71"></a>Drawing Ducts</h3>
+        <p>You draw ducts using the duct drawing tool previously described in the <a href="../SketchPad/IDH_UsingSketchPad_DrawingWallsandDucts.htm">Working with the SketchPad</a> section. After you complete the "<a href="../SketchPad/IDH_UsingSketchPad_DrawingWallsandDucts.htm#IDMID_UsingDrawing_FinalizeDrawingObject">finalize drawing object"</a> stage of duct drawing, the completed duct will appear as an undefined set of red duct icons. The color red indicates that the duct is not yet defined. Once you have defined the duct components, they will be displayed in blue. A directional duct segment icon will be displayed within each duct segment, and each junction and terminal point will be replaced with an icon indicating the type of junction or terminal point you have defined.</p>
+        <p class="SubHeading1">Drawing Duct Segments</p>
+        <p>ContamW provides certain constraints when drawing ducts to ensure that a valid duct system will be drawn that conforms to the underlying model of nodal equations upon which CONTAM is based. When drawing a duct, you cannot cross over a line that you are currently drawing. Ducts can cross over walls, but you cannot draw ducts over any other building component icons. After each duct segment is drawn, the ends of the segment will be automatically replaced by either an undefined terminal point or junction icon. You can only begin or end a duct segment drawing in an unoccupied SketchPad cell or on an undefined duct icon. For this reason, you are advised to draw the entire duct system, on a given level, before you define the individual duct segments. If you cross over a previously drawn duct segment, either defined or undefined, while drawing a new duct segment, no junction will be placed where the two segments cross.</p>
+        <p><i>Vertical duct segments</i> do not appear directly on the SketchPad, because the SketchPad displays only plan-view drawings. Vertical duct segments are associated with vertically connected junctions or terminal points. These vertical junction and terminal icons provide access to the properties of the vertical segments that are located below the level upon which the vertical junction or terminal appears. </p>
+        <p class="SubHeading1">Drawing Duct Junctions</p>
+        <p>Undefined horizontal duct junction icons are drawn automatically at the intersections of the ducts after you finalize drawing a duct. Each time you begin or end drawing a duct segment upon an undefined duct segment, junction or terminal point, ContamW will automatically provide an undefined junction icon if there is not yet one at the junction location.</p>
+        <p>All vertical junctions are connected to vertical duct segments that are located below the level upon which the vertical junction appears. You can create a vertical junction that is isolated from other ducts on a level that is connected either up, down or both up and down to ductwork on adjacent levels. To do this, <a href="../SketchPad/IDH_UsingSketchPad_DrawingWallsandDucts.htm#IDMID_UsingDrawing_FinalizeDrawingObject">finalize the drawing object</a> immediately after setting the initial location of the duct object. To do this, you simple press <span style="font-weight: bold;">LMB</span> (double click) or <span style="font-family: 'Symbol';font-weight: bold;">¿</span><span style="font-weight: bold;"> <![CDATA[ ]]></span>twice at the desired location on the SketchPad when you have the duct drawing tool selected. This will place a single undefined terminal point icon within the SketchPad cell. You can later define this undefined terminal point icon as the specific type of junction that you need and associate it with a vertical duct segment.</p>
+        <p class="SubHeading1">Drawing Duct Terminal Points</p>
+        <p>Undefined horizontal terminal point icons are automatically drawn by ContamW at the end of each duct segment that does not end on another previously drawn duct icon.
+        </p>
+        <p>You can also create terminal points that are isolated from other ducts on a level but connected either up or down to ductwork on an adjacent level by finalizing the drawing object immediately after setting the initial location of the duct object. To do this, you simply press <span style="font-weight: bold;">LMB</span> (double click) or <span style="font-family: 'Symbol';font-weight: bold;">¿</span> twice at the desired location on the SketchPad when you have the duct drawing tool selected. This will place a single undefined terminal point icon within the SketchPad cell. You can later define this terminal point as the specific type that you need and associate it with a vertical duct segment.
+        </p>
+        <p class="SubHeading1">Coloring Duct Systems</p>
+        <p>You can use the <i>Duct System Coloring Tool</i> to automatically color sections of the duct system that are associated with fans (forced flow elements) within the duct. You access the <i>Duct System Coloring Tool</i> via the <span style="font-weight: bold;text-decoration: underline;">V</span><span style="font-weight: bold;">iew</span><span style="font-family: 'Symbol';font-weight: bold;"> ® </span><span style="font-weight: bold;text-decoration: underline;">D</span><span style="font-weight: bold;">uct Coloring...</span> menu command. This will display the Duct System Coloring dialog box that contains a list of all duct segments that contain fans (forced flow elements). Select the fan whose ducts you wish to color. Set the inlet side, outlet side and fan segment colors, then click the Set Colors button to have ContamW trace the duct system on the inlet and outlet sides of the fan segment and set the colors.
+        </p>
+        <p>Use the <span style="font-weight: bold;text-decoration: underline;">V</span><span style="font-weight: bold;">iew</span><span style="font-family: 'Symbol';font-weight: bold;"> ® </span><span style="font-weight: bold;"></span><span style="font-weight: bold;">Color D</span><span style="font-weight: bold;text-decoration: underline;">u</span><span style="font-weight: bold;">cts</span> menu command to toggle the colors in which ducts are displayed on the SketchPad between the custom duct colors and the default color.
+        </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Species and Contaminants" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Contaminant Files</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor97"></a>Contaminant Files</h3>
+        <p>You can account for changes in the ambient contaminant concentrations when performing transient contaminant simulations using ambient contaminant (CTM) files. If you associate a contaminant file with your project (see <a href="../Simulation/IDH_UsingSIM_ParamsRunControl.htm">Run Control Properties</a>) ContamX will compare those contaminants defined within your project file with those contained in the contaminant file. If they match, ContamX will use the ambient concentrations in the contaminant file within the simulation, otherwise they will be ignored.</p>
+        <p>You create the contaminant files external to ContamW. You can use a utility program provided by NIST, Weather 2.0, to convert existing CONTAM 1.0 weather (which previously contained ambient contaminant concentrations) files to CONTAM 2.0 weather and contaminant files.</p>
+        <p>Note that with this method the ambient concentration does not vary spatially, only temporally. If you require spatial variations of outdoor contaminant level, then refer to the section entitled <a href="../Weather/IDH_UsingWPC_WorkingWithWPCFiles.htm">Working with WPC Files</a>.</p>
+        <p class="SubHeading1">Contaminant (CTM) File Format</p>
+        <p>The CONTAM contaminant (species) file is a tab-delimited ASCII text file. These files are easily created, imported and modified using common spreadsheet applications. They can be saved as tab-delimited text files for use with CONTAM. In the listing below <span style="font-family: 'Courier New';">I1</span> indicates a character string, <span style="font-family: 'Courier New';">I2</span> indicates a short integer and <span style="font-family: 'Courier New';">R4</span> indicates a four-byte real number. Individual lines of data are separated by dashes (these dashes are only shown here for format presentation purposes and should not be included in the actual files). Each day must begin with time 00:00:00 and end with time 24:00:00. The time interval between 00:00:00 and 24:00:00 can be either regular or irregular – ContamX will interpolate as necessary. Comments are allowed and are indicated by an "!" (exclamation point). Anything that appears on a line following a comment indicator is ignored by the contaminant file reader.</p>
+        <p style="margin-top: 0;margin-bottom: 0;">&#160;</p>
+        <p class="code">SpeciesFile ContamW 2.0 ! file and version identification</p>
+        <p class="code">-----</p>
+        <p class="code">I1 Descr[] ! species file description</p>
+        <p class="code">-----</p>
+        <p class="code">I1 StartDate ! day of year (1/1 – 12/31) </p>
+        <p class="code">I1 EndDate ! day of year (1/1 – 12/31) </p>
+        <p class="code">I2 NumCont ! number of species</p>
+        <p class="code">-----</p>
+        <p class="code">I1 Name[1] ! name of species 1 (16 characters max)</p>
+        <p class="code">I1 Name[2] ! name of species 2</p>
+        <p class="code">...</p>
+        <p class="code">I2 Name[NumCont] ! name of species NumCont</p>
+        <p class="code">-----</p>
+        <p class="code">!Date Time Name[1] Name[2] ... Name[NumCont]</p>
+        <p class="code">-----</p>
+        <p class="code">! for each day: start_date – end_date</p>
+        <p class="code">! for each time: 00:00:00 - 24:00:00 increment may be variable</p>
+        <p class="code">   I1 Date ! date (1/1 – 12/31)&#160;</p>
+        <p class="code">   I1 Time ! time of day 00:00:00 – 24:00:00&#160;</p>
+        <p class="code">   R4 Conc[1] ! concentration of species 1&#160;</p>
+        <p class="code">   R4 Conc[2] ! concentration of species 2&#160;</p>
+        <p class="code">   ...&#160;</p>
+        <p class="code">   R4 Conc[NumCont] ! concentration of species nc &#160;</p>
+        <p class="code">                    ! [kg_species/kg_air]&#160;</p>
+        <p class="code">-----</p>
+        <p class="SubHeading1">Editing Contaminant Files</p>
+        <p>You can import ambient files into a spreadsheet program for editing. However you must make sure that the date format is compatible with CONTAM when you save the file. One well-known spreadsheet program will convert the CONTAM date format of mm/dd into the mmm-dd form. For example, the CONTAM date format for January 1 is "1/1", but the spreadsheet program will convert it to "Jan-01" unless you "force" it to import the first column of data – the one that contains date information – as text. Another option is to accept the default importing option then change the cell format for each date to the CONTAM format mm/dd prior to saving the file as tab-delimited.</p>
+        <p class="SubHeading1"><a name="IDMID_ConcentrationConversions"></a>Contaminant Unit Conversions</p>
+        <p>Gaseous contaminants – to convert from ppm to:</p>
+        <p class="NormalIndent"><span style="font-style: italic;">kg</span><span style="">/</span><span style="font-style: italic;">kg</span><span style="">&#160;= (</span><span style="font-style: italic;">ppm</span><span style=""> <![CDATA[ ]]></span><span style="font-family: 'Symbol';">´</span><span style=""> <![CDATA[ ]]></span><span style="font-style: italic;">MW</span><span style="">) / (1 </span><span style="">000</span><span style=""> <![CDATA[ ]]></span><span style="">000 </span><span style="font-family: 'Symbol';">´</span><span style=""> <![CDATA[ ]]></span><span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">s</span><span style=""> <![CDATA[ ]]></span><span style="font-family: 'Symbol';">´</span><span style=""> <![CDATA[ ]]></span><span style="font-family: 'Symbol';font-style: italic;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">air</span><span style="">)</span>
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">mg</span><span style="">/</span><span style="font-style: italic;">L</span><span style="">&#160;&#160;= (</span><span style="font-style: italic;">ppm</span><span style=""> <![CDATA[ ]]></span><span style="font-family: 'Symbol';">´</span><span style=""> <![CDATA[ ]]></span><span style="font-style: italic;">MW</span><span style="">) / (1</span><span style=""> <![CDATA[ ]]></span><span style="">000 </span><span style="font-family: 'Symbol';">´</span><span style=""> <![CDATA[ ]]></span><span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">s</span><span style="">)</span>
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">mg</span><span style="">/</span><span style="font-style: italic;">m</span><span style="font-style: italic;vertical-align: super;">3</span><span style="">&#160;= (</span><span style="font-style: italic;">ppm</span><span style=""> <![CDATA[ ]]></span><span style="font-family: 'Symbol';">´</span><span style=""> <![CDATA[ ]]></span><span style="font-style: italic;">MW</span><span style="">) / </span><span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">s</span><span style=""> <![CDATA[ ]]></span>
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">mg</span><span style="">/</span><span style="font-style: italic;">ft</span><span style="font-style: italic;vertical-align: super;">3</span><span style="vertical-align: super;font-size: 10pt;">&#160;</span><span style="">= (</span><span style="font-style: italic;">ppm</span><span style=""> <![CDATA[ ]]></span><span style="font-family: 'Symbol';">´</span><span style=""> <![CDATA[ ]]></span><span style="font-style: italic;">MW</span><span style="">) / (35.3147 </span><span style="font-family: 'Symbol';">´</span><span style=""> <![CDATA[ ]]></span><span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">s</span><span style="">)</span>
+        </p>
+        <p>Particle Contaminants – to convert from <span style="font-style: italic;">#</span>/<span style="font-style: italic;">m</span><span style="font-style: italic;vertical-align: super;">3</span> to <span style="font-style: italic;">kg</span>/<span style="font-style: italic;">kg</span>:</p>
+        <p class="NormalIndent">
+            <img src="../../Resources/Images/Eqn_ContConvert.PNG" alt="equation" />
+        </p>
+        <p>where:</p>
+        <p class="NormalIndent"><span style="font-style: italic;">MW</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;"> <![CDATA[ ]]></span>= molar mass of contaminant [kg/kmol]</p>
+        <p class="NormalIndent"><span style="font-style: italic;">V</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">s</span> = 24.05 m<span style="vertical-align: super;font-size: 10pt;">3</span> which is the volume of one kmol of air at T = 20 ºC and P = 101 325 Pa (1 atm)</p>
+        <p class="NormalIndent"><span style="font-family: 'Symbol';font-style: italic;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">air</span><span style=""> = 1.204 kg/m</span><span style="vertical-align: super;font-size: 10pt;">3</span><span style=""> at T = 20</span><span style=""> <![CDATA[ ]]></span><span style="">ºC</span>
+        </p>
+        <p class="NormalIndent"><span style="font-family: 'Symbol';font-style: italic;">r</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">eff</span><span style=""> &#160;</span><span style="">= effective particle density [kg/m</span><span style="vertical-align: super;font-size: 10pt;">3</span><span style="">]</span>
+        </p>
+        <p class="NormalIndent"><span style="font-style: italic;">D</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">mean</span>&#160;= mean particle diameter [m]</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

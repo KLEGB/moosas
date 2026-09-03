@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Special Applications of CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Building Pressurization Test</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>Building Pressurization Test</h2>
+        <p>The building pressurization test (sometimes referred to as fan pressurization or blower door test) is a common way of determining the airtightness of a building envelope. Fan pressurization is relatively quick and inexpensive and it characterizes building envelope airtightness independent of weather conditions. In this procedure, a large fan or blower is mounted in a door or window and induces a large and roughly uniform pressure difference across the building shell [<a href="../IDH_References.htm#REF_ASHRAE_2005">ASHRAE 2005</a>, p 27.12; <a href="../IDH_References.htm#REF_ASTM_1999">ASTM 1999</a>]. A common airtightness rating is the airflow rate at 50 Pa divided by the building volume to give units of air changes per hour. CONTAM now provides an automated method of performing the <span style="font-style: italic;">Building Pressurization Test</span> (See <a href="../Simulation/IDH_UsingSIM_Working_with_Simulations.htm">Working with Simulations</a>), but there are also "manual" methods of performing this test presented below for informational purposes. </p>
+        <p>You may wish to do a simulated pressurization test to determine the airtightness rating of your idealized building. This is easily done by setting one of the zones on the zero elevation level to a constant pressure of 50 Pa, running the simulation, and then observing the total airflow out of that zone. (Don't forget flows to other building levels.) You could also define an airflow path using a constant volume airflow element through which you can vary the airflow until you achieve the desired level(s) of pressurization. Use standard m<sup>3</sup>/h flow units and divide by the building volume to get the air change rate at 50 Pa. Alternatively, the flow rate at 4 Pa can be converted to an effective leakage area (ELA) using equations in Chapter 27 of the 2005 ASHRAE Fundamentals Handbook [<a href="../IDH_References.htm#REF_ASHRAE_2005">ASHRAE 2005</a>]. Use the CONTAM results display to check that the building has been properly pressurized by moving the cursor to each path on the envelope to get the pressure drop reported in the status bar. You can use the report of all flows to get a listing of all flow and pressure drops. The pressure difference (dP) across every path to the ambient zone should be close to -50 Pa. The value is negative, because the report considers flow and dP to the zone listed in the "zone" column from the zone in the "from" to be positive. All flows are to the "from" zone.</p>
+        <p>The reported pressure drop across various flow paths will not be exactly 50 Pa because of density effects. Minimize these differences by running all zones and ambient at the same (standard) temperature and no wind. Differences in pressure due to elevation make it critical that the constant pressure zone be on the level with zero elevation.&#160;&#160;&#160; </p>
+        <p>In a multizone building the effects of partitioning (internal walls and floors) usually are significant.&#160; There are two solutions depending on the goal of the simulation. If the goal is only to achieve a uniform pressure difference across the entire building shell, add a very large opening across each partition. If the goal is to reproduce a field test, simulate the internal doors as being open to get a relatively uniform pressure inside the building. </p>
+        <p>Prior to performing these tests, you should make a copy of the project file, so you do not have to reverse the changes to restore the original project file.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

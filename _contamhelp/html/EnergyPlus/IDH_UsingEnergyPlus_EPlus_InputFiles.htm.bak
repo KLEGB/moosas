@@ -1,0 +1,54 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:lastBlockDepth="6" MadCap:lastHeight="821" MadCap:lastWidth="762" MadCap:conditions="Primary.TODO,Primary.CONTAM3.2">
+    <head>
+    </head>
+    <body>
+        <h2>EnergyPlus Input Files</h2>
+        <p>These input files are utilized for the coupling process to coordinate the transfer of data during the co-simulation between EnergyPlus and CONTAM via the ContamFMU.dll. These files can be created using the CONTAM3DExportTool, but their contents are provided here.</p>
+        <p><b>&lt;project&gt;.vef</b>
+        </p>
+        <p>This <i>variable exchange file</i> is used by ContamFMU.dll to coordinate data exchange information at the beginning of a co-simulation run. This file will contain a list of variables that are to be exchanged during co-simulation. The number and types of variables will depend on the contents of the CONTAM project file.</p>
+        <p>In the following material individual variables are briefly described. Units are indicated within brackets, [ ]. The type of variable is in parentheses.
+</p>
+        <p><span style="font-family: 'Courier New';">(I)</span> <![CDATA[ ]]>= integer value,</p>
+        <p><![CDATA[ ]]><span style="font-family: 'Courier New';">(R)</span> <![CDATA[ ]]>= real/decimal value, </p>
+        <p><span style="font-family: 'Courier New';">(char)</span> = single character</p>
+        <p><span style="font-family: 'Courier New';">(string)</span> = string of characters</p>
+        <p class="SubHeading1">File Format:</p>
+        <p class="NormalItalic">The first line is a file header indicates file type and version:</p>
+        <p class="codeindent">VariableExchangeFile 1.0</p>
+        <p class="NormalItalic">The second line provides the number of variables being exchanged:</p>
+        <p class="codeindent">nvariables (I)</p>
+        <p><i><i>Each line will provide information related to a single variable to be exchanged during co-simulation:&#160;</i></i>
+        </p>
+        <p class="codeindent">input/output indicator <span style="color: #008000;">// (char) “I” for input to ContamX or “O” for output to ContamX.</span></p>
+        <p class="codeindent">variable identification <span style="color: #008000;">// (string) - This identifier is used to ensure the variables</span><br style="color: #008000;" /><span style="color: #008000;">// match those of the modelDescription.xml file. The order of these variables must</span><br style="color: #008000;" /><span style="color: #008000;">// match those in the xml file to ensure that EnergyPlus (the FMI master algorithm)</span><br style="color: #008000;" /><span style="color: #008000;">// can match the inputs and outputs with the slave process, ContamFMU.dll</span></p>
+        <p class="codeindent"><code>variable type <span style="color: #008000;">// (string) A three character abbreviation that indicates the type of</span><br style="color: #008000;" /><span style="color: #008000;">// data that follows.</span></code> <![CDATA[ ]]></p>
+        <p class="codeindent"><code>variable data</code> <![CDATA[ ]]><span style="color: #008000;">// This information depends on the </span><code style="color: #008000;">type</code><span style="color: #008000;"> as described below.</span></p>
+        <p class="NormalItalic">&#160;</p>
+        <p class="NormalItalic">Type strings and related data (for both FMI and Type98):</p>
+        <ul>
+            <li><code>wat</code> – <i>ambient temperature</i>. <code>WTH_AmbientTemp</code></li>
+            <li><code>wbp</code> – <i>barometric pressure</i><i></i>. <code>WTH_BarometricPressure</code></li>
+            <li><code>wws</code> – <i>wind speed</i>. <code>WTH_WindSpeed</code></li>
+            <li><code>wwd</code> – <i>wind direction</i>. <code>WTH_WindDirection</code></li>
+            <li class="CW2"><code>whr</code> – <i>humidity ratio</i>. <code>WTH_HumidityRatio</code></li>
+            <li><code>zti</code> – <i>zone temperature input [C]</i><i></i>, <code>TAIR_&lt;lev_nr&gt;_&lt;zone_name&gt; lev_nr zone_name</code></li>
+            <li class="CW2"><code>zhr</code> – <i>zone humidity ratio [kg/kg]</i><i></i>, <code>HRAIR_&lt;lev_nr&gt;_&lt;zone_name&gt; lev_nr zone_name</code></li>
+            <li><code>mix</code> – <i>interzone airflow rate</i>. <code>MIX_&lt;lev_from&gt;_&lt;zone_from&gt;_&lt;lev_to&gt;_&lt;zone_to&gt; lev_from zone_from lev_to zone_to</code></li>
+            <li><code>inf</code> – <i>infiltration airflow rate []</i>. <code>INFIL_&lt;lev_nr&gt;_&lt;zone_name&gt; lev_nr zone_name</code></li>
+            <li><code>ahs</code> – <i>air handling system supply air terminal</i> (input to ContamX). <code>AHS_supply_&lt;lev_nr&gt;_&lt;zone_name&gt; lev_nr zone_name ahs_nr</code></li>
+            <li><code>ahr</code> – <i>air handling system return air terminal</i> (input to ContamX). <code>AHS_return_&lt;lev_nr&gt;_&lt;zone_name&gt; lev_nr zone_name ahs_nr</code></li>
+            <li class="CW2"><code>ahrp</code> – <i>air handling system plenum return air terminal</i> (input to ContamX). <code>AHS_return_&lt;lev_nr&gt;_&lt;zone_name&gt; lev_nr zone_name ahs_nr path_nr</code></li>
+            <li><code>exh</code> – <i>exhaust-only air handling system return air terminal</i> (input to ContamX). <code>AHS_exhaust_&lt;lev_nr&gt;_&lt;zone_name&gt; lev_nr zone_name ahs_nr</code></li>
+            <li><code>hvs</code> – <i>energy recovery ventilator air handling system supply air terminal</i> (input to ContamX). <code>AHS_supply_&lt;lev_nr&gt;_&lt;zone_name&gt; lev_nr zone_name ahs_nr</code></li>
+            <li><code>hvr</code> – <i>energy recovery ventilator air handling system return air terminal</i> (input to ContamX). <code>AHS_supply_&lt;lev_nr&gt;_&lt;zone_name&gt; lev_nr zone_name ahs_nr</code></li>
+            <li><code>poa</code> – <i>air handling system percent outdoor air</i> (input to ContamX). <code>PCTOA_&lt;AHS_name&gt; ahs_name</code></li>
+            <li><code>cti</code> – <i>control input</i><i></i>. <code>CTRL_I_&lt;name&gt; &lt;name&gt;</code></li>
+            <li><code>cto</code> – <i>control output</i>. <code>CTRL_O_&lt;name&gt; &lt;name&gt;</code></li>
+        </ul>
+        <p><b>modelDescription.xml</b>
+        </p>
+        <p>This file is used by the EnergyPlus co-simulation master algorithm to coordinate data exchange. The general requirements of its content is defined by the FMI for co-simulation specification [<a href="../IDH_References.htm#REF_MODELISAR_2010">MODELISAR 2010a</a>, <a href="../IDH_References.htm#REF_MODELISAR_2010b">MODELISAR 2010b</a>]. The unique variable names are the same as those provided for the &lt;project&gt;.vef, e.g., <code>TAIR_&lt;lev_nr&gt;_&lt;zone_name&gt;</code>.</p>
+    </body>
+</html>

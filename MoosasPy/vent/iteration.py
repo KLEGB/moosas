@@ -700,14 +700,14 @@ def test_exist():
     # Do not clean project_dir here: input prj may already be placed inside this
     # directory by upper-level workspace management.
     if not os.path.exists(FilePath['project_dir']):
-        os.mkdir(FilePath['project_dir'])
+        os.makedirs(FilePath['project_dir'], exist_ok=True)
     if not os.path.exists(FilePath['contam_dir']):
         return False
     if not os.path.exists(FilePath['project_file']):
         return False
 
     if not os.path.exists(FilePath['result_dir']):
-        os.mkdir(FilePath['result_dir'])
+        os.makedirs(FilePath['result_dir'], exist_ok=True)
     return True
 
 

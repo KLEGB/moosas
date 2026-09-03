@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with Occupant Exposure</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2><a name="kanchor110"></a>Working with Occupant Exposure</h2>
+        <p>CONTAM provides you with the ability to simulate the existence of <span style="font-style: italic;">occupants</span> within a building. You can simulate the movement of occupants throughout the building, allow the occupant to leave the building, and determine the contaminant exposure of each occupant. Occupants can also generate contaminants within a building, so you can represent a contaminant source that moves through the building using an occupant. </p>
+        <p>Occupant exposure is determined by integrating the contaminant concentration to which the occupant is exposed over a period of time.</p>
+        <p>
+            <img src="../../Resources/Images/Eqn_Exp.PNG" border="0" alt="equation" /><span style="color: blue;"> <![CDATA[ ]]></span>
+        </p>
+        <p>CONTAM presents results in terms of <span style="font-style: italic;">E</span>/<span style="font-family: 'Symbol';">D</span>t. Where <span style="font-family: 'Symbol';">D</span>t is the user-defined <span style="font-style: italic;">output time step</span> established for a transient simulation (See <a href="../Results/IDH_UsingResults_ResultsFiles.htm">Results Files</a> in the <a href="../Results/IDH_UsingResults_Working_with_Results.htm">Working with Results</a> section). From these results you can calculate a dosage as desired.</p>
+        <p>To implement an occupant, you must first define at least one species. You then place an <span style="font-style: italic;">exposure icon</span> (shown below) on the SketchPad. Once you place the exposure icon on the SketchPad, you can define its characteristics, move, copy, and delete it. You must then define an occupant schedule for the exposure icon. The details of drawing, defining and modifying occupants are described in the following sections.</p>
+        <table>
+            <tr>
+                <td>Occupant exposure icon&#160;&#160;&#160;&#160;</td>
+                <td>
+                    <img src="../../image/Icon_Expos.gif" border="0" height="23" width="23" alt="image\Icon_Expos.gif" />
+                </td>
+            </tr>
+        </table>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Appendix B - ContamX TCP/IP Socket Communication</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h1>Appendix B - ContamX TCP/IP Socket Communication</h1>
+        <p>The socket communication features of ContamX enable another application to control the execution of ContamX as it is running. During this <i>bridge</i> mode of execution, ContamX is referred to as the client, and the controlling program as the server. These two programs communicate with each other using the TCP/IP Socket communication method and a pre-defined set of messages. Generally, the server must be developed by the user. This section provides the set of socket communications messages that enable the exchange of ContamX-related information during run-time, including detailed airflow results, zone temperatures and controls data. </p>
+        <p>The ability to couple ContamX with both TRNSYS and EnergyPlus has also been developed. TRNSYS Type98 has been developed as a means to demonstrate these capabilities and the ContamFMU dynamic link library has been developed to enable co-simulation between EnergyPlus and ContamX (see <a href="../TRNSYS/IDH_UsingTRNSYS-WorkingWithTRNSYS.htm">Working with TRNSYS</a> and <a href="../EnergyPlus/IDH_UsingEnergyPlus-WorkingWithEnergyPlus.htm">Working with EnergyPlus</a>).</p>
+        <p>This section provides the details of executing ContamX in the socket mode and the specifications of the pre-defined set of messages implemented by ContamX. These messages fall into the following categories defined from the perspective of ContamX: </p>
+        <ul>
+            <li value="1">Send <i>project information</i></li>
+            <li value="2">Send/Receive <i>execution control</i></li>
+            <li value="3">Receive <i>project modification</i></li>
+            <li value="4">Send <i>simulation results</i></li>
+        </ul>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

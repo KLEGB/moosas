@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Results" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>SketchPad Results</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor145"></a>SketchPad Results</h3>
+        <p>ContamW will display color-coded bars indicating the relative airflow rates and pressure drops associated with each airflow path, duct terminal, or the supplies and returns of simple air-handling systems for the current time-step on the current level of the SketchPad. By default, <span style="font-weight: bold;">Airflow rates are </span><span style="font-weight: bold;">displayed with</span><span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="color: #339966;font-weight: bold;">gree</span><span style="color: #339966;font-weight: bold;">n lines</span> and <span style="font-weight: bold;">pressure differences </span><span style="font-weight: bold;">with</span><span style="font-weight: bold;"> <![CDATA[ ]]></span><span style="color: #ff5050;font-weight: bold;">re</span><span style="color: #ff5050;font-weight: bold;">d lines</span>. Display colors are user-selectable (See <a href="../Config/IDH_CONFIGPARMS_ALL.htm">Configuring ContamW</a>). These result-bars will only appear if you have selected the Airflows option on the Output page of the Simulation Parameters property sheet. If you have set flow or pressure limits for a given airflow path (see <a href="../AirflowPaths/IDH_PP_PATHPARMS0.htm">Airflow Path Properties</a>), and they have been exceeded, the icon will be highlighted in red as a warning indicator.</p>
+        <p>You can also highlight individual icons on the SketchPad to display results related to the specific icon. Results can be viewed in the ContamW Status Bar and Floating Status Bar (See Status Bar in the Getting Started section of the documentation). The following is a brief explanation of the results displayed for each building component.</p>
+        <ul>
+            <li value="1">
+                <p>Airflow path – pressure difference, airflow rate and direction of pressure drop and airflow</p>
+            </li>
+            <li value="2">
+                <p>Duct segment – pressure difference, airflow rate, velocity and direction of pressure drop and airflow where velocity is calculated from the area of the duct segment</p>
+            </li>
+            <li value="3">
+                <p>Simple air handling system – outdoor, recirculation and exhaust airflow rate</p>
+            </li>
+            <li value="4">
+                <p>Supply and return of simple air handling system – airflow rate</p>
+            </li>
+            <li value="5">
+                <p>Zone – zone temperature and reference pressure, i.e., the absolute pressure of the zone relative to the absolute pressure of the ambient at the elevation of the level on which the zone is located. Prior to CONTAM 2.4, this pressure was relative to the ambient pressure at the reference elevation of the building. So now these pressures more closely resemble a gage pressure.</p>
+            </li>
+            <li value="6">
+                <p>Duct junction – junction temperature and static pressure relative to the pressure at the height of the junction in the zone in which the junction is located</p>
+            </li>
+            <li value="7">
+                <p>Duct terminal – airflow rate and velocity based on the terminal free face area, temperature and static pressure relative to the pressure at the height of the terminal in the zone in which the terminal is located</p>
+            </li>
+        </ul>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

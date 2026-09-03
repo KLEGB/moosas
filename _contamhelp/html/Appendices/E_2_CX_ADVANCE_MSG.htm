@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication|ContamX TCP/IP Message Formats" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>CX_ADVANCE_MSGTYPE</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>CX_ADVANCE_MSGTYPE</h3>
+        <p>This message is received by ContamX at any time while in the <span style="font-weight: normal; font-style: italic;">ready mode</span> to notify ContamX to run until the simulation time specified in seconds from time 0:00:00 of the first day of the simulation as defined by the simulation start time in the PRJ file. For example, if the simulation begins at 09:30:00 and the simulation time step is 5 minutes, then the first <span style="font-family: 'Courier New';">time</span> sent should be at least 34200 s + 1800 s. The <span style="font-family: 'Courier New';">option</span> field is used to indicate the data ContamX should send back in the form of <span style="font-style: italic;">Update Messages</span> after it reaches the time specified. </p>
+        <p class="code">Message Header;</p>
+        <p class="code"><span style="color: blue;">int</span> option;    <span style="color: #008100;">// bitwise flag controls which _UPDATE_MSGTYPES ContamX will send </span></p>
+        <p class="code"><span style="color: #008100;"> &#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;// once <i>time</i> has been reached</span>
+        </p>
+        <ul style="list-style-type: circle;">
+            <li style="color: #008100;font-family: 'Courier New';font-size: 10pt;" value="1">bit 1: iterative advance message (currently not used)</li>
+            <li style="color: #008100;font-family: 'Courier New';font-size: 10pt;" value="2">bit 2: send CONC_UPDATE_MSGTYPE</li>
+            <li style="color: #008100;font-family: 'Courier New';font-size: 10pt;" value="3">bit 3: send PATH_UPDATE_MSGTYPE</li>
+            <li style="color: #008100;font-family: 'Courier New';font-size: 10pt;" value="4">bit 4: send AHSP_UPDATE_MSGTYPE</li>
+            <li style="color: #008100;font-family: 'Courier New';font-size: 10pt;" value="5">bit 5: send DUCT_UPDATE_MSGTYPE</li>
+            <li style="color: #008100;font-family: 'Courier New';font-size: 10pt;" value="6">bit 6: send TERM_UPDATE_MSGTYPE</li>
+            <li style="color: #008100;font-family: 'Courier New';font-size: 10pt;" value="7">bit 7: send LEAK_UPDATE_MSGTYPE</li>
+            <li style="color: #008100;font-family: 'Courier New';font-size: 10pt;" value="8">bit 8: send CTRL_NODE_UPDATE_MSGTYPE</li>
+        </ul>
+        <p class="code"><span style="color: blue;">int </span>time;       <span style="color: #008100;">// simulation time in seconds to which ContamX should advance relative to <br />&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;// time 0:00:00 of the first day of the simulation</span></p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

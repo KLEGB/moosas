@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Appendix A - PRJ File Format</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <p class="h1_NoNumber">Appendix A - PRJ File Format</p>
+        <p>CONTAM consists of two separate programs: ContamW provides the graphic user interface for describing the building and viewing simulation results; ContamX performs the simulation. "Project" files (.PRJ extension) provide input to both ContamW and ContamX. Project files are created by the functions in file prjsave.c in ContamW and read by the functions in file prjread.c in ContamW and ContamX. The project file contains some information that is used only by ContamW and not by ContamX, e.g., input units and the SketchPad display data. These data are read when the macro name CTMW is defined to be 1, and they are not read when it is defined to be 0.  </p>
+        <p>Most of the data are read into structures that are defined in the files contam.h and celmts.h for ContamW and files simdat.h and selmts.h for ContamX. Some data are read into global variables that are defined in cglob.h and cxtrn.h for ContamW and sglob.h and sxtrn.h for ContamX. These variables are indicated by a leading underscore, _, in their name.  </p>
+        <p>One important feature of the project files is the tremendous variety of data stored. It has been divided into sections grouping similar kinds of data, or objects, together. Each section is terminated with the special value –999 which serves as a check for some reading errors. Within each section there are usually multiple objects, each stored into an individual structure. Such a section begins with the number of objects and starts the data for each object with a sequence number that serves to check for reading errors. These objects may be ordered as arrays when the total number is constant, or as linked lists to allow the number to vary.  </p>
+        <p>In the following material individual variables are briefly described. Units are indicated within brackets, [ ]. The type of variable is in parentheses (matching the definitions in the include file types.h).</p>
+        <p>&#160;I1 – a one-byte signed integer (C type "char")</p>
+        <p>&#160;I2 – a two-byte signed integer (C type "short")</p>
+        <p>&#160;I4 – a four-byte signed integer (C type "long")</p>
+        <p>&#160;IX – a default length signed integer (C type "int")</p>
+        <p>&#160;UX – a default length unsigned integer (C type "unsigned")</p>
+        <p>&#160;R4 – a four-byte real (C type "float")</p>
+        <p>Variables used only by ContamW are indicated by {W}. Items that appear in <span style="color: #a52a2a;">red</span> are the most recently modified items including those whose data size has been increased from 2-bytes to 4-bytes to allow for an increased number of building components. This change took place between versions 2.3 and 2.4.</p>
+        <p>Comments are included in the project file to make it somewhat human-readable. The exclamation mark, "<span style="font-family: 'Courier New';">!</span>" serves as a comment character. Anything after an exclamation mark to the end of the line is not read by the input processor. Any user-defined comments within a PRJ file will not be maintained when the file is saved by ContamW.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication|ContamX TCP/IP Message Formats" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>ADJ_WPC_MSGTYPE</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>ADJ_WPC_MSGTYPE</h3>
+        <p>This message can be received by ContamX at any time while in the <span style="font-style: italic; font-weight: normal;">ready mode</span>. It may be used to set either the ambient concentrations or pressures at envelope airflow paths including outdoor air intakes of simple air handling systems and duct terminals. Concentrations for paths, simple air handling system outdoor air intakes and terminals are transmitted in the order specified by the ambient indexes provided by the <span style="font-family: 'Courier New';">PATH_INFO_MSGTYPE</span>, <span style="font-family: 'Courier New';">AHSP_INFO_MSGTYPE</span>, and   <![CDATA[ ]]><span style="font-family: 'Courier New';">TERM_INFO_MSGTYPE</span> messages. If multiple agents need to be transmitted, the order is:</p>
+        <p class="code">&#160;[all agents for path 1], </p>
+        <p class="code"> ...</p>
+        <p class="code">&#160;[all agents for path num_paths], </p>
+        <p class="code">&#160;[all agents for ahs path 1],</p>
+        <p class="code"> &#160;...</p>
+        <p class="code">&#160;[all agents for path num_ahsp], </p>
+        <p class="code">&#160;[all agents for terminal 1],</p>
+        <p class="code">&#160;...</p>
+        <p class="code">&#160;[all agents for terminal num_terms]</p>
+        <p>&#160;</p>
+        <p>If <span style="font-family: 'Courier New';">num_agents</span> is 0, then instead of concentrations, the message should provide one set of pressures corresponding to the pressures at the envelope locations. Pressures must conform to the 2.4 format of the WPC file as specified in the <a href="../Weather/IDH_UsingWPC_WPC_File_Format.htm">WPC File Format</a> section of the documentation.</p>
+        <p class="code">Message Header;</p>
+        <p class="code"><span style="color: blue;">int </span>time;        <span style="color: #008100;">// (value required but currently not used)</span></p>
+        <p class="code"><span style="color: blue;">int </span>num_agents;  <span style="color: #008100;">// number of contaminants OR set to zero to send pressures</span></p>
+        <p class="code"><span style="color: blue;">int </span>num_vals;<span style="color: green;">   // number of items to send depending on num_agents parameter</span></p>
+        <p class="NormalItalic">For contaminants, i.e., num_agents &gt; 0:</p>
+        <p class="code"><span style="color: blue;">int </span>agent_ids[num_agents];<span style="color: green;"> // index of each contaminant for which values are being sent</span></p>
+        <p class="code"><span style="color: blue;">float </span>values[num_agents * nEnvPaths];  <span style="color: #008100;">// concentrations [kg_cont/kg_air]</span></p>
+        <p class="NormalItalic">For wind pressures, i.e., num_agents == 0:</p>
+        <p class="code"><span style="color: blue;">float </span>values[nEnvPaths];  <span style="color: #008100;">// wind pressures [Pa]</span></p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

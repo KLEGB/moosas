@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix A - PRJ File Format" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Section 9: Source/Sink Elements</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Section 9: Source/Sink Elements</h5>
+        <p>Source/sink elements are read by the cselmt_read( ) function and saved by the cselmt_save( ) function. The data are stored in the CSE_DAT structures that are defined in contam.h for ContamW and simdat.h for ContamX. CSE_DAT includes a pointer to the element specific data structure.</p>
+        <p class="NormalItalic">The source/sink elements section starts with: </p>
+        <p class="code">_ncse // number of source/sink elements (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">This is followed by a data header comment line and then data for all _ncse elements.
+        </p>
+        <p class="NormalItalic">For each element the first data line includes:
+        </p>
+        <p class="codeindent">nr // element number (<span style="color: red;">IX</span>); in order from 1 to _ncse</p>
+        <p class="codeindent">spcs[] // species name (I1)</p>
+        <p class="codeindent">ctype // element data type (string ? I2)</p>
+        <p class="code">&#160; element type names are stored in _cse_dnames in ctype order.</p>
+        <p class="codeindent">name[] // element name (I1) {W}</p>
+        <p class="NormalItalic">and the second line has:</p>
+        <p class="codeindent">desc[] // element description (I1) {W} may be blank</p>
+        <p class="NormalItalic">This is followed by one or more lines of data that depend on the element data type.</p>
+        <p class="NormalItalic">The introductory lines that follow give the type number, the program macro defined as that number, the type name from_cse_dnames, and the data structures to hold the data. The data structures are defined in celmts.h in ContamW and selmts.h in ContamX. Type numbers can change as long as the ordering in _csse_names and related arrays reflect that order.</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 0 [CS_CCF] "ccf" stored in structure CSE_CCF.</p>
+        <p class="NormalItalic">The constant coefficient source model data:</p>
+        <p class="codeindent">G // generation rate [kg/s] (R4)</p>
+        <p class="codeindent">D // deposition rate [kg/s] (R4)</p>
+        <p class="codeindent">u_G // units of generation (I2) {W}</p>
+        <p class="codeindent">u_D // units of deposition (I2) {W}</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 1 [CS_PRS] "prs" stored in structure CSE_PRS.</p>
+        <p class="NormalItalic">The pressure driven source data:</p>
+        <p class="codeindent">G // generation rate [kg/s] (R4)</p>
+        <p class="codeindent">x // pressure exponent [-] (R4)</p>
+        <p class="codeindent">u_G // units of generation (I2) {W}</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 2 [CS_CUT] "cut" stored in structure CSE_CUT.</p>
+        <p class="NormalItalic">The concentration cutoff model data:</p>
+        <p class="codeindent">G // generation rate [kg/s] (R4)</p>
+        <p class="codeindent">Co // cutoff concentration [kg/kg] (R4)</p>
+        <p class="codeindent">u_G // units of generation (I2) {W}</p>
+        <p class="codeindent">u_C // units of concentration (I2) {W}</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 3 [CS_EDS] "eds" stored in structure CSE_EDS.</p>
+        <p class="NormalItalic">The exponential decay model data:</p>
+        <p class="codeindent">G0 // initial generation rate [kg/s] (R4)</p>
+        <p class="codeindent">k // decay constant [1/s] (R4)</p>
+        <p class="codeindent">u_G // units of generation (I2) {W}</p>
+        <p class="codeindent">u_k // units of time (I2) {W}</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 4 [CS_BLS] "bls" stored in structure CSE_BLS.</p>
+        <p class="NormalItalic">The boundary layer diffusion model data:</p>
+        <p class="codeindent">hm // average film mass transfer coefficient [m/s] (R4)</p>
+        <p class="codeindent">rho // film density of air [kg/m^3] (R4)</p>
+        <p class="codeindent">Kp // partition coefficient (R4)</p>
+        <p class="codeindent">M // adsorbent mass/unit area [kg/m^2] (R4)</p>
+        <p class="codeindent">u_h // units of hm (I2) {W}</p>
+        <p class="codeindent">u_r // units of rho (I2) {W}</p>
+        <p class="codeindent">u_M // units of M (I2) {W}</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 5 [CS_BRS] "brs" stored in structure CSE_BRS.</p>
+        <p class="NormalItalic">The burst source data:</p>
+        <p class="codeindent">M // mass added to zone in one time step [kg] (R4)</p>
+        <p class="codeindent">u_M // units of mass (I2) {W}</p>
+        <p class="codeindent" style="margin-top: 0;margin-bottom: 0;">&#160;</p>
+        <p class="NormalItalic">Element type 6 [CS_DVS] "dvs"&#160;stored in structure CSE_DVS.</p>
+        <p class="NormalItalic">The deposition velocity sink model data:</p>
+        <p class="codeindent">dV&#160;&#160;&#160;&#160;&#160;&#160;&#160; // deposition velocity [m/s] (R4)</p>
+        <p class="codeindent">dA&#160;&#160;&#160;&#160;&#160;&#160;&#160; // deposition area [m^2] (R4)</p>
+        <p class="codeindent">u_V&#160;&#160;&#160;&#160;&#160;&#160; // units of velocity (I2) {W}</p>
+        <p class="codeindent">u_A&#160;&#160;&#160;&#160;&#160;&#160; // units of area (I2) {W}</p>
+        <p class="codeindent" style="margin-top: 0;margin-bottom: 0;">&#160;</p>
+        <p class="NormalItalic">Element type 7 [CS_DRS] "drs"&#160;stored in structure CSE_DRS.</p>
+        <p class="NormalItalic">The deposition rate sink model data:</p>
+        <p class="codeindent">kd&#160;&#160;&#160;&#160;&#160;&#160;&#160; // deposition rate [1/s] (R4)</p>
+        <p class="codeindent">u_k&#160;&#160;&#160;&#160;&#160;&#160; // units of deposition rate (I2) {W}</p>
+        <p class="codeindent">
+            <br />
+        </p>
+        <p class="NormalItalic">Element type 8 [CS_DVR] "dvr"&#160;stored in structure CSE_DVR.&#160;{CONTAM 3.0}</p>
+        <p class="NormalItalic">The deposition velocity resuspension source/sink model data:</p>
+        <p class="codeindent">dV&#160;&#160;&#160;&#160;&#160;&#160;&#160; // deposition velocity [m/s] (R4)</p>
+        <p class="codeindent">R&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160; // resuspension rate [1/s] (R4)</p>
+        <p class="codeindent">dA&#160;&#160;&#160;&#160;&#160;&#160;&#160; // deposition surface area [m2] (R4)</p>
+        <p class="codeindent">rA&#160;&#160;&#160;&#160;&#160;&#160;&#160; // resuspension surface area [m2] (R4)</p>
+        <p class="codeindent">u_V&#160;&#160;&#160;&#160;&#160;&#160; // units of deposition velocity (I2) {W}<br />u_R&#160;&#160;&#160;&#160;&#160;&#160; // units of resuspension rate (I2) {W}<br />u_dA&#160;&#160;&#160;&#160;&#160; // units of deposition areaa (I2) {W}<br />u_dR&#160;&#160;&#160;&#160;&#160; // units of resuspension area (I2) {W}<br /></p>
+        <p class="codeindent">&#160;</p>
+        <p class="NormalItalic">Element type 11 [CS_PLM] "plm"&#160; stored in structure CSE_PLM.<span style="font-size: 10pt;font-style: normal;"> <![CDATA[ ]]></span><span style="font-size: 10pt;font-style: normal;">{CONTAM 2.4b}</span></p>
+        <p class="NormalItalic">The NRCC power law model data:</p>
+        <p class="codeindent">a&#160;&#160;// coefficient(R4) [kg/s]</p>
+        <p class="codeindent">b&#160;&#160;// exponent (R4)</p>
+        <p class="codeindent">tp&#160;&#160;// PL model time [s] (R4)</p>
+        <p class="codeindent">u_a&#160;// units of initial emission factor (I2) {W}</p>
+        <p class="codeindent">u_tp&#160;// units of PL model time (I2) {W}</p>
+        <p class="codeindent">&#160;</p>
+        <p class="NormalItalic">Element type 12 [CS_PKM] "pkm"&#160; stored in structure CSE_PKM.<span style="font-size: 10pt;font-style: normal;"> <![CDATA[ ]]></span><span style="font-size: 10pt;font-style: normal;">{CONTAM 2.4b}</span></p>
+        <p class="NormalItalic">The NRCC peak model data:</p>
+        <p class="codeindent">a&#160;&#160;// peak emission rate(R4) [kg/s]</p>
+        <p class="codeindent">b&#160;&#160;// fitting parameter (R4)</p>
+        <p class="codeindent">tp&#160;&#160;// time to peak [s] (R4)</p>
+        <p class="codeindent">u_a&#160;// units of peak emission rate (I2) {W}</p>
+        <p class="codeindent">u_tp&#160;// units of peak time (I2) {W}</p>
+        <p class="codeindent" style="margin-top: 0;margin-bottom: 0;">&#160;</p>
+        <p class="NormalItalic">Element type 13 [CS_SUP] "sup". <span style="font-size: 10pt;font-style: normal;">{CONTAM 2.4b}</span></p>
+        <p class="NormalItalic">The super source element data:</p>
+        <p class="codeindent">n&#160;&#160;// number of sub-elements (IX)</p>
+        <p class="NormalIndentItalic">A line containing a list of all sub-element numbers:</p>
+        <p class="codeindent">elmt[]&#160;// sub-element numbers (IX) – converted to pointers</p>
+        <p class="NormalItalic">The source/sink element section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data</p>
+        <p class="code">&#160;</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

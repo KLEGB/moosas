@@ -1,0 +1,220 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" class="" MadCap:lastBlockDepth="2" MadCap:lastHeight="832" MadCap:lastWidth="762" MadCap:conditions="Primary.3.1">
+    <head><title>Section 1: Project, Weather, Simulation, and Output Controls</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" type="text/css" />
+    </head>
+    <body>
+        <h5>Section 1: Project, Weather, Simulation, and Output Controls</h5>
+        <p>The initial section of the project file is read by the run_read( ) function and saved by the run_save( ) function.  </p>
+        <p class="NormalItalic">The first line of the project file identifies the source program:</p>
+        <p class="code">_string[] // program name "ContamW" (I1)</p>
+        <p class="codeCW2">_string[] // program version "3.2" (I1)</p>
+        <p class="codeCW2">_echo // &gt; 0 echo input files, &gt; 1 echo bridge messages to the log file (I2)</p>
+        <p class="NormalItalic">The second line is a user-defined description of the project:</p>
+        <p class="code">_prjdesc[] // (unused) project description (I1) {W}</p>
+        <p class="NormalItalic">The next line sets the following miscellaneous values:</p>
+        <p class="code">_skheight // total SketchPad height [cells] (I2) {W}</p>
+        <p class="code">_skwidth // total SketchPad width [cells] (I2) {W}</p>
+        <p class="code">_def_units // default units: 0 = SI, 1 = US (I2) {W}</p>
+        <p class="code">_def_flows // default flows: 0 = mass, 1 = volume (I2) {W}</p>
+        <p class="code">_def_T // default temperature for zones [K] (R4) {W}</p>
+        <p class="code">_udefT // units for temperature (I2) {W}</p>
+        <p class="code">_rel_N // angle to true north [degrees] (R4) {W}</p>
+        <p class="code">_wind_H // elevation for reference wind speed [m] (R4) {W}</p>
+        <p class="code">_uwH // units for _wind_H (I2) {W}</p>
+        <p class="code">_wind_Ao // local terrain constant (R4) {W}</p>
+        <p class="code">_wind_a // velocity profile exponent (R4) {W}</p>
+        <p class="NormalItalicCW2">The next line provides SketchPad pseudo-geometry information: {CONTAM 3.1}</p>
+        <p class="codeCW2">scale // cell scaling factor (R4)</p>
+        <p class="codeCW2">uScale // units of scaling factor: 0 = m, 1 = ft (I2)</p>
+        <p class="codeCW2">orgRow // row of origin (I2)</p>
+        <p class="codeCW2">orgCol // column of origin (I2)</p>
+        <p class="codeCW2">invYaxis // 0 = positive above origin, 1 = negative above origin (I2)</p>
+        <p class="codeCW2">showGeom // 0/1 = show pseudo-geometry info in status bar (I2)</p>
+        <p class="NormalItalic">The next line defines the weather (WTHDAT) for steady-state simulation in ContamX:</p>
+        <p class="code">Tambt // ambient temperature [K] (R4)</p>
+        <p class="code">barpres // barometric pressure [Pa] NOT corrected to sea level (R4)</p>
+        <p class="code">windspd // wind speed [m/s] (R4)</p>
+        <p class="code">winddir // wind direction: 0 = N, 90 = E, 180 = S, ...; (R4)</p>
+        <p class="code">relhum // relative humidity: 0.0 to 1.0 (R4)</p>
+        <p class="code">daytyp // type of day (1-12) (I2)</p>
+        <p class="code">uTa // units for Tambt (I2) {W}</p>
+        <p class="code">ubP // units for barpres (I2) {W}</p>
+        <p class="code">uws // units for windspd (I2) {W}</p>
+        <p class="code">uwd // units for winddir (I2) {W}</p>
+        <p class="NormalItalic">The next line defines weather data (WTHDAT) for the wind pressure test in ContamW:</p>
+        <p class="code">Tambt // ambient temperature [K] (R4) {W}</p>
+        <p class="code">barpres // barometric pressure [Pa] NOT corrected to sea level (R4) {W}</p>
+        <p class="code">windspd // wind speed [m/s] (R4) {W}</p>
+        <p class="code">winddir // wind direction: 0 = N, 90 = E, 180 = S, ...; (R4) {W}</p>
+        <p class="code">relhum // relative humidity: 0.0 to 1.0 (R4) {W}</p>
+        <p class="code">daytyp // type of day (1-12) (I2) {W}</p>
+        <p class="code">uTa // units for Tambt (I2) {W}</p>
+        <p class="code">ubP // units for barpres (I2) {W}</p>
+        <p class="code">uws // units for windspd (I2) {W}</p>
+        <p class="code">uwd // units for winddir (I2) {W}</p>
+        <p class="NormalItalic">The next four lines define the weather, contaminant and controls files, respectively:</p>
+        <p class="code">_WTHpath[_MAX_PATH] // full name of weather file (I1)</p>
+        <p class="code">_CTMpath[_MAX_PATH] // full name of contaminant file (I1)</p>
+        <p class="code">_CVFpath[_MAX_PATH] // full name of continuous values file (I1)</p>
+        <p class="code">_DVFpath[_MAX_PATH] // full name of discrete values file (I1)</p>
+        <p class="NormalItalic">The following lines define path location data (PLDDAT) for the creating the WPC file:</p>
+        <p class="NormalItalic">three lines for file paths and WPC description:</p>
+        <p class="code">WPCfile[_MAX_PATH] // full name of WPC file (I1)</p>
+        <p class="code">EWCfile[_MAX_PATH] // full name of EWC data source file (I1) {W}</p>
+        <p class="code">WPCdesc[] // WPC description (I1) {W}</p>
+        <p class="NormalItalic"> next a line describing reference coordinates:&#160;</p>
+        <p class="code">X0 // X-value of ContamW origin in EWC coordinates [m] (R4) {W}</p>
+        <p class="code">Y0 // Y-value of ContamW origin in EWC coordinates [m] (R4) {W}</p>
+        <p class="code">Z0 // Z-value of ContamW origin in EWC coordinates [m] (R4) {W}</p>
+        <p class="code">angle // Rotation of ContamW relative to EWC coordinates (R4) {W}</p>
+        <p class="code">u_XYZ // units of coordinates (I2) {W}</p>
+        <p class="NormalItalic">then some EWC to WPC conversion parameters:</p>
+        <p class="code">epsPath // tolerance for matching path locations [-] (R4) {W}</p>
+        <p class="code">epsSpcs // tolerance for matching species [-] (R4) {W}</p>
+        <p class="code">tShift // time shift of EWC data {W} [s] (hh:mm:ss <span style="font-family: 'Symbol';">®</span> IX) {W}</p>
+        <p class="code">dStart // date WPC data starts (I2) {W}</p>
+        <p class="code">dEnd // date WPC data ends (I2) {W}</p>
+        <p class="code">_useWPCwp // if true, use WPC file wind pressures (I2)</p>
+        <p class="code">_useWPCmf // if true, use WPC file mass fractions (I2)</p>
+        <p class="codeCW2">wpctrig // 0/1 = trigger airflow calculation by WPC data (I2)</p>
+        <p class="NormalItalic">The next line defines the location (LOCDAT) (for future use with thermal simulation):</p>
+        <p class="code">latd // latitude (degrees: north +, south -) (R4)</p>
+        <p class="code">lgtd // longitude (degrees: east +, west -) (R4)</p>
+        <p class="code">Tznr // time zone (Greenwich = 0, Eastern = -5, etc.) (R4)</p>
+        <p class="code">altd // elevation above sea level [m] (R4)</p>
+        <p class="code">Tgrnd // ground temperature [K] (R4)</p>
+        <p class="code">utg // units for ground temperatures (I2)</p>
+        <p class="code">u_a // units for elevation (I2)</p>
+        <p class="NormalItalic">The remaining data is stored in the run control (RCDAT) structure. In ContamX some values may be transferred to other variables before being used. The next two lines control the airflow simulation – first the nonlinear part:</p>
+        <p class="code">sim_af // airflow simulation: 0 = steady, 1 = dynamic (I2)</p>
+        <p class="code">afcalc // N-R method for non-linear eqns: 0 = SUR, 1 = STR (I2)</p>
+        <p class="code">afmaxi // maximum number of N-R iterations (I2)</p>
+        <p class="code">afrcnvg // relative airflow convergence factor (R4)</p>
+        <p class="code">afacnvg // absolute airflow convergence factor [1/s] (R4)</p>
+        <p class="code">afrelax // flow under-relaxation coefficient (for SUR) (R4)</p>
+        <p class="code">uac2 // units for afacnvg (I2)</p>
+        <p class="code">Pres&#160;&#160;// pressure test pressure (R4) {Contam 2.4}</p>
+        <p class="code">uPres&#160;&#160;// units of Pres (I2) {Contam 2.4}</p>
+        <p class="NormalItalic">and then the linear part:</p>
+        <p class="code">afslae // method for linear equations: 0 = SKY, 1 = PCG (I2)</p>
+        <p class="code">afrseq // if true, resequence the linear equations (I2)</p>
+        <p class="code">aflmaxi // maximum number of iterations (PCG) (I2)</p>
+        <p class="code">aflcnvg // relative convergence factor for (PCG) (R4)</p>
+        <p class="code">aflinit // if true, do linear airflow initialization (I2)</p>
+        <p class="code">Tadj // if true, use temperature adjustment (I2)</p>
+        <p class="NormalItalicCW2">The next four lines control the linear solver for contaminant calculations:</p>
+        <p class="NormalItalicCW2">first for cyclic simulation:</p>
+        <p class="code">sim_mf // mass fraction (contaminant) simulation:</p>
+        <p class="code">            // 0 = none, 1 = steady, 2 = transient, 3 = cyclic (I2)&#160;</p>
+        <p class="code">ccmaxi // simulation: maximum number of cyclic iterations (I2)</p>
+        <p class="code">ccrcnvg // relative convergence factor (R4)</p>
+        <p class="code">ccacnvg // absolute convergence factor [kg/kg] (R4)</p>
+        <p class="code">ccrelax // (unused) over-relaxation coefficient (R4) </p>
+        <p class="code">uccc // units for ccacnvg (I2)</p>
+        <p class="NormalItalic">then for non-trace contaminants:</p>
+        <p class="code">mfnmthd // simulation: 0 = SKY, 1 = BCG, 2 = SOR, 3 = LU (I2)</p>
+        <p class="code">mfnrseq // if true, resequence the linear equations (I2)</p>
+        <p class="code">mfnmaxi // maximum iterations (I2)</p>
+        <p class="code">mfnrcnvg // desired relative convergence (R4)</p>
+        <p class="code">mfnacnvg // desired absolute convergence (R4)</p>
+        <p class="code">mfnrelax // relaxation coefficient (R4)</p>
+        <p class="code">mfngamma // trapezoidal integration factor (R4)</p>
+        <p class="code">uccn // units for mfnacnvg (I2)</p>
+        <p class="NormalItalic">then for trace contaminants:</p>
+        <p class="code">mftmthd // 0 = SKY, 1 = BCG, 2 = SOR, 3 = LU (I2)</p>
+        <p class="code">mftrseq // if true, resequence the linear equations (I2)</p>
+        <p class="code">mftmaxi // maximum iterations (I2)</p>
+        <p class="code">mftrcnvg // desired relative convergence (R4)</p>
+        <p class="code">mftacnvg // desired absolute convergence (R4)</p>
+        <p class="code">mftrelax // relaxation coefficient (R4)</p>
+        <p class="code">mftgamma // trapezoidal integration factor (R4)</p>
+        <p class="code">ucct // units for mftacnvg (I2)</p>
+        <p class="NormalItalicCW2">then for CVODE&#160;contaminant solver: {CONTAM 3.1}</p>
+        <p class="codeCW2">mfvmthd // 0 = SKY, 2 = SOR, 3 = LU (1 n/a) (I2)</p>
+        <p class="codeCW2">mfvrseq // if true, resequence the linear equations (I2)</p>
+        <p class="codeCW2">mfvmaxi // maximum iterations (I2)</p>
+        <p class="codeCW2">mfvrcnvg // desired relative convergence (R4)</p>
+        <p class="codeCW2">mfvacnvg // desired absolute convergence (R4)</p>
+        <p class="codeCW2">mfvrelax // relaxation coefficient (R4)</p>
+        <p class="codeCW2">uccv // units for mfvacnvg (I2)</p>
+        <p class="NormalItalicCW2">The next line sets the integration method and short time step contaminant calculation parameters:</p>
+        <p class="codeCW2">mf_solver // mass fraction integration method: {3.1}<br />&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;// 0=trapezoid, 1=STS, 2=CVODE (I2)</p>
+        <p class="code">sim_1dz // if true, use 1D zones (I2)</p>
+        <p class="code">sim_1dd // if true, use 1D ducts (I2)</p>
+        <p class="code">celldx // default length of duct cells for C-D model [m] (R4)</p>
+        <p class="code">sim_vjt // if true, compute variable junction temperatures (I2)</p>
+        <p class="code">udx // units of celldx (I2)</p>
+        <p class="NormalItalicCW2">The next line contains CVODE&#160;contaminant solver parameters: {CONTAM 3.1}</p>
+        <p class="codeCW2">cvode_mth // 0 = am, 1 = bdf (I2)</p>
+        <p class="codeCW2">cvode_rcnvg // relative convergence factor(R4)</p>
+        <p class="codeCW2">cvode_acnvg // absolute convergence factor(R4)</p>
+        <p class="codeCW2">cvode_dtmax // maximum time step (R4)</p>
+        <p class="NormalItalic">The next line contains density control parameters:</p>
+        <p class="code">tsdens // (0/1) vary density during time step (I2)</p>
+        <p class="code">tsrelax // (inactive) under-relaxation factor for calculating dM/dt (R4)</p>
+        <p class="code">tsmaxi // maximum number of iterations for density changes (I2)</p>
+        <p class="codeCW2">cnvgSS // (0/1) converge density in steady state init (I1) {2.4b}</p>
+        <p class="codeCW2">densZP // (0/1) density = f(zone pressure) (I1) {2.4b, 3.1}</p>
+        <p class="codeCW2">stackD // (0/1) density varies hydrostatically (I1) {2.4b, 3.1}</p>
+        <p class="codeCW2">dodMdt // (0/1) include dM/dt in airflow calc (I1) {2.4b, 3.1}</p>
+        <p class="NormalItalic">The next line sets the dates, times, and time steps for simulation:</p>
+        <p class="code">date_st // day-of-year to start steady simulation (mmmdd <span style="font-family: 'Symbol';">®</span> IX)</p>
+        <p class="code">time_st // time-of-day to start steady simulation (hh:mm:ss <span style="font-family: 'Symbol';">®</span> I4)</p>
+        <p class="code">date_0 // day-of-year to start transient simulation (mmmdd <span style="font-family: 'Symbol';">®</span> IX)</p>
+        <p class="code">time_0 // time-of-day to start transient simulation (hh:mm:ss <span style="font-family: 'Symbol';">®</span> I4)</p>
+        <p class="code">date_1 // day-of-year to end transient simulation (mmmdd <span style="font-family: 'Symbol';">®</span> IX)</p>
+        <p class="code">time_1 // time-of-day to end transient simulation (hh:mm:ss <span style="font-family: 'Symbol';">®</span> I4)</p>
+        <p class="code">time_step // simulation time step [s] (hh:mm:ss <span style="font-family: 'Symbol';">®</span> IX)</p>
+        <p class="code">time_list // simulation output (results) time step [s] (hh:mm:ss <span style="font-family: 'Symbol';">®</span> IX)</p>
+        <p class="code">time_scrn // simulation status time step [s] (up to 1 day) (hh:mm:ss <span style="font-family: 'Symbol';">®</span> I4)</p>
+        <p class="NormalItalic">The next line controls the use of the restart file:</p>
+        <p class="code">restart // use restart file (I2)</p>
+        <p class="code">rstdate // restart date (mmmdd <span style="font-family: 'Symbol';">®</span> IX)</p>
+        <p class="code">rsttime // restart time (hh:mm:ss <span style="font-family: 'Symbol';">®</span> I4)</p>
+        <p class="NormalItalic">The next line controls output of simulation result files. </p>
+        <p class="code">_list // data dump parameter (I2)</p>
+        <p class="code">&#160;&#160;&#160;&#160;&#160;&#160;// &gt; 0 dump matrix analysis,&#160;</p>
+        <p class="code">&#160;&#160;&#160;&#160;&#160;&#160;// = 2 dump SIM file output,&#160;</p>
+        <p class="code">&#160;&#160;&#160;&#160;&#160;&#160;// &gt; 2 dump lognotes. &#160;</p>
+        <p class="code">_doDlg // (0/1) ContamX will display dialog box (I1)</p>
+        <p class="code">_pfsave // (0/1) save path flow results to SIM file (I1)</p>
+        <p class="code">_zfsave // (0/1) save zone flow results to SIM file (I1)</p>
+        <p class="code">_zcsave // (0/1) save mass fraction results to SIM file (I1)</p>
+        <p class="code">_achvol // (0/1) ACH based on true volumes instead of std volumes </p>
+        <p class="code">_achsave // (0/1) save building air exchange rate transient data</p>
+        <p class="code">_abwsave // (0/1) save air exchange rate box-whisker data</p>
+        <p class="code">_cbwsave // (0/1) save contaminant box-whisker data</p>
+        <p class="code">_expsave // (0/1) save exposure transient data</p>
+        <p class="code">_ebwsave // (0/1) save exposure box-whisker data</p>
+        <p class="code">_zaasave // (0/1) save zones age-of-air transient data</p>
+        <p class="code">_zbwsave // (0/1) save zones age-of-air box-whisker data</p>
+        <p class="NormalItalicCW2"> <![CDATA[ ]]>The next line controls output of more simulation result files:  {CONTAM 3.1}</p>
+        <p class="codeCW2">rzfsave // (0/1) save binary zone flow file</p>
+        <p class="codeCW2">rzmsave // (0/1) save binary avg zone mass fraction file</p>
+        <p class="codeCW2">rz1save // (0/1) save binary 1D zone cell mass fraction file</p>
+        <p class="codeCW2">csmsave // (0/1) save text contaminant summary file</p>
+        <p class="codeCW2">srfsave // (0/1) save text surface result file</p>
+        <p class="codeCW2">logsave // (0/1) save text controls log file</p>
+        <p class="NormalItalicCW2"> <![CDATA[ ]]>The next line provides a set of integers that are used for development purposes:  {CONTAM 3.1}</p>
+        <p class="codeCW2">save[0-15]&#160;// (unused by CONTAM; subject to change without notice) (I1)</p>
+        <p class="NormalItalic">The next two lines             <![CDATA[ ]]>contain a list of real values provided for PRJ file flexibility. They are stored in the rvals[] vector {CONTAM 2.4b}</p>
+        <p class="code">nrvals             <![CDATA[ ]]>// number of real values in the vector (I2)</p>
+        <p class="code">rvals[0]             <![CDATA[ ]]>// standard density for air change calculation             <![CDATA[ ]]>[kg/m3](R4)</p>
+        <p class="code">rvals[1]             <![CDATA[ ]]>// acceleration due to gravity             <![CDATA[ ]]>[m/s2](R4)</p>
+        <p class="NormalItalic">The next line controls which sections are output to the .val file: {CONTAM 2.4a}</p>
+        <p class="code">BldgFlowZ // output building airflow test (zones) (IX)</p>
+        <p class="code">BldgFlowD  // output building airflow test (ducts) (IX)</p>
+        <p class="code">BldgFlowC   // output building airflow test (classified flows) (IX)</p>
+        <p class="NormalItalic">The next line controls cfd calculations and coupling: {CONTAM 3.0}&#160;</p>
+        <p class="code">cfd_ctype // (0=no cfd, 1=post, 2=quasi, 3=dynamic) cfd coupling method (I2)</p>
+        <p class="code">cfd_convcpl // convergence factor for dynamic coupling (R4)</p>
+        <p class="code">cfd_var // (0/1) use .var file (I2)</p>
+        <p class="code">cfd_zref // currently not used (I2)</p>
+        <p class="code">cfd_imax // max number of dynamic coupling iterations (I2)</p>
+        <p class="code">cfd_dtcmo // number of iterations between outputs to .cmo file (I2)</p>
+        <p class="NormalItalic">The run control section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data</p>
+        <p>Note on outputs: _pfsave and _zfsave always have the same value – 0 or 1. </p>
+    </body>
+</html>

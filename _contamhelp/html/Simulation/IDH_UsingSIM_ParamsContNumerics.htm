@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Simulations|Simulation Parameters" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Simulation Contaminant Numerics Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4>Simulation – Contaminant Numerics Properties</h4>
+        <p style="">These are the parameters that you can use to adjust the methods used to solve the contaminant equations. Typically, you won’t need to change these values from their defaults. However, as discussed below, certain types of problems may benefit from using different solution techniques that are available.</p>
+        <p><span style="font-weight: bold;">Linear Contaminant Solver:</span> <![CDATA[ ]]>Both the default solver and the CVODE solver require the use of a linear solution method. The need for a linear solver is described in the <a href="../Theory/IDH_TheoryCont_Intro.htm">Contaminant Analysis</a> section. For each zone there is an equation for each contaminant species that you have selected to be either trace or non-trace contaminants. The mass fractions of the non-trace contaminants are solved within an iterative loop that also determines the airflows (because the non-trace contaminants affect the zone air densities and pressures). The mass fractions of the trace contaminants are solved after the flows have been computed (since they do not affect the zone air densities). These calculations require the solution of simultaneous, non-symmetric, linear algebraic equations. </p>
+        <p>Four linear solution methods are provided – two direct and two iterative. The iterative algorithms are successive over relaxation (SOR) and biconjugate gradient (BCG). The direct methods are a skyline (or ‘profile’) algorithm and a Gaussian LU-decomposition method. These four methods have been listed in order of increasing memory use. The iterative methods may or may not be faster than the more reliable direct methods. Before doing a long transient simulation of a large project, it may be useful to test the different methods to determine which gives optimum performance.
+        </p>
+        <ul>
+            <li value="1"><span style="font-weight: bold;">Skyline:</span> The skyline algorithm is the most reliable solution, and it is very fast for small problems but can be slow for large problems.
+            </li>
+            <li value="2"><span style="font-weight: bold;">BCG:</span> Try the iterative biconjugate gradient algorithm for problems having a large number of zones for which the SOR algorithm might not converge.
+            </li>
+            <li value="3"><span style="font-weight: bold;">SOR:</span> The successive over-relaxation algorithm requires much less memory and is faster than the Skyline method unless there are convergence problems.
+            </li>
+            <li value="4">
+                <p><span style="font-weight: bold;">LU:</span> LU decomposition using a full (non-sparse) matrix and is for verifying the solutions of the other methods rather than general usage.
+                </p>
+                <p>The following properties apply to the linear solver:</p>
+                <ul style="list-style-type: circle;">
+                    <li value="1"><span style="font-weight: bold;">Maximum Iterations:</span> Used to prevent endless calculations if the iterations are not converging.</li>
+                    <li value="2"><span style="font-weight: bold;">Convergence Factors:</span> The SOR iterations are assumed converged when the relative difference between the values on successive iterations are less than the relative convergence, e1.&#160; The BCG method is determined to have converged when <img src="../../image/0800005F_111x26.png" style="visibility: visible; mso-wrap-style: square; width: 111; height: 26;" />.</li>
+                    <li value="3"><span style="font-weight: bold;">Relaxation Coefficient:</span> An optimum over-relaxation coefficient, <span style="font-family: Symbol;">w</span>, speeds the convergence of the SOR algorithm.&#160; Determination of an optimum will require some experimentation with different values (usually near the low end of the range 1.0 to 2.0).</li>
+                    <li value="4"><span style="font-weight: bold;">The Trapezoidal Integration Factor:</span> Determines the relative portions of the explicit and implicit terms in the solution of the differential equations. This is the parameter <span style="font-family: Symbol;">g</span> presented in the Contaminant Analysis section of the Theoretical Background.</li>
+                    <li value="5"><span style="font-weight: bold;">Resequence Linear Equations:</span> The default is to do this in order to speed the solution by reducing the sparsity of the solution matrix.</li>
+                </ul>
+            </li>
+        </ul>
+        <p><b>CVODE Non-Linear Contaminant Solver:</b> Select the method and associated parameters to use when implementing the CVODE solver.</p>
+        <ul style="color: #8b0000;">
+            <li style="color: #000000;" value="1"><b>Backward Differentiation Formulas</b>: The BDF method is recommended for stiff systems.</li>
+            <li style="color: #000000;" value="2"><b>Adams-Moulton</b>: Suitable for non-stiff problems.</li>
+        </ul>
+        <p class="NormalIndent"><b>Maximum Time Step:</b> <![CDATA[ ]]>CVODE limits its time steps according to its accuracy requirements, and in order to accommodate any scheduled events. This value limits the longest time step CVODE will take (the default value of 0 imposes no artificial restrictions). One reason to limit CVODE’s time step is in order to allow the control network to respond to changes in contaminant concentrations. The control elements operate between steps of the contaminant transport solver, so if CVODE takes very long steps, it can interfere with simulating the building control system. Note that it is not necessary to set a maximum time step in order to ensure data get written to the simulation result files, because CVODE always interpolates its predictions to provide output at the requested times.</p>
+        <p class="NormalIndent"><b>Relative Convergence Factor:</b> Default value of 1 x 10<sup>-6</sup>.</p>
+        <p class="NormalIndent"><b>Absolute Convergence Factor:</b> Default value of 1 x 10<sup>-13</sup> kg/kg.</p>
+        <p><span style="font-weight: bold;">Convergence for Cyclic Simulations:</span> Convergence is assumed when the relative difference in the peak concentrations (for all contaminants in all zones) is less than the relative convergence, e1.&#160; The absolute convergence, e2, is used to keep zones and contaminants with negligible mass fractions from dominating the solution.
+        </p>
+        <p class="Normal"><span style="font-weight: bold;">1D Options:</span> These options provide control over the 1D simulation capabilities that can be implemented when using the <span style="font-style: italic;">Short Time Step Method</span> to perform contaminant simulation. 
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">1D Zone Model:</span> Select this method to implement the explicit one-dimensional convection/diffusion cell solution method for zones that have been defined as 1D zones. This will subdivide the zones into cells along user-specified 1D axes.
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">1D Duct Model:</span> Select this method to implement the explicit one-dimensional convection/diffusion cell solution method for ducts. This will subdivide all duct segments into cells along their length based on the flow rate through the duct segment. Effective diffusion coefficient will be based upon the Reynolds number and the molecular diffusion coefficients of the contaminants.
+        </p>
+        <p class="NormalIndent">If the product of the velocity <span style="font-style: italic;">u</span> and the time step <span style="font-family: Symbol;">D</span><span style="font-style: italic;">t</span> in a given duct segment is less than the <span style="font-weight: bold;">Cell Size</span> parameter, then an Eulerian method is used with a cell size equal to that of the <span style="font-style: italic;">Cell Size</span> parameter, otherwise a Lagrangian method is implemented with an effective cell size of <span style="font-style: italic;">u</span><span style="font-family: Symbol;">×</span><span style="font-family: Symbol;">D</span><span style="font-style: italic;">t</span> leading to the solution of fewer simultaneous equations as the velocity increases.
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Variable Junction Temperatures:</span> When using the 1D Duct Model, you can have CONTAM implement variable junction temperatures to account for the convective heat transfer of the air within the duct system based on inlet terminal temperatures. When using this option, the junction temperature properties are ignored and terminal inlet temperatures are obtained from the zones in which they are located.
+        </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

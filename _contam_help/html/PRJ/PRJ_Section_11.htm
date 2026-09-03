@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix A - PRJ File Format" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Section 11: Duct Elements</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Section 11: Duct Elements</h5>
+        <p>Duct elements are read by the afelmt_read( ) function with the duct flag set to 1 and saved by the afelmt_save( ) function. The data are stored in the AFE_DAT structures that are defined in contam.h for ContamW and simdat.h for ContamX. AFE_DAT includes a pointer to the element specific data structure.</p>
+        <p>NOTE: Some of the elements in this section were incorrectly documented in the CONTAM 2.1 program documentation. However, the data structures have not changed for this version, only the documentation provided herein.</p>
+        <p class="NormalItalic">The duct elements section starts with: </p>
+        <p class="code">_ndfe // number of duct flow elements (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">This is followed by a data header comment line and then data for all _ndfe elements.</p>
+        <p class="NormalItalic">For each element the first data line includes:</p>
+        <p class="codeindent">nr // element number (<span style="color: red;">IX</span>); in order from 1 to _nafe</p>
+        <p class="codeindent">icon // icon used to represent flow path ((R4) {W}</p>
+        <p class="codeindent">dtype // element data type (string ? I2)</p>
+        <p class="code">             // element type names are stored in _afe_dnames in dtype order.&#160;</p>
+        <p class="codeindent">name[] // element name (I1) {W}</p>
+        <p class="NormalItalic">and the second line has:</p>
+        <p class="codeindent">desc[] // element description (I1) {W} may be blank</p>
+        <p class="NormalItalic">This is followed by two or more lines of data that depend on the element data type.</p>
+        <p class="NormalItalic">The introductory lines that follow give the type number, the program macro defined as that number, the type name from _afe_dnames, and the data structures to hold the data. The data structures are defined in celmts.h in ContamW and selmts.h in ContamX. Type numbers can change as long as the ordering in _afe_dnames and related arrays reflect that order.</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 23 [DD_DWC] "dct_dwc" stored in structure DEF_DWC.</p>
+        <p class="NormalItalic">The Darcy-Colebrook data consist of: </p>
+        <p class="codeindent">rough // roughness dimension [m] (R4)</p>
+        <p class="codeindent">lam // laminar total loss coefficient per [m] of duct (R4) </p>
+        <p class="codeindent">u_R // units for roughness (I2) {W}</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 24 [DD_PLR] "dct_plr" stored in structure DFE_ORF.</p>
+        <p class="NormalItalic">The orifice data consist of:</p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="codeindent">area // actual area [m^2] (R4) {X}</p>
+        <p class="codeindent">dia // hydraulic diameter [m] (R4) {X}</p>
+        <p class="codeindent">coef // flow coefficient (R4) {X}</p>
+        <p class="codeindent">u_A // units of area (I2) {X}</p>
+        <p class="codeindent">u_D // units of diameter (I2) {X}</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 26 [DD_QCN] "dct_qcn" stored in structure DFE_QCN.</p>
+        <p class="NormalItalic">The volume flow powerlaw data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 25 [DD_FCN] "dct_fcn" stored in structure DFE_FCN.</p>
+        <p class="NormalItalic">The mass flow powerlaw data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 28 [DD_CMF] "dct_cmf" stored in structure DFE_CMF.</p>
+        <p class="NormalItalic">The constant mass flow fan data consist of: </p>
+        <p class="codeindent">Flow // design flow rate [kg/s] (R4)</p>
+        <p class="codeindent">u_F // units of flow (I2) {W}</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 29 [DD_CVF] "dct_cvf" stored in structure DFE_CVF.</p>
+        <p class="NormalItalic">The constant volume flow fan data consist of: </p>
+        <p class="codeindent">Flow // design flow rate [m^3/s] (R4)</p>
+        <p class="codeindent">u_F // units of flow (I2) {W}</p>
+        <p class="code">&#160;</p>
+        <p class="NormalItalic">Element type 27 [DD_FAN] "dct_fan" stored in structure DFE_FAN.</p>
+        <p class="NormalItalic">The first line of performance curve fan data consists of: </p>
+        <p class="codeindent">lam // laminar flow coefficient (R4)</p>
+        <p class="codeindent">turb // turbulent flow coefficient (R4)</p>
+        <p class="codeindent">expt // pressure exponent (R4)</p>
+        <p class="codeindent">rdens // reference fluid density [kg/m^3] {R4}</p>
+        <p class="codeindent">fdf // free delivery flow (prise = 0) [kg/s] {R4}</p>
+        <p class="codeindent">sop // shut-off pressure (flow = 0) [Pa] {R4}</p>
+        <p class="codeindent">off // fan is off if (RPM/rated RPM) &lt; off {R4}</p>
+        <p class="NormalItalic">The second line consists of:  </p>
+        <p class="codeindent">fpc[4] // fan performance polynomial coefficients {R4}</p>
+        <p class="codeindent">npts // number of mesaured data points (I2) {W}</p>
+        <p class="codeindent">Sarea // shut-off orifice area [m^2] {R4} {W}</p>
+        <p class="codeindent">u_Sa // units of shut-off area (I2) {W}</p>
+        <p class="NormalIndentItalic">The next npts lines consists of:  </p>
+        <p class="codeindent">mF // measured flow rates [kg/s] (R4) {W}</p>
+        <p class="codeindent">u_mF // units of measured flows (I2) {W}</p>
+        <p class="codeindent">dP // measured pressure rises [Pa] (R4) {W}</p>
+        <p class="codeindent">u_dP // units of pressure rises (I2) {W}</p>
+        <p class="codeindent">rP // revised pressure rises [Pa] (R4) {W}</p>
+        <p class="codeindent">u_rP // units of revised pressures (I2) {W}</p>
+        <p class="codeindent" style="margin-top: 0;margin-bottom: 0;">&#160;</p>
+        <p class="NormalItalic">Element type 30 [DD_BDQ] "dct_bdq" stored in structure DFE_BDQ.</p>
+        <p class="NormalItalic">The volume flow powerlaw backdraft damper data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient {R4}</p>
+        <p class="codeindent">Cp // turbulent flow coefficient ( dP &gt; 0 ) {R4}</p>
+        <p class="codeindent">xp // pressure exponent ( dP &gt; 0 ) {R4}</p>
+        <p class="codeindent">Cn // turbulent flow coefficient ( dP &lt; 0 ) {R4}</p>
+        <p class="codeindent">xn // pressure exponent ( dP &lt; 0 ) {R4}</p>
+        <p class="codeindent" style="margin-top: 0;margin-bottom: 0;">&#160;</p>
+        <p class="NormalItalic">Element type 31 [DD_BDF] "dct_bdf" stored in structure DFE_BDF.</p>
+        <p class="NormalItalic">The mass flow powerlaw backdraft damper data consist of: </p>
+        <p class="codeindent">lam // laminar flow coefficient {R4}</p>
+        <p class="codeindent">Cp // turbulent flow coefficient ( dP &gt; 0 ) {R4}</p>
+        <p class="codeindent">xp // pressure exponent ( dP &gt; 0 ) {R4}</p>
+        <p class="codeindent">Cn // turbulent flow coefficient ( dP &lt; 0 ) {R4}</p>
+        <p class="codeindent">xn // pressure exponent ( dP &lt; 0 ) {R4}</p>
+        <p class="NormalItalic">After each element comes the following geometry and leakage data stored in structure DUCT.</p>
+        <p class="NormalItalic">The first line of duct geometry data consists of: </p>
+        <p class="codeindent">hdia // hydraulic diameter [m] {R4}</p>
+        <p class="codeindent">perim // perimeter [m] {R4}</p>
+        <p class="codeindent">area // cross sectional area [m^2] {R4}</p>
+        <p class="codeindent">major // major dimension of rectangular or oval duct [m] {R4}</p>
+        <p class="codeindent">minor // minor dimension of rectangular or oval duct [m] {R4}</p>
+        <p class="codeindent">As // duct segment surface area [m^2] {R4} (not used)</p>
+        <p class="codeindent">Qr // duct leakage rate at Pr [L/s/m^2] {R4}</p>
+        <p class="codeindent">Pr // dPstatic for leakage rate [Pa] {R4}</p>
+        <p class="NormalItalic">The second line of duct geometry data consists of: </p>
+        <p class="codeindent">shape // 0 = circle, 1 = rectangle, 2 = oval, 3 = other (I2) {W}</p>
+        <p class="codeindent">u_D // units for diameter (I2) {W}</p>
+        <p class="codeindent">u_P // units for perimeter (I2) {W}</p>
+        <p class="codeindent">u_A // units for area (I2) {W}</p>
+        <p class="codeindent">u_mj // units for major dimension (I2) {W}</p>
+        <p class="codeindent">u_mn // units for minor dimension (I2) {W}</p>
+        <p class="codeindent">u_Qr // units for leakage rate (I2) {W}</p>
+        <p class="codeindent">u_Pr // units for standard dP (I2) {W}</p>
+        <p class="NormalItalic">The duct element section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data</p>
+        <h6>&#160;</h6>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

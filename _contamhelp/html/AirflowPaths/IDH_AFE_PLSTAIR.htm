@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Airflow Paths|Defining Airflow Paths|Airflow Element Types|One-way flow using Powerlaw Models" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Powerlaw Model: Stairwell</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h6>Powerlaw Model: Stairwell</h6>
+        <p>This airflow element allows you to enter a description of a stairway, which ContamW converts to a powerlaw relationship assuming a pressure exponent of 0.5. A stairwell will normally be modeled as a vertical series of zones connected by low resistance openings (this stairwell flow element) through the floors. The resistance is based on a fit to experimental data [<a href="../IDH_References.htm#REF_Achakji">Achakji &amp; Tamura 1998</a>]. This model should only be used between zones on different levels of a building (paths through floors), not between zones on the same level (paths through walls).</p>
+        <p><span style="font-weight: bold;">Name:</span> Enter the name you want to use to identify the airflow element. The airflow element will be saved within the current project and can be associated with multiple airflow paths.</p>
+        <p><span style="font-weight: bold;">Distance Between Levels:</span> The vertical distance between doorways of the stairwell. This is typically equal to the "Distance to level above" of the level below the path with which this element is to be associated.</p>
+        <p><span style="font-weight: bold;">Cross-sectional area:</span> This is the horizontal, cross-sectional, area of the shaft. </p>
+        <p><span style="font-weight: bold;">Density of People:</span> A large number of people in the stairwell influences the flow resistance of the stairwell. The experiment used densities of 1, 2, and 3 people per square meter. These are the only units available in ContamW. The following conversion is provided for your convenience. </p>
+        <p>1 m<sup>2</sup> = 10.76 ft<sup>2</sup></p>
+        <p><span style="font-weight: bold;">Stair Treads:</span> There are two options for this field: open tread and closed tread. This refers to the front of the tread whether or not the tread is open effects flow.</p>
+        <p><span style="font-weight: bold;">Description:</span> Field for entering a more detailed description of the specific airflow element.</p>
+        <p><span style="font-weight: bold;">Icon:</span> Choose either the small or large opening icon as appropriate for the specific airflow element. The icon has no effect on the simulations.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

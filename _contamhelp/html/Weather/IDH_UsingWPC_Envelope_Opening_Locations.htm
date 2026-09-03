@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with WPC Files" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Envelope Opening Locations</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>Envelope Opening Locations</h3>
+        <p>When using WPC Files you must enter the coordinates for each opening connected to the ambient including: airflow paths, duct terminals, and outdoor air intakes of simple air handling systems. Coordinate data is input via the Wind Pressure Property Pages of these building components. The location information will be used to create the PLD File which in turn is used to verify that there is matching information within the WPC File prior to performing a simulation.
+
+</p>
+        <p><b>NOTE:</b> Even though every opening connected to ambient requires location data when using WPC Files, they are not required to be unique. They simply must match a location within the WPC File.
+</p>
+        <p class="SubHeading1">Airflow Paths and Duct Terminals
+</p>
+        <p>Enter the X and Y coordinates and units for each airflow path and duct terminal. The Z coordinate will be calculated by ContamW to be the Relative Elevation plus the Elevation of the building level on which the path or terminal is located.
+</p>
+        <p class="SubHeading1">Outdoor Air Intakes of Simple Air Handling Systems
+</p>
+        <p>Enter the X, Y and Z coordinates and units for the outdoor air intake of each Simple AHS. Enter the Z coordinate as the height of the midpoint of the outdoor air intake with respect to the building reference height.
+</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

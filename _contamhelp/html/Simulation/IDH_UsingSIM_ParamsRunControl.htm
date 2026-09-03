@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Simulations|Simulation Parameters" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Simulation Run Control Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4><a name="_Ref119727171"></a>Simulation – Run Control Properties</h4>
+        <p class="SubHeading1"><span style="font-weight: bold;">Simulation Method</span>
+        </p>
+        <p>Set the type of simulation you wish to perform for both Airflows and Contaminants by checking the appropriate radio buttons. Refer to the Working with Simulations section for a table of allowable combinations of simulation method settings.
+        </p>
+        <p><span style="font-weight: bold;">Airflows:</span> You can use one of the following airflow calculation methods.
+        </p>
+        <ul>
+            <li value="1"><span style="font-weight: bold;">Steady:</span> A steady state simulation will utilize the weather set by pressing the Edit Weather Button on the Run Control property page. This will calculate a single set of airflows. If any building components have schedules associated with them, then schedule values will be determined by the <span style="font-style: italic;">Day Type</span> set in the <span style="font-style: italic;">Steady State Weather Data</span> (see <a href="../Weather/IDH_PP_WTH_SS.htm">Weather Properties</a> under <a href="../Weather/IDH_UsingWTH_Working_with_Weather_and_Wind.htm">Working with Weather and Wind</a>) and the <span style="font-style: italic;">Steady Simulation Time</span>.</li>
+            <li value="2"><span style="font-weight: bold;">Transient:</span> Transient simulations perform calculations over a user-defined period of time at a regular time interval referred to as the calculation time step. When performing a transient simulation CONTAM can use either steady state weather data or weather and contaminant files that define the weather and ambient contaminant concentrations for the time period of the simulation. See Defining Transient Weather and Wind in the Working with Weather and Wind section for more details.
+        </li>
+            <li value="3"><span style="font-weight: bold;">Duct Balance:</span> Use this feature when working with detailed duct systems to have CONTAM adjust terminal duct balancing coefficients to provide user-defined airflow rates at the duct terminals. See Working with Ducts.
+            </li>
+            <li value="4"><span style="font-weight: bold;">Building Airflow Test:</span> The <span style="font-style: italic;">building airflow test</span> method performs calculations that aid in verifying data input to your building model. Use this test prior to performing analysis with your building model to verify system and total airflow rates to each zone, zone temperatures and whole building air change rate. You must have only one contaminant set to be used in the simulation, and it must be a trace contaminant, when you run this test. Results of the test will be written to the validation file having the same name as the project file and the .val extension (see <a href="../Results/IDH_UsingResults_Working_with_Results.htm">Working with Results</a>).&#160; This file will be overwritten each time either the <span style="font-style: italic;">Building Airflow Test</span> or <span style="font-style: italic;">Building Pressurization Test</span> is performed.</li>
+            <li value="5">
+                <p><span style="font-weight: bold;">Building Pressurization Test:</span> The building pressurization method performs an automated whole-building fan pressurization test (see <a href="../Applications/IDH_Apps.htm">Special Applications of CONTAM</a>) to determine building envelope airtightness under idealized test conditions. See the Special Applications of CONTAM section for a detailed discussion of building pressurization tests.<br />ContamX will temporarily set conditions for the duration of the building pressurization calculation as follows:</p>
+                <ul style="list-style-type: circle;">
+                    <li value="1">no-wind</li>
+                    <li value="2">ambient pressure set to steady state barometric pressure</li>
+                    <li value="3">ambient and interior zones set to 20 ºC</li>
+                    <li value="4">conditioned zones (included in building volume) set to constant test pressure<br />NOTE: This will eliminate the effect of airflow between building zones as explained in the Special Applications of CONTAM section. 
+                </li>
+                    <li value="5">unconditioned zones (not included in building volume) set to variable pressure</li>
+                    <li value="6">“close” all duct terminals and duct leaks
+                </li>
+                    <li value="7">
+                        <p>“turn off” all forced flow elements</p>
+                        <p class="BulletAfter2">When you perform a simulation using this method, ContamX will perform a steady state airflow calculation under the above conditions and calculate the total airflow rate between conditioned and unconditioned zones of the project. Results of the test will be written to the validation file having the same name as the project file and the .val extension (see <a href="../Results/IDH_UsingResults_Working_with_Results.htm">Working with Results</a>). This file will be overwritten each time either the <span style="font-style: italic;">Building Airflow Test</span> or <span style="font-style: italic;">Building Pressurization Test</span> is performed.</p>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+        <p><span style="font-weight: bold;">Contaminants:</span> You can choose one of the following contaminant simulation options:       </p>
+        <ul>
+            <li value="1"><span style="font-weight: bold;">None:</span> Do not perform contaminant analysis, only airflow analysis.
+        </li>
+            <li value="2"><span style="font-weight: bold;">Steady:</span> The steady contaminant option can only be used in conjunction with steady airflows and will run until the system reaches equilibrium. Contaminant sources are modeled as continuous sources with a constant generation rate.&#160; If any sources have schedules associated with them, then schedule values will be determined by the <span style="font-style: italic;">Day Type</span> set in the <span style="font-style: italic;">Steady State Weather Data</span> (see <a href="../Weather/IDH_PP_WTH_SS.htm">Weather Properties</a> under <a href="../Weather/IDH_UsingWTH_Working_with_Weather_and_Wind.htm">Working with Weather and Wind</a>) and the <span style="font-style: italic;">Steady Simulation Time</span>. Burst sources will be ignored. Ambient contaminant concentrations will be the <span style="font-style: italic;">Default Concentration</span> values of each contaminant.</li>
+            <li value="3"><span style="font-weight: bold;">Transient:</span> Transient simulations performs calculations over a user-defined period of time and at a regular time interval referred to as the <span style="font-style: italic;">calculation time step</span>. When performing a transient simulation CONTAM can use either constant ambient concentrations as given by default contaminant concentrations or dynamic concentrations from external contaminant files. See Contaminant Files and Working with WPC Files.
+            </li>
+            <li value="4"><span style="font-weight: bold;">Cyclic:</span> A cyclic simulation repeats a 24 hour cycle until steady-periodic conditions are achieved. As with transient simulations, cyclic simulations can implement either steady state or dynamic weather and contaminant data. If using dynamic weather or contaminant data files (CTM and WTH), data will be obtained from the file for the date indicated by <span style="font-style: italic;">Steady &amp; Cyclic Simulations</span> date.
+          </li>
+        </ul>
+        <p><span style="font-weight: bold;">Transient Integration Method:</span> Select the type of transient or cyclic simulation to perform from the available options. More detailed options are available via the <a href="IDH_UsingSIM_ParamsContNumerics.htm">Contaminant Numerics</a> simulation parameters.</p>
+        <ul>
+            <li value="1"><span style="font-weight: bold;">Default Solver (Implicit Euler):</span> This is the traditional, fixed time step solver.</li>
+        </ul>
+        <ul>
+            <li value="1"><b>Short Time Step (Explicit Euler):</b> You can use this method with either the Transient or Cyclic contaminant simulation methods. This method is required to perform simulations of one-dimensional convection diffusion zones and/or ducts. See Contaminant Numerics Properties for specific control in applying the <i>short time step</i> method to 1D ducts and 1D zones.<br />NOTE: This is an explicit solution method that should only be used for short time steps, therefore there are some checks performed to help avoid known stability problems. ContamX will check the zone airflow rates (of all zones having non-zero volumes) during airflow simulation to ensure that they do not exceed one air change per time step. If this limitation is exceeded for any zone, then the simulation will be terminated with an error message indicating the offending zone(s). The problem could also manifest itself with an error message indicating an invalid zone density was calculated due to the calculation of a negative absolute pressure.</li>
+            <li value="2"><b>CVODE:</b> This is a variable time step ordinary differential equation solver [<a href="../IDH_References.htm#REF_Hindmarsh_CVODE_2012">Hindmarsh and Serban 2012</a>]. It may provide a more accurate solution, especially in cases with stiff contaminant transport systems. Stiff systems are those with wide variations in system dynamics, e.g., air change rates or kinetic reactions [<a href="../IDH_References.htm#REF_Lorenzetti_2013">Lorenzetti 2013</a>].<br />NOTE: This solver is currently limited in that it will not handle projects that contain 1D zones, CFD zones, occupant exposure, burst sources, or zones (nodes) with zero volume. Further, the CVODE solver does not support the bridge mode (socket communication capabilities).</li>
+        </ul>
+        <p><span style="font-weight: bold;">Reset initial contaminant concentrations to…:</span> Use this feature to reset the initial contaminant concentrations of all zones, including the implicit supply and return zones of simple air handling systems, prior to running a simulation. You can reset initial concentrations to <span style="font-style: italic;">Zero</span>, <span style="font-style: italic;">Ambient</span> or <span style="font-style: italic;">Current Results Concentrations</span>. If you do not check one of these boxes, ContamX uses the Initial Concentrations indicated on the Contaminant Property page for each zone (See <a href="../Zones/IDH_PP_ZONEPARMS1.htm">Contaminant Data</a> under the <a href="../Zones/IDH_UsingZones_WorkingWithZones.htm">Working with Zones</a> section). Checking one of these boxes causes the Initial Concentration values for each zone to be overwritten.
+        </p>
+        <ul>
+            <li value="1"><span style="font-weight: bold;">Zero:</span> This option sets the initial contaminant concentrations to zero.        </li>
+            <li value="2"><span style="font-weight: bold;">Ambient Concentrations:</span> This option sets the initial contaminant concentrations to the default contaminant concentrations as set when defining Project Species (See <a href="../Contaminants/IDH_UsingContaminants_SpeciesProperties.htm">Species Properties</a>).     </li>
+            <li value="3"><span style="font-weight: bold;">Current Results Concentrations:</span> This option sets the initial contaminant concentrations to be the same as the concentrations in each zone at the time step for which ContamW is currently displaying results on the SketchPad. You must be in the results viewing mode to utilize this feature. The current time step is displayed in the middle pane of the Status Bar (See the <a href="../GetStarted/IDH_GetStart_OverviewOfGUI.htm#StatusBar">Status Bar</a> section). This option is especially useful for cyclic simulation, where you may continue a simulation that has been interrupted before convergence, continue simulation with tighter convergence criteria, or create a project file for archive which can be rerun as a one-day transient simulation to quickly compute cyclic results.
+        </li>
+        </ul>
+        <blockquote>
+            <ul style="list-style-type: circle;">
+            </ul>
+        </blockquote>
+        <p class="SubHeading1"><span style="font-weight: bold;">Simulation Dates and Times</span>
+        </p>
+        <p>These dates and times are used to set the date and time labels put on steady state simulation results and to control the duration of transient simulations by allowing you to set the start and stop dates and times. Depending on the simulation method chosen different simulation "Dates and Times" fields will be enabled or disabled. 
+        </p>
+        <ul>
+            <li value="1">
+                <p><span style="font-weight: bold;">Steady &amp; Cyclic Simulations:</span> For <span style="font-style: italic;">steady simulations</span>, the date field is only used to label the simulation results, however, the time field is used to obtain schedule values from the day schedules based on the day type which the simulation is set to utilize. You set the <span style="font-style: italic;">D</span><span style="font-style: italic;">ay </span><span style="font-style: italic;">T</span><span style="font-style: italic;">ype</span> via the steady state Weather and Wind Parameters property sheet (see <a href="../Weather/IDH_PP_WTH_SS.htm">Weather Properties</a> under <a href="../Weather/IDH_UsingWTH_Working_with_Weather_and_Wind.htm">Working with Weather and Wind</a>). ContamX will then utilize the <span style="font-style: italic;">D</span><span style="font-style: italic;">ay </span><span style="font-style: italic;">T</span><span style="font-style: italic;">ype</span> and time to select schedule values for items that have schedules associated with them. The value of <span style="font-style: italic;">Day Type</span> will be from 1 to 12 and will be used to select from the twelve day schedules associated with each week schedule in use during a simulation.</p>
+                <p class="BulletAfter1">For <span style="font-style: italic;">cyclic simulations</span> with steady airflows, the date field is only used to label the simulation results, and the <span style="font-style: italic;">day type</span> of the steady state data is used to determine schedule values. For cyclic simulation with transient airflows, the date field is used to determine schedule values and obtain data from weather and contaminant files if being used, otherwise steady state data is used. Cyclic simulations always begin at time 00:00:00 and end at time 24:00:00, so the time field is irrelevant.</p>
+            </li>
+            <li value="2">
+                <p><span style="font-weight: bold;">Transient Simulation, Start and Stop:</span> These date and time fields are used to set the starting and stopping date and time of transient simulations. You should be sure to use only those dates available in both the weather and ambient contaminant files. The available dates in these files will be displayed in the Transient Weather Data and Transient Contaminant Data sections below. Each day of the WTH file contains a Day Type field which will be used to determine which of each week schedule's twelve day schedules should be used for each day of simulation.</p>
+                <p class="BulletAfter1">NOTE: If using steady state weather with a transient simulation, simulation will begin with the <span style="font-style: italic;">D</span><span style="font-style: italic;">ay </span><span style="font-style: italic;">T</span><span style="font-style: italic;">ype </span>set in the steady state weather and cycle through the first seven day schedules if simulating more than one day.</p>
+                <p class="BulletAfter1"><b>Use restart file:</b> Each transient and cyclic simulation produces a restart file that contains the status of the simulation at midnight for each day of the simulation, and at the last time step of a simulation if it does not end at midnight. The restart file will have the same name as the PRJ file but have the RST extension. If a restart file with the same name as the project file is available, the dates for which restart data is available will be listed as "Restart data from ___ to ___" below the "Use restart file" check box. Enter the date in the edit box labeled “Restart data beginning.” If a restart file is used in a simulation, the existing restart file will be overwritten.</p>
+                <p class="BulletAfter1">This feature can be useful when running long multi-day simulations with the potential for generating impractically large detailed simulation results files. You can avoid the generation of large results files by running the multi-day simulation outputting only summary data files, reviewing the results to determine days of interest, e.g., highest concentration, then rerunning the simulation for the days of interest using the restart file and outputting detailed results.</p>
+                <p class="BulletAfter1">You can also use this feature to load <i>boundary layer</i> and <i>deposition/resuspension source/sinks</i> by first running a cyclic simulation for a single day, then using the restart file to run a transient simulation for the desired period of time.</p>
+            </li>
+        </ul>
+        <p class="SubHeading1"><span style="font-weight: bold;"><a name="SIM_TimeStepAnalysis"></a>Simulation Time Steps</span>
+        </p>
+        <p>These are the time increments that CONTAM uses when performing transient and cyclic simulations.
+            </p>
+        <ul>
+            <li value="1"><span style="font-weight: bold;">Calculation:</span> The <span style="font-style: italic;">calculation time step</span> is that used by ContamX when performing transient airflow and contaminant calculations for the transient and cyclic simulations. Shorter time steps provide for greater accuracy of results but require more computation time. There must be an integral number of <span style="font-style: italic;">calculation time steps</span> in an hour. The minimum allowable time step is 1 second and the maximum is 1 hour.<br />Selecting a time step can also affect the ability to capture scheduled events. CONTAM provides the means to schedule events via day/week schedules and multiple time-based input files including WTH, CTM, WPC, CVF and DVF files. You can have ContamW help you choose this time step by selecting <b>Time Step A<u>n</u>alysis...</b> from the <b><u>S</u>imulation</b> menu. ContamW will review all schedules and input files to determine the maximum recommended time step required to capture all of the scheduled events. This will display a dialog box that will provide you with a list of day schedules and input files along with the limiting time step for each and an overall limiting time step.</li>
+            <li value="2"><span style="font-weight: bold;">Output:</span> Simulation results are written to results files (see <a href="../Results/IDH_UsingResults_Working_with_Results.htm">Working with Results</a>) at the <span style="font-style: italic;">output time step</span> which must be an even multiple of the <span style="font-style: italic;">calculation time step</span>. Shorter time steps allow you to see the results in more detail, but also create larger results files. Utilizing an <span style="font-style: italic;">output time step</span> that is longer than the <span style="font-style: italic;">calculation time step</span> can still retain relatively high accuracy while reducing the size of the results files. Using these parameters you can refine your simulation period to provide detailed simulation results where needed.
+            </li>
+            <li value="3"><span style="font-weight: bold;">Status:</span> CONTAM uses the <span style="font-style: italic;">status time step</span> to determine how often the simulation progress is updated on the CONTAMX Simulation Control dialog box. The <span style="font-style: italic;">status time step</span> must be a multiple of the <span style="font-style: italic;">calculation time step</span>.
+            </li>
+        </ul>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

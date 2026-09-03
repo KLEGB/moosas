@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" class="">
+    <head><title>Section 2: Species and Contaminants</title>
+        <script language="JavaScript" title="BSSC Special Effects" src="../../ehlpdhtm.js">
+        </script>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" type="text/css" />
+    </head>
+    <body>
+        <h5>Section 2: Species and Contaminants</h5>
+        <p>Species/contaminant data are read by the spcs_read( ) function and saved by the spcs_save( ) function in ContamW. They are read by ctm_read( ) in ContamX.  </p>
+        <p class="NormalItalic">The species/contaminant section starts with:</p>
+        <p class="code">_nctm // total number of species simulated (= contaminants) (I2)</p>
+        <p>The next line lists the numbers of the _nctm species treated as contaminants. The ordering of the contaminants is important, and is set in ContamW.</p>
+        <p class="code">_ctm[i] // i = 0 to nctm-1</p>
+        <p class="NormalItalic">The third line of this section gives:</p>
+        <p class="code">_nspcs // the number of species (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">This is followed by a header line and then two lines of data for each species:</p>
+        <p class="NormalIndentItalic">The first line of species data consists of:</p>
+        <p class="codeindent">nr // species number (<span style="color: red;">IX</span>), in order from 1 to _nspcs</p>
+        <p class="codeindent">sflag // 1 = simulated, 0 = unsimulated species (I2) {W}</p>
+        <p class="codeindent">ntflag // 1 = non-trace, 0 = trace species (I2) {W}</p>
+        <p class="codeindent">molwt // molar mass [kg/kmol] - gas (R4)</p>
+        <p class="codeindent">mdiam // mean diameter – particle [m] (R4)</p>
+        <p class="codeindent">edens // effective densiity – particle [kg/m^3] (R4)</p>
+        <p class="codeindent">decay // decay constant [1/s] (R4) {W}</p>
+        <p class="codeindent">Dm // molecular diffusion coefficient [m<span style="vertical-align: super;font-size: 10pt;">2</span>/s] (R4)</p>
+        <p class="codeindent">ccdef // default concentration [kg/kg air] (R4)</p>
+        <p class="codeindent">Cp // (unused) specific heat at constant pressure [J/kgK] (R4)</p>
+        <p class="codeindent">ucc // units to display concentration (I2) {W}</p>
+        <p class="codeindent">umd // units to display mean diameter (I2) {W}</p>
+        <p class="codeindent">ued // units to display effective density (I2) {W}</p>
+        <p class="codeindent">udm // units to display diffusion coefficient (I2) {W}</p>
+        <p class="codeindent">ucp // units to display specific heat (I2) {W}</p>
+        <p class="codeindent">name[] // species name (I1)</p>
+        <p class="NormalIndentItalic">The second line is:</p>
+        <p class="codeindent">desc[] // species description (I1) {W}</p>
+        <p class="NormalItalic">The section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data (I2)</p>
+    </body>
+</html>

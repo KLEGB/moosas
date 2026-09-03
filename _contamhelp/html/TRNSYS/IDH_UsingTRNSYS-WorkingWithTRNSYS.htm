@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with TRNSYS</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h1><a name="top"></a>Working with TRNSYS</h1>
+        <p>The CONTAM simulation engine, ContamX, can be controlled via a set of TCP/IP socket communication messages. This enables CONTAM to be coupled with other simulation software. This socket communication capability, or bridge mode, has been utilized to couple CONTAM with TRNSYS (<a href="http://www.trnsys.com/" title="TRNSYS Software website" alt="TRNSYS Software website">www.trnsys.com</a>) to perform combined airflow and heat transfer simulations for multizone buildings. More specifically, TRNSYS implements a Type56 multizone building heat transfer module with which CONTAM can be "synchronized" to share inputs and outputs between a Type56 and a CONTAM representation of a multizone building. </p>
+        <p>Historically, TRNSYS has implemented Type96 and Type97, which were based on the airflow calculation capabilities of CONTAM and its predecessor program AIRNET [<a href="../IDH_References.htm#REF_Walton_1989a">Walton 1989a</a>]. These types only provided access to a subset of the airflow network calculations that CONTAM/AIRNET were capable of performing. Further, the types did not support the contaminant calculations that CONTAM was capable of performing. Therefore, Type98 has been developed that acts as a server to ContamX and provides communication and exchange of information/data between Type56 and ContamX. One advantage of timplementation provides the continued benefit of the full features of CONTAM as it evolves without requiring a redevelopment of a new type as previously required with Type96/97. The socket communications messages associated with this coupling are documented in <a href="../Appendices/AppE.htm">Appendix B</a>.</p>
+        <p>This section provides an overview of how to implement Type98 [<a href="../IDH_References.htm#REF_Dols_2014a">Dols 2014a</a>, <a href="../IDH_References.htm#REF_Dols_2014b">Dols 2014b</a>]. This implementation is currently limited to the so-called <i>quasi-dynamic</i> (or ping-pong) method of coupling, whereby each analysis tool converges independently, as opposed to the <i>dynamic</i> coupling (or onion) method whereby convergence is attained between the coupled tools.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

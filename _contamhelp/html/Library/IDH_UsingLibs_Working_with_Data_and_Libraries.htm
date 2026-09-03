@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with Data and Libraries</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2><a name="kanchor120"></a>Working with Data and Libraries</h2>
+        <p>CONTAM enables you to share certain types of data between building components contained within a project as well as between projects. The sharing of data within a project (locally) is accomplished by allowing you to associate multiple building components with <span style="font-style: italic;">data elements</span> defined within a project. Sharing data between projects is accomplished by exporting data elements from one project into CONTAM library files and then retrieving the data elements into another project from the library files. The following table lists the different types of data elements implemented by CONTAM. All of the data elements can be shared within a project, and all but occupancy schedules can be shared between projects. </p>
+        <div align="center">
+            <table class="Center">
+                <col />
+                <tr>
+                    <td class="HeadCenterBold">Library/Local Data Elements</td>
+                </tr>
+                <tr>
+                    <td>Contaminant-related (LB0)</td>
+                </tr>
+                <tr>
+                    <td>&#160;&#160;&#160;Species</td>
+                </tr>
+                <tr>
+                    <td>&#160;&#160;&#160;Source/Sink Elements</td>
+                </tr>
+                <tr>
+                    <td>&#160;&#160;&#160;Contaminant Filters</td>
+                </tr>
+                <tr>
+                    <td>&#160;&#160;&#160;Kinetic Reactions</td>
+                </tr>
+                <tr>
+                    <td>Schedules (LB1)</td>
+                </tr>
+                <tr>
+                    <td>Wind Pressure Profiles (LB2)</td>
+                </tr>
+                <tr>
+                    <td>Airflow Elements (LB3)</td>
+                </tr>
+                <tr>
+                    <td>Duct Flow Elements (LB4)</td>
+                </tr>
+                <tr>
+                    <td>Control Super Elements (LB5)</td>
+                </tr>
+                <tr>
+                    <td class="HeadCenterBold">Local-Only Data Elements</td>
+                </tr>
+                <tr>
+                    <td>Occupancy Schedules</td>
+                </tr>
+            </table>
+        </div>
+        <p>&#160;</p>
+        <p class="SubHeading1">Data Elements</p>
+        <p>You create and modify data elements according to the procedures given throughout the "Using CONTAM" section of this manual for the specific data elements. Once you have created a data element, you can associate it with the relevant building components as you create them. You do this by selecting the desired element from the local list that ContamW presents to you when you are editing the properties of a particular building component. To share data elements between project files, you must utilize the CONTAMW Library Manager. You must also use the CONTAMW Library Manager to delete data elements from either the local project or the library. To delete local data elements, they must not be referenced by any building components.</p>
+        <p class="SubHeading1">Library Files</p>
+        <p>CONTAM Libraries are files that contain the descriptions of sharable data elements. Each type of sharable data element is stored in a different library file. You can create as many of each type of library file that you want, and store them anywhere within the file structure of your computer. Each type of library file is associated with a different three-character extension as shown in the table above. </p>
+        <p class="SubHeading1"><a name="IDMID_UsingLibs_CONTAMWLibraryManager"></a>CONTAMW Library Manager</p>
+        <p>The CONTAMW Library Manager, shown in the following figure, is a dialog box that is displayed when you access data elements from the <span style="font-weight: bold;text-decoration: underline;">D</span><span style="font-weight: bold;">ata</span> menu or by clicking on a "Library…" button when editing the properties of one of the building components that utilizes library data elements. This dialog box is divided into three sections: Library File, Library Elements and Local Project Elements sections. The Library File section displays the name of the currently displayed library file and allows you to save, rename and open new and existing library files. The Library Elements section displays the data elements contained in the library file that is currently listed in the Library File section. The Local Project Elements section displays the data elements that are contained in the current project file.</p>
+        <p>
+            <img src="../../image/LibManager.gif" border="0" alt="image\LibManager.gif" />
+        </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

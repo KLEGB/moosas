@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication|ContamX TCP/IP Message Formats" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>ADJ_ELEMENT_MSGTYPE</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3>ADJ_ELEMENT_MSGTYPE</h3>
+        <p>This message can be received by ContamX at any time while in the <span style="font-weight: normal; font-style: italic;">ready mode</span>. It is used to change the airflow element of an airflow path from one element to another. This could be useful, for example, to change a closed door element to a two-way open door element. </p>
+        <p class="code">Message Header;</p>
+        <p class="code"><span style="color: blue;">int </span>path_id;        <span style="color: #008100;">// id of air flow path</span></p>
+        <p class="code"><span style="color: blue;">int </span>element_index;  <span style="color: #008100;">// index of the new element the path is to reference</span></p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

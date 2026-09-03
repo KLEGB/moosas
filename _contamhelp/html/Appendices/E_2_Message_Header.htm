@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix B - ContamX TCP/IP Socket Communication|ContamX TCP/IP Message Formats" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Message Header and Message IDs</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="top"></a>Message Header and Message IDs</h3>
+        <p>The message header is the first part of every message. It provides a consistent means of establishing the specific information that is to follow. The specifics will depend on the <span style="font-family: 'Courier New';">type</span> field of the message. The <span style="font-family: 'Courier New';">length</span> field includes the length of the header and the specific portion of the message that follows. The <span style="font-family: 'Courier New';">version</span> field is provided to enable programs that utilize the socket communication capabilities of ContamX to ensure conformity to the messaging requirements as they evolve due to modifications/enhancements of the methodology.</p>
+        <p class="code"><span style="color: blue;">char </span>pattern[8];&#160;<span style="color: #008100;">// string to verify the header ‘ACATMSG’.</span></p>
+        <p class="code"><span style="color: blue;">int </span>length;&#160;&#160;&#160;&#160;&#160;&#160;<span style="color: #008100;">// length of entire message in bytes</span></p>
+        <p class="code"><span style="color: blue;">int </span>type;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;<span style="color: #008100;">// type of message (see table below.)</span></p>
+        <p class="code"><span style="color: blue;">int </span>version;&#160;&#160;&#160;&#160;&#160;<span style="color: #008100;">// current message version # = </span><span style="font-weight: bold; color: #8b0000;">10</span></p>
+        <p class="code">&#160;</p>
+        <h4>Message Type Definitions</h4>
+        <p>The value after each ID indicates the message version for which the message was introduced or modified. The message version must match that of the ContamX build or an error will occur.</p>
+        <h5>Project information messages:</h5>
+        <p class="codeindent">BLDG_INFO_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;1</p>
+        <p class="codeindent">SIMPARM_INFO_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;2 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">AGENT_INFO_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;3</p>
+        <p class="codeindent">ELEMENT_INFO_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;4</p>
+        <p class="codeindent">INPUT_CTRL_INFO_MSGTYPE&#160;&#160;&#160;&#160;5</p>
+        <p class="codeindent">OUTPUT_CTRL_INFO_MSGTYPE&#160;&#160;&#160;6 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">AHSP_INFO_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;7 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">ZONE_INFO_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;8</p>
+        <p class="codeindent">PATH_INFO_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;9</p>
+        <p class="codeindent">JCT_INFO_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;10 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">TERM_INFO_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;11 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">LEAK_INFO_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;12 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">DUCT_INFO_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;13 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">AHS_INFO_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;14 <span style="color: #006400;">// v9</span></p>
+        <h5>Execution control messages:</h5>
+        <p class="codeindent">CX_READY_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;0</p>
+        <p class="codeindent">CX_ADVANCE_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;20</p>
+        <p class="codeindent">CX_ERROR_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;200</p>
+        <h5>Project modification messages:</h5>
+        <p class="codeindent">ADJ_ZONE_CONC_MSGTYPE&#160;&#160;&#160;&#160;&#160;30 <span style="color: #006400;">// v7</span><span style="font-weight: bold;"></span></p>
+        <p class="codeindent">ADJ_ZONE_TEMP_MSGTYPE&#160;&#160;&#160;&#160;&#160;40 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">ADJ_JCT_TEMP_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;50 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">ADJ_ELEMENT_MSGTYPE&#160;&#160; &#160;&#160;&#160;&#160;60</p>
+        <p class="codeindent">ADJ_CONTROL_NODE_MSGTYPE&#160;&#160;70</p>
+        <p class="codeindentCW2">ADJ_WTH_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;80 <span style="color: #006400;">// v8, v10</span></p>
+        <p class="codeindent">ADJ_WPC_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;90</p>
+        <p class="codeindent">ADJ_AHSP_FLOWS_MSGTYPE&#160;&#160;&#160;100 <span style="color: #006400;">// v9</span></p>
+        <p class="codeindent">ADJ_AHS_POA_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;110 <span style="color: #006400;">// v9</span></p>
+        <p class="codeindentCW2">ADJ_ZONE_HR_MSGTYPE&#160;&#160;&#160;&#160;&#160;&#160;190 <span style="color: #006400;">// v10</span></p>
+        <h5>Simulation result messages:</h5>
+        <p class="codeindent">CONC_UPDATE_MSGTYPE&#160; &#160;&#160;&#160;&#160;120</p>
+        <p class="codeindent">PATH_FLOW_UPDATE_MSGTYPE 130<span style="color: #006400;"> // v8</span></p>
+        <p class="codeindent">TERM_FLOW_UPDATE_MSGTYPE&#160;140 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">AHSP_FLOW_UPDATE_MSGTYPE&#160;150 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">DUCT_FLOW_UPDATE_MSGTYPE  160 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">LEAK_FLOW_UPDATE_MSGTYPE  170 <span style="color: #006400;">// v8</span></p>
+        <p class="codeindent">CTRL_NODE_UPDATE_MSGTYPE  180 <span style="color: #006400;">// v8</span></p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

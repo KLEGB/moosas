@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix A - PRJ File Format" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Section 8b: Filters</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Section 8b: Filters</h5>
+        <p>Filter data are read by the filter_read( ) function and saved by the filter_save( ) function. The data are stored in the FLT_DSC structures that are defined in contam.h for ContamW and simdat.h for ContamX.</p>
+        <p class="NormalItalic">The filter section starts with: </p>
+        <p class="code">_nfilt // number of filters (<span style="">IX</span>)</p>
+        <p class="NormalItalic">This is followed by data for all <span style="font-family: 'Courier New';font-size: 10pt;">_nfilt</span> filters.</p>
+        <p class="NormalItalic">For each filter the first data line includes:</p>
+        <p class="codeindent">nr // filter number (<span style="">IX</span>); in order from 1 to _nfilt</p>
+        <p class="codeindent">fe&#160;&#160;// filter element number (<span style="">IX</span>)</p>
+        <p class="codeindent">nsub &#160;// number of sub-elements, 1 if not super filter (<span style="">IX</span><span style="">)</span></p>
+        <p class="NormalItalic">This is followed by <i style="font-style: normal;font-family: 'Courier New';">nsub</i> lines of initial total relative loadings:</p>
+        <p class="codeindent">load // initial relative loading [-] (R4)</p>
+        <p class="codeindent">nsload&#160;// number of species loadings (I2) [0]</p>
+        <p class="NormalIndentItalic">This is followed by <span style="font-family: 'Courier New';">nload</span><span style=""> lines of species loading data:&#160; [not yet used; </span><span style="font-style: normal;">nsload</span><span style=""> = 0] </span></p>
+        <p class="codeindent">&#160;&#160;&#160;spcs[]&#160;&#160; // species name (I1)</p>
+        <p class="codeindent">&#160;&#160;&#160;load&#160;&#160;&#160;&#160; // initial relative loading [-] (R4)</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

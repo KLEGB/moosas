@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Zones|Defining Zones|Zone Properties" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Zone Data</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4><a name="kanchor23"></a>Zone – Zone Data Properties</h4>
+        <p>These are the basic properties that describe a zone.</p>
+        <p><span style="font-weight: bold;">Zone Name:</span> This is the symbolic name of the zone. Enter a name up to 15 characters in length. Zone names must be unique within each level of a building.</p>
+        <p><span style="font-weight: bold;">Dimensions</span>
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Volume:</span> Zone volume is used in the dynamic contaminant calculations. For phantom zones, the zone volume is set at the standard zone icon on the lowest level for the entire height of the zone and includes the volume of the phantom zones on the levels above.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Floor Area:</span><span style="font-weight: bold;"> <![CDATA[ ]]></span>Instead of the volume, you may enter a floor area. Floor area is then multiplied by the height of the current building level to compute a volume. This area is not used for any other purpose by CONTAM. </p>
+        <p class="NormalIndent"><span style="font-weight: bold;"><span style="font-weight: bold;">Color:</span> <![CDATA[ ]]></span>Select a zone fill color to help you distinguish zones on the SketchPad. You must activate the <span style="font-weight: bold;">Color </span><span style="font-weight: bold;text-decoration: underline;">Z</span><span style="font-weight: bold;">ones </span>option from the <span style="font-weight: bold;text-decoration: underline;">V</span><span style="font-weight: bold;">iew</span> menu in order to display zone colors on the SketchPad.</p>
+        <p class="NormalIndent"><span style="font-weight: bold;"><a name="kanchor24"></a><span style="font-weight: bold;">Include in Building Volume:</span> <![CDATA[ ]]></span>This refers to the calculation of whole building <span style="font-style: italic;"><a name="kanchor25"></a>air change rates</span> that you can now have CONTAM perform during simulation. The associated check box is checked by default, so if you do not want the zone to be included in the whole <span style="font-style: italic;">building volume</span> you should uncheck this box. The <span style="font-style: italic;">air change rate</span> and <span style="font-style: italic;"><a name="kanchor26"></a>building pressurization</span> calculations will calculate the total rate of airflow from <span style="font-style: italic;">ambient</span> into all of the zones having this box checked. Typically, you would include all <span style="font-style: italic;">conditioned space</span> in the building volume; for example, you might not want to include an attic or crawl space.</p>
+        <p><span style="font-weight: bold;">Temperature &amp; Pressure</span>
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Temperature:</span> Set the value you want to use as the constant temperature of the zone. Whenever you create a new zone, ContamW will use the default value, which you can override by entering another value. You can set the default zone temperature via the <span style="font-weight: bold;text-decoration: underline;">O</span><span style="font-weight: bold;">ptions…</span> command of the <span style="font-weight: bold;text-decoration: underline;">V</span><span style="font-weight: bold;">iew</span> menu. Optionally, you can define a Schedule for the zone temperature via the Schedule properties (See <a href="IDH_PP_ZONEPARMS3.htm">Schedule Properties</a> for zone temperature).</p>
+        <p class="NormalIndent"><span style="font-weight: bold;"></span>
+        </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Pressure:</span><a name="kanchor27"></a> The zone air pressure relative to ambient can be specified as either variable or constant. Typically you would set the zone pressure to be variable and allow it to be calculated during the simulation. This option is provided mainly for developers to perform analytic test cases of CONTAM.  </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix A - PRJ File Format" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Section 4: Day Schedules</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Section 4: Day Schedules</h5>
+        <p>Day schedule data are read by the dschd_read( ) function and saved by the dschd_save( ) function. The data are stored in the DY_SCHD structures that are defined in contam.h for ContamW and simdat.h for ContamX.</p>
+        <p class="NormalItalic">The day schedules section starts with: </p>
+        <p class="code">_ndsch // number of day schedules (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">This is followed by a data header comment line and then data for all <span style="font-family: 'Courier New';font-size: 10pt;color: black;font-style: normal;">_ndsch</span> schedules.</p>
+        <p class="NormalItalic">For each schedule the first data line includes:</p>
+        <p class="codeindent">nr // schedule number (<span style="color: red;">IX</span>); in order from 1 to _ndsch</p>
+        <p class="codeindent">npts // number of data points (I2)</p>
+        <p class="codeindent">shape // 0 = rectangular; 1 = trapezoidal (I2)</p>
+        <p class="codeindent">utyp // type of units (I2) {W}</p>
+        <p class="codeindent">ucnv // units conversion (I2) {W}</p>
+        <p class="codeindent">name[] // schedule name (I1) {W}</p>
+        <p class="NormalItalic">and the second line has:</p>
+        <p class="codeindent">desc[] // schedule description (I1) {W} may be blank</p>
+        <p class="NormalItalic">This is followed by a line for each of the npts data points:</p>
+        <p class="codeindent">time // time-of-day [s] (hh:mm:ss converted to I4) </p>
+        <p class="codeindent">ctrl // corresponding control value (R4) [-]</p>
+        <p class="NormalItalic">The section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data</p>
+        <h6>&#160;</h6>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

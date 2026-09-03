@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" class="">
+    <head><title>Section 17: Duct Junctions</title>
+        <script language="JavaScript" title="BSSC Special Effects" src="../../ehlpdhtm.js">
+        </script>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" type="text/css" />
+    </head>
+    <body>
+        <h5>Section 17: Duct Junctions</h5>
+        <p>Junction data are read by the jct_read( ) function and saved by the jct_save( ) function. The data are stored in the JCT_DSC structures that are defined in contam.h for ContamW and simdat.h for ContamX.</p>
+        <p class="NormalItalic">The junction section starts with: </p>
+        <p class="code">_njct // number of junctions (I2)</p>
+        <p class="NormalItalic">This is followed by a data header comment line and then data for all _njct junctions.</p>
+        <p class="NormalItalic">For each junction the data line includes:</p>
+        <p class="codeindent">nr // junction number (I2); in order from 1 to _njct</p>
+        <p class="codeindent">flags // junction flags – bits defined in contam.h (U2)</p>
+        <p class="codeindent">jtype // junction type flag: 0=jct, 1=term, 3=term w/ wind {Contam 2.1}</p>
+        <p class="codeindent">pzn // surrounding zone index (I2); converted to pointer</p>
+        <p class="codeindent">dnr // duct segment number - use during read (I2)</p>
+        <p class="codeindent">pk // kinetic reaction index (I2); converted to pointer</p>
+        <p class="codeindent">ps // schedule index (I2); converted to pointer</p>
+        <p class="codeindent">pc // control node index (I2); converted to pointer</p>
+        <p class="codeindent">pld // level index (I2); converted to pointer</p>
+        <p class="codeindent">X // X-coordinate of ambient terminal [m] (R4) {Contam 2.1}</p>
+        <p class="codeindent">Y // Y-coordinate of ambient terminal [m] (R4) {Contam 2.1}</p>
+        <p class="codeindent">relHt // height relative to current level [m] (R4)</p>
+        <p class="codeindent">T0 // initial junction temperature [K] (R4)</p>
+        <p class="codeindent">P0 // initial junction pressure [Pa] (R4)</p>
+        <p class="codeindent">icon // icon used to represent junction (U1) {W}</p>
+        <p class="codeindent">u_Ht // units of height (I2) {W}</p>
+        <p class="codeindent">u_XY      // units of X and Y (I2) {W}</p>
+        <p class="codeindent">u_T // units of temperature (I2) {W}</p>
+        <p class="codeindent">u_dP // units of pressure difference (I2) {W}</p>
+        <p class="NormalItalic">If jtype &gt; 0 then the line continues with:</p>
+        <p class="codeindent">"T:" // string indicates terminal data follows {Contam 2.3} </p>
+        <p class="codeindent">pf        // filter index (I2); converted to pointer {Contam 2.3}</p>
+        <p class="codeindent">pw // wind coefficients index (I2); converted to pointer</p>
+        <p class="codeindent">wPset // constant wind pressure [Pa] (pw==NULL) (R4)</p>
+        <p class="codeindent">wPmod // wind speed(?) modifier (pw!=NULL) (R4)</p>
+        <p class="codeindent">wazm // wall azimuth angle (pw!=NULL) (R4)</p>
+        <p class="codeindent">bal // balance terminal flag (I2) {Contam 2.3}</p>
+        <p class="codeindent">  Ad // area of duct connected to terminal [m^2] (R4) {Contam 2.3}</p>
+        <p class="codeindent">  Af // free area of terminal [m^2] (R4) {Contam 2.3}</p>
+        <p class="codeindent">  Fdes // design flow rate [kg/s] (R4) {Contam 2.3}</p>
+        <p class="codeindent">  Ct // terminal loss coefficient (R4) {Contam 2.3}</p>
+        <p class="codeindent">  Cb // balance loss coefficient (R4) {Contam 2.3}</p>
+        <p class="codeindent">  Cbmax // maximum Cb desired (R4) {Contam 2.3}</p>
+        <p class="codeindent">  u_A&#160; // units of area (I2) {Contam 2.3}</p>
+        <p class="codeindent">  u_F // units of mass flow (I2) {Contam 2.3}</p>
+        <p class="codeindent">ddir // direction of terminal duct - to show wind pressure (U1) {W}</p>
+        <p class="codeindent">fdir // positive flow direction - to show flow (U1) {W}</p>
+        <p class="NormalItalic">The junctions section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data</p>
+        <p class="code">&#160;</p>
+    </body>
+</html>

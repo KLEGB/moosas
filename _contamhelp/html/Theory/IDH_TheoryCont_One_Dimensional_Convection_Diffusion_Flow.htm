@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Theoretical Background|Contaminant Analysis" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>One-Dimensional Convection-Diffusion Flow</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor163"></a>One-Dimensional Convection-Diffusion Flow</h3>
+        <p>Although it is possible to use a time step as short as one second in CONTAM, this may not produce a more accurate simulation of transient concentrations because of the use of control volumes which are treated as well-mixed. For example, consider the sudden release of a contaminant at one end of a 10 m long zone with air flowing at a typical 0.2 m/s from the release point toward a doorway at the other end. It would take about 50 seconds for the contaminant to reach that doorway and begin entering the next zone. In the well-mixed zone model the sudden release will instantly produce a uniform concentration (equal to the mass released divided by the mass of air) everywhere in the zone, even at the far end 10 m from the source, and begins entering the adjacent zone within one time step.  </p>
+        <p>The well-mixed zone model is appropriate when the time step is longer than the mixing time of the zone. Conventional HVAC systems attempt to produce well mixed zones, but the mixing time is on the order of a few minutes rather than seconds.</p>
+        <p>The standard numerical solution to this problem is to create smaller control volumes whose size is similar to the distance traveled in one time step. This is done in the computational fluid dynamics (CFD) models that consider mass, momentum, and energy in computing the flow field in a space that has been divided into <span style="font-style: italic;">many</span> control volumes. Conventional CFD might divide a volume into 30 cells along each of the three directions. This increases the computation effort from one large "cell" per zone to 27,000 (=30×30×30) cells per zone. This analysis approach is not practical for a building containing many zones.</p>
+        <p><span style="font-style: italic;">One-dimensional convection-diffusion flow</span> has been introduced to CONTAM as a compromise between simple, and fast, well-mixed zones and a full CFD simulation. CONTAM 2.4 includes the option of modeling detailed contaminant migration in one, user-defined direction through a zone and or an entire duct system. This one-dimensional model is obviously appropriate for flow through a duct and reasonably appropriate for a long hallway or a zone using a displacement ventilation system. Its use in more conventional well-mixed zones is problematic because of the presence of supply air jets and areas of recirculation.</p>
+        <p>Contaminant flow in one direction consists of a mixture of <span style="font-style: italic;">convection</span>, the bulk movement of air, and <span style="font-style: italic;">diffusion</span>, the mixing of the contaminant within the air. CONTAM’s primary 1-D convection diffusion model is taken directly from the finite volume method developed by Patankar [<a href="../IDH_References.htm#REF_Patankar_1980">Patankar 1980</a>] and described in more detail by Versteeg and Malalasekera [<a href="../IDH_References.htm#REF_Versteeg_and_Malalasekera_1995">Versteeg and Malalasekera 1995</a>]. This model divides the zone into a number of equal-length cells and uses an implicit method (with a fast tri-diagonal equation solver) to guarantee stability in computing the contaminant concentrations. It has been observed that the accuracy of this method declines as the ratio of the flow velocity × time step to the length of the cell increases.</p>
+        <p>This loss of accuracy is a particular problem in the ducts where flow velocities can be quite high. CONTAM uses a Lagrangian model to handle high speed flows in ducts. In the Lagrangian model, air flowing at velocity <span style="font-style: italic;">u</span> will create a cell <span style="font-style: italic;">u</span><span style="font-family: Symbol;font-style: italic">D</span><span style="font-style: italic;">t</span> long at the inlet end of the duct segment and cause the cell at <span style="font-style: italic;">x</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">j</span> to move to <span style="font-style: italic;">x</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">j</span> +<span style="font-style: italic;"> u</span><span style="font-family: 'Symbol';font-style: italic;">D</span><span style="font-style: italic;">t</span> during a time step of <span style="font-family: 'Symbol';font-style: italic">D</span><span style="font-style: italic;">t</span>. The length of the cell, <span style="font-family: 'Symbol';font-style: italic">D</span><span style="font-style: italic;">x</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">j</span>, is unchanged. This process of adding cells at the inlet end of the duct and deleting cells at the outlet end handles convection exactly. During that time step the contaminant will diffuse between adjacent cells due to molecular diffusion and turbulent mixing. That diffusion is solved by a standard implicit method using a tri-diagonal equation solver.  </p>
+        <p>The cell at the outlet end of the duct segment will not necessarily have an edge at <span style="font-style: italic;">x = L</span> in which case an interpolation is necessary to compute the concentration at <span style="font-style: italic;">x = L</span>, which becomes the input concentration to the next duct segment downstream. When two or more duct segments merge at a junction the contaminant concentration at the junction is the flow-weighted average of the concentrations at the end of each incoming duct.  </p>
+        <p>High velocities produce long cells and, therefore, relatively few equations to be solved in a duct segment. At lower velocities more cells are required, and as the velocity approaches zero the number of cells approaches infinity. To prevent this, ContamX automatically switches to the Eulerian finite volume model when <span style="font-style: italic;">u</span><span style="font-family: 'Symbol';font-style: italic">D</span><span style="font-style: italic;">t</span> is less than the user specified minimum cell length. This corresponds to the flow regime where the finite volume is most accurate.</p>
+        <p>The axial dispersion coefficient in ducts is computed from the following relations. For laminar flow (Re &lt; 2000) the Taylor-Aris relation is used [<a href="../IDH_References.htm#REF_Wen_1975">Wen &amp; Fan 1975</a>, p. 127]:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/AxialDisp.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(12)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where</p>
+        <p class="EqnParams"><span style="font-style: italic;">E</span> &#160;= axial dispersion coefficient [m<span style="vertical-align: super;font-size: 10pt;">2</span>/s], </p>
+        <p class="EqnParams"><span style="font-style: italic;">D</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">m</span> &#160;= molecular diffusion coefficient [m<span style="vertical-align: super;font-size: 10pt;">2</span>/s],</p>
+        <p class="EqnParams">
+            <img src="../../image/ubar.png" border="0" height="17" width="14" alt="equation" />&#160;= average fluid velocity [m/s],
+        </p>
+        <p class="EqnParams"><span style="font-style: italic;">d</span> &#160;= duct diameter [m], and
+        </p>
+        <p class="EqnParams"><span style="font-style: italic;">L</span> &#160;= length of duct [m].
+        </p>
+        <p>The condition refers to a minimum length of duct for full development of laminar flow. Until another relation is found for undeveloped flow, equation (12) will be used for all laminar flows.</p>
+        <p>For turbulent flow E depends only on the Reynolds number, Re [<a href="../IDH_References.htm#REF_Wen_1975">Wen and Fan 1975</a>, p. 149]:</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/AxialDispTurb.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(13)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p class="SubHeading1">Duct Thermal Model</p>
+        <p>When performing simulations using the <i>short time step</i> method, a simple duct thermal model has been incorporated into the solution that may be implemented as an option to the user. This model addresses only convective heat transfer.</p>
+        <p>Conservation of thermal energy is analogous to the conservation of contaminant mass in a control volume:  </p>
+        <p>(energy at time <span style="font-style: italic;">t+</span><span style="font-family: 'Symbol';font-style: italic">D</span><span style="font-style: italic;">t </span>) = (energy at time <span style="font-style: italic;">t</span>) + <span style="font-family: 'Symbol';font-style: italic;">D</span><span style="font-style: italic;">t</span> •(rate of energy gain – rate of energy loss)
+        </p>
+        <p>Replace the concentration terms, 
+           <img src="../../image/Calphai.png" />, in equation (8) with specific energy, <i>Cp<sub>i</sub>T<sub>i</sub></i>:
+        </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/ConserveThermal.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(14)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where</p>
+        <p class="EqnParams"><span style="font-style: italic;">Cp</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">i</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">&#160;</span>= specific heat of c.v. <span style="font-style: italic;">i</span>, and</p>
+        <p class="EqnParams"><span style="font-style: italic;">T</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">i</span> &#160;= temperature of c.v. <span style="font-style: italic;">i</span>.</p>
+        <p>This is done only for ducts because the energy in the moving air dominants the solution in a well designed and well built duct system. That is not the case for zones where conductive and airflow heat transfers are of a similar scale. This model ignores heat exchange with the ductwork and its transient impact. However, the model should still be a useful help in computing the draft of a chimney.   </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

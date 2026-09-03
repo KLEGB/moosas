@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Getting Started" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>User Tasks</title>
+        <link href="../../SkinSupport/MadCap.css" rel="stylesheet" />
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h2>User Tasks</h2>
+        <p>The use of CONTAM to analyze airflow or contaminant migration in a building involves five distinct tasks:</p>
+        <ol>
+            <li value="1">
+                <p><font style="font-style:italic; ">Building Idealization</font>:  Form an <font style="font-style:italic; ">idealization</font> or specific <font style="font-style:italic; ">model</font> of the building being considered,</p>
+            </li>
+            <li value="2">
+                <p><font style="font-style:italic; ">Schematic Representation</font>:  Develop a schematic representation of the idealized building using the ContamW <font style="font-style:italic; ">SketchPad</font> to draw the building components,</p>
+            </li>
+            <li value="3">
+                <p><font style="font-style:italic; ">Define Building Components</font>: Collect and input data associated with each of the building components represented on the <font style="font-style:italic; ">SketchPad</font>,</p>
+            </li>
+            <li value="4">
+                <p><font style="font-style:italic; ">Simulation</font>:  Select the type of analysis you wish to conduct, set simulation parameters, and execute the simulation, </p>
+            </li>
+            <li value="5">
+                <p><font style="font-style:italic; ">Review &amp; Record Results</font>:  Review the results of your simulation and record selected portions of the results.</p>
+            </li>
+        </ol>
+        <p class="SubHeading1">Task 1 - Building Idealization</p>
+        <p>Building idealization refers to the simplification of a building into a set of zones that are relevant to the user's goal in performing an analysis. A building can be idealized in a number of ways depending on the building layout, the ventilation system configuration and the problem of interest. This idealization phase of analysis requires some engineering knowledge on the part of the user and is an acquired skill that you can develop through experience in airflow and indoor air quality analysis and by becoming familiar with the theoretical principles and details upon which indoor air quality analysis is based.</p>
+        <p>It is important to note that CONTAM provides a macroscopic model of a building. In this macroscopic view, each zone is considered to be well-mixed. Well-mixed means that a zone is characterized by a discrete set of state variables, i.e., temperature, pressure and contaminant concentrations. Temperature and contaminant concentration do not vary spatially within a zone, and contaminants mix instantly throughout well-mixed zones. However, pressure does vary hydrostatically within all zones.</p>
+        <p>Beginning with CONTAM version 2.4, one-dimensional convection/diffusion zones can be implemented within CONTAM. This feature can be useful in simulating contaminant transport through long or tall zones that are characterized by a single, dominant flow direction. One dimensional convection/diffusion duct models can also be implemented to more realistically capture contaminant transport within entire duct systems. </p>
+        <p>CONTAM is well suited for analyzing the interaction between the zones of a building on a <i>macroscopic</i> or whole-building level. Computational Fluid Dynamics (CFD) analysis is well-suited for analyzing the airflow and contaminant transport characteristics on a <i>microscopic</i> level, i.e., within a single zone of a building. However, the computational resources required to perform a CFD analysis for an entire building is currently prohibitive. Beginning with CONTAM version 3.0, a zero-order turbulence CFD model has been directly integrated with CONTAM to enable consideration of a single, CFD zone in conjunction with the rest of a building that is being analyzed on a macroscopic level, i.e., coupled multizone/CFD analysis.</p>
+        <p class="SubHeading1">Task 2 - SketchPad Representation </p>
+        <p>Developing the SketchPad representation will be the focus of your interaction with ContamW. With ContamW's SketchPad you will be able to draw a diagram – a  <font style="font-style:italic; ">SketchPad diagram</font> – of your building idealization using drawing tools and sets of icons to represent components of the building system. CONTAM translates your diagram into a system of equations that will then be used to model the behavior of the building when you perform a simulation. </p>
+        <p>See <a href="../SketchPad/IDH_UsingSketchPad_WorkingWithTheSketchPad.htm">Working with the SketchPad</a> in the <a href="../IDH_Using_Overview.htm">Using CONTAMW</a> section.</p>
+        <p class="SubHeading1">Task 3   Data Entry </p>
+        <p>Data entry can be one of the more time-consuming parts of the process of using ContamW. It involves the determination and input of the numerical values of the parameters associated with each of the SketchPad icons. These icons represent the elements of the building model and include air leakage paths (windows, doors, cracks), ventilation system elements (fans, ducts, vents), contaminant sources, filters, and sinks and control network components. Each of these elements is associated with a number of parameters, and you must obtain the values of these parameters for entry into the model. Depending on the element and the application, these values can be obtained from building-specific data, engineering handbooks, and product literature. In many cases, a degree of engineering judgement will be involved. ContamW allows you to create libraries of these elements that you can use in current and future modeling efforts. </p>
+        <p>Detailed information is provided for the various components throughout the <a href="../IDH_Using_Overview.htm">Using CONTAMW</a> section.</p>
+        <p class="SubHeading1">Task 4   Simulation</p>
+        <p>Simulation is the use of CONTAM to solve the system of equations assembled from your SketchPad representation of a building to predict the airflow and contaminant concentrations of interest. This step involves determining the type of analysis that is needed; steady state, transient or cyclical, and a number of other simulation parameters. These parameters depend on the type of analysis you wish to perform (steady state or transient), and include convergence criteria and in the case of a transient analysis, time steps and the duration of the analysis. </p>
+        <p>See <a href="../Simulation/IDH_UsingSIM_Working_with_Simulations.htm">Working with Simulations</a> in the <a href="../IDH_Using_Overview.htm">Using CONTAMW</a> section.</p>
+        <p class="SubHeading1">Task 5   Review &amp; Record Results </p>
+        <p>ContamW allows you to view the simulation results on the screen and to output them to a file for input to a spreadsheet program or other data analysis programs including those developed by NIST and available on the <a href="https://www.nist.gov/el/energy-and-environment-division-73200/nist-multizone-modeling">NIST&#160;Multizone Modeling</a> website. Airflows and pressure differences at each flow element can be viewed directly on the SketchPad. Contaminant concentrations for a zone can also be plotted as a function of time directly from the SketchPad. You can then decide which data you wish to examine more closely and export these to a tab-delimited text file that can then be imported into a spreadsheet for further analysis. There is also a controls-related feature that provide the ability to report the values of user-selected control nodes to a control "log" file for each time step of a transient simulation. </p>
+        <p>See <a href="../Results/IDH_UsingResults_Working_with_Results.htm">Working with Results</a> in the <a href="../IDH_Using_Overview.htm">Using CONTAMW</a> section and <a href="../Controls/IDH_UsingControls_ControlElementTypes.htm#Report_Control">Report a value</a> in the <a href="../Controls/IDH_UsingControls_WorkingWithControls.htm#top" target="" title="" alt="" class="MCXref" xrefformat="Working with Controls">Working with Controls</a> section for details.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CatapultSkin Version="1" AutoSyncTOC="true" Tabs="TOC,Index,Search" Top="32px" Left="60px" Width="1100px" Height="1000px" DefaultTab="TOC" Bottom="8px" Right="760px" Anchors="" NavigationLinkBottom="true" UseBrowserDefaultSize="false" Title="CONTAM User Guide 3.4">
+    <HtmlHelpOptions ShowMenuBar="true" TopmostWindowStyle="false" AutoShowNavigationPane="false" EnableButtonCaptions="false" AdvancedSearch="true" NavigationPaneWidth="300" Buttons="Hide,Locate,Back,Forward,Home,Print,Next,Previous,Options" HideNavigationOnStartup="false" />
+    <Toc LinesBetweenItems="true" LinesFromRoot="true" SingleClick="false" PlusMinusSquares="true" AlwaysShowSelection="true" UseFolderIcons="false" ImageListWidth="" BinaryStorage="false" Border="FixedSingle" />
+    <WebHelpOptions NavigationPaneWidth="220" VisibleAccordionItemCount="100" NavigationPanePosition="Left" HideNavigationOnStartup="false" AboutBox="About.gif" AboutBoxWidth="118" AboutBoxHeight="102">
+    </WebHelpOptions>
+    <Stylesheet Link="Stylesheet.xml" />
+    <Toolbar EnableCustomLayout="true" Buttons="ToggleNavigationPane|Back|Forward|CollapseAll|ExpandAll|RemoveHighlight|Print" ExcludeAccordionTitle="false" />
+</CatapultSkin>

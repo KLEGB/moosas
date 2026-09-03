@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Ducts|Defining Ducts|Duct Junction and Terminal Properties" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Wind Pressure</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5><a name="kanchor90"></a>Duct Junction and Terminal - Wind Pressure Properties</h5>
+        <p>This set of properties is available only for those <span style="font-style: italic;">terminals </span>that are located in the ambient zone and thus potentially subject to wind effects.</p>
+        <p><span style="font-weight: bold;">Wind Pressure Option:</span> There are three wind pressure options for duct terminals located in an ambient zone: </p>
+        <ol>
+            <li value="1">
+                <p>No wind pressure</p>
+            </li>
+            <li value="2">
+                <p>Constant pressure</p>
+            </li>
+            <li value="3">
+                <p>Pressure dependent on wind speed and direction</p>
+            </li>
+        </ol>
+        <p>When you select one of the above options, the following data entry options that correspond to the wind pressure option that you selected will be made available for your input.</p>
+        <p><span style="font-weight: bold;">Constant Pressure Data:</span> Enter a constant wind pressure (wind speed and direction independent).</p>
+        <p><span style="font-weight: bold;">Variable Pressure Data:</span> Variable wind pressures are computed from the product of the following three parameters:</p>
+        <ol>
+            <li value="1">
+                <p>The dynamic pressure of the wind at some reference height.<br />ContamX will determine this pressure based on either the steady state wind data (See <a href="../Weather/IDH_PP_WTH_WIND.htm">Wind Properties</a>) or the transient wind data from a weather file (See <a href="../Weather/IDH_UsingWTH_Defining_Transient_Weather_and_Wind.htm">Defining Transient Weather and Wind</a>).</p>
+            </li>
+            <li value="2">
+                <p>A coefficient accounting for local terrain effects (Wind Pressure Modifier).</p>
+            </li>
+            <li value="3">
+                <p>A pressure coefficient accounting for relative wind direction (Wind Pressure Profile).</p>
+            </li>
+        </ol>
+        <p class="NormalIndent"><span style="font-weight: bold;">Wind Pressure Modifier:</span> CONTAM uses this value to account for differences between wind velocity profiles at the building site and that at a measurement location, e.g. an airport weather station (See <a href="../Weather/IDH_UsingWTH_Working_with_Weather_and_Wind.htm">Working with Weather and Wind</a>). CONTAM only requires this value if you are implementing Variable Wind Pressure for an airflow path. ContamW will provide a default value for this based on the data entered via the <a href="../Weather/IDH_PP_WTH_WIND.htm">Weather and Wind Parameters Property Page</a> or you can override the default value for a particular airflow path. </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Wall Azimuth Angle:</span> Enter the direction the wall faces (clockwise from north). </p>
+        <p class="NormalIndent"><span style="font-weight: bold;">Profile:</span> The wind pressure profile accounts for the wind direction effects. You may select a previously defined wind pressure profile from those contained in the Name list. Click the "New Profile" button to define a new wind pressure profile. To view or modify wind pressure profile data, click the "Edit Profile" button. After you press the "New Profile" or "Edit Profile" button, the <a href="../Weather/IDH_WIND_PROFILE.htm">Wind Pressure Profile</a> page will be displayed with a graphical representation of the profile.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM|Working with Controls|Control Super Elements" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Control Super Element Properties</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h4>Control Super Element Properties</h4>
+        <p>This section provides information on utilizing the Control Super Element dialog box that together with the Super Element SketchPad enables you to manage and define control super elements and is activated via the <span style="font-weight: bold;text-decoration: underline;">D</span><span style="font-weight: bold;">ata</span><span style="font-family: Symbol;">®</span><span style="font-weight: bold;">Co</span><span style="font-weight: bold;text-decoration: underline;">n</span><span style="font-weight: bold;">trols</span><span style="font-family: Symbol;">®</span><span style="font-weight: bold;text-decoration: underline;">S</span><span style="font-weight: bold;">uper Elements...</span> menu item. There are two section of information presented: Element Manager and Element Properties editor.
+            </p>
+        <p class="SubHeading1">Element Manager</p>
+        <p>This is used to select super elements for editing and creating new elements and activating the CONTAMW Library Manager to work with Super Element Library files.</p>
+        <p><span style="font-weight: bold;">Name:</span> This combo box provides you with the name of the currently active super element for which the sketch data is also displayed on the Super Element SketchPad. The name should also appear on the upper left corner of the sketchpad. You can also select other existing super elements from the drop-down list. This will change the super element displayed upon the sketchpad as well as the properties displayed on this dialog box.
+            </p>
+        <p><span style="font-weight: bold;">Check Element:</span> While working with a super element, you can perform a check on it to determine if is a fully defined super element. If the check passes then the super element is considered to be fully defined. If the check fails, then ContamW will provide feedback in the form of messages and highlighting of errors on the sketch. Even though a super element is undefined, it can still be saved in its incomplete form.
+            </p>
+        <p>There are a few basic reasons why the check could fail. Super elements are similar to control networks on the main SketchPad, so undefined super elements can result from problems similar to main SketchPad control network as well as problems specific to super elements.</p>
+        <p>Potential reasons for undefined Super Elements:</p>
+        <ul>
+            <li value="1">Undefined sub-nodes (i.e., undefined sketch icons)</li>
+            <li value="2">Incorrect number of inputs to control nodes</li>
+            <li value="3">Circular control logic</li>
+            <li value="4">No Output Node set</li>
+            <li value="5">Pre-defined input to Input Node</li>
+        </ul>
+        <p><span style="font-weight: bold;">New Element:</span> This will create new super element having a default name of "SE_##" where ## will depend on the number of existing super elements. New super elements have no sketch data, so the SketchPad will be cleared. Once you create a super element, you do not have to save it. Any modification you make to the sketch and properties will be maintained automatically with the exception of the name which you must set via the "Rename Element" feature.
+            </p>
+        <p><span style="font-weight: bold;">Library:</span> Use this feature to activate the CONTAMW Library Manager to create control library files, copy super elements to and from super element library files (type LB5) and delete unused super elements from the current project file. (See <a href="../Library/IDH_UsingLibs_Working_with_Data_and_Libraries.htm">Working with Data and Libraries</a>)
+            </p>
+        <p><span style="font-weight: bold;">Element defined?</span> This feature indicates whether or not a super element is fully defined (as determined by ContamW) meaning it can be instantiated to create super nodes. Element definition is verified by "checking." Checking is performed using the "Check Element" feature described above, when you switch the currently displayed super element from the list of names, or when you close the Control Super Elements dialog box, i.e., exit the super element editing mode.</p>
+        <p><span style="font-weight: bold;">Super Node Reference Count:</span> This is the number of instantiated super nodes that reference, the super element. The super element cannot be deleted from the project file unless this count is equal to zero.
+            </p>
+        <p class="SubHeading1">Edit Element Properties</p>
+        <p>These are the user-defined properties of the super element other than the sketch and control nodes. These properties include the Name, Description, Input Node name and Output Node name.</p>
+        <p><span style="font-weight: bold;">Rename Element:</span> Use this feature to enter a new name for the super element and change it with the accompanying button. The new name will be compared to existing names before being reset.
+            </p>
+        <p><span style="font-weight: bold;">Description:</span> Provide a detailed description of the super element of up to 255 characters. This description will be displayed in the CONTAMW Library Manager. The description and the super element name are currently the only means by which to identify the super elements when viewing them in the library manager.
+            </p>
+        <p><span style="font-weight: bold;">Input Node:</span> The <span style="font-style: italic;">input node</span> of the super element is the sub-node which will receive an input signal if one is drawn to an instantiated supernode on the main SketchPad. This is not required to be set. If needed, select a sub-node to serve as the main input for the super element from the list of <span style="font-style: italic;">named sub-nodes</span>. Note that you must have provided a name for the sub-node which you wish to make the <span style="font-style: italic;">input node</span>, and the sub-node must be of a type that accepts at least one input.
+            </p>
+        <p class="NormalIndent" style="text-decoration: underline;">Multiple inputs</p>
+        <p class="NormalIndent">If you require a super element with multiple inputs, you can define a sub-node to be of type <span style="font-style: italic;">phantom</span>. Once you instantiate a super node from the super element, you can select a named control element that you want the <span style="font-style: italic;">phantom sub-node</span> to reference.
+            </p>
+        <p><span style="font-weight: bold;">Output Node:</span> The <span style="font-style: italic;">output node</span> of the super element is the sub-node from which the signal will be provided to an output drawn from an instantiated <span style="font-style: italic;">super node</span> on the main SketchPad. This is required to be set for a super element to be <span style="font-style: italic;">defined</span>. Note that when instantiated, the output node will assume the name of the super node for the purposes of referencing with phantom nodes on the main SketchPad.
+            </p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

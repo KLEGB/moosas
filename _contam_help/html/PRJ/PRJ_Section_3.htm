@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Appendix A - PRJ File Format" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Section 3: Level and Icon Data</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h5>Section 3: Level and Icon Data</h5>
+        <p>The data for recreating the SketchPad is stored in this section. The data are read by the level_read( ) function and saved by the level_save( ) function. The level data are stored in LEV_DATA structures that are defined in contam.h for ContamW and simdat.h for ContamX.  </p>
+        <p>The icon data are stored in ICON_DAT structures in ContamW and are not saved in ContamX.  </p>
+        <p class="NormalItalic">The level/icons section starts with: </p>
+        <p class="code">nlev // number of levels (<span style="color: red;">IX</span>)</p>
+        <p class="NormalItalic">This is followed by a data header comment line and then data for all nlev levels.</p>
+        <p class="NormalItalic">Each level has a data line that includes:</p>
+        <p class="codeindent">nr // level number (<span style="color: red;">IX</span>), in order from 1 to nlev</p>
+        <p class="codeindent">refht // reference elevation of level [m] (R4)</p>
+        <p class="codeindent">delht // delta elevation to next level [m] (R4) {W}</p>
+        <p class="codeindent">nicon // number of icons on this level (<span style="color: red;">IX</span>)</p>
+        <p class="codeindent">u_rfht // units of reference elevation (I2) {W}</p>
+        <p class="codeindent">u_dlht // units of delta elevation (I2) {W}</p>
+        <p class="codeindent">name[] // level name (I1)</p>
+        <p class="NormalItalic">This line is followed by a comment line and then data for nicon icons.</p>
+        <p class="NormalItalic">Each icon has a data line consisting of:</p>
+        <p class="codeindent">icon // icon type – see ‘special symbols’ in contam.h (I2) {W}</p>
+        <p class="codeindent">row // row position on the SketchPad (I2) {W}</p>
+        <p class="codeindent">col // column position on the SketchPad (I2) {W}</p>
+        <p class="codeindent">nr // zone, path, duct, etc., number (I2) {W}</p>
+        <p class="NormalItalic">The section is terminated with:</p>
+        <p class="code">-999 // used to check for a read error in the above data (I2)</p>
+        <h6>&#160;</h6>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

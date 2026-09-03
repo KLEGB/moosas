@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Using CONTAM" MadCap:medium="non-print" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Working with EnergyPlus</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h1><a name="top"></a>Working with EnergyPlus</h1>
+        <p>Beginning with CONTAM 3.2, ContamX can be coupled with EnergyPlus to perform combined airflow and heat transfer simulations [<a href="../IDH_References.htm#REF_Dols_2016" title="Dols et al. 2016" alt="Dols et al. 2016">Dols et al. 2016</a>]. This coupling is performed using CONTAM's previously developed inter-process communication application programming interface (API). This API consists of a set of socket communication messages that enable the control of execution and exchange of data between ContamX and an external process.  This same socket communication capability, or bridge mode, has been previously utilized to couple CONTAM with TRNSYS (<a href="http://www.trnsys.com/" title="TRNSYS Software website" alt="TRNSYS Software website">www.trnsys.com</a>) as documented in the <a href="../TRNSYS/IDH_UsingTRNSYS-WorkingWithTRNSYS.htm">Working with TRNSYS</a> section. The socket communication API is documented in <a href="../Appendices/AppE.htm">Appendix B</a>.            Coupling between ContamX and EnergyPlus is accomplished via co-simulation based on the Functional Mock-up Interface (FMI) for Co-simulation specification version 1.0 [<a href="../IDH_References.htm#MODELISAR_2010">MODELISAR 2010</a>]. EnergyPlus provides a master algorithm that controls the simulation [<a href="../IDH_References.htm#REF_DOE_2013_EPlus_ExtInt">DOE 2013</a>, <a href="../IDH_References.htm#REF_Nouidui_2014">Nouidui et al. 2014</a>, <a href="../IDH_References.htm#REF_Wetter_2011">Wetter 2011</a>], and a NIST-developed module (ContamFMU.dll) is incorporated into a Functional Mock-up Unit (FMU) for use during execution. <span style="color: #800000;">Therefore, co-simulation is accomplished by running EnergyPlus with an IDF file configured for co-simulation with CONTAM as described in this section.</span> <![CDATA[ ]]></p>
+        <p>NIST developed a module that can be incorporated into a Functional Mock-up Unit (FMU) for use during co-simulation. This module, ContamFMU, can be used under Windows as a dynamic link library (ContamFMU.dll) or Linux as a shared object (ContamFMU.so).</p>
+        <p>EnergyPlus sets up the dynamic data exchange between itself and the slave FMU based on the co-simulation description file. Currently, the following data can be exchanged between EnergyPlus and ContamX:</p>
+        <ul>
+            <li value="1">From EnergyPlus to ContamX
+			<ul style="list-style-type: circle;"><li value="1"><b>Zone Temperatures</b></li><li class="CW2" value="2"><b>Zone Humidity Ratio</b> used only for converting ContamX mass flow rates to EnergyPlus volume flow rates</li><li value="3"><b>Ventilation system airflow rates</b> for zone supply and return airflow rates</li><li value="4"><b>Outdoor airflow fractions</b> of outdoor airflow controllers</li><li value="5"><b>Exhaust fan airflow rates</b></li><li value="6"><b>Energy recovery fan airflow rates</b></li><li value="7"><b>Outdoor environment data</b> including temperature, <span style="color: #8b0000;">humidity ratio,</span> barometric pressure, wind speed and wind direction obtained from EnergyPlus weather (.epw) files</li><li value="8"><b>Output variables</b> which may be EnergyPlus Output:Variable or EnergyManagementSystem:OutputVariable objects</li></ul></li>
+            <li value="2">From ContamX to EnergyPlus
+			<ul style="list-style-type: circle;"><li value="1"><b>Zone infiltration airflow rates</b></li><li value="2"><b>Inter-zone airflow rates</b> via airflow paths, i.e., not via ducts</li><li value="3"><b>Controls values</b> which may be any value exposed via a named “split” type control node in a CONTAM controls network, e.g., a signal calling for ventilation airflow due to an elevated contaminant level</li></ul></li>
+        </ul>
+        <p>The <b>CONTAM3DExporter</b> tool was developed by NIST to assist in the coupling between CONTAM and EnergyPlus. This tool reads a CONTAM PRJ file and creates an EnergyPlus IDF file that contains objects associated with the geometry, infiltration and inter-zone mixing flows, an air loop that includes an outdoor air mixer and HVAC airflow terminal, and FMI-related entities required to facilitate dynamic data exchange. Detailed mappings between CONTAM and EnergyPlus entities are provided in the table below. Items in the table with fixed-width fonts, e.g., <code>ZoneMixing</code>, indicate entities that are objects within CONTAM or EnergyPlus. Italicized items indicate EnergyPlus variable names made accessible via the EnergyPlus external interface, e.g., <i>Zone Mean Air Temperature</i>. The Notes column provides details of the relationship between the CONTAM and EnergyPlus entities.</p>
+        <table>
+            <col style="width: 278px;" />
+            <col />
+            <col style="width: 266px;" />
+            <tr>
+                <td style="text-align: center;font-weight: bold;font-size: 8pt;">CONTAM</td>
+                <td style="text-align: center;font-weight: bold;font-size: 8pt;">EnergyPlus</td>
+                <td style="text-align: center;font-weight: bold;font-size: 8pt;">Notes</td>
+            </tr>
+            <tr>
+                <td style="background-color: #dcdcdc;font-size: 8pt;" colspan="3">Building Geometry</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;"><span style="font-family: 'Courier New';">Zone</span>
+                </td>
+                <td style="font-size: 8pt;"><span style="font-family: 'Courier New';">Zone</span>
+                </td>
+                <td style="font-size: 8pt;">CONTAM airflow zone maps to EnergyPlus thermal zone</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;">Wall</td>
+                <td class="code" style="">BuildingSurface:Detailed</td>
+                <td style="font-size: 8pt;">CONTAM zones are bounded by implicitly defined walls</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;background-color: #dcdcdc;" colspan="3">Infiltration and Inter-zone Airflows (paths are grouped into connections between zones including ambient)</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;"><span style="font-family: 'Courier New';">Airflow Path</span> (external)</td>
+                <td style="font-size: 8pt;" class="code">ZoneInfiltration:DesignFlowRate</td>
+                <td style="font-size: 8pt;">EnergyPlus constant term coefficient is set to 1 and all others to 0</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;"><span style="font-family: 'Courier New';">Airflow Path</span> (inter-zone)</td>
+                <td style="font-size: 8pt;" class="code">ZoneMixing</td>
+                <td style="font-size: 8pt;">Two ZoneMixing objects are created for each inter-zone connection</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;background-color: #dcdcdc;" colspan="3">Ventilation System</td>
+            </tr>
+            <tr>
+                <td rowspan="6" class="code" style=""><span style="font-family: 'Courier New';">Simple Air Handling System</span> (AHS)</td>
+                <td style="font-size: 8pt;" class="code">AirLoopHVAC</td>
+                <td style="font-size: 8pt;">Zone Supplies and Returns must exist in pairs to match the EnergyPlus air loop requirements</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;" class="code">Fan:ConstantVolume</td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;" class="code">AirLoopHVAC:ZoneSplitter</td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;" class="code">AirLoopHVAC:ZoneMixer</td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;" class="code">AirLoopHVAC:OutdoorAirSystem</td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;"><span style="font-family: 'Courier New';">Branch</span> and <span style="font-family: 'Courier New';">Nodes</span></td>
+                <td style="font-size: 8pt;">Outdoor air, Supply-side, Demand-side, etc.</td>
+            </tr>
+            <tr>
+                <td rowspan="3" class="code" style="">AHS Supply</td>
+                <td style="font-size: 8pt;" class="code">AirTerminal:SingleDuct:Uncontrolled</td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;" class="code">AirLoopHVAC:SupplyPath</td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;" class="code">Node</td>
+                <td style="font-size: 8pt;">Zone supply air</td>
+            </tr>
+            <tr>
+                <td rowspan="2" class="code" style="">AHS Return</td>
+                <td style="font-size: 8pt;" class="code">AirLoopHVAC:ReturnPath</td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;" class="code">Node</td>
+                <td style="font-size: 8pt;">Zone return air</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;background-color: #dcdcdc;" colspan="3">FMI-related External Interface</td>
+            </tr>
+            <tr>
+                <td colspan="3" class="code" style="background-color: #dcdcdc;">ExternalInterface:FunctionalMockupUnitImport:From:Variable <span style="font-family: 'Times New Roman';">(Values passed FROM EnergyPlus TO ContamX)</span></td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;">&#160;</td>
+                <td style="font-size: 8pt;"><b>Output: Variable Index Key Name</b>
+                </td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;">Environment</td>
+                <td style="font-size: 8pt;"><i>Drybulb temperature</i>, <i>Barometric Pressure</i>, <i>Wind Speed</i>, <i>Wind Direction</i>, and <i style="color: #8b0000;">Humidity Ratio</i></td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;" class="code">Zone</td>
+                <td style="font-size: 8pt;"><i>Zone Mean Air Temperature</i> and <i style="color: #8b0000;">Zone Mean Air Humidity Ratio</i></td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;" class="code">Supply Air Node</td>
+                <td style="font-size: 8pt;font-style: italic;">System Node Mass Flow Rate</td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;" class="code">Return Air Node</td>
+                <td style="font-size: 8pt;font-style: italic;">System Node Mass Flow Rate</td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;" class="code">AHS</td>
+                <td style="font-size: 8pt;font-style: italic;">Air System Outdoor Air Flow Fraction</td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;"><span style="font-family: 'Courier New';">Control</span> (Constant type)</td>
+                <td style="font-size: 8pt;">(user-defined)</td>
+                <td style="font-size: 8pt;">User must define connectivity after export</td>
+            </tr>
+            <tr>
+                <td class="code" style="background-color: #dcdcdc;" colspan="3">ExternalInterface:FunctionalMockupUnitImport:To:Actuator <span style="font-family: 'Times New Roman';">(Values passed TO EnergyPlus FROM ContamX)</span></td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;">&#160;</td>
+                <td style="font-size: 8pt;"><b>Actuated Component Type</b>
+                </td>
+                <td style="font-size: 8pt;">&#160;</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;"><span style="font-family: 'Courier New';">Airflow Path</span> (external)</td>
+                <td style="font-size: 8pt;"><i>Zone Infiltration</i>
+                </td>
+                <td style="font-size: 8pt;">Multiple external airflow paths for a zone are grouped together into a single connection</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;"><span style="font-family: 'Courier New';">Airflow Path</span> (inter-zone)</td>
+                <td style="font-size: 8pt;"><i>ZoneMixing</i>
+                </td>
+                <td style="font-size: 8pt;">Multiple interzone airflow paths for a pair of zones are grouped together into a single connection</td>
+            </tr>
+            <tr>
+                <td style="font-size: 8pt;"><span style="font-family: 'Courier New';">Control</span> (Signal Split type)</td>
+                <td style="font-size: 8pt;">(user-defined)</td>
+                <td style="font-size: 8pt;">User must define connectivity after export</td>
+            </tr>
+        </table>
+        <p>&#160;</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>

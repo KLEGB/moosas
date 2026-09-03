@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns:MadCap="http://www.madcapsoftware.com/Schemas/MadCap.xsd" MadCap:disableMasterStylesheet="true" MadCap:tocPath="Theoretical Background|Contaminant Analysis" MadCap:medium="non-print" class="" MadCap:PathToHelpSystem="../../../" MadCap:SearchType="Stem">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=Windows-1252" /><title>Properties of Air</title>
+        <link href="../../Resources/Stylesheets/CWhtml.css" rel="stylesheet" />
+        <script src="../../ehlpdhtm.js">
+        </script>
+        <script src="../../SkinSupport/MadCapUtilities.js">
+        </script>
+        <script src="../../SkinSupport/MadCapBody.js">
+        </script>
+        <script src="../../SkinSupport/MadCapHighlighter.js">
+        </script>
+    </head>
+    <body>
+        <h3><a name="kanchor160"></a>Properties of Air</h3>
+        <p>In CONTAM air is treated as an ideal gas with properties computed from the ideal gas law. The density of air is given by</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn"><span style="font-family: Symbol;font-style: italic;">r</span> = <i>m</i>/<i>V</i> = <i>P</i>/(<i>RT</i>)</td>
+                    <td class="EqnNum">(1)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where</p>
+        <p class="EqnParams"><span style="font-style: italic;">m</span> &#160;= the mass of air in</p>
+        <p class="EqnParams"><span style="font-style: italic;">V</span> &#160;= a given volume,</p>
+        <p class="EqnParams"><span style="font-style: italic;">P</span> &#160;= the absolute pressure,</p>
+        <p class="EqnParams"><span style="font-style: italic;">R</span> &#160;= the gas constant for air, and</p>
+        <p class="EqnParams"><span style="font-style: italic;">T</span> &#160;= the absolute temperature.</p>
+        <p>The mass of air in c.v. <span style="font-style: italic;">i</span> is the sum of the masses of the individual contaminants, <span style="font-family: 'Symbol';font-style: italic;">a</span>, in the c.v.    </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/M_sumM.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(2)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>The concentration of contaminant <span style="font-family: 'Symbol';">a</span> in c.v. <span style="font-style: italic;">i</span> is defined as</p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/C_mdivm.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(3)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>In CONTAM <span style="font-style: italic;">concentration</span> refers to a mass ratio rather than a volumetric ratio unless otherwise specified. </p>
+        <p>Air is a mixture of several different species. The value of the gas constant for the air in a c.v. is given by:       </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/R_sumRC.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(4)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>where <i>R</i><sub style="font-style: italic;">i</sub> = the gas constant of species <span style="font-family: 'Symbol';font-style: italic;">a</span> which equals the universal gas constant, 8 314.41 J/(kmol·K), divided by the molar mass of <span style="font-family: 'Symbol';font-style: italic;">a</span> (kg/kmol). Similarly, for thermal calculations (an option in CONTAM for duct flow under the <i>short time step</i> method only), the specific heat of air in a duct segment is given by the weighted sum of the specific heats of the individual species:         </p>
+        <table class="NoBorder">
+            <tbody>
+                <tr>
+                    <td class="Eqn">
+                        <img src="../../image/Cp_sumCpC.png" alt="equation" />
+                    </td>
+                    <td class="EqnNum">(5)</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>Under typical conditions only water vapor has an impact on the properties of air and even that can be ignored as an initial approximation. There is a standard definition of species concentrations for <span style="font-style: italic;">dry air</span> which yields an effective molar mass of 28.9645 kg/kmol and a gas constant of 287.055 J/(kg·K). ASHRAE often refers to dry air at <span style="font-style: italic;">standard conditions</span> which are 101.325 kPa and 20 ºC and notes the density of such air is 1.20 kg/m<span style="vertical-align: super;font-size: 10pt;">3</span> [ASHRAE 2004 p 18.4]. More precisely, the density is 1.20410 kg/m<span style="vertical-align: super;font-size: 10pt;">3</span> as computed by equation (1).  </p>
+        <p><span style="font-size: 11pt;font-weight: bold;">NOTE</span><span style="font-size: 11pt;font-weight: bold;">:</span>  ASHRAE considers water vapor in terms of <span style="font-style: italic;">humidity ratio</span> instead of mass concentration. The humidity ratio, <span style="font-style: italic;">W</span>, is defined as the ratio of the mass of water vapor to the mass of dry air in the volume: W = <span style="font-style: italic;">m</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">w</span><span style="font-style: italic;vertical-align: super;"> <![CDATA[ ]]></span>/ <span style="font-style: italic;">m</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">da</span> [<a href="../IDH_References.htm#REF_ASHRAE_2005">ASHRAE 2005</a> p 6.8]. The CONTAM mass concentration, which ASHRAE refers to as <span style="font-style: italic;">specific humidity</span>, is: <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">w</span> = <span style="font-style: italic;">m</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">w</span><span style="font-style: italic;vertical-align: super;"> <![CDATA[ ]]></span>/ (<span style="font-style: italic;">m</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">w</span><span style="font-style: italic;vertical-align: super;"> <![CDATA[ ]]></span>+ <span style="font-style: italic;">m</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">da</span>). The conversions between humidity ratio and mass concentration are <span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">w</span>&#160;=&#160;<span style="font-style: italic;">W</span>&#160;/&#160;(1+<span style="font-style: italic;">W</span>) and W&#160;=&#160;<span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">w</span><span style="font-style: italic;">&#160;</span>/&#160;(1–<span style="font-style: italic;">C</span><span style="font-style: italic;vertical-align: sub;font-size: 10pt;">w</span>).</p>
+        <p>In many cases we are interested in species concentrations that are too small to significantly affect the air density (or specific heat). These are referred to as <span style="font-style: italic;">trace </span><span style="font-style: italic;">concentrations</span>. When a simulation involves only trace contaminants, CONTAM uses dry air to compute the air properties.</p>
+        <p>&#160;</p>
+        <script type="text/javascript" src="../../SkinSupport/MadCapBodyEnd.js">
+        </script>
+    </body>
+</html>
