@@ -3,7 +3,7 @@ from datetime import datetime
 from ...transform.geometry.geos import Projection
 
 
-def _meshToRadObject(geos, material, id):
+def _mesh_to_radiance_object(geos, material, object_id):
     """
     Convert a mesh geometry to a Radiance object string representation.
     
@@ -40,7 +40,7 @@ def _meshToRadObject(geos, material, id):
                 return ""
             for trIdx, tri in enumerate(triangles):
                 pts = shapely.get_coordinates(tri, include_z=True)
-                geoStr += [f"{material} polygon {id}_{gid}_{trIdx} 0 0 {(len(pts)-1) * 3}"]
+                geoStr += [f"{material} polygon {object_id}_{gid}_{trIdx} 0 0 {(len(pts)-1) * 3}"]
                 for pt in pts[:-1]:
                     geoStr += ["    "+" ".join(pt.astype(str))]
                 geoStr += [""]
@@ -50,7 +50,7 @@ def _meshToRadObject(geos, material, id):
     return "\n".join(geoStr) + "\n"
 
 
-def _materialLib():
+def _material_library():
     """
     Return a string containing Radiance material definitions for common building materials.
     
@@ -96,7 +96,7 @@ void glass glazing_
     return matStr
 
 
-def _getSky(date: datetime, skyType, lat, lon, diff=10000):
+def _get_sky(date: datetime, sky_type, lat, lon, diffuse_illuminance=10000):
     """
     Generate a Radiance sky description string for a given date and location.
     
@@ -119,9 +119,9 @@ def _getSky(date: datetime, skyType, lat, lon, diff=10000):
         A formatted string containing the Radiance sky definition commands, including gensky command
         and associated glow and source elements for sky and ground.
     """
-    skyStr = f"!gensky {str(date.month).zfill(2)} {str(date.day).zfill(2)} {str(date.hour).zfill(2)} {skyType} -a {lat} -o {lon} -g 0.200"
-    if skyType == "-c":
-        skyStr += f" -B {diff / 179.0}"
+    skyStr = f"!gensky {str(date.month).zfill(2)} {str(date.day).zfill(2)} {str(date.hour).zfill(2)} {sky_type} -a {lat} -o {lon} -g 0.200"
+    if sky_type == "-c":
+        skyStr += f" -B {diffuse_illuminance / 179.0}"
     skyStr += "\n"
     skyStr += """skyfunc glow sky_mat
 0

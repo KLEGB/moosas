@@ -76,16 +76,19 @@ def read_topology(file_path):
         head += f.readline()
         line = f.readline()
 
-        while line != '-999\n':
+        while line and line.strip() != '-999':
             topo += line
             line = f.readline()
+
+        if not line:
+            raise ValueError(f"Missing -999 terminator in CONTAM flow paths: {file_path}")
 
         while line:
             rear += line
             line = f.readline()
     topo = re.split('\n', topo)
     topo.pop()
-    topo = np.array([re.split('\s+', li.strip('\n')) for li in topo])
+    topo = np.array([re.split(r'\s+', li.strip('\n')) for li in topo])
     return topo[:, 3:5].astype(int)
 
 
@@ -179,9 +182,12 @@ def read_file(path):
         head += f.readline()
         line = f.readline()
 
-        while line != '-999\n':
+        while line and line.strip() != '-999':
             temp += line
             line = f.readline()
+
+        if not line:
+            raise ValueError(f"Missing -999 terminator in CONTAM zones: {path}")
 
         while line:
             rear += line

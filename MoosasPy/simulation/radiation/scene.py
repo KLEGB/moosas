@@ -1,74 +1,13 @@
-﻿from .radiance import _meshToRadObject, _materialLib, _getSky
+﻿from .radiance import _get_sky, _material_library, _mesh_to_radiance_object
 from ...model import MoosasModel
 from ...transform.geometry.element import MoosasElement, MoosasSpace
 from ...transform.geometry.geos import Projection, Vector
 from ...transform.geometry.grid import MoosasGrid
 from ...utils import np, shapely, path, os,mixItemListToList
 from datetime import datetime
-import warnings
 
 
-def simModel(
-    model: MoosasModel,
-    date: datetime,
-    skyType,
-    location,
-    diff=15000,
-    radPath=None,
-    gridPath=None,
-    *,
-    work_dir=None,
-    timeout_seconds: float = 300.0,
-    engine=None,
-):
-    """
-        Simulate a model by embedded RADIANCE module.
-        gensky.exe is implemented with the params input.
-
-        Parameters
-        ----------
-        model : MoosasModel
-            the model for simulation
-        date : datetime
-            the date to generate the sky
-        skyType : str
-            the skyType hint for radiance, -c means the cloudy sky
-        location : Location
-            Geographic metadata read from an EPW file.
-        diff : float , optional
-            diffuse illuminance for the cloudy sky (Default : 15000)
-        work_dir : str or pathlib.Path, optional
-            Parent directory for the per-run temporary work directory.
-        timeout_seconds : float, optional
-            Maximum runtime for each Radiance executable.
-
-        Returns
-        -------
-        dict
-            the daylighting simulation result on the floor:
-            [{df:daylight factor, satisfied: satification}...{}]
-
-    """
-    if radPath is not None or gridPath is not None:
-        warnings.warn(
-            "radPath and gridPath are ignored. RadianceRunner uses an isolated temporary work directory.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-    from .runner import RadianceRunner, RadianceSky
-
-    result = RadianceRunner(
-        model=model,
-        sky=RadianceSky(date, skyType, location, diff),
-        work_dir=work_dir,
-        timeout_seconds=timeout_seconds,
-        engine=engine,
-    ).run()
-    return result.as_legacy()
-
-
-def _generateRadGeo(roof, floor, others):
+def _generate_radiance_geometry(roof, floor, others):
     """
     Generate a Radiance geometry string from roof, floor, and other building elements.
     
@@ -91,22 +30,22 @@ def _generateRadGeo(roof, floor, others):
     geoStr = ''
     ids = 0
     for moFace in floor:
-        geoStr += _meshToRadObject(triOpaque(moFace), "default_floor", ids)
+        geoStr += _mesh_to_radiance_object(_triangulate_opaque(moFace), "default_floor", ids)
         ids += 1
     for moFace in roof:
-        geoStr += _meshToRadObject(triOpaque(moFace), "default_roof", ids)
+        geoStr += _mesh_to_radiance_object(_triangulate_opaque(moFace), "default_roof", ids)
         ids += 1
     for moFace in others:
         if moFace.category == 0:
-            geoStr += _meshToRadObject(triOpaque(moFace), "default_wall", ids)
+            geoStr += _mesh_to_radiance_object(_triangulate_opaque(moFace), "default_wall", ids)
         if moFace.category == 1:
-            geoStr += _meshToRadObject(moFace.representation(), "glazing_", ids)
+            geoStr += _mesh_to_radiance_object(moFace.representation(), "glazing_", ids)
         ids += 1
     return geoStr
 
 
-def modelToRad(model: MoosasModel, date: datetime, skyType, lat, lon, diff=10000,
-               radPath=rf"{path.libDir}\rad\model.rad"):
+def _model_to_radiance(model: MoosasModel, date: datetime, sky_type, lat, lon, diffuse_illuminance=10000,
+                       rad_path=rf"{path.libDir}\rad\model.rad"):
     """
     Convert a MoosasModel to a Radiance input file (.rad) string and write it to disk.
     
@@ -152,13 +91,13 @@ def modelToRad(model: MoosasModel, date: datetime, skyType, lat, lon, diff=10000
     # floor = np.array(model.geometryList)[floor]
     # others = np.array(model.geometryList)[others]
 
-    geoStr = _generateRadGeo(roof, floor, others)
-    radStr = _getSky(date, skyType, lat, lon, diff) + _materialLib() + geoStr
-    with open(radPath, 'w+') as f:
+    geoStr = _generate_radiance_geometry(roof, floor, others)
+    radStr = _get_sky(date, sky_type, lat, lon, diffuse_illuminance) + _material_library() + geoStr
+    with open(rad_path, 'w+') as f:
         f.write(radStr)
     return radStr
 
-def triOpaque(moFace:MoosasElement)->list[shapely.Geometry]:
+def _triangulate_opaque(moFace:MoosasElement)->list[shapely.Geometry]:
     """
     Compute triangulated opaque geometry from a MoosasElement face.
     
@@ -191,8 +130,8 @@ def triOpaque(moFace:MoosasElement)->list[shapely.Geometry]:
     baseBrep = shapely.delaunay_triangles(baseBrep)
     baseBrep = [proj.toWorld(tri) for tri in shapely.get_parts(baseBrep)]
     return baseBrep
-def spaceToRad(space: MoosasSpace, date: datetime, skyType, lat, lon, diff=10000,
-               radPath=rf"{path.libDir}\rad\model.rad"):
+def _space_to_radiance(space: MoosasSpace, date: datetime, sky_type, lat, lon, diffuse_illuminance=10000,
+                       rad_path=rf"{path.libDir}\rad\model.rad"):
     """
     Generate a Radiance input file string and write it to disk based on the provided space geometry and environmental conditions.
     
@@ -203,7 +142,7 @@ def spaceToRad(space: MoosasSpace, date: datetime, skyType, lat, lon, diff=10000
     date : datetime
         The date and time for which the sky conditions are computed.
     skyType : object
-        Specifies the type of sky model to use (e.g., sunny, cloudy); passed to `_getSky`.
+        Specifies the type of sky model to use (e.g., sunny or cloudy).
     lat : float or int
         Latitude of the location, used in sky calculation.
     lon : float or int
@@ -231,15 +170,15 @@ def spaceToRad(space: MoosasSpace, date: datetime, skyType, lat, lon, diff=10000
     for moface in faces["MoosasSkylight"]:
         others = np.append(others, moface)
 
-    geoStr = _generateRadGeo(roof, floor, others)
+    geoStr = _generate_radiance_geometry(roof, floor, others)
 
-    radStr = _getSky(date, skyType, lat, lon, diff) + _materialLib() + geoStr
-    with open(radPath, 'w+') as f:
+    radStr = _get_sky(date, sky_type, lat, lon, diffuse_illuminance) + _material_library() + geoStr
+    with open(rad_path, 'w+') as f:
         f.write(radStr)
     return radStr
 
 
-def writeGrid(element: MoosasElement, gridPath=rf"{path.libDir}\rad\grid.input", normal=None, append=True):
+def _write_grid(element: MoosasElement, grid_path=rf"{path.libDir}\rad\grid.input", normal=None, append=True):
     """
     Write grid points and their normal vectors to a file.
     
@@ -271,7 +210,7 @@ def writeGrid(element: MoosasElement, gridPath=rf"{path.libDir}\rad\grid.input",
 
         gridStr += [" ".join(pts) + " " + " ".join(nor)]
 
-    with open(gridPath, mode) as f:
+    with open(grid_path, mode) as f:
         f.write('\n'.join(gridStr) + "\n")
 
     return gridStr

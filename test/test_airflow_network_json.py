@@ -21,7 +21,7 @@ from MoosasPy.simulation.airflow.network import (
 from MoosasPy.model import MoosasModel
 from MoosasPy.simulation.airflow import AirflowRunner
 from MoosasPy.simulation.airflow.runner import VentPaths
-from MoosasPy.simulation.radiation import modelRadiation
+from MoosasPy.simulation.radiation import calculate_model_radiation
 from MoosasPy.simulation.weather.sky.cumulative import CumulativeSky
 
 
@@ -151,7 +151,7 @@ def test_rdf_model_runs_airflow_simulation():
     rdf_path = Path(__file__).parent / "caseFile" / "NBuilding.rdf"
     model = MoosasModel.load(rdf_path)
     zero_sky = CumulativeSky(np.zeros(145))
-    modelRadiation(
+    calculate_model_radiation(
         model,
         {"summer": zero_sky, "winter": zero_sky},
         reflection=0,

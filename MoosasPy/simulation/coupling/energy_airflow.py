@@ -5,10 +5,9 @@ from ...transform.geometry.geos import Vector, Ray
 from ...model import MoosasModel
 from ...model.resources import get_schedule_name, load_schedule, write_schedule
 from ..weather import CumulativeSky, WeatherData, build_cumulative_skies
-from ..radiation import modelRadiation, writeRadGeo, rayTest
+from ..radiation import calculate_model_radiation, ray_test, write_radiation_geometry
 from ...utils import np, path, os
 from ...utils.date import DateTime
-from numpy.linalg import LinAlgError
 from ..airflow.network import (
     NETWORK_SCHEMA_VERSION,
     AfnNetwork,
@@ -74,7 +73,7 @@ class EnergyAirflowCoupler(object):
         self.weather = weather
         cumulative_sky_matrix = np.asarray(cumulative_sky_matrix, dtype=float)
         cumulative_sky = build_cumulative_skies(cumulative_sky_matrix)
-        modelRadiation(self.model, cumulative_sky, reflection=0)
+        calculate_model_radiation(self.model, cumulative_sky, reflection=0)
         network = AfnNetwork(self.model)
         self.zones = network.zones
         self.paths = network.paths
@@ -107,8 +106,8 @@ class EnergyAirflowCoupler(object):
             ray_paths.append(ps)
         if ray_paths:
             rays = np.array(rays)
-            geo_path = writeRadGeo(model)
-            resRay = rayTest(rays, geo_path=geo_path)
+            geo_path = write_radiation_geometry(model)
+            resRay = ray_test(rays, geo_path=geo_path)
             resRay = np.array([1.0 if r is not None else 0 for r in resRay])
             resRay = resRay.reshape(len(ray_paths), int(len(resRay) / len(ray_paths)))
 
@@ -1215,24 +1214,16 @@ class EnergyAirflowCoupler(object):
             self.runtime['outdoor_temperature'] = outdoor_series[hi]
             hour_temp = {zu: np.nan for zu in zone_users}
             hour_ach = {zu: np.nan for zu in zone_users}
-            try:
-                zResultHoy = self.ventilationTask(
-                    hoy=hoy,
-                    energyDict=energyDict,
-                    iteration=iteration,
-                    inf_p=inf_p
-                )
-            except LinAlgError as e:
-                if "Singular matrix" not in str(e):
-                    raise
-                print(f"Warning: Singular matrix at hoy={hoy}, filled NaN for this timestep.")
-            except Exception as e:
-                print(f"Warning: Exception at hoy={hoy} ({type(e).__name__}: {e}), filled NaN for this timestep.")
+            zResultHoy = self.ventilationTask(
+                hoy=hoy,
+                energyDict=energyDict,
+                iteration=iteration,
+                inf_p=inf_p
+            )
+            if (not zResultHoy) or not zResultHoy[0].temperatures or not zResultHoy[0].ach_values:
+                raise RuntimeError(f"Airflow simulation returned no result at hoy={hoy}")
             else:
-                if (not zResultHoy) or not zResultHoy[0].temperatures or not zResultHoy[0].ach_values:
-                    print(f"Warning: Empty result at hoy={hoy}, filled NaN for this timestep.")
-                else:
-                    hour_temp, hour_ach = _extract_hour_result(zResultHoy)
+                hour_temp, hour_ach = _extract_hour_result(zResultHoy)
 
             comfort_now = {}
             out_t = float(weather_t[hi])
@@ -1255,29 +1246,22 @@ class EnergyAirflowCoupler(object):
                     baseEnergyDict=base_network_for_hours,
                     discomfort_zone_users=discomfort_users
                 )
-                try:
-                    zResultSecond = self.ventilationTask(
-                        hoy=hoy,
-                        energyDict=filtered_energy,
-                        iteration=iteration,
-                        inf_p = inf_p
-                    )
-                    second_temp, second_ach = _extract_hour_result(zResultSecond)
-                    kept_users = {
-                        str(z.get("userName", k))
-                        for k, z in filtered_energy.get("zones", {}).items()
-                    }
-                    for zu in kept_users:
-                        if zu in hour_temp and np.isfinite(second_temp.get(zu, np.nan)):
-                            hour_temp[zu] = float(second_temp[zu])
-                        if zu in hour_ach and np.isfinite(second_ach.get(zu, np.nan)):
-                            hour_ach[zu] = float(second_ach[zu])
-                except LinAlgError as e:
-                    if "Singular matrix" not in str(e):
-                        raise
-                    print(f"Warning: erase-conditioned singular matrix at hoy={hoy}, keep first-pass results.")
-                except Exception as e:
-                    print(f"Warning: erase-conditioned exception at hoy={hoy} ({type(e).__name__}: {e}), keep first-pass results.")
+                zResultSecond = self.ventilationTask(
+                    hoy=hoy,
+                    energyDict=filtered_energy,
+                    iteration=iteration,
+                    inf_p = inf_p
+                )
+                second_temp, second_ach = _extract_hour_result(zResultSecond)
+                kept_users = {
+                    str(z.get("userName", k))
+                    for k, z in filtered_energy.get("zones", {}).items()
+                }
+                for zu in kept_users:
+                    if zu in hour_temp and np.isfinite(second_temp.get(zu, np.nan)):
+                        hour_temp[zu] = float(second_temp[zu])
+                    if zu in hour_ach and np.isfinite(second_ach.get(zu, np.nan)):
+                        hour_ach[zu] = float(second_ach[zu])
 
             mech_this_h = self._mechanical_energy_kwh_m2_by_zone(
                 prj_file=self.runtime.get('last_prj_file'),

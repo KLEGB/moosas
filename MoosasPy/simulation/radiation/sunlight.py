@@ -1,18 +1,18 @@
 ﻿from __future__ import annotations
 from datetime import datetime
 
-from .calculation import rayTest, writeRadGeo
+from .calculation import ray_test, write_radiation_geometry
 from ...transform.geometry.geos import Vector, Ray
 from ...utils.date import DateTime
 from ...utils import np,Iterable
 from ...model import MoosasModel
 
 
-def positionSunHour(positionRay: Ray | Iterable[Ray], sky,
-                    model: MoosasModel = None, geo_path=None,
-                    periodStart: datetime | DateTime = DateTime(1, 1, 0),
-                    periodEnd: datetime | DateTime = DateTime(12, 31, 23),
-                    leapYear: bool = False)->Iterable[float]:
+def calculate_position_sun_hours(position_ray: Ray | Iterable[Ray], sky,
+                                 model: MoosasModel = None, geo_path=None,
+                                 period_start: datetime | DateTime = DateTime(1, 1, 0),
+                                 period_end: datetime | DateTime = DateTime(12, 31, 23),
+                                 leap_year: bool = False)->Iterable[float]:
     """
     Direct sun hour calculation for given positions considering shadows and orientation.
     
@@ -65,36 +65,36 @@ def positionSunHour(positionRay: Ray | Iterable[Ray], sky,
     if geo_path is None:
         if model is None:
             raise Exception('Geo export error: empty model.')
-        geo_path = writeRadGeo(model)
+        geo_path = write_radiation_geometry(model)
 
-    if isinstance(positionRay, Ray):
-        positionRay = [positionRay]
+    if isinstance(position_ray, Ray):
+        position_ray = [position_ray]
 
-    if isinstance(periodStart, datetime):
-        periodStart = DateTime(periodStart)
-    if isinstance(periodEnd, datetime):
-        periodEnd = DateTime(periodEnd)
+    if isinstance(period_start, datetime):
+        period_start = DateTime(period_start)
+    if isinstance(period_end, datetime):
+        period_end = DateTime(period_end)
 
-    sunPositions = sky.annual_sun(leap_year=leapYear)
-    if int(periodStart.hoy) < int(periodEnd.hoy):
-        sunPositions = sunPositions[int(periodStart.hoy):int(periodEnd.hoy)]
-        totalDays = 0 - int(periodStart.doy) + int(periodEnd.doy)
+    sunPositions = sky.annual_sun(leap_year=leap_year)
+    if int(period_start.hoy) < int(period_end.hoy):
+        sunPositions = sunPositions[int(period_start.hoy):int(period_end.hoy)]
+        totalDays = 0 - int(period_start.doy) + int(period_end.doy)
     else:
-        sunPositions = sunPositions[int(periodStart.hoy):] + sunPositions[:int(periodEnd.hoy)]
-        totalDays = 365 - int(periodStart.doy) + int(periodEnd.doy)
-        if leapYear:
+        sunPositions = sunPositions[int(period_start.hoy):] + sunPositions[:int(period_end.hoy)]
+        totalDays = 365 - int(period_start.doy) + int(period_end.doy)
+        if leap_year:
             totalDays += 1
 
     sunPositions = [sunvect for sunvect in sunPositions if sunvect.z >= 0]
     rayIdx, sunRay = [], []
-    for position in positionRay:
+    for position in position_ray:
         validSunRay = [Ray(position.origin, sunvect) for sunvect in sunPositions if
                        Vector.dot(sunvect, position.direction) > 0]
 
         rayIdx.append([len(sunRay), len(sunRay) + len(validSunRay)])
         sunRay += validSunRay
 
-    refRay = np.array(rayTest(sunRay, geo_path= geo_path))
+    refRay = np.array(ray_test(sunRay, geo_path= geo_path))
     if len(refRay) != len(sunRay):
         raise Exception(f'Error occurred in ray test: expect len of rays {len(sunRay)} but got {len(refRay)}')
 

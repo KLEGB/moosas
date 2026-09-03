@@ -13,6 +13,7 @@ public building types via the -t parameter.
 """
 from __future__ import annotations
 
+from copy import copy
 from ...utils.support import os
 from dataclasses import dataclass
 import re
@@ -230,6 +231,7 @@ class EnergyRunner(Runner):
                 schedule_path=self.schedule_path,
             )
         else:
+            energy_input = copy(energy_input)
             energy_input["args"] = list(energy_input.get("args", []))
             energy_input["args"] += _scale_arguments(self.temporal_scale, self.spatial_scale)
             if energy_input.get("schedule_path") and "-sch" not in energy_input["args"]:

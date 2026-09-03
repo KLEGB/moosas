@@ -13,7 +13,7 @@ from ..contracts import Location, SimulationResult
 from ..engine import NativeEngine
 from ..runner import CommandError, CommandResult, CommandTimeoutError, Runner
 from ..workspace import SimulationWorkspace
-from .scene import modelToRad, writeGrid
+from .scene import _model_to_radiance, _write_grid
 
 if TYPE_CHECKING:
     from ...model import MoosasModel
@@ -50,19 +50,6 @@ class RadianceDaylightResult(SimulationResult):
     """Structured output from an isolated Radiance daylight run."""
 
     floors: tuple[DaylightFloorResult, ...] = ()
-
-    def as_legacy(self) -> list[dict]:
-        """Return the dictionary payload historically produced by ``simModel``."""
-        return [
-            {
-                "Uid": floor.uid,
-                "element": floor.element,
-                "gridLength": floor.grid_point_count,
-                "df": floor.daylight_factor,
-                "satisfied": floor.satisfied_fraction,
-            }
-            for floor in self.floors
-        ]
 
 
 class RadianceCommandError(CommandError):
@@ -122,7 +109,7 @@ class RadianceRunner(Runner):
             )
 
     def _write_inputs(self, rad_path: Path, grid_path: Path) -> list[tuple[MoosasElement, int]]:
-        modelToRad(
+        _model_to_radiance(
             self.model,
             self.sky.date,
             self.sky.sky_type,
@@ -134,9 +121,9 @@ class RadianceRunner(Runner):
         floors = []
         for space in self.model.spaceList:
             for floor in space.getAllFaces(to_dict=True)["MoosasFloor"]:
-                grid_lines = writeGrid(
+                grid_lines = _write_grid(
                     floor,
-                    gridPath=str(grid_path),
+                        grid_path=str(grid_path),
                     normal=[0, 0, 1],
                     append=bool(floors),
                 )

@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 import os
 import platform
-import random
 import re
 import shutil
 import sys
@@ -125,6 +124,7 @@ class AirflowRunner(Runner):
         simread_exe=None,
         response_file=None,
         paths: VentPaths | None = None,
+        work_dir=None,
         timeout_seconds=300.0,
         engine: NativeEngine | None = None,
     ):
@@ -139,13 +139,25 @@ class AirflowRunner(Runner):
         self.max_iterations = int(max_iterations)
         self.convergence_tolerance = float(convergence_tolerance)
         self.flow_multiplier = float(flow_multiplier)
-        self.paths = paths or VentPaths.create()
-        self.contam_exe = contam_exe or self.paths.contamx
-        self.simread_exe = simread_exe or self.paths.simread
-        self.response_file = response_file or self.paths.response
+        self.paths = paths
+        self.work_dir = work_dir
+        self.contam_exe = contam_exe
+        self.simread_exe = simread_exe
+        self.response_file = response_file
 
     def run(self) -> AirflowResult:
         """Build the project and iterate airflow and zone sensible heat balance."""
+        if self.paths is not None:
+            return self._run()
+
+        with SimulationWorkspace(parent=self.work_dir, prefix="moosas-airflow-") as workspace:
+            self.paths = VentPaths.from_workspace(workspace.path)
+            try:
+                return self._run(workspace.report)
+            finally:
+                self.paths = None
+
+    def _run(self, workspace_report=None) -> AirflowResult:
         network_file = os.path.join(self.paths.project_dir, "model.json")
         project_file = os.path.join(self.paths.project_dir, "model.prj")
         zones, airflow_paths = getZoneAndPath(self.model)
@@ -217,7 +229,7 @@ class AirflowRunner(Runner):
             residual=residual,
             commands=tuple(commands),
             warnings=() if converged else ("Airflow iteration did not converge.",),
-            workspace=WorkspaceReport(self.paths.workspace, True),
+            workspace=workspace_report or WorkspaceReport(self.paths.workspace, True),
         )
 
     def _apply_heat_loads(self, zones, airflow_paths):
@@ -237,10 +249,13 @@ class AirflowRunner(Runner):
         return zones, pathTopology(airflow_paths, zones)
 
     def _run_project(self, project_file):
-        contam_result = self.run_command((self.contam_exe, project_file))
-        with open(self.response_file, "r", encoding="utf-8") as response_file:
+        contam_exe = self.contam_exe or self.paths.contamx
+        simread_exe = self.simread_exe or self.paths.simread
+        response_path = self.response_file or self.paths.response
+        contam_result = self.run_command((contam_exe, project_file))
+        with open(response_path, "r", encoding="utf-8") as response_file:
             simread_result = self.run_command(
-                (self.simread_exe, project_file),
+                (simread_exe, project_file),
                 stdin=response_file,
             )
         return AirflowResult(
@@ -282,9 +297,6 @@ def _calculate_temperature(airflow_matrix, heat_loads, outdoor_temperature):
         for row in range(len(airflow_matrix) - 1):
             if airflow_matrix[row, column] == 0:
                 airflow_matrix[row, column] = -0.0001
-            airflow_matrix[row, column] += (
-                airflow_matrix[row, column] * random.randrange(-100, 100) * 0.00001
-            )
     outdoor_heat = airflow_matrix[-1, :-1] * (outdoor_temperature * 1.2 / 3600 * 1005)
     enthalpy = heat_loads + outdoor_heat
     airflow_matrix *= 1.2 / 3600 * 1005

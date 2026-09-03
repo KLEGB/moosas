@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ..energy.runner import EnergyRunner
-from ..radiation import modelRadiation
+from ..radiation import calculate_model_radiation
 from ..weather import CumulativeSky, WeatherData
 
 
@@ -19,7 +19,7 @@ def run_energy_with_radiation(
     """Calculate radiation, then run energy analysis with those results."""
     if radiation_mode not in (1, 2):
         raise ValueError("radiation_mode must be 1 or 2")
-    modelRadiation(model, cumulative_skies, reflection=reflection)
+    calculate_model_radiation(model, cumulative_skies, reflection=reflection)
     return EnergyRunner(
         model=model,
         weather=weather,

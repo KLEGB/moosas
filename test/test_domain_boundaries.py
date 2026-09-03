@@ -1,11 +1,14 @@
 import ast
+import inspect
 from pathlib import Path
+import textwrap
 from types import SimpleNamespace
 import unittest
 
 import numpy as np
 
 from MoosasPy.simulation.airflow.network import AfnZone
+from MoosasPy.simulation.coupling.energy_airflow import EnergyAirflowCoupler
 from MoosasPy.simulation.energy.pv import calculate_pv_generation
 from MoosasPy.simulation.energy.runner import build_energy_input
 
@@ -82,6 +85,11 @@ class DomainBoundaryTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "Precomputed"):
             AfnZone.fromElement(space)
+
+    def test_coupled_task_does_not_swallow_simulation_failures(self):
+        tree = ast.parse(textwrap.dedent(inspect.getsource(EnergyAirflowCoupler.coupledTask)))
+
+        self.assertFalse(any(isinstance(node, ast.ExceptHandler) for node in ast.walk(tree)))
 
 
 if __name__ == "__main__":

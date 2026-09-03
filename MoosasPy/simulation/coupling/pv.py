@@ -6,7 +6,7 @@ from ...model import MoosasModel
 from ...transform.geometry.element import MoosasElement
 from ...utils import np
 from ..energy.pv import calculate_pv_generation
-from ..radiation import faceRadiation, writeRadGeo
+from ..radiation import calculate_face_radiation, write_radiation_geometry
 from ..weather import CumulativeSky
 
 
@@ -88,7 +88,7 @@ def calculate_face_incident_energy(
 
     generation_series = []
     for face in faces:
-        visibility = faceRadiation(
+        visibility = calculate_face_radiation(
             face,
             grid_size,
             grid_offset,
@@ -122,7 +122,7 @@ def _run_pv(
         grid_size=grid_size,
         grid_offset=grid_offset,
         reflection=reflection,
-        geo_path=writeRadGeo(model),
+        geo_path=write_radiation_geometry(model),
     )
     return calculate_pv_generation(
         incident_energy,

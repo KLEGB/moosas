@@ -80,6 +80,39 @@ class SimulationContractTests(unittest.TestCase):
         for legacy_name in ("energyAnalysis", "getEnergyInput", "parseEnergyOutput"):
             self.assertFalse(hasattr(energy, legacy_name))
 
+    def test_radiation_exposes_only_formal_runner_and_snake_case_helpers(self):
+        radiation = MoosasPy.simulation.radiation
+
+        self.assertEqual(
+            set(radiation.__all__),
+            {
+                "DaylightFloorResult",
+                "RadianceCommandError",
+                "RadianceCommandResult",
+                "RadianceDaylightResult",
+                "RadianceRunner",
+                "RadianceSky",
+                "RadianceTimeoutError",
+                "calculate_face_radiation",
+                "calculate_model_radiation",
+                "calculate_position_radiation",
+                "calculate_position_sun_hours",
+                "calculate_space_radiation",
+                "estimate_space_daylight_factor",
+                "ray_test",
+                "write_radiation_geometry",
+            },
+        )
+        for legacy_name in (
+            "faceRadiation",
+            "modelRadiation",
+            "positionRadiation",
+            "positionSunHour",
+            "simModel",
+            "spaceRadiation",
+        ):
+            self.assertFalse(hasattr(radiation, legacy_name))
+
     def test_base_result_defaults_to_empty_diagnostics(self):
         result = SimulationResult()
 
@@ -115,6 +148,27 @@ class SimulationContractTests(unittest.TestCase):
 
         self.assertEqual(result.data, {"total": {}})
         self.assertEqual(result.commands, (command_result,))
+
+    def test_energy_runner_does_not_mutate_reused_input(self):
+        zone = SimpleNamespace(paramToString=lambda: "zone", paramTags=lambda: "header")
+        energy_input = {"zones": [zone], "args": []}
+        command_result = CommandResult(("MoosasEnergy",), 0, "", "")
+
+        with TemporaryDirectory() as work_dir, patch(
+            "MoosasPy.simulation.energy.runner.Runner.run_command", return_value=command_result
+        ), patch(
+            "MoosasPy.simulation.energy.runner.parse_energy_output", return_value={"total": {}}
+        ):
+            runner = EnergyRunner(
+                energy_input=energy_input,
+                temporal_scale="hourly",
+                spatial_scale="zone",
+                work_dir=work_dir,
+            )
+            runner.run()
+            runner.run()
+
+        self.assertEqual(energy_input["args"], [])
 
     def test_energy_scales_map_to_one_temporal_flag_and_one_spatial_flag(self):
         space = SimpleNamespace(
@@ -236,15 +290,24 @@ class SimulationContractTests(unittest.TestCase):
         airflow_matrix = np.array([[0.0, 2.0], [3.0, 0.0]])
         conversion = 1.2 / 3600 * 1005
 
-        with patch(
-            "MoosasPy.simulation.airflow.runner.random.randrange", return_value=0
-        ):
-            temperature = _calculate_temperature(airflow_matrix, [100.0], 25.0)
+        temperature = _calculate_temperature(airflow_matrix, [100.0], 25.0)
 
         expected = 273.15 + (100.0 + 3.0 * 25.0 * conversion) / (3.0 * conversion)
         self.assertIsInstance(temperature, np.ndarray)
         self.assertEqual(temperature.shape, (1,))
         np.testing.assert_allclose(temperature, [expected])
+
+    def test_airflow_temperature_solver_is_deterministic(self):
+        airflow_matrix = np.array([
+            [0.0, 2.0, 1.0],
+            [3.0, 0.0, 1.0],
+            [2.0, 4.0, 0.0],
+        ])
+
+        first = _calculate_temperature(airflow_matrix, [100.0, 120.0], 25.0)
+        second = _calculate_temperature(airflow_matrix, [100.0, 120.0], 25.0)
+
+        np.testing.assert_array_equal(first, second)
 
     def test_energy_airflow_coupler_is_exposed_by_coupling_package(self):
         self.assertEqual(EnergyAirflowCoupler.__module__, "MoosasPy.simulation.coupling.energy_airflow")

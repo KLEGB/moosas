@@ -27,8 +27,8 @@ class RadianceRunnerTests(unittest.TestCase):
         )
         recorded_work_dirs = []
 
-        def write_grid(_floor, gridPath, **_kwargs):
-            Path(gridPath).write_text("0 0 0 0 0 1\n", encoding="utf-8")
+        def write_grid(_floor, grid_path, **_kwargs):
+            Path(grid_path).write_text("0 0 0 0 0 1\n", encoding="utf-8")
             return ["0 0 0 0 0 1"]
 
         def run_command(command, cwd, **_kwargs):
@@ -38,8 +38,8 @@ class RadianceRunnerTests(unittest.TestCase):
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
         with tempfile.TemporaryDirectory() as parent_dir:
-            with patch("MoosasPy.simulation.radiation.runner.modelToRad") as model_to_rad, patch(
-                "MoosasPy.simulation.radiation.runner.writeGrid", side_effect=write_grid
+            with patch("MoosasPy.simulation.radiation.runner._model_to_radiance") as model_to_rad, patch(
+                "MoosasPy.simulation.radiation.runner._write_grid", side_effect=write_grid
             ), patch("MoosasPy.simulation.runner.subprocess.run", side_effect=run_command):
                 result = RadianceRunner(model, self.sky, work_dir=parent_dir).run()
 

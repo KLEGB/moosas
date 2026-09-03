@@ -25,7 +25,7 @@ def _default_sky_positions():
         ]
 
 
-def modelRadiation(model, cumulative_sky, reflection=1):
+def calculate_model_radiation(model, cumulative_sky, reflection=1):
     """
     Calculate radiation for each space in the model using a fast single-call method via MoosasRad.exe.
     
@@ -45,12 +45,12 @@ def modelRadiation(model, cumulative_sky, reflection=1):
     """
     model.x = 1000
     """
-         This method is faster than spaceRadiation since it only call MoosasRad.exe once.
+         This method is faster than per-space calculation since it calls MoosasRad.exe once.
          Radiation Calculation in MoosasRad is parallel.
     """
     """construct rays"""
     rays, windowArea, spaceIdx = [], [], []
-    geo_path = writeRadGeo(model)
+    geo_path = write_radiation_geometry(model)
     for i, space in enumerate(model.spaceList):
         moFaces = space.getAllFaces(to_dict=False)
         for moGeometry in moFaces:
@@ -67,14 +67,14 @@ def modelRadiation(model, cumulative_sky, reflection=1):
     spaceIdx = np.array(spaceIdx)
 
     """radiation calculation"""
-    summerRad = positionRadiation(
-        positionRay=rays,
+    summerRad = calculate_position_radiation(
+        position_ray=rays,
         sky=cumulative_sky['summer'],
         geo_path=geo_path,
         reflection=reflection
     )
-    winterRad = positionRadiation(
-        positionRay=rays,
+    winterRad = calculate_position_radiation(
+        position_ray=rays,
         sky=cumulative_sky['winter'],
         geo_path=geo_path,
         reflection=reflection
@@ -91,7 +91,7 @@ def modelRadiation(model, cumulative_sky, reflection=1):
     return model
 
 
-def spaceRadiation(space: MoosasSpace, cumulative_sky, reflection=1) -> dict:
+def calculate_space_radiation(space: MoosasSpace, cumulative_sky, reflection=1) -> dict:
     """
     Calculate seasonal radiation for a space by aggregating aperture-level radiation contributions.
     
@@ -114,7 +114,7 @@ def spaceRadiation(space: MoosasSpace, cumulative_sky, reflection=1) -> dict:
     """
     settings = space.settings
     model = space.parent
-    geo_path = writeRadGeo(model)
+    geo_path = write_radiation_geometry(model)
     moFaces = space.getAllFaces(to_dict=False)
     rays = []
     windowArea = []
@@ -126,15 +126,15 @@ def spaceRadiation(space: MoosasSpace, cumulative_sky, reflection=1) -> dict:
             ))
             windowArea.append(moGeometry.area3d())
     windowArea = np.array(windowArea)
-    settings['zone_summerrad'] = np.sum(windowArea * positionRadiation(
-        positionRay=rays,
+    settings['zone_summerrad'] = np.sum(windowArea * calculate_position_radiation(
+        position_ray=rays,
         sky=cumulative_sky['summer'],
         geo_path=geo_path,
         reflection=reflection
     ))
 
-    settings['zone_winterrad'] = np.sum(windowArea * positionRadiation(
-        positionRay=rays,
+    settings['zone_winterrad'] = np.sum(windowArea * calculate_position_radiation(
+        position_ray=rays,
         sky=cumulative_sky['winter'],
         geo_path=geo_path,
         reflection=reflection
@@ -143,8 +143,8 @@ def spaceRadiation(space: MoosasSpace, cumulative_sky, reflection=1) -> dict:
     return settings
 
 
-def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky=None, reflection=1,
-                  geo_path=None) -> np.ndarray:
+def calculate_face_radiation(face: MoosasElement, grid_size=None, grid_offset=0.78, sky=None, reflection=1,
+                             geo_path=None) -> np.ndarray:
     """
     Calculate the sky visibility for each patch in the sky model, for a gridded face.
     the return result would be the average sky visibility, not for a position but the whole grid.
@@ -169,7 +169,7 @@ def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky=None,
     np.ndarry
         A numpy array containing average sky patches visibility (len=145).
     """
-    grid: MoosasGrid = MoosasGrid(face, gridSize, gridOffset)
+    grid: MoosasGrid = MoosasGrid(face, grid_size, grid_offset)
     model = face.parent
     if sky is None:
         position = _default_sky_positions()
@@ -188,10 +188,10 @@ def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky=None,
     unHit = np.arange(len(rays))
     rays = np.array(rays)
     if geo_path is None:
-        geo_path = writeRadGeo(model)
+        geo_path = write_radiation_geometry(model)
 
     while reflection >= 0 and len(rays[unHit]) > 0:
-        newRays = rayTest(rays[unHit], geo_path=geo_path)
+        newRays = ray_test(rays[unHit], geo_path=geo_path)
         if len(newRays) != len(unHit):
             raise Exception('Ray test error: input and output dont have the same len')
         unHitNext = []
@@ -214,8 +214,8 @@ def faceRadiation(face: MoosasElement, gridSize=None, gridOffset=0.78, sky=None,
     return np.mean(rays, axis=0)
 
 
-def positionRadiation(positionRay: Ray | Iterable[Ray], sky,
-                      model=None, reflection=1, geo_path=None) -> Iterable[float]:
+def calculate_position_radiation(position_ray: Ray | Iterable[Ray], sky,
+                                 model=None, reflection=1, geo_path=None) -> Iterable[float]:
     """
         Cumulative radiation for positions with factors.
         The position are defined as Ray class with origins and directions.
@@ -237,21 +237,21 @@ def positionRadiation(positionRay: Ray | Iterable[Ray], sky,
         Iterable[float]
             The return value is unit in kWh/m2
     """
-    if isinstance(positionRay, Ray):
-        positionRay = np.array([positionRay])
-    elif isinstance(positionRay, list):
-        positionRay = np.array(positionRay)
-    elif not isinstance(positionRay, np.ndarray):
-        raise Exception(f'Wrong type of positionRay, except {list} or {np.ndarray} or {Ray} got {type(positionRay)}')
-    if len(positionRay) == 0:
+    if isinstance(position_ray, Ray):
+        position_ray = np.array([position_ray])
+    elif isinstance(position_ray, list):
+        position_ray = np.array(position_ray)
+    elif not isinstance(position_ray, np.ndarray):
+        raise TypeError(f'Expected {list}, {np.ndarray}, or {Ray}; got {type(position_ray)}')
+    if len(position_ray) == 0:
         return np.array([])
     if geo_path is None:
         if model is None:
             raise Exception('Geo export error: empty model.')
-        geo_path = writeRadGeo(model)
+        geo_path = write_radiation_geometry(model)
 
     rays = []
-    for pointRay in positionRay:
+    for pointRay in position_ray:
         # project the direct sun radiation to the pointRay direction
         thisRays = [Ray(pointRay.origin, pos, value=val) for pos, val in
                     zip(sky.positions, sky.values)]
@@ -267,7 +267,7 @@ def positionRadiation(positionRay: Ray | Iterable[Ray], sky,
     unHit = np.arange(len(rays))
     rays = np.array(rays)
     while reflection >= 0 and len(rays[unHit]) > 0:
-        newRays = rayTest(rays[unHit], geo_path=geo_path)
+        newRays = ray_test(rays[unHit], geo_path=geo_path)
         if len(newRays) != len(unHit):
             raise Exception('Ray test error: input and output dont have the same len')
         unHitNext = []
@@ -282,12 +282,12 @@ def positionRadiation(positionRay: Ray | Iterable[Ray], sky,
         reflection -= 1
 
     rays = np.array([ra.value for ra in rays])
-    rays = rays.reshape(len(positionRay), int(len(rays) / len(positionRay)))
+    rays = rays.reshape(len(position_ray), int(len(rays) / len(position_ray)))
     return np.sum(rays, axis=1)
 
 
-def rayTest(rays: Iterable[Ray], model=None, geo_path: str = None,
-            ray_path: str = None) -> list[Ray | None]:
+def ray_test(rays: Iterable[Ray], model=None, geo_path: str = None,
+             ray_path: str = None) -> list[Ray | None]:
     """
         call MoosasRad.exe to test the ray face intersection and reflection.
         if the ray hit a face: result ray will be the reflection ray of the input ray.
@@ -309,7 +309,7 @@ def rayTest(rays: Iterable[Ray], model=None, geo_path: str = None,
     if geo_path is None:
         if model is None:
             raise Exception('empty model')
-        geo_path = writeRadGeo(model)
+        geo_path = write_radiation_geometry(model)
     if ray_path is None:
         run_dir = tempfile.mkdtemp(prefix="moosas-ray-")
         ray_path = os.path.join(run_dir, "rays.i")
@@ -352,7 +352,7 @@ def rayTest(rays: Iterable[Ray], model=None, geo_path: str = None,
     return reflectionRay
 
 
-def writeRadGeo(model, work_dir=None):
+def write_radiation_geometry(model, work_dir=None):
     """
     Write a geometry file for the given model towards MoosasRayTest.exe.
     
