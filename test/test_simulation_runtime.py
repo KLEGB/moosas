@@ -6,6 +6,8 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
+import numpy as np
+
 from MoosasPy.simulation import SimulationWorkspace
 from MoosasPy.simulation.airflow.parser import read_file, read_topology
 from MoosasPy.simulation.airflow.runner import (
@@ -16,7 +18,12 @@ from MoosasPy.simulation.airflow.runner import (
 )
 from MoosasPy.simulation.energy.runner import EnergyRunner
 from MoosasPy.simulation.engine import NativeExecution
-from MoosasPy.simulation.radiation.calculation import write_radiation_geometry
+from MoosasPy.simulation.radiation.calculation import (
+    calculate_model_radiation,
+    calculate_position_radiation,
+    ray_test,
+    write_radiation_geometry,
+)
 from MoosasPy.simulation.radiation.runner import (
     RadianceCommandError,
     RadianceRunner,
@@ -26,6 +33,8 @@ from MoosasPy.simulation.radiation.runner import (
 from MoosasPy.simulation.runner import CommandError, CommandTimeoutError, Runner
 from MoosasPy.simulation.weather import Location
 from MoosasPy.simulation.weather.epw import convert_epw_to_wea
+from MoosasPy.transform.geometry.geos import Ray, Vector
+from MoosasPy.utils.constant import rad
 
 
 class RecordingEngine:
@@ -230,6 +239,107 @@ class SimulationWorkspaceTests(unittest.TestCase):
             self.assertTrue(Path(vent_paths.simread).is_file())
             self.assertEqual(Path(vent_paths.contamx).parent, Path(vent_paths.workspace) / "contam")
             self.assertEqual(Path(vent_paths.response).name, "response.txt")
+
+    def test_position_radiation_preserves_energy_across_reflections(self):
+        position_ray = Ray(Vector([0, 0, 0]), Vector([0, 0, 1]))
+        sky = SimpleNamespace(
+            positions=[Vector([0, 0, 1])],
+            values=np.array([2.0]),
+        )
+
+        def reflect_once(rays, **_kwargs):
+            if reflect_once.call_count == 0:
+                reflect_once.call_count += 1
+                return [Ray(ray.origin, ray.direction) if index == 0 else None for index, ray in enumerate(rays)]
+            return [None] * len(rays)
+
+        reflect_once.call_count = 0
+        with patch(
+            "MoosasPy.simulation.radiation.calculation.ray_test",
+            side_effect=reflect_once,
+        ):
+            result = calculate_position_radiation(
+                position_ray,
+                sky,
+                geo_path="model.geo",
+                reflection=1,
+            )
+
+        self.assertAlmostEqual(result[0], 2.0 * rad.CONTENT_REFLECTION)
+
+    def test_position_radiation_excludes_blocked_rays_without_reflections(self):
+        position_ray = Ray(Vector([0, 0, 0]), Vector([0, 0, 1]))
+        sky = SimpleNamespace(
+            positions=[Vector([0, 0, 1])],
+            values=np.array([2.0]),
+        )
+
+        with patch(
+            "MoosasPy.simulation.radiation.calculation.ray_test",
+            return_value=[Ray(position_ray.origin, position_ray.direction), None],
+        ):
+            result = calculate_position_radiation(
+                position_ray,
+                sky,
+                geo_path="model.geo",
+                reflection=0,
+            )
+
+        self.assertEqual(result[0], 0.0)
+
+    def test_model_radiation_traces_shared_sky_geometry_once(self):
+        class Glazing:
+            normal = np.array([0.0, 0.0, 1.0])
+
+            @staticmethod
+            def getWeightCenter():
+                return np.array([0.0, 0.0, 0.0])
+
+            @staticmethod
+            def area3d():
+                return 1.0
+
+        glazing = Glazing()
+        space = SimpleNamespace(getAllFaces=lambda to_dict: [glazing], settings={})
+        model = SimpleNamespace(spaceList=[space])
+        positions = [Vector([0, 0, 1])]
+        skies = {
+            "summer": SimpleNamespace(positions=positions, values=np.array([2.0])),
+            "winter": SimpleNamespace(positions=positions, values=np.array([3.0])),
+        }
+
+        with patch(
+            "MoosasPy.simulation.radiation.calculation.write_radiation_geometry",
+            return_value="model.geo",
+        ), patch(
+            "MoosasPy.simulation.radiation.calculation.MoosasGlazing",
+            Glazing,
+        ), patch(
+            "MoosasPy.simulation.radiation.calculation.ray_test",
+            return_value=[None, None],
+        ) as ray_test_mock:
+            calculate_model_radiation(model, skies, reflection=0)
+
+        ray_test_mock.assert_called_once()
+
+    def test_ray_test_cleans_its_internal_workspace(self):
+        ray = Ray(Vector([0, 0, 0]), Vector([0, 0, 1]))
+
+        def run_command(command, **_kwargs):
+            Path(command[command.index("-o") + 1]).write_text(
+                "-1,-1,-1,0,0,1\n",
+                encoding="utf-8",
+            )
+
+        with TemporaryDirectory() as parent_dir, patch(
+            "MoosasPy.simulation.radiation.calculation.tempfile.TemporaryDirectory",
+            side_effect=lambda **kwargs: TemporaryDirectory(dir=parent_dir, **kwargs),
+        ), patch(
+            "MoosasPy.simulation.radiation.calculation.Runner.run_command",
+            side_effect=run_command,
+        ):
+            self.assertEqual(ray_test([ray], geo_path="model.geo"), [None])
+            self.assertEqual(list(Path(parent_dir).iterdir()), [])
 
 
 class RadianceRunnerTests(unittest.TestCase):

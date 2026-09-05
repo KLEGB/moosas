@@ -50,7 +50,6 @@ def calculate_model_radiation(model, cumulative_sky, reflection=1):
     """
     """construct rays"""
     rays, windowArea, spaceIdx = [], [], []
-    geo_path = write_radiation_geometry(model)
     for i, space in enumerate(model.spaceList):
         moFaces = space.getAllFaces(to_dict=False)
         for moGeometry in moFaces:
@@ -67,18 +66,16 @@ def calculate_model_radiation(model, cumulative_sky, reflection=1):
     spaceIdx = np.array(spaceIdx)
 
     """radiation calculation"""
-    summerRad = calculate_position_radiation(
-        position_ray=rays,
-        sky=cumulative_sky['summer'],
-        geo_path=geo_path,
-        reflection=reflection
-    )
-    winterRad = calculate_position_radiation(
-        position_ray=rays,
-        sky=cumulative_sky['winter'],
-        geo_path=geo_path,
-        reflection=reflection
-    )
+    with tempfile.TemporaryDirectory(prefix="moosas-radiation-") as work_dir:
+        geo_path = write_radiation_geometry(model, work_dir=work_dir)
+        factors = _calculate_position_radiation_factors(
+            position_ray=rays,
+            sky_positions=cumulative_sky['summer'].positions,
+            geo_path=geo_path,
+            reflection=reflection,
+        )
+    summerRad = factors @ cumulative_sky['summer'].values
+    winterRad = factors @ cumulative_sky['winter'].values
 
     """sum up space radiation"""
     for i, space in enumerate(model.spaceList):
@@ -114,7 +111,6 @@ def calculate_space_radiation(space: MoosasSpace, cumulative_sky, reflection=1) 
     """
     settings = space.settings
     model = space.parent
-    geo_path = write_radiation_geometry(model)
     moFaces = space.getAllFaces(to_dict=False)
     rays = []
     windowArea = []
@@ -126,19 +122,16 @@ def calculate_space_radiation(space: MoosasSpace, cumulative_sky, reflection=1) 
             ))
             windowArea.append(moGeometry.area3d())
     windowArea = np.array(windowArea)
-    settings['zone_summerrad'] = np.sum(windowArea * calculate_position_radiation(
-        position_ray=rays,
-        sky=cumulative_sky['summer'],
-        geo_path=geo_path,
-        reflection=reflection
-    ))
-
-    settings['zone_winterrad'] = np.sum(windowArea * calculate_position_radiation(
-        position_ray=rays,
-        sky=cumulative_sky['winter'],
-        geo_path=geo_path,
-        reflection=reflection
-    ))
+    with tempfile.TemporaryDirectory(prefix="moosas-radiation-") as work_dir:
+        geo_path = write_radiation_geometry(model, work_dir=work_dir)
+        factors = _calculate_position_radiation_factors(
+            position_ray=rays,
+            sky_positions=cumulative_sky['summer'].positions,
+            geo_path=geo_path,
+            reflection=reflection,
+        )
+    settings['zone_summerrad'] = np.sum(windowArea * (factors @ cumulative_sky['summer'].values))
+    settings['zone_winterrad'] = np.sum(windowArea * (factors @ cumulative_sky['winter'].values))
 
     return settings
 
@@ -169,8 +162,20 @@ def calculate_face_radiation(face: MoosasElement, grid_size=None, grid_offset=0.
     np.ndarry
         A numpy array containing average sky patches visibility (len=145).
     """
-    grid: MoosasGrid = MoosasGrid(face, grid_size, grid_offset)
     model = face.parent
+    if geo_path is None:
+        with tempfile.TemporaryDirectory(prefix="moosas-radiation-") as work_dir:
+            temporary_geo_path = write_radiation_geometry(model, work_dir=work_dir)
+            return calculate_face_radiation(
+                face,
+                grid_size=grid_size,
+                grid_offset=grid_offset,
+                sky=sky,
+                reflection=reflection,
+                geo_path=temporary_geo_path,
+            )
+
+    grid: MoosasGrid = MoosasGrid(face, grid_size, grid_offset)
     if sky is None:
         position = _default_sky_positions()
     else:
@@ -187,9 +192,6 @@ def calculate_face_radiation(face: MoosasElement, grid_size=None, grid_offset=0.
 
     unHit = np.arange(len(rays))
     rays = np.array(rays)
-    if geo_path is None:
-        geo_path = write_radiation_geometry(model)
-
     while reflection >= 0 and len(rays[unHit]) > 0:
         newRays = ray_test(rays[unHit], geo_path=geo_path)
         if len(newRays) != len(unHit):
@@ -197,9 +199,12 @@ def calculate_face_radiation(face: MoosasElement, grid_size=None, grid_offset=0.
         unHitNext = []
         for i, thisRay in enumerate(newRays):
             if thisRay is not None:
-                rays[unHit[i]] = thisRay
-                rays[unHit[i]].value *= rad.CONTENT_REFLECTION
-                unHitNext.append(unHit[i])
+                if reflection > 0:
+                    thisRay.value = rays[unHit[i]].value * rad.CONTENT_REFLECTION
+                    rays[unHit[i]] = thisRay
+                    unHitNext.append(unHit[i])
+                else:
+                    rays[unHit[i]].value = 0
         unHit = unHitNext
         if len(rays[unHit]) == 0:
             break
@@ -237,6 +242,18 @@ def calculate_position_radiation(position_ray: Ray | Iterable[Ray], sky,
         Iterable[float]
             The return value is unit in kWh/m2
     """
+    factors = _calculate_position_radiation_factors(
+        position_ray,
+        sky.positions,
+        model=model,
+        reflection=reflection,
+        geo_path=geo_path,
+    )
+    return factors @ sky.values
+
+
+def _calculate_position_radiation_factors(position_ray: Ray | Iterable[Ray], sky_positions,
+                                          model=None, reflection=1, geo_path=None) -> np.ndarray:
     if isinstance(position_ray, Ray):
         position_ray = np.array([position_ray])
     elif isinstance(position_ray, list):
@@ -244,24 +261,39 @@ def calculate_position_radiation(position_ray: Ray | Iterable[Ray], sky,
     elif not isinstance(position_ray, np.ndarray):
         raise TypeError(f'Expected {list}, {np.ndarray}, or {Ray}; got {type(position_ray)}')
     if len(position_ray) == 0:
-        return np.array([])
+        return np.empty((0, len(sky_positions)))
     if geo_path is None:
         if model is None:
             raise Exception('Geo export error: empty model.')
-        geo_path = write_radiation_geometry(model)
+        with tempfile.TemporaryDirectory(prefix="moosas-radiation-") as work_dir:
+            temporary_geo_path = write_radiation_geometry(model, work_dir=work_dir)
+            return _calculate_position_radiation_factors(
+                position_ray,
+                sky_positions,
+                reflection=reflection,
+                geo_path=temporary_geo_path,
+            )
 
     rays = []
     for pointRay in position_ray:
-        # project the direct sun radiation to the pointRay direction
-        thisRays = [Ray(pointRay.origin, pos, value=val) for pos, val in
-                    zip(sky.positions, sky.values)]
-        # Add ground reflection to the rays
-        nagativeRays = [ra.reverse() for ra in thisRays]
-        for ra in nagativeRays:
-            ra.value *= rad.GROUND_REFLECTION
+        thisRays = [
+            Ray(
+                pointRay.origin,
+                position,
+                value=max(Vector.dot(position, pointRay.direction), 0),
+            )
+            for position in sky_positions
+        ]
+        nagativeRays = [
+            Ray(
+                pointRay.origin,
+                Vector(-position.array),
+                value=rad.GROUND_REFLECTION
+                * max(Vector.dot(Vector(-position.array), pointRay.direction), 0),
+            )
+            for position in sky_positions
+        ]
         thisRays += nagativeRays
-        for r in thisRays:
-            r.value *= max(Vector.dot(r.direction, pointRay.direction), 0)
         rays += thisRays
     # whether the ray hit anything
     unHit = np.arange(len(rays))
@@ -273,16 +305,19 @@ def calculate_position_radiation(position_ray: Ray | Iterable[Ray], sky,
         unHitNext = []
         for i, thisRay in enumerate(newRays):
             if thisRay is not None:
-                rays[unHit[i]] = thisRay
-                rays[unHit[i]].value *= rad.CONTENT_REFLECTION
-                unHitNext.append(unHit[i])
+                if reflection > 0:
+                    thisRay.value = rays[unHit[i]].value * rad.CONTENT_REFLECTION
+                    rays[unHit[i]] = thisRay
+                    unHitNext.append(unHit[i])
+                else:
+                    rays[unHit[i]].value = 0
         unHit = unHitNext
         if len(rays[unHit]) == 0:
             break
         reflection -= 1
 
     rays = np.array([ra.value for ra in rays])
-    rays = rays.reshape(len(position_ray), int(len(rays) / len(position_ray)))
+    rays = rays.reshape(len(position_ray), 2, len(sky_positions))
     return np.sum(rays, axis=1)
 
 
@@ -309,47 +344,49 @@ def ray_test(rays: Iterable[Ray], model=None, geo_path: str = None,
     if geo_path is None:
         if model is None:
             raise Exception('empty model')
-        geo_path = write_radiation_geometry(model)
-    if ray_path is None:
-        run_dir = tempfile.mkdtemp(prefix="moosas-ray-")
-        ray_path = os.path.join(run_dir, "rays.i")
-    else:
-        ray_path = os.path.abspath(ray_path)
-    result_path = os.path.join(os.path.dirname(ray_path), "rays.o")
+        with tempfile.TemporaryDirectory(prefix="moosas-radiation-") as work_dir:
+            temporary_geo_path = write_radiation_geometry(model, work_dir=work_dir)
+            return ray_test(rays, geo_path=temporary_geo_path, ray_path=ray_path)
+    temporary_directory = tempfile.TemporaryDirectory(prefix="moosas-ray-") if ray_path is None else None
+    try:
+        if ray_path is None:
+            ray_path = os.path.join(temporary_directory.name, "rays.i")
+        else:
+            ray_path = os.path.abspath(ray_path)
+        result_path = os.path.join(os.path.dirname(ray_path), "rays.o")
 
-    # export ray file
-    lines = ''
-    for ra in rays:
-        if not isinstance(ra, Ray):
-            raise Exception(f'expect{Vector},got{type(ra)}')
-        lines += ra.dump() + '\n'
+        lines = []
+        for ra in rays:
+            if not isinstance(ra, Ray):
+                raise Exception(f'expect{Vector},got{type(ra)}')
+            lines.append(ra.dump())
 
-    path.checkBuildDir(ray_path, result_path)
-    with open(ray_path, 'w') as f:
-        f.write(lines)
+        path.checkBuildDir(ray_path, result_path)
+        with open(ray_path, 'w') as f:
+            f.write('\n'.join(lines) + '\n')
 
-    # call MoosasRad.exe
-    command = [
-        os.path.join(path.libDir, 'rad', f'MoosasRad{RAD_EXE_SUFFIX}'),
-        '-g', geo_path,
-        '-o', result_path,
-        ray_path
-    ]
-    Runner().run_command(command)
+        command = [
+            os.path.join(path.libDir, 'rad', f'MoosasRad{RAD_EXE_SUFFIX}'),
+            '-g', geo_path,
+            '-o', result_path,
+            ray_path
+        ]
+        Runner().run_command(command)
 
-    # read the result ray from the file
-    result = []
-    with open(result_path, 'r') as f:
-        result = f.read().split('\n')
-    reflectionRay = []
-    for res in result:
-        if len(res) > 6:
-            res = np.array(res.split(',')).astype(float)
-            res = Ray(Vector(res[:3]), Vector(res[3:]))
-            if Vector.equal(res.origin, Vector(np.array([-1, -1, -1]))):
-                res = None
-            reflectionRay.append(res)
-    return reflectionRay
+        with open(result_path, 'r') as f:
+            result = f.read().split('\n')
+        reflectionRay = []
+        for res in result:
+            if len(res) > 6:
+                res = np.array(res.split(',')).astype(float)
+                res = Ray(Vector(res[:3]), Vector(res[3:]))
+                if Vector.equal(res.origin, Vector(np.array([-1, -1, -1]))):
+                    res = None
+                reflectionRay.append(res)
+        return reflectionRay
+    finally:
+        if temporary_directory is not None:
+            temporary_directory.cleanup()
 
 
 def write_radiation_geometry(model, work_dir=None):
