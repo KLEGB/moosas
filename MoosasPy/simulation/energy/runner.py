@@ -14,6 +14,7 @@ public building types via the -t parameter.
 from __future__ import annotations
 
 from copy import copy
+import math
 from ...utils.support import os
 from dataclasses import dataclass
 import re
@@ -307,7 +308,8 @@ def parse_energy_output(result_path,
             "cooling": total_row[0],
             "heating": total_row[1],
             "lighting": total_row[2],
-            "total": np.array(total_row).astype(float).sum(),
+            "equipment": total_row[3],
+            "total": np.array(total_row[:4]).astype(float).sum(),
         }
 
         # ── Section 1: SPACE RESULT (N rows) ─────────────
@@ -317,14 +319,16 @@ def parse_energy_output(result_path,
                     'cooling': output[1][i][0],
                     'heating': output[1][i][1],
                     'lighting': output[1][i][2],
-                    'total': np.array(output[1][i]).astype(float).sum(),
+                    'equipment': output[1][i][3],
+                    'total': np.array(output[1][i][:4]).astype(float).sum(),
                 }
         else:
             zone_list = [{
                 'cooling': res[0],
                 'heating': res[1],
                 'lighting': res[2],
-                'total': np.array(res).astype(float).sum(),
+                'equipment': res[3],
+                'total': np.array(res[:4]).astype(float).sum(),
             } for res in output[1]]
 
         # ── Section 2: MONTH RESULT (12 rows) ────────────
@@ -334,7 +338,8 @@ def parse_energy_output(result_path,
                 "cooling": result[0],
                 "heating": result[1],
                 "lighting": result[2],
-                "total": np.array(result).astype(float).sum(),
+                "equipment": result[3],
+                "total": np.array(result[:4]).astype(float).sum(),
             }
 
         e_data = {"total": total, "spaces": zone_list}
@@ -390,7 +395,8 @@ def _parse_energy_rows(section_data):
         "cooling": row[0],
         "heating": row[1],
         "lighting": row[2],
-        "total": np.array(row).astype(float).sum(),
+        "equipment": row[3],
+        "total": np.array(row[:4]).astype(float).sum(),
     } for row in section_data]
 
 
@@ -419,7 +425,8 @@ def _parse_zone_energy_rows(section_data, num_zones, items_per_zone):
             "cooling": row[1],
             "heating": row[2],
             "lighting": row[3],
-            "total": np.array(row[1:4]).astype(float).sum(),
+            "equipment": row[4],
+            "total": np.array(row[1:5]).astype(float).sum(),
         })
     return zone_results
 
@@ -603,7 +610,7 @@ def build_energy_input(model: MoosasModel,
     args = [
         '-w', weather.weather_file,
         '-t', str(building_type_int),
-        '-l', str(round(float(weather.location.latitude), 2)),
+        '-l', str(math.radians(float(weather.location.latitude))),
         '-a', str(round(float(weather.location.altitude), 2)),
         '-s', str(round(total_outside_area / total_volume, 2)),
     ]

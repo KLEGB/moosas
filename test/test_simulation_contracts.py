@@ -1,3 +1,4 @@
+import math
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -183,7 +184,7 @@ class SimulationContractTests(unittest.TestCase):
         model = SimpleNamespace(spaceList=[space], schedule=None)
         weather = SimpleNamespace(
             weather_file="weather.csv",
-            location=SimpleNamespace(latitude=0.0, altitude=0.0),
+            location=SimpleNamespace(latitude=37.8, altitude=0.0),
         )
 
         monthly = build_energy_input(model, weather, temporal_scale="monthly")
@@ -197,6 +198,10 @@ class SimulationContractTests(unittest.TestCase):
 
         self.assertNotIn("-d", monthly["args"])
         self.assertNotIn("-r", monthly["args"])
+        self.assertAlmostEqual(
+            float(monthly["args"][monthly["args"].index("-l") + 1]),
+            math.radians(37.8),
+        )
         self.assertEqual(daily["args"][-2:], ["-d", "1"])
         self.assertEqual(hourly_zone["args"][-4:], ["-r", "1", "-z", "1"])
 
@@ -209,12 +214,12 @@ class SimulationContractTests(unittest.TestCase):
 
     def test_energy_parser_exposes_only_requested_hourly_zone_scale(self):
         energy_output = [
-            [["1", "2", "3"]],
-            [["1", "2", "3"]],
-            [["1", "2", "3"]] * 12,
-            [["1", "2", "3"]] * 8760,
-            [["0", "1", "2", "3"]] * 12,
-            [["0", "1", "2", "3"]] * 8760,
+            [["1", "2", "3", "4"]],
+            [["1", "2", "3", "4"]],
+            [["1", "2", "3", "4"]] * 12,
+            [["1", "2", "3", "4"]] * 8760,
+            [["0", "1", "2", "3", "4"]] * 12,
+            [["0", "1", "2", "3", "4"]] * 8760,
         ]
         with patch("MoosasPy.simulation.energy.runner.parseFile", return_value=energy_output):
             result = parse_energy_output(
@@ -229,6 +234,8 @@ class SimulationContractTests(unittest.TestCase):
         )
         self.assertEqual(len(result["hours"]), 8760)
         self.assertEqual(len(result["zone_hours"][0]), 8760)
+        self.assertEqual(result["total"]["equipment"], "4")
+        self.assertEqual(result["total"]["total"], 10.0)
 
     def test_airflow_runner_builds_project_from_model_in_its_workspace(self):
         command_result = CommandResult(("contamx", "model.prj"), 0, "", "")
