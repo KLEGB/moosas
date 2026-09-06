@@ -6,10 +6,12 @@ import numpy as np
 import pytest
 
 from MoosasPy.simulation.energy.runner import _resolve_schedule_ref
+from MoosasPy.simulation.radiation import calculation as radiation_calculation
 from MoosasPy.transform.geometry.convexify import GeometryConvexifier
 from MoosasPy.model import MoosasModel
-from MoosasPy.transform.geometry.element import MoosasEdge, MoosasGeometry, MoosasSpace, MoosasWall
-from MoosasPy.transform.geometry.geos import simplify
+from MoosasPy.transform.geometry.element import MoosasEdge, MoosasFace, MoosasGeometry, MoosasSpace, MoosasWall
+from MoosasPy.transform.geometry.geos import Projection, simplify
+from MoosasPy.transform.geometry.grid import MoosasGrid
 from MoosasPy.transform.geometry.planar_graph import TopoNetwork
 from MoosasPy.transform.geometry.contour import _merge_tiny_partitions
 from MoosasPy.transform.stages.convexification import convexify_model
@@ -46,6 +48,62 @@ def test_simplify_keeps_three_vertices_for_a_2d_triangle():
 
     assert shapely.is_valid(result)
     assert len(shapely.get_coordinates(result)) == 4
+
+
+def test_projection_supports_sloped_roof_without_horizontal_section_vertices():
+    roof = shapely.polygons(np.array([
+        [0.0, 0.0, 3.0],
+        [6.0, 0.0, 3.0],
+        [6.0, 4.0, 6.0],
+        [0.0, 4.0, 6.0],
+        [0.0, 0.0, 3.0],
+    ]))
+
+    projection = Projection.fromPolygon(roof)
+    projected_roof = projection.toUV(roof)
+
+    assert shapely.area(projected_roof) > 0.0
+    assert np.isfinite(projection.rotateMatrix).all()
+
+
+def test_sloped_roof_radiation_uses_offset_world_grid_points(monkeypatch):
+    roof = shapely.polygons(np.array([
+        [0.0, 0.0, 3.0],
+        [6.0, 0.0, 3.0],
+        [6.0, 4.0, 6.0],
+        [0.0, 4.0, 6.0],
+        [0.0, 0.0, 3.0],
+    ]))
+    model = MoosasModel()
+    model.levelList = [0.0, 3.0, 6.0]
+    geometry = MoosasGeometry(roof, "sloped-roof")
+    model.geometryList = [geometry]
+    model.geoId = [geometry.faceId]
+    face = MoosasFace(model, geometry)
+    grid = MoosasGrid(face, 1.0, 0.2)
+    automatic_grid = MoosasGrid(face, grid_offset=0.2)
+    world_points = [point.coords[0] for point in grid.gridPoints]
+    projected_points = [grid.proj.toUV(point).coords[0] for point in grid.gridPoints]
+    traced_rays = []
+
+    def capture_rays(rays, **_):
+        traced_rays.extend(rays)
+        return [None] * len(rays)
+
+    monkeypatch.setattr(radiation_calculation, "ray_test", capture_rays)
+    result = radiation_calculation.calculate_face_radiation(
+        face,
+        grid_size=1.0,
+        grid_offset=0.2,
+        reflection=0,
+        geo_path="unused.geo",
+    )
+
+    assert world_points
+    assert automatic_grid.gridSize == pytest.approx(1.2)
+    assert all(point[2] == pytest.approx(0.2) for point in projected_points)
+    assert np.allclose(traced_rays[0].origin.array, world_points[0])
+    assert result.shape == (145,)
 
 
 def test_convexification_does_not_infer_vertical_air_walls():

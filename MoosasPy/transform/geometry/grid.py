@@ -67,11 +67,11 @@ class MoosasGrid(MoosasElement):
         self.UVFace = self.proj.toUV(face_geometry)
         bbox = shapely.bounds(self.UVFace)
         if grid_size is None:
-            grid_size = max(bbox[2]- bbox[2],bbox[3]- bbox[1])/5
+            grid_size = max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / 5
         self.gridSize = grid_size
         self.gridOffset = grid_offset
 
-        z = self.level + self.offset + self.gridOffset
+        z = self.gridOffset
 
         # Generate grid point as a array of Ray object
         self.gridCell = []

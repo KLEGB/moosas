@@ -678,7 +678,7 @@ class Projection(Ray):
             self.axisX = Vector(unitX).unit().array
         else:
             if not Vector.parallel(self.axisZ, np.array([0, 0, 1])):
-                self.axisX = np.cross(np.array([0, 0, 1]), self.axisZ)
+                self.axisX = Vector(np.cross(np.array([0, 0, 1]), self.axisZ)).unit().array
             else:
                 self.axisX = np.array([1, 0, 0])
 
@@ -718,11 +718,8 @@ class Projection(Ray):
         unitz = faceNormal(polygon)
         if Vector.parallel(unitz, np.array([0, 0, 1])):
             return cls.findOrthogonalBasis([polygon])
-        else:
-            center = np.mean(shapely.get_coordinates(polygon, include_z=True), axis=0)
-            sectionVector = shapely.get_coordinates(section(polygon, center[2], False), include_z=True)
-            sectionVector = sectionVector[1] - sectionVector[0]
-            return cls(center, unitz, unitX=sectionVector)
+        center = np.mean(shapely.get_coordinates(polygon, include_z=True), axis=0)
+        return cls(center, unitz)
 
     @classmethod
     def findOrthogonalBasis(cls, polygons):
