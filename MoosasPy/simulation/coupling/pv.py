@@ -2,12 +2,23 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from ...model import MoosasModel
 from ...transform.geometry.element import MoosasElement
 from ...utils import np
+from ...utils.constant import dateSetting
+from ..contracts import SimulationResult
 from ..energy.pv import calculate_pv_generation
 from ..radiation import calculate_face_radiation, write_radiation_geometry
 from ..weather import CumulativeSky
+
+
+@dataclass(frozen=True)
+class PVResult(SimulationResult):
+    """Structured photovoltaic generation result."""
+
+    data: dict | None = None
 
 
 def run_roof_pv(
@@ -18,8 +29,9 @@ def run_roof_pv(
     grid_size: float = 1.0,
     grid_offset: float = 0.2,
     reflection: int = 0,
-) -> np.ndarray:
-    """Calculate hourly PV generation for exterior roof faces."""
+    **energy_options,
+) -> PVResult:
+    """Calculate PV generation for exterior roof faces."""
     faces = [
         face
         for face in model.getAllFaces(True)["MoosasFace"]
@@ -34,6 +46,7 @@ def run_roof_pv(
         grid_size=grid_size,
         grid_offset=grid_offset,
         reflection=reflection,
+        temporal_scale=energy_options.get("temporal_scale", "monthly"),
     )
 
 
@@ -45,8 +58,9 @@ def run_facade_pv(
     grid_size: float | None = None,
     grid_offset: float = 0.2,
     reflection: int = 0,
-) -> np.ndarray:
-    """Calculate hourly PV generation for exterior facade faces."""
+    **energy_options,
+) -> PVResult:
+    """Calculate PV generation for exterior facade faces."""
     faces = [
         face
         for face in model.getAllFaces(True)["MoosasWall"]
@@ -61,6 +75,7 @@ def run_facade_pv(
         grid_size=grid_size,
         grid_offset=grid_offset,
         reflection=reflection,
+        temporal_scale=energy_options.get("temporal_scale", "monthly"),
     )
 
 
@@ -114,6 +129,7 @@ def _run_pv(
     grid_size,
     grid_offset,
     reflection,
+    temporal_scale,
 ):
     sky_values = np.asarray(cumulative_sky_matrix, dtype=float)
     incident_energy = calculate_face_incident_energy(
@@ -124,8 +140,41 @@ def _run_pv(
         reflection=reflection,
         geo_path=write_radiation_geometry(model),
     )
-    return calculate_pv_generation(
+    hourly_generation = calculate_pv_generation(
         incident_energy,
         useful_area_ratio=useful_area_ratio,
         efficiency=efficiency,
     )
+    return PVResult(data=_pv_output_to_data(hourly_generation, temporal_scale))
+
+
+def _pv_output_to_data(hourly_generation, temporal_scale: str) -> dict:
+    temporal_scale = str(temporal_scale).strip().lower()
+    if temporal_scale not in {"monthly", "daily", "hourly"}:
+        raise ValueError("temporal_scale must be one of ['daily', 'hourly', 'monthly']")
+
+    hours = np.asarray(hourly_generation, dtype=float)
+    if hours.shape != (CumulativeSky.HOURS_PER_YEAR,):
+        raise ValueError(
+            "PV generation must contain 8760 hourly values, "
+            f"got {hours.shape}"
+        )
+
+    data = {"total": float(np.sum(hours))}
+    if temporal_scale == "hourly":
+        data["hours"] = hours.tolist()
+    elif temporal_scale == "daily":
+        data["days"] = np.sum(hours.reshape(365, 24), axis=1).tolist()
+    else:
+        daily = np.sum(hours.reshape(365, 24), axis=1)
+        month_end_days = np.cumsum(dateSetting.MONTH_DAY)
+        month_start_days = np.concatenate(([0], month_end_days[:-1]))
+        data["months"] = {
+            month: float(np.sum(daily[start:end]))
+            for month, start, end in zip(
+                dateSetting.MONTH_NAME,
+                month_start_days,
+                month_end_days,
+            )
+        }
+    return data

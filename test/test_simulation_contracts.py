@@ -14,7 +14,13 @@ from MoosasPy.simulation.energy.runner import (
     build_energy_input,
 )
 from MoosasPy.simulation.energy.engine import EnergyOutput
-from MoosasPy.simulation.coupling import EnergyAirflowCoupler
+from MoosasPy.simulation.coupling import (
+    EnergyAirflowCoupler,
+    PVResult,
+    run_facade_pv,
+    run_roof_pv,
+)
+from MoosasPy.simulation.coupling.pv import _pv_output_to_data
 from MoosasPy.simulation.radiation.runner import RadianceDaylightResult
 from MoosasPy.utils.constant import buildingType
 from MoosasPy.simulation.airflow.runner import (
@@ -135,6 +141,52 @@ class SimulationContractTests(unittest.TestCase):
 
         self.assertIsInstance(result, SimulationResult)
         self.assertEqual(result.data, {"total": {"cooling": 10.0}})
+
+    def test_pv_result_implements_shared_contract(self):
+        result = PVResult(data={"total": 10.0})
+
+        self.assertIsInstance(result, SimulationResult)
+        self.assertEqual(result.data, {"total": 10.0})
+
+    def test_pv_output_uses_requested_temporal_scale(self):
+        hourly = np.ones(8760)
+
+        hourly_data = _pv_output_to_data(hourly, "hourly")
+        daily_data = _pv_output_to_data(hourly, "daily")
+        monthly_data = _pv_output_to_data(hourly, "monthly")
+
+        self.assertEqual(len(hourly_data["hours"]), 8760)
+        self.assertEqual(daily_data["days"], [24.0] * 365)
+        self.assertEqual(monthly_data["months"]["Feb"], 28 * 24)
+        self.assertEqual(sum(monthly_data["months"].values()), 8760.0)
+        self.assertEqual(hourly_data["total"], daily_data["total"])
+        self.assertEqual(daily_data["total"], monthly_data["total"])
+
+    def test_pv_output_rejects_unknown_temporal_scale(self):
+        with self.assertRaisesRegex(ValueError, "temporal_scale"):
+            _pv_output_to_data(np.ones(8760), "annual")
+
+    def test_pv_entry_points_accept_energy_options(self):
+        model = SimpleNamespace(
+            getAllFaces=lambda _: {"MoosasFace": [], "MoosasWall": []},
+            levelList=[],
+        )
+        sky = np.zeros((145, 8760))
+
+        with patch(
+            "MoosasPy.simulation.coupling.pv.write_radiation_geometry",
+            return_value="model.rad",
+        ):
+            roof = run_roof_pv(model, sky, core=buildingType.OFFICE)
+            facade = run_facade_pv(
+                model,
+                sky,
+                temporal_scale="daily",
+                spatial_scale="zone",
+            )
+
+        self.assertEqual(len(roof.data["months"]), 12)
+        self.assertEqual(len(facade.data["days"]), 365)
 
     def test_energy_runner_returns_python_engine_data(self):
         zone = SimpleNamespace(paramToString=lambda: "zone", paramTags=lambda: "header")
