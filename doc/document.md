@@ -297,9 +297,8 @@ warnings, and a workspace report.
 
 ### Energy Analysis
 
-`EnergyRunner` is the formal interface to the packaged `MoosasEnergy`
-executable. It returns an `EnergyResult` with energy data, command diagnostics,
-and workspace information:
+`EnergyRunner` runs the residential or public energy model directly in Python.
+It returns an `EnergyResult` with structured energy data:
 
 ```python
 from MoosasPy.simulation.energy import EnergyRunner
@@ -322,9 +321,8 @@ print(result.data["total"])
 the requested temporal scale, with an additional zone-scale field when zone
 output is requested.
 
-Other energy options include the building type (`core`), radiation mode,
-schedule path, explicit input and result paths, workspace parent, timeout, and
-a custom native engine.
+Other energy options include the building type (`core`), radiation mode, and
+schedule path.
 
 Radiation modes are:
 
@@ -332,8 +330,8 @@ Radiation modes are:
 - `1` or `True`: consume precomputed seasonal radiation totals.
 - `2`: consume precomputed radiation schedules.
 
-Use `build_energy_input()` and `parse_energy_output()` only when direct access
-to the native input and result formats is necessary.
+Use `build_energy_input()` when direct access to the generated zone parameters
+and engine configuration is necessary.
 
 ### Radiation Calculation
 
@@ -495,8 +493,6 @@ main internal formats are:
 | File | Consumer | Contents |
 | --- | --- | --- |
 | `.geo` | Geometry transform and radiation engine | Categorized polygon faces, normals, and vertices. |
-| `Energy.i` | `MoosasEnergy` | Per-zone geometry, solar, and thermal parameters. |
-| `Energy.o` | Energy result parser | Total, zone, and optional time-series loads. |
 | `.net` | Native AFN project builder | Zones, openings, topology, pressure, and boundary data. |
 | `.prj` | CONTAM | Multizone airflow project. |
 | `.info` | Airflow iteration | CONTAM zone name, heat load, and user zone name. |
@@ -512,7 +508,6 @@ the Python modules:
 
 - `db/`: building templates, schedules, weather records, material data, the
   EnergyPlus 26.1 IDD, and the default IDF template.
-- `libs/energy/`: the unified Moosas energy executable and support files.
 - `libs/rad/`: the Moosas radiation engine and Radiance executables/resources.
 - `libs/vent/`: AFN tools and platform-specific CONTAM distributions.
 - `libs/weather/`: EPW-to-WEA and cumulative-sky executables/resources.

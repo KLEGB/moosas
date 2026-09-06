@@ -12,4 +12,3 @@ global-exclude *.pyo
 global-exclude .idea/*
 prune MoosasPy/__temp__
 prune MoosasPy/libs/.idea
-prune MoosasPy/libs/energy/.idea

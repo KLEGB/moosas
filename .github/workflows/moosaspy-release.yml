@@ -44,7 +44,6 @@ jobs:
           from zipfile import ZipFile
 
           executables = (
-              "MoosasPy/libs/energy/MoosasEnergy",
               "MoosasPy/libs/rad/MoosasRad",
               "MoosasPy/libs/rad/gensky",
               "MoosasPy/libs/rad/oconv",

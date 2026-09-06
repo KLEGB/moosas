@@ -151,26 +151,18 @@ class SimulationWorkspaceTests(unittest.TestCase):
         with self.assertRaisesRegex(OSError, "platform"):
             _contam_platform("darwin", "x86_64")
 
-    def test_energy_defaults_are_removed_after_parsing(self):
+    def test_energy_runner_has_no_native_workspace(self):
         zone = SimpleNamespace(paramToString=lambda: "zone", paramTags=lambda: "header")
-        energy_input = {"zones": [zone], "args": []}
-        recorded_paths = []
+        energy_input = {"zones": [zone], "args": ["-w", "weather.csv"]}
+        output = SimpleNamespace(
+            total=np.zeros(4), spaces=np.zeros((1, 4)), months=np.zeros((12, 4))
+        )
 
-        def run_command(command, **_kwargs):
-            output_path = Path(command[command.index("-o") + 1])
-            output_path.write_text("output", encoding="utf-8")
-            recorded_paths.append(output_path)
-
-        with patch(
-            "MoosasPy.simulation.energy.runner.Runner.run_command", side_effect=run_command
-        ), patch(
-            "MoosasPy.simulation.energy.runner.parse_energy_output", return_value={"total": {}}
-        ):
+        with patch("MoosasPy.simulation.energy.runner.simulate_energy", return_value=output):
             result = EnergyRunner(energy_input=energy_input).run()
 
-        self.assertEqual(result.data, {"total": {}})
-        self.assertEqual(len(recorded_paths), 1)
-        self.assertFalse(recorded_paths[0].parent.exists())
+        self.assertEqual(result.commands, ())
+        self.assertEqual(result.data["total"]["total"], 0.0)
 
     def test_weather_conversion_uses_explicit_output_path(self):
         def run_command(command, **_kwargs):

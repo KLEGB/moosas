@@ -2,7 +2,6 @@ from functools import lru_cache
 from io import StringIO
 import math
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 import pytest
 
@@ -14,7 +13,6 @@ from MoosasPy.transform import TransformOptions, transform
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CASE_DIRECTORY = PROJECT_ROOT / "test" / "caseFile"
-ENERGY_ENGINE = PROJECT_ROOT / "MoosasPy" / "libs" / "energy" / "MoosasEnergy.exe"
 BEIJING_WEATHER = PROJECT_ROOT / "MoosasPy" / "db" / "weather" / "545110.csv"
 
 
@@ -60,29 +58,27 @@ def test_courtyard_case_generates_two_sided_air_boundaries():
 
 
 @pytest.mark.skipif(
-    not ENERGY_ENGINE.is_file() or not BEIJING_WEATHER.is_file(),
-    reason="requires the bundled MoosasEnergy engine and Beijing 545110 weather data",
+    not BEIJING_WEATHER.is_file(),
+    reason="requires Beijing 545110 weather data",
 )
 def test_divided_zone_model_runs_energy_simulation():
     model = _transform_divided_case("test0_6spacesIntersection.geo")
 
-    with TemporaryDirectory() as work_dir:
-        result = EnergyRunner(
-            model=model,
-            weather=read_weather_csv(
-                BEIJING_WEATHER,
-                Location("545110", "BEIJING/PEKING", "-", 39.93, 116.28, 55.0, 100962.17),
-            ),
-            work_dir=work_dir,
-            timeout_seconds=60,
-        ).run()
+    result = EnergyRunner(
+        model=model,
+        weather=read_weather_csv(
+            BEIJING_WEATHER,
+            Location("545110", "BEIJING/PEKING", "-", 39.93, 116.28, 55.0, 100962.17),
+        ),
+    ).run()
 
-    assert result.commands[0].returncode == 0
+    assert result.commands == ()
     assert len(result.data["spaces"]) == len(model.spaceList)
     assert len(result.data["months"]) == 12
-    totals = {key: float(result.data["total"][key]) for key in ("cooling", "heating", "lighting", "total")}
+    totals = {key: float(result.data["total"][key]) for key in ("cooling", "heating", "lighting", "equipment", "total")}
     assert all(math.isfinite(value) and value >= 0 for value in totals.values())
-    assert totals["cooling"] == pytest.approx(10.19, abs=0.01)
-    assert totals["heating"] == pytest.approx(32.43, abs=0.01)
-    assert totals["lighting"] == pytest.approx(2.63, abs=0.01)
-    assert totals["total"] == pytest.approx(45.25, abs=0.01)
+    assert totals["cooling"] == pytest.approx(12.03, abs=0.01)
+    assert totals["heating"] == pytest.approx(24.38, abs=0.01)
+    assert totals["lighting"] == pytest.approx(9.47, abs=0.01)
+    assert totals["equipment"] == pytest.approx(14.08, abs=0.01)
+    assert totals["total"] == pytest.approx(sum(totals[key] for key in ("cooling", "heating", "lighting", "equipment")), abs=0.01)

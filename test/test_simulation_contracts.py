@@ -12,8 +12,8 @@ from MoosasPy.simulation.energy.runner import (
     EnergyResult,
     EnergyRunner,
     build_energy_input,
-    parse_energy_output,
 )
+from MoosasPy.simulation.energy.engine import EnergyOutput
 from MoosasPy.simulation.coupling import EnergyAirflowCoupler
 from MoosasPy.simulation.radiation.runner import RadianceDaylightResult
 from MoosasPy.simulation.airflow.runner import (
@@ -76,7 +76,7 @@ class SimulationContractTests(unittest.TestCase):
 
         self.assertEqual(
             set(energy.__all__),
-            {"EnergyResult", "EnergyRunner", "build_energy_input", "calculate_pv_generation", "parse_energy_output"},
+            {"EnergyResult", "EnergyRunner", "build_energy_input", "calculate_pv_generation"},
         )
         for legacy_name in ("energyAnalysis", "getEnergyInput", "parseEnergyOutput"):
             self.assertFalse(hasattr(energy, legacy_name))
@@ -135,41 +135,38 @@ class SimulationContractTests(unittest.TestCase):
         self.assertIsInstance(result, SimulationResult)
         self.assertEqual(result.data, {"total": {"cooling": 10.0}})
 
-    def test_energy_runner_returns_parsed_data_and_command_diagnostics(self):
+    def test_energy_runner_returns_python_engine_data(self):
         zone = SimpleNamespace(paramToString=lambda: "zone", paramTags=lambda: "header")
-        energy_input = {"zones": [zone], "args": []}
-        command_result = CommandResult(("MoosasEnergy",), 0, "", "")
+        energy_input = {"zones": [zone], "args": ["-w", "weather.csv"]}
+        output = EnergyOutput(
+            total=np.zeros(4), spaces=np.zeros((1, 4)), months=np.zeros((12, 4))
+        )
 
-        with TemporaryDirectory() as work_dir, patch(
-            "MoosasPy.simulation.energy.runner.Runner.run_command", return_value=command_result
-        ), patch(
-            "MoosasPy.simulation.energy.runner.parse_energy_output", return_value={"total": {}}
-        ):
-            result = EnergyRunner(energy_input=energy_input, work_dir=work_dir).run()
+        with patch("MoosasPy.simulation.energy.runner.simulate_energy", return_value=output):
+            result = EnergyRunner(energy_input=energy_input).run()
 
-        self.assertEqual(result.data, {"total": {}})
-        self.assertEqual(result.commands, (command_result,))
+        self.assertEqual(result.data["total"]["total"], 0.0)
+        self.assertEqual(result.commands, ())
 
     def test_energy_runner_does_not_mutate_reused_input(self):
         zone = SimpleNamespace(paramToString=lambda: "zone", paramTags=lambda: "header")
-        energy_input = {"zones": [zone], "args": []}
-        command_result = CommandResult(("MoosasEnergy",), 0, "", "")
+        energy_input = {"zones": [zone], "args": ["-w", "weather.csv"]}
+        output = EnergyOutput(
+            total=np.zeros(4), spaces=np.zeros((1, 4)), months=np.zeros((12, 4)),
+            hours=np.zeros((8760, 4)), zone_months=np.zeros((1, 12, 4)),
+            zone_hours=np.zeros((1, 8760, 4)),
+        )
 
-        with TemporaryDirectory() as work_dir, patch(
-            "MoosasPy.simulation.energy.runner.Runner.run_command", return_value=command_result
-        ), patch(
-            "MoosasPy.simulation.energy.runner.parse_energy_output", return_value={"total": {}}
-        ):
+        with patch("MoosasPy.simulation.energy.runner.simulate_energy", return_value=output):
             runner = EnergyRunner(
                 energy_input=energy_input,
                 temporal_scale="hourly",
                 spatial_scale="zone",
-                work_dir=work_dir,
             )
             runner.run()
             runner.run()
 
-        self.assertEqual(energy_input["args"], [])
+        self.assertEqual(energy_input["args"], ["-w", "weather.csv"])
 
     def test_energy_scales_map_to_one_temporal_flag_and_one_spatial_flag(self):
         space = SimpleNamespace(
@@ -211,31 +208,6 @@ class SimulationContractTests(unittest.TestCase):
             EnergyRunner(energy_input={"zones": [zone], "args": []}, temporal_scale="annual")
         with self.assertRaisesRegex(ValueError, "spatial_scale"):
             EnergyRunner(energy_input={"zones": [zone], "args": []}, spatial_scale="space")
-
-    def test_energy_parser_exposes_only_requested_hourly_zone_scale(self):
-        energy_output = [
-            [["1", "2", "3", "4"]],
-            [["1", "2", "3", "4"]],
-            [["1", "2", "3", "4"]] * 12,
-            [["1", "2", "3", "4"]] * 8760,
-            [["0", "1", "2", "3", "4"]] * 12,
-            [["0", "1", "2", "3", "4"]] * 8760,
-        ]
-        with patch("MoosasPy.simulation.energy.runner.parseFile", return_value=energy_output):
-            result = parse_energy_output(
-                "Energy.o",
-                temporal_scale="hourly",
-                spatial_scale="zone",
-            )
-
-        self.assertEqual(
-            set(result),
-            {"total", "spaces", "hours", "zone_hours"},
-        )
-        self.assertEqual(len(result["hours"]), 8760)
-        self.assertEqual(len(result["zone_hours"][0]), 8760)
-        self.assertEqual(result["total"]["equipment"], "4")
-        self.assertEqual(result["total"]["total"], 10.0)
 
     def test_airflow_runner_builds_project_from_model_in_its_workspace(self):
         command_result = CommandResult(("contamx", "model.prj"), 0, "", "")

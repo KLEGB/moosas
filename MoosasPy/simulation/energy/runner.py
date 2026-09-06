@@ -7,9 +7,7 @@ The analysis result has been validated by ASHRAE 140.
 More information can be found in this article:
 https://doi.org/10.1016/j.buildenv.2021.107929.
 
-This module serves as the Python-side interface for the unified
-MoosasEnergy Go executable, which supports both residential and
-public building types via the -t parameter.
+The residential and public energy models run directly in Python.
 """
 from __future__ import annotations
 
@@ -18,12 +16,9 @@ import math
 from ...utils.support import os
 from dataclasses import dataclass
 import re
-from ...utils import path, parseFile, FileError
 from ...utils.constant import buildingType, dateSetting
 from ..contracts import SimulationResult
-from ..engine import NativeEngine
-from ..runner import Runner
-from ..workspace import SimulationWorkspace
+from .engine import EnergyOutput, simulate_energy
 
 from ...model.io.idf.model import ThermalSettings
 
@@ -39,10 +34,6 @@ WINTER_RADIATION = [150800, 355200, 123600, 51500, 150800]
 SUMMER_SOLAR_SEASON_DAYS = 123
 WINTER_SOLAR_SEASON_DAYS = 120
 SOLAR_ACTIVE_HOURS = tuple(range(8, 18))
-
-# Directory paths for the energy module
-energyScriptDir = os.path.join(path.libDir, "energy")
-energyExeSuffix = ".exe" if os.name == "nt" else ""
 
 # Month names for output parsing (12 months)
 MONTH_NAMES = [
@@ -179,13 +170,13 @@ def _write_typical_solar_schedule(model: MoosasModel, space, space_index: int, s
 
 @dataclass(frozen=True)
 class EnergyResult(SimulationResult):
-    """Structured output from an isolated MoosasEnergy run."""
+    """Structured output from an energy simulation."""
 
     data: dict | None = None
 
 
-class EnergyRunner(Runner):
-    """Prepare inputs, run MoosasEnergy, and return structured energy results."""
+class EnergyRunner:
+    """Prepare inputs, run the Python energy model, and return its results."""
 
     def __init__(
         self,
@@ -197,13 +188,7 @@ class EnergyRunner(Runner):
         spatial_scale="building",
         schedule_path=None,
         energy_input=None,
-        input_path=None,
-        result_path=None,
-        work_dir=None,
-        timeout_seconds=300.0,
-        engine: NativeEngine | None = None,
     ):
-        super().__init__(timeout_seconds=timeout_seconds, engine=engine)
         self.model = model
         self.weather = weather
         self.core = core
@@ -214,12 +199,9 @@ class EnergyRunner(Runner):
         )
         self.schedule_path = schedule_path
         self.energy_input = energy_input
-        self.input_path = input_path
-        self.result_path = result_path
-        self.work_dir = work_dir
 
     def run(self) -> EnergyResult:
-        """Execute MoosasEnergy and return the parsed result with diagnostics."""
+        """Execute the energy model and return structured results."""
         energy_input = self.energy_input
         if not energy_input:
             energy_input = build_energy_input(
@@ -238,197 +220,61 @@ class EnergyRunner(Runner):
             if energy_input.get("schedule_path") and "-sch" not in energy_input["args"]:
                 energy_input["args"] += ["-sch", os.path.abspath(energy_input["schedule_path"])]
 
-        with SimulationWorkspace(parent=self.work_dir, prefix="moosas-energy-") as workspace:
-            input_path = self.input_path or str(workspace.child("Energy.i"))
-            result_path = self.result_path or str(workspace.child("Energy.o"))
-            input_path = os.path.abspath(input_path)
-            result_path = os.path.abspath(result_path)
-            os.makedirs(os.path.dirname(input_path), exist_ok=True)
-            os.makedirs(os.path.dirname(result_path), exist_ok=True)
+        rows = [zone.paramToString() for zone in energy_input["zones"]]
+        output = simulate_energy(rows, energy_input["args"])
+        data = _energy_output_to_data(
+            output,
+            energy_input["zones"],
+            temporal_scale=self.temporal_scale,
+            spatial_scale=self.spatial_scale,
+        )
+        return EnergyResult(data=data)
 
-            with open(input_path, "w") as file:
-                lines = [zone.paramToString() for zone in energy_input["zones"]]
-                file.write("!" + energy_input["zones"][0].paramTags() + "\n")
-                file.write("\n".join(lines))
 
-            arguments = list(energy_input["args"]) + ["-o", result_path, input_path]
-            command = (
-                os.path.abspath(os.path.join(energyScriptDir, f"MoosasEnergy{energyExeSuffix}")),
-                *arguments,
-            )
-            command_result = self.run_command(command, cwd=os.path.abspath(energyScriptDir))
-            data = parse_energy_output(
-                result_path,
-                energy_input["zones"],
-                temporal_scale=self.temporal_scale,
-                spatial_scale=self.spatial_scale,
-            )
-            return EnergyResult(data=data, commands=(command_result,), workspace=workspace.report)
+def _energy_row(values, precision):
+    formatted = [f"{value:.{precision}f}" for value in values]
+    return {
+        "cooling": formatted[0],
+        "heating": formatted[1],
+        "lighting": formatted[2],
+        "equipment": formatted[3],
+        "total": sum(float(value) for value in formatted),
+    }
 
-def parse_energy_output(result_path,
-                      zone_list: list[ThermalSettings] | None = None,
-                      temporal_scale="monthly",
-                      spatial_scale="building"):
-    """Parse the output file from MoosasEnergy executable.
 
-    The output file contains multiple sections separated by ';', each
-    starting with a '!' header line. This function parses all sections
-    and returns a structured dictionary.
+def _energy_output_to_data(output: EnergyOutput, zone_list, temporal_scale, spatial_scale):
+    total = _energy_row(output.total, 2)
+    for zone, values in zip(zone_list, output.spaces):
+        zone.load = _energy_row(values, 2)
+    months = {
+        month: _energy_row(values, 2)
+        for month, values in zip(dateSetting.MONTH_NAME, output.months)
+    }
+    data = {"total": total, "spaces": zone_list}
+    if temporal_scale == "monthly":
+        data["months"] = months
+    elif temporal_scale == "daily":
+        data["days"] = [_energy_row(values, 4) for values in output.days]
+    else:
+        data["hours"] = [_energy_row(values, 5) for values in output.hours]
 
-    Args:
-        result_path (str): Path to the result .o file to parse.
-        zone_list (list[ThermalSettings], optional): List of ThermalSettings
-            objects to record per-space results. If None, results are returned
-            as plain dictionaries. (default: None)
-        temporal_scale (str): One of ``monthly``, ``daily``, or ``hourly``.
-        spatial_scale (str): Either ``building`` or ``zone``.
-
-    Returns:
-        dict: A dictionary containing the parsed energy results with keys:
-            - 'total': dict with 'cooling', 'heating', 'lighting', 'total'
-            - 'spaces': list of ThermalSettings or list of dicts
-            The selected building-scale result is stored under ``months``,
-            ``days``, or ``hours``. Zone results use the corresponding
-            ``zone_months``, ``zone_days``, or ``zone_hours`` key.
-
-    Raises:
-        FileError: The output file cannot be parsed.
-
-    Examples:
-        >>> e_data = parse_energy_output('Energy.o', temporal_scale='daily')
-        >>> print(len(e_data['days']))  # 365
-    """
-    temporal_scale, spatial_scale = _validate_scales(temporal_scale, spatial_scale)
-    try:
-        output = parseFile(result_path)
-
-        # ── Section 0: TOTAL (1 row) ──────────────────────
-        total_row = output[0][0]
-        total = {
-            "cooling": total_row[0],
-            "heating": total_row[1],
-            "lighting": total_row[2],
-            "equipment": total_row[3],
-            "total": np.array(total_row[:4]).astype(float).sum(),
-        }
-
-        # ── Section 1: SPACE RESULT (N rows) ─────────────
-        if zone_list:
-            for i in range(len(zone_list)):
-                zone_list[i].load = {
-                    'cooling': output[1][i][0],
-                    'heating': output[1][i][1],
-                    'lighting': output[1][i][2],
-                    'equipment': output[1][i][3],
-                    'total': np.array(output[1][i][:4]).astype(float).sum(),
-                }
-        else:
-            zone_list = [{
-                'cooling': res[0],
-                'heating': res[1],
-                'lighting': res[2],
-                'equipment': res[3],
-                'total': np.array(res[:4]).astype(float).sum(),
-            } for res in output[1]]
-
-        # ── Section 2: MONTH RESULT (12 rows) ────────────
-        months_result = {}
-        for mon, result in zip(dateSetting.MONTH_NAME, output[2]):
-            months_result[mon] = {
-                "cooling": result[0],
-                "heating": result[1],
-                "lighting": result[2],
-                "equipment": result[3],
-                "total": np.array(result[:4]).astype(float).sum(),
-            }
-
-        e_data = {"total": total, "spaces": zone_list}
-
-        # ── Track the next section index ─────────────────
-        # Sections 0, 1, 2 are always present (TOTAL, SPACE, MONTH).
-        # Additional sections are appended in the order defined by the
-        # Go executable: DAY, HOUR, ZONE MONTH, ZONE DAY, ZONE HOUR.
-        section_idx = 3
-
+    if spatial_scale == "zone":
         if temporal_scale == "monthly":
-            e_data["months"] = months_result
+            data["zone_months"] = [
+                [_energy_row(values, 2) for values in zone]
+                for zone in output.zone_months
+            ]
         elif temporal_scale == "daily":
-            e_data["days"] = _parse_energy_rows(output[section_idx])
-            section_idx += 1
+            data["zone_days"] = [
+                [_energy_row(values, 4) for values in zone]
+                for zone in output.zone_days
+            ]
         else:
-            e_data["hours"] = _parse_energy_rows(output[section_idx])
-            section_idx += 1
-
-        if spatial_scale == "zone":
-            num_zones = len(output[1])  # number of spaces
-            zone_months = _parse_zone_energy_rows(
-                output[section_idx], num_zones, 12
-            )
-            section_idx += 1
-            if temporal_scale == "monthly":
-                e_data["zone_months"] = zone_months
-            elif temporal_scale == "daily":
-                e_data["zone_days"] = _parse_zone_energy_rows(
-                    output[section_idx], num_zones, 365
-                )
-            else:
-                e_data["zone_hours"] = _parse_zone_energy_rows(
-                    output[section_idx], num_zones, 8760
-                )
-
-        return e_data
-
-    except Exception:
-        raise FileError(result_path)
-
-
-def _parse_energy_rows(section_data):
-    """Parse a list of [cooling, heating, lighting] rows into dicts.
-
-    Args:
-        section_data: List of rows, each row is a list of 3 string values.
-
-    Returns:
-        list[dict]: Each dict has 'cooling', 'heating', 'lighting', 'total'.
-    """
-    return [{
-        "cooling": row[0],
-        "heating": row[1],
-        "lighting": row[2],
-        "equipment": row[3],
-        "total": np.array(row[:4]).astype(float).sum(),
-    } for row in section_data]
-
-
-def _parse_zone_energy_rows(section_data, num_zones, items_per_zone):
-    """Parse zone-level output rows into a nested list structure.
-
-    The Go executable outputs zone results as flat rows in the format:
-    SpaceIndex,Cooling,Heating,Lighting
-    This function groups them by zone index.
-
-    Args:
-        section_data: List of rows, each row is [spaceIdx, cooling, heating,
-            lighting].
-        num_zones (int): Number of zones/spaces.
-        items_per_zone (int): Number of items per zone (12 for months,
-            365 for days, 8760 for hours).
-
-    Returns:
-        list[list[dict]]: Outer list indexed by zone, inner list contains
-            dicts with 'cooling', 'heating', 'lighting', 'total'.
-    """
-    zone_results = [[] for _ in range(num_zones)]
-    for row in section_data:
-        zone_idx = int(float(row[0]))
-        zone_results[zone_idx].append({
-            "cooling": row[1],
-            "heating": row[2],
-            "lighting": row[3],
-            "equipment": row[4],
-            "total": np.array(row[1:5]).astype(float).sum(),
-        })
-    return zone_results
+            data["zone_hours"] = [
+                [_energy_row(values, 5) for values in zone]
+                for zone in output.zone_hours
+            ]
+    return data
 
 
 def build_energy_input(model: MoosasModel,
@@ -441,8 +287,7 @@ def build_energy_input(model: MoosasModel,
     """Get the energy input configuration for a given MoosasModel.
 
     This function computes geometry-derived parameters for each space,
-    populates ThermalSettings objects, and builds the command-line argument
-    list for the unified MoosasEnergy executable.
+    populates ThermalSettings objects, and builds the engine configuration.
 
     Args:
         model (MoosasModel): The model for which to generate the energy input.

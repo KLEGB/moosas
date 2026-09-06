@@ -3,7 +3,6 @@ from __future__ import annotations
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
-from tempfile import TemporaryDirectory
 import math
 import unittest
 
@@ -23,7 +22,6 @@ from MoosasPy.utils import np
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 GEOMETRY_FIXTURE = PROJECT_ROOT / "test" / "caseFile" / "test8_topology.geo"
-ENERGY_ENGINE = PROJECT_ROOT / "MoosasPy" / "libs" / "energy" / "MoosasEnergy.exe"
 BEIJING_WEATHER = PROJECT_ROOT / "MoosasPy" / "db" / "weather" / "545110.csv"
 
 
@@ -122,40 +120,31 @@ class ExampleIntegrationTests(unittest.TestCase):
         self.assertEqual(len(root.findall("space")), len(self.model.spaceList))
         self.assertEqual(root.findtext("level"), " ".join(str(level) for level in self.model.levelList))
 
-    @unittest.skipUnless(
-        ENERGY_ENGINE.is_file() and BEIJING_WEATHER.is_file(),
-        "requires the bundled MoosasEnergy engine and Beijing 545110 weather data",
-    )
+    @unittest.skipUnless(BEIJING_WEATHER.is_file(), "requires Beijing 545110 weather data")
     def test_energy_engine_returns_real_results_for_geometry_fixture(self):
         weather = read_weather_csv(
             BEIJING_WEATHER,
             Location("545110", "BEIJING/PEKING", "-", 39.93, 116.28, 55.0, 100962.17),
         )
 
-        with TemporaryDirectory() as work_dir:
-            result = EnergyRunner(
-                model=self.model,
-                weather=weather,
-                work_dir=work_dir,
-                timeout_seconds=60,
-            ).run()
+        result = EnergyRunner(model=self.model, weather=weather).run()
 
-        self.assertEqual(result.commands[0].returncode, 0)
+        self.assertEqual(result.commands, ())
         self.assertEqual(len(result.data["spaces"]), 70)
         self.assertEqual(len(result.data["months"]), 12)
 
         total = result.data["total"]
         component_total = 0.0
-        for key in ("cooling", "heating", "lighting"):
+        for key in ("cooling", "heating", "lighting", "equipment"):
             value = float(total[key])
             self.assertTrue(math.isfinite(value))
             self.assertGreaterEqual(value, 0.0)
             component_total += value
         self.assertGreater(component_total, 0.0)
-        self.assertAlmostEqual(float(total["cooling"]), 3.48, places=2)
-        self.assertAlmostEqual(float(total["heating"]), 11.42, places=2)
-        self.assertAlmostEqual(float(total["lighting"]), 2.63, places=2)
-        self.assertAlmostEqual(float(total["total"]), 17.53, places=2)
+        self.assertAlmostEqual(float(total["cooling"]), 5.24, places=2)
+        self.assertAlmostEqual(float(total["heating"]), 7.87, places=2)
+        self.assertAlmostEqual(float(total["lighting"]), 9.47, places=2)
+        self.assertAlmostEqual(float(total["equipment"]), 14.08, places=2)
         self.assertAlmostEqual(float(total["total"]), component_total, places=6)
 
 
