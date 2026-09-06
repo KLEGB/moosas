@@ -1118,7 +1118,7 @@ def _import_schedule_nodes(rdfGraph: MoosasRDF, model: MoosasModel):
         for node in rdfGraph.getSubject(rdfGraph.rdf.type, cls):
             schedule_nodes.add(URIRef(str(node)))
 
-    for scheduleUri in schedule_nodes:
+    for scheduleUri in sorted(schedule_nodes, key=str):
         schedule_name = rdfGraph.getObject(scheduleUri, rdfGraph.pgd.scheduleName)
         if schedule_name is None:
             schedule_name = decodeURI(scheduleUri)
@@ -1248,7 +1248,7 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     pgList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.moosas.Program)
     pgList = mixItemListToList(pgList)
     spList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.bot.Space)
-    spList = mixItemListToList(spList)
+    spList = sorted(mixItemListToList(spList), key=str)
     print()
 
     # construct geometryList

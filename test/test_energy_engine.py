@@ -3,12 +3,23 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from MoosasPy.simulation.energy.engine import _lighting, parse_spaces, simulate_energy_file
+from MoosasPy.simulation.energy.engine import _lighting, _load_schedules, parse_spaces, simulate_energy_file
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 ENERGY_FIXTURES = PROJECT_ROOT / "test" / "caseFile" / "energy"
 WEATHER_FILE = PROJECT_ROOT / "MoosasPy" / "db" / "weather" / "545110.csv"
+
+
+@pytest.mark.parametrize("building_type", ("commercial", "school", "hotel"))
+def test_public_building_schedule_files_are_complete(building_type):
+    schedules = _load_schedules(
+        PROJECT_ROOT / "MoosasPy" / "db" / "schedule" / f"{building_type}.sch"
+    )
+    prefix = {"commercial": "COM", "school": "SCH", "hotel": "HOT"}[building_type]
+
+    for role in ("OccDens", "OccHeat", "EquipHeat", "LightHeat"):
+        assert len(schedules[f"{prefix}_{role}_Weekly"]) == 8760
 
 
 def test_space_perimeter_area_is_limited_to_floor_area():

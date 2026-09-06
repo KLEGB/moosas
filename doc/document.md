@@ -322,7 +322,11 @@ the requested temporal scale, with an additional zone-scale field when zone
 output is requested.
 
 Other energy options include the building type (`core`), radiation mode, and
-schedule path.
+schedule path. `core` accepts `buildingType.RESIDENTIAL`, `OFFICE`, `HOTEL`,
+`SCHOOL`, or `COMMERCIAL`. Apply the matching climate-zone building template
+to each space before simulation; the non-residential types share the public
+building calculation path and use their templates and schedules for distinct
+occupancy, equipment, and lighting profiles.
 
 Radiation modes are:
 

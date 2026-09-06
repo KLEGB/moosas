@@ -143,7 +143,7 @@ def config_from_arguments(arguments: list[str]) -> EngineConfig:
 def _load_schedules(file_path: str | None) -> dict[str, np.ndarray]:
     if not file_path:
         return {}
-    with open(file_path, newline="") as schedule_file:
+    with open(file_path, newline="", encoding="utf-8") as schedule_file:
         rows = list(csv.reader(schedule_file))
     schedules: dict[str, np.ndarray] = {}
     for row in rows:

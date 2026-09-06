@@ -16,6 +16,7 @@ from MoosasPy.simulation.energy.runner import (
 from MoosasPy.simulation.energy.engine import EnergyOutput
 from MoosasPy.simulation.coupling import EnergyAirflowCoupler
 from MoosasPy.simulation.radiation.runner import RadianceDaylightResult
+from MoosasPy.utils.constant import buildingType
 from MoosasPy.simulation.airflow.runner import (
     AirflowResult,
     AirflowRunner,
@@ -208,6 +209,37 @@ class SimulationContractTests(unittest.TestCase):
             EnergyRunner(energy_input={"zones": [zone], "args": []}, temporal_scale="annual")
         with self.assertRaisesRegex(ValueError, "spatial_scale"):
             EnergyRunner(energy_input={"zones": [zone], "args": []}, spatial_scale="space")
+
+    def test_energy_building_types_map_to_engine_codes(self):
+        space = SimpleNamespace(
+            id="zone-1",
+            settings={},
+            area=10.0,
+            height=3.0,
+            edge=SimpleNamespace(wall=[]),
+            ceiling=SimpleNamespace(face=[]),
+            floor=SimpleNamespace(face=[]),
+        )
+        model = SimpleNamespace(spaceList=[space], schedule=None)
+        weather = SimpleNamespace(
+            weather_file="weather.csv",
+            location=SimpleNamespace(latitude=37.8, altitude=0.0),
+        )
+        expected_codes = {
+            buildingType.RESIDENTIAL: "0",
+            buildingType.OFFICE: "1",
+            buildingType.HOTEL: "2",
+            buildingType.SCHOOL: "3",
+            buildingType.COMMERCIAL: "4",
+        }
+
+        for core, expected_code in expected_codes.items():
+            energy_input = build_energy_input(model, weather, core=core)
+            type_index = energy_input["args"].index("-t")
+            self.assertEqual(energy_input["args"][type_index + 1], expected_code)
+
+        with self.assertRaisesRegex(ValueError, "core must be one of"):
+            build_energy_input(model, weather, core=buildingType.HOSPITAL)
 
     def test_airflow_runner_builds_project_from_model_in_its_workspace(self):
         command_result = CommandResult(("contamx", "model.prj"), 0, "", "")

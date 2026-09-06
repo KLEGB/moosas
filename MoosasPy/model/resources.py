@@ -44,11 +44,20 @@ def rebuild_schedule_index(model):
         if not isinstance(schedule_value, dict):
             continue
         schedule_type = str(schedule_value.get("type", "")).strip().title()
+        if schedule_type != "Weekly":
+            continue
         prefix = str(schedule_name).split("_", 1)[0].upper()
-        type_name = prefix_to_type.get(prefix, schedule_type.upper())
+        type_name = prefix_to_type.get(prefix)
         role = _schedule_role_from_name(schedule_name)
         if type_name and role:
-            schedule_by_type.setdefault(type_name, {})[role] = schedule_name
+            indexed_roles = schedule_by_type.setdefault(type_name, {})
+            existing = indexed_roles.get(role)
+            if existing is not None and existing != schedule_name:
+                raise ValueError(
+                    f"Multiple weekly schedules for {type_name} {role}: "
+                    f"{existing!r} and {schedule_name!r}"
+                )
+            indexed_roles[role] = schedule_name
     model.scheduleByType = schedule_by_type
     return schedule_by_type
 

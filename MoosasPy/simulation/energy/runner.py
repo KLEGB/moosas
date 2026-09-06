@@ -45,6 +45,14 @@ MONTH_NAMES = [
 TEMPORAL_SCALES = frozenset({"monthly", "daily", "hourly"})
 SPATIAL_SCALES = frozenset({"building", "zone"})
 
+BUILDING_TYPE_CODES = {
+    buildingType.RESIDENTIAL: 0,
+    buildingType.OFFICE: 1,
+    buildingType.HOTEL: 2,
+    buildingType.SCHOOL: 3,
+    buildingType.COMMERCIAL: 4,
+}
+
 
 def _validate_scales(temporal_scale: str, spatial_scale: str) -> tuple[str, str]:
     temporal_scale = str(temporal_scale).strip().lower()
@@ -291,9 +299,8 @@ def build_energy_input(model: MoosasModel,
 
     Args:
         model (MoosasModel): The model for which to generate the energy input.
-        core: Building type selector. Use buildingType.RESIDENTIAL for
-            residential buildings, or any other buildingType value for public
-            buildings. (default: buildingType.RESIDENTIAL)
+        core: Building type selector. Supported values are RESIDENTIAL,
+            OFFICE, HOTEL, SCHOOL, and COMMERCIAL. (default: RESIDENTIAL)
         require_radiation (bool | int): 0/False keeps the fast geometric
             estimate, 1/True consumes precomputed seasonal radiation totals,
             and 2 consumes those totals to write schedule-driven solar gains.
@@ -446,11 +453,12 @@ def build_energy_input(model: MoosasModel,
         theZone.updateParams(**addSettings)
         zones.append(theZone)
 
-    # ── Build command-line arguments ──────────────────────
-    # Determine the building type integer for the -t parameter.
-    # buildingType.RESIDENTIAL maps to 0; all others map to their
-    # integer value (1=OFFICE, 2=HOTEL, 3=SCHOOL, etc.)
-    building_type_int = 0 if core == buildingType.RESIDENTIAL else 1
+    try:
+        building_type_int = BUILDING_TYPE_CODES[core]
+    except KeyError as error:
+        raise ValueError(
+            "core must be one of RESIDENTIAL, OFFICE, HOTEL, SCHOOL, or COMMERCIAL"
+        ) from error
 
     args = [
         '-w', weather.weather_file,

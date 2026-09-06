@@ -9,7 +9,7 @@ import pytest
 
 from MoosasPy.model import MoosasModel
 from MoosasPy.model.io.idf.version import configure_idd
-from MoosasPy.model.resources import configure_model_resources
+from MoosasPy.model.resources import configure_model_resources, rebuild_schedule_index
 from MoosasPy.transform import transform
 
 
@@ -40,6 +40,31 @@ def test_resource_service_configures_a_domain_model():
     assert model.buildingTemplate
     assert model.schedule
     assert model.scheduleByType
+
+
+def test_schedule_index_uses_weekly_roots_regardless_of_insertion_order():
+    schedules = {
+        "OFF_EquipHeat_Weekend": {"type": "Daily", "value": [0.0] * 24},
+        "OFF_EquipHeat_Weekly": {"type": "Weekly", "value": ["daily"] * 7},
+        "OFF_EquipHeat_Weekday": {"type": "Daily", "value": [1.0] * 24},
+    }
+    model = MoosasModel()
+    model.schedule = dict(reversed(list(schedules.items())))
+
+    rebuild_schedule_index(model)
+
+    assert model.scheduleByType["OFFICE"]["zone_equipment"] == "OFF_EquipHeat_Weekly"
+
+
+def test_schedule_index_rejects_duplicate_weekly_roots():
+    model = MoosasModel()
+    model.schedule = {
+        "OFF_EquipHeat_Weekly": {"type": "Weekly", "value": ["daily"] * 7},
+        "OFF_EquipmentHeatGain_Weekly": {"type": "Weekly", "value": ["daily"] * 7},
+    }
+
+    with pytest.raises(ValueError, match="Multiple weekly schedules"):
+        rebuild_schedule_index(model)
 
 
 @pytest.mark.parametrize("suffix", (".geo", ".obj", ".stl"))
@@ -73,6 +98,16 @@ def test_semantic_model_formats_round_trip(semantic_model: MoosasModel, suffix: 
     assert len(restored.geometryList) == len(semantic_model.geometryList)
     assert len(restored.spaceList) == len(semantic_model.spaceList)
     assert len(restored.wallList) == len(semantic_model.wallList)
+
+
+def test_rdf_round_trip_loads_spaces_in_stable_uri_order(semantic_model: MoosasModel):
+    with TemporaryDirectory() as directory:
+        file_path = Path(directory) / "model.rdf"
+        semantic_model.save(file_path)
+        restored = MoosasModel.load(file_path)
+
+    restored_ids = [space.id for space in restored.spaceList]
+    assert restored_ids == sorted(restored_ids, key=lambda value: f"Space_{value}")
 
 
 def test_rdf_round_trip_preserves_air_boundaries_as_walls(semantic_model: MoosasModel):
