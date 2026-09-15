@@ -17,6 +17,7 @@ def classify_model(
     model: MoosasModel,
     triangulate_faces: bool = True,
     break_wall_vertical: bool = True,
+    attach_shading: bool = False,
 ) -> MoosasModel | None:
     """Classify source geometry into building elements and establish levels."""
     print("\rLOADING: Predefining existing tag on faces...", end="")
@@ -24,7 +25,8 @@ def classify_model(
     for geometry in model.geometryList:
         if geometry.category == -1:
             geometry.setCategory()
-            model.shadingList.append(MoosasElement(model, geometry))
+            if attach_shading:
+                model.shadingList.append(MoosasElement(model, geometry))
             classified_ids.append(geometry.faceId)
         elif geometry.category == 4:
             classified_ids.append(geometry.faceId)

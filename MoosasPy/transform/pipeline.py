@@ -201,7 +201,12 @@ def structured(
     while True:
         t1 = time.time()
 
-        model = classify_model(model, options.triangulate_faces, options.break_wall_vertical)
+        model = classify_model(
+            model,
+            options.triangulate_faces,
+            options.break_wall_vertical,
+            options.attach_shading,
+        )
 
         model.faceList = np.array(model.faceList)
         model.wallList = np.array(model.wallList)

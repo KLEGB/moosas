@@ -36,10 +36,15 @@ def attach_shading_content(model: MoosasModel) -> MoosasModel:
         for space_index in space_indices:
             if shapely.contains(model.spaceList[space_index].force_2d(), element.force_2d()):
                 model.spaceList[space_index].addInternalMass(element)
-                keep_mask[space_index] = False
+                keep_mask[index] = False
                 break
 
     shading = shading[keep_mask]
+    existing_shading = set(model.shadingList)
+    model.shadingList = np.append(
+        model.shadingList,
+        [element for element in shading if element not in existing_shading],
+    )
     print()
     for index, face in enumerate(shading):
         print(f"\rCONTENT: attach shading element:{index}/{len(shading)}", end="")

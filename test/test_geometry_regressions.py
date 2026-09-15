@@ -15,6 +15,7 @@ from MoosasPy.transform.geometry.grid import MoosasGrid
 from MoosasPy.transform.geometry.planar_graph import TopoNetwork
 from MoosasPy.transform.geometry.contour import _merge_tiny_partitions
 from MoosasPy.transform.stages.convexification import convexify_model
+from MoosasPy.transform.stages.classification import classify_model
 from MoosasPy.utils import GeometryError, shapely
 
 
@@ -48,6 +49,28 @@ def test_simplify_keeps_three_vertices_for_a_2d_triangle():
 
     assert shapely.is_valid(result)
     assert len(shapely.get_coordinates(result)) == 4
+
+
+def test_attach_shading_controls_explicit_shading_faces():
+    face = shapely.polygons(np.array([
+        [0.0, 0.0, 0.0],
+        [1.0, 0.0, 0.0],
+        [1.0, 1.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0],
+    ]))
+
+    def classify(attach_shading):
+        model = MoosasModel()
+        model.geometryList = [
+            MoosasGeometry(face, "floor", shapely.points([0.0, 0.0, 1.0]), 4),
+            MoosasGeometry(face, "shade", shapely.points([0.0, 0.0, 1.0]), -1),
+        ]
+        model.geoId = [geometry.faceId for geometry in model.geometryList]
+        return classify_model(model, attach_shading=attach_shading)
+
+    assert classify(False).shadingList == []
+    assert len(classify(True).shadingList) == 1
 
 
 def test_projection_supports_sloped_roof_without_horizontal_section_vertices():
