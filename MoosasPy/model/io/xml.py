@@ -3,6 +3,7 @@
 from collections import defaultdict
 
 from ...transform.importers.geo import _readGeo, preClassified
+from ...transform.geometry.geos import Vector
 from ..model import *
 from ...utils import ET, np
 
@@ -42,12 +43,15 @@ def build_xml(model: MoosasModel, write_geometry: bool = False) -> ET.Element:
     for skylight in elements["MoosasSkylight"]:
         root.append(skylight.to_xml(model, writeGeometry=write_geometry))
 
-    shading = ET.SubElement(root, "shading")
-    for glazing in model.glazingList:
-        for shade in glazing.shading:
-            face = ET.SubElement(shading, "face")
-            face.text = str(shade)
-            face.set("glazingId", str(glazing.faceId))
+    for shading in model.shadingList:
+        shading_xml = ET.SubElement(root, "shading")
+        ET.SubElement(shading_xml, "Uid").text = str(shading.Uid)
+        ET.SubElement(shading_xml, "faceId").text = " ".join(
+            np.array(shading.faceId).flatten().astype(str)
+        )
+        ET.SubElement(shading_xml, "normal").text = " ".join(
+            Vector(shading.normal).array.astype(str)
+        )
     ET.SubElement(root, "level").text = " ".join(np.array(model.levelList).astype(str))
     return root
 

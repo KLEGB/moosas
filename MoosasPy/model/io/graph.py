@@ -167,6 +167,8 @@ def _primary_geometry(geometries: list[dict]) -> dict | None:
 
 
 def _node_type_from_categories(categories: list[int], current_type: str | None = None) -> str | None:
+    if current_type == "shading" or any(cat == -1 for cat in categories):
+        return "shading"
     if any(cat == 2 for cat in categories):
         return "airwall"
     if any(cat in (1, 5, 6) for cat in categories):
@@ -212,6 +214,7 @@ class CugerGraph:
             + list(root.findall("wall"))
             + list(root.findall("glazing"))
             + list(root.findall("skylight"))
+            + list(root.findall("shading"))
         )
 
         for element in face_like_elements:
@@ -225,6 +228,8 @@ class CugerGraph:
                 node_type="face",
                 face_params=FACE_PARAM_TEMPLATE.copy(),
             )
+            if element.tag == "shading":
+                self.graph.nodes[uid]["face_params"]["t"] = "shading"
 
         for space in root.findall("space"):
             sid = space.findtext("id")
@@ -252,7 +257,7 @@ class CugerGraph:
                     if neighbor_uid in self.graph:
                         self.graph.add_edge(uid, neighbor_uid, adj="adjacent")
 
-        for element in list(root.findall("face")) + list(root.findall("wall")):
+        for element in face_like_elements:
             uid = element.findtext("Uid")
             if not uid:
                 continue
@@ -351,7 +356,8 @@ class CugerGraph:
 
     def clean_isolated_nodes(self):
         for node in list(self.graph.nodes()):
-            if self.graph.degree(node) == 0:
+            node_type = self.graph.nodes[node].get("face_params", {}).get("t")
+            if self.graph.degree(node) == 0 and node_type != "shading":
                 self.graph.remove_node(node)
 
     def clean_airwall_nodes(self):

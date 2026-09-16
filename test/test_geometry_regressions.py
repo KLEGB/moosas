@@ -7,9 +7,17 @@ import pytest
 
 from MoosasPy.simulation.energy.runner import _resolve_schedule_ref
 from MoosasPy.simulation.radiation import calculation as radiation_calculation
+from MoosasPy.model.io.graph import buildGraph
 from MoosasPy.transform.geometry.convexify import GeometryConvexifier
 from MoosasPy.model import MoosasModel
-from MoosasPy.transform.geometry.element import MoosasEdge, MoosasFace, MoosasGeometry, MoosasSpace, MoosasWall
+from MoosasPy.transform.geometry.element import (
+    MoosasEdge,
+    MoosasElement,
+    MoosasFace,
+    MoosasGeometry,
+    MoosasSpace,
+    MoosasWall,
+)
 from MoosasPy.transform.geometry.geos import Projection, simplify
 from MoosasPy.transform.geometry.grid import MoosasGrid
 from MoosasPy.transform.geometry.planar_graph import TopoNetwork
@@ -71,6 +79,27 @@ def test_attach_shading_controls_explicit_shading_faces():
 
     assert classify(False).shadingList == []
     assert len(classify(True).shadingList) == 1
+
+
+def test_graph_serializes_explicit_shading_semantics():
+    face = shapely.polygons(np.array([
+        [0.0, 0.0, 1.0],
+        [1.0, 0.0, 1.0],
+        [1.0, 1.0, 1.0],
+        [0.0, 1.0, 1.0],
+        [0.0, 0.0, 1.0],
+    ]))
+    model = MoosasModel()
+    geometry = MoosasGeometry(face, "shade", shapely.points([0.0, 0.0, 1.0]), -1)
+    model.geometryList = [geometry]
+    model.geoId = [geometry.faceId]
+    shading = MoosasElement(model, geometry)
+    model.shadingList = [shading]
+
+    graph = buildGraph(model)
+
+    assert shading.Uid in graph.graph
+    assert graph.graph.nodes[shading.Uid]["face_params"]["t"] == "shading"
 
 
 def test_projection_supports_sloped_roof_without_horizontal_section_vertices():

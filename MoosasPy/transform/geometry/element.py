@@ -1299,7 +1299,9 @@ class MoosasSkylight(MoosasFace):
                 """
         skylightXml = super(MoosasSkylight, self).to_xml(model, Element_tag, writeGeometry=writeGeometry)
         ET.SubElement(skylightXml, "parentFace").text = str(self.parentFace.Uid)
-        ET.SubElement(skylightXml, "shadingid").text = ' '.join(np.array(self.shading).astype(str))
+        ET.SubElement(skylightXml, "shadingId").text = ' '.join(
+            np.array([shade.Uid for shade in self.shading]).astype(str)
+        )
         ET.SubElement(skylightXml, "SHGC").text = "" if self.SHGC is None else str(self.SHGC)
         return skylightXml
 
@@ -1897,7 +1899,9 @@ class MoosasGlazing(MoosasWall):
         """
         glazingXml = super(MoosasGlazing, self).to_xml(model, Element_tag, writeGeometry=writeGeometry)
         ET.SubElement(glazingXml, "parentFace").text = self.parentFace.Uid
-        ET.SubElement(glazingXml, "shadingid").text = ' '.join(np.array(self.shading).astype(str))
+        ET.SubElement(glazingXml, "shadingId").text = ' '.join(
+            np.array([shade.Uid for shade in self.shading]).astype(str)
+        )
         ET.SubElement(glazingXml, "SHGC").text = "" if self.SHGC is None else str(self.SHGC)
         return glazingXml
 
