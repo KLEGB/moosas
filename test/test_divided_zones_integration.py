@@ -26,6 +26,17 @@ def _transform_divided_case(case_name):
     )
 
 
+def test_attic_is_preserved_without_divided_zones():
+    model = transform(
+        str(CASE_DIRECTORY / "test90_restockwithattic.geo"),
+        input_type="geo",
+        stdout=StringIO(),
+        options=TransformOptions(divided_zones=False),
+    )
+
+    assert sum(space.space_type == "attic" for space in model.spaceList) == 1
+
+
 @pytest.mark.parametrize(
     "case_name",
     (

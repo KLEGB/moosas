@@ -62,6 +62,10 @@ def order_connected_walls(walls: list) -> list | None:
     return ordered
 
 
+def _touches_projection(first, second) -> bool:
+    return shapely.distance(first.force_2d(), second.force_2d()) <= geom.POINT_PRECISION
+
+
 def pack_attic_spaces(model: MoosasModel) -> MoosasModel:
     """Create normal spaces closed by existing inclined roof faces and eave walls."""
     inclined_faces = [
@@ -75,9 +79,8 @@ def pack_attic_spaces(model: MoosasModel) -> MoosasModel:
         changed = True
         while changed:
             changed = False
-            component_edges = {edge for face in component for edge in face.getEdgeStr()}
             for face in list(remaining):
-                if component_edges.intersection(face.getEdgeStr()):
+                if any(_touches_projection(face, component_face) for component_face in component):
                     component.append(face)
                     remaining.remove(face)
                     changed = True
@@ -88,6 +91,13 @@ def pack_attic_spaces(model: MoosasModel) -> MoosasModel:
     for roof_faces in roof_components:
         roof_edges = {edge for face in roof_faces for edge in face.getEdgeStr()}
         eave_walls = [wall for wall in model.wallList if wall not in used_walls and roof_edges.intersection(wall.getEdgeStr())]
+        if not eave_walls:
+            roof_boundary = shapely.union_all([shapely.boundary(face.force_2d()) for face in roof_faces])
+            eave_walls = [
+                wall for wall in model.wallList
+                if wall not in used_walls
+                and shapely.distance(wall.force_2d(), roof_boundary) <= geom.POINT_PRECISION
+            ]
         ordered_walls = order_connected_walls(eave_walls)
         if ordered_walls is None:
             continue
