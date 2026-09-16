@@ -21,6 +21,7 @@ from MoosasPy.transform.geometry.element import (
 from MoosasPy.transform.geometry.geos import Projection, simplify
 from MoosasPy.transform.geometry.grid import MoosasGrid
 from MoosasPy.transform.geometry.planar_graph import TopoNetwork
+from MoosasPy.transform.geometry.planar_graph import TopoEdge
 from MoosasPy.transform.geometry.contour import _merge_tiny_partitions
 from MoosasPy.transform.stages.convexification import convexify_model
 from MoosasPy.transform.stages.classification import classify_model
@@ -79,6 +80,55 @@ def test_attach_shading_controls_explicit_shading_faces():
 
     assert classify(False).shadingList == []
     assert len(classify(True).shadingList) == 1
+
+
+def test_horizontal_faces_preserve_close_structural_levels():
+    model = MoosasModel()
+    lower = shapely.polygons(np.array([
+        [0.0, 0.0, 0.0],
+        [2.0, 0.0, 0.0],
+        [2.0, 2.0, 0.0],
+        [0.0, 2.0, 0.0],
+        [0.0, 0.0, 0.0],
+    ]))
+    upper = shapely.force_3d(shapely.force_2d(lower), z=1.219)
+    geometries = [
+        MoosasGeometry(lower, "lower", shapely.points([0.0, 0.0, 1.0]), 4),
+        MoosasGeometry(upper, "upper", shapely.points([0.0, 0.0, 1.0]), 4),
+    ]
+    model.geometryList = geometries
+    model.geoId = [geometry.faceId for geometry in geometries]
+
+    MoosasFace(model, geometries[0])
+    upper_face = MoosasFace(model, geometries[1])
+
+    assert model.levelList == [0.0, 1.219]
+    assert upper_face.level == pytest.approx(1.219)
+    assert upper_face.offset == pytest.approx(0.0)
+
+
+def test_topology_node_keys_normalize_signed_zero():
+    edge = SimpleNamespace(
+        force_2d=lambda: shapely.linestrings([[-0.0, 0.0], [1.0, 0.0]]),
+        Uid="edge",
+    )
+
+    topology_edge = TopoEdge(0, edge)
+
+    assert topology_edge.fromPStr == "0.0_0.0"
+
+
+def test_low_enclosed_space_is_void():
+    floor = SimpleNamespace(level=0.0, offset=0.0, area=4.0)
+    ceiling = SimpleNamespace(level=1.219, offset=0.0, area=4.0)
+    edge = SimpleNamespace(area=4.0)
+    space = object.__new__(MoosasSpace)
+    space.floor = floor
+    space.ceiling = ceiling
+    space.edge = edge
+    space.space_type = "room"
+
+    assert space.is_void()
 
 
 def test_graph_serializes_explicit_shading_semantics():

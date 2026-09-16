@@ -52,7 +52,7 @@ def test_courtyard_case_generates_two_sided_air_boundaries():
     model = _transform_divided_case("test2_cortyard.geo")
     air_walls = [wall for wall in model.wallList if wall.is_air_boundary]
 
-    assert len(model.spaceList) == 52
+    assert len(model.spaceList) == 53
     assert len(air_walls) == 18
     assert all(len({str(space_id) for space_id in wall.space}) == 2 for wall in air_walls)
 

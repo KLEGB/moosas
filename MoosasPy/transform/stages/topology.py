@@ -28,13 +28,16 @@ def build_space_topology(
             meta_voids.pop()
             if not meta_voids or meta_voids[-1].ceiling is None:
                 continue
+            source_voids = meta_voids
             meta_voids = [MoosasSpace(item.floor, item.edge, item.ceiling) for item in meta_voids]
             for space_bottom, space_top in zip(meta_voids[:-1], meta_voids[1:]):
                 space_bottom.ceiling, space_top.floor = find_co_ceiling(space_bottom, space_top)
                 model.ceilingList.append(space_bottom.ceiling)
                 model.floorList.append(space_top.floor)
+            if any(space.is_void() for space in meta_voids):
+                continue
             model.spaceList = list(np.append(model.spaceList, meta_voids))
-            model.voidList = list(set(model.voidList) - set(meta_voids))
+            model.voidList = list(set(model.voidList) - set(source_voids))
         print()
 
     print("\r2LSB: Recording Boundary topology", end="")

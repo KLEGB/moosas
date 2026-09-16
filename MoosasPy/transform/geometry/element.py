@@ -1091,7 +1091,7 @@ class MoosasFace(MoosasElement):
         pointlist.pop()
 
         for bld_level in model.levelList:
-            if np.abs(_facebotheight - bld_level) < geom.LEVEL_MAX_OFFSET:
+            if np.abs(_facebotheight - bld_level) < geom.POINT_PRECISION:
                 self.level = bld_level
         if self.level is None:
             self.level = _facebotheight
@@ -3028,6 +3028,12 @@ class MoosasSpace(object):
             False otherwise.
         """
         if not self.floor or not self.ceiling:
+            return True
+        if (
+            self.ceiling.level + self.ceiling.offset
+            - self.floor.level - self.floor.offset
+            < geom.LEVEL_MAX_OFFSET
+        ):
             return True
         # Inclined roof faces do not cover the footprint in XY projection. An attic
         # is validated by its existing floor, eave walls and roof topology instead.

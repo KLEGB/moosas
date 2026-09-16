@@ -73,7 +73,9 @@ class TopoEdge(object):
             A string formed by joining the coordinates of `fromLocation` with underscores, where each coordinate value 
             is converted to its string representation.
         """
-        return '_'.join(shapely.get_coordinates(self.fromLocation)[0].astype(str))
+        coordinates = shapely.get_coordinates(self.fromLocation)[0]
+        coordinates = np.where(np.isclose(coordinates, 0.0), 0.0, coordinates)
+        return '_'.join(coordinates.astype(str))
 
     @property
     def toPStr(self):
@@ -91,7 +93,9 @@ class TopoEdge(object):
         str
             A string formed by converting the first coordinate point (x, y) to strings and joining them with an underscore.
         """
-        return '_'.join(shapely.get_coordinates(self.toLocation)[0].astype(str))
+        coordinates = shapely.get_coordinates(self.toLocation)[0]
+        coordinates = np.where(np.isclose(coordinates, 0.0), 0.0, coordinates)
+        return '_'.join(coordinates.astype(str))
 
     @staticmethod
     def overlap(this: TopoEdge, other: TopoEdge):
