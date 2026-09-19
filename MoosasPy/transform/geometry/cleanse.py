@@ -7,7 +7,7 @@ import numpy as np
 import shapely
 
 from .element import *
-from ...utils.tools import searchBy
+from ...utils.tools import mixItemListToList, searchBy
 from ...utils.constant import geom
 from .geos import equals, overlapEdge, Vector
 from .triangulation import triangulate2dFace
@@ -653,6 +653,7 @@ def _coPlannerCleanse(elements: np.ndarray[MoosasElement]) -> (np.ndarray[Moosas
     faceNum = len(elements)
     currentFaceNum = 0
     redundant = []
+
     while currentFaceNum != faceNum:
         currentFaceNum = faceNum
         edgeDict = {}
@@ -760,7 +761,6 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
                     if not (shapely.dwithin(twins[0], intersection, geom.POINT_PRECISION) or shapely.dwithin(twins[1],
                                                                                                            intersection,
                                                                                                            geom.POINT_PRECISION)):
-
                         brkResult = MoosasWall.break_(wall, intersection)
                         if brkResult is not None:
                             newWalls.pop()
@@ -773,6 +773,8 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
             return newWalls
 
     delWalls, newWalls = [], []
+    removedGlazings = set()
+    removedGeoIds = set()
     prs = 0
     model.wallList = list(model.wallList)
     for bld_level in model.levelList:
@@ -798,6 +800,10 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
                 if len(brkResult) > 1:
                     newWalls += brkResult
                     delWalls.append(wid)
+                    removedGeoIds.update(mixItemListToList(wall.faceId))
+                    for glazing in mixItemListToList(wall.glazingElement):
+                        removedGlazings.add(glazing)
+                        removedGeoIds.update(mixItemListToList(glazing.faceId))
 
 
         # for i, wall, w2d in zip(wall_list, wallElement, wall2d):
@@ -829,6 +835,27 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
 
     model.wallList = list(np.delete(model.wallList, delWalls))
     model.wallList += newWalls
+
+    referencedGeoIds = set()
+    referencedGlazingUids = set()
+    for element in model.getAllFaces():
+        referencedGeoIds.update(mixItemListToList(getattr(element, "faceId", [])))
+        for glazing in mixItemListToList(getattr(element, "glazingElement", [])):
+            referencedGlazingUids.add(str(getattr(glazing, "Uid", "")))
+            referencedGeoIds.update(mixItemListToList(getattr(glazing, "faceId", [])))
+
+    if removedGlazings:
+        model.glazingList = [
+            glazing for glazing in model.glazingList
+            if str(getattr(glazing, "Uid", "")) not in {str(getattr(item, "Uid", "")) for item in removedGlazings}
+            or str(getattr(glazing, "Uid", "")) in referencedGlazingUids
+        ]
+
+    for face_id in removedGeoIds:
+        if face_id in referencedGeoIds:
+            continue
+        if face_id in model.geoId:
+            model.removeGeo(face_id)
     print()
     return model
 

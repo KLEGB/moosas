@@ -11,6 +11,26 @@ from ...utils import ET, np, shapely
 def _xml_float_or_none(value):
     if value in (None, ""):
         return None
+
+
+def _has_valid_parent_face(element) -> bool:
+    """Return whether an opening can be serialized with a real parent face."""
+    parent = getattr(element, "parentFace", None)
+    return parent is not None and getattr(parent, "Uid", None) not in (None, "")
+
+
+def _has_serializable_space_topology(space) -> bool:
+    """Return whether the legacy Ruby reader can construct this space."""
+    floor = getattr(space, "floor", None)
+    ceiling = getattr(space, "ceiling", None)
+    edge = getattr(space, "edge", None)
+    return (
+        floor is not None
+        and ceiling is not None
+        and edge is not None
+        and len(getattr(floor, "face", [])) > 0
+        and len(getattr(ceiling, "face", [])) > 0
+    )
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -21,7 +41,11 @@ def build_xml(model: MoosasModel, write_geometry: bool = False) -> ET.Element:
     """Build the XML representation of a complete Moosas model."""
     root = ET.Element("model")
     elements = {"MoosasFace": set(), "MoosasSkylight": set(), "MoosasWall": set(), "MoosasGlazing": set()}
-    for space in model.spaceList + model.voidList:
+    spaces = [space for space in model.spaceList + model.voidList if _has_serializable_space_topology(space)]
+    skipped_spaces = len(model.spaceList) + len(model.voidList) - len(spaces)
+    if skipped_spaces:
+        print(f"WARNING: skipping {skipped_spaces} spaces without complete floor/ceiling topology")
+    for space in spaces:
         root.append(space.to_xml(model, writeGeometry=write_geometry))
         element_dict = space.getAllFaces(to_dict=True)
         elements["MoosasFace"] |= set(element_dict["MoosasFloor"] + element_dict["MoosasCeiling"])
@@ -33,6 +57,28 @@ def build_xml(model: MoosasModel, write_geometry: bool = False) -> ET.Element:
     elements["MoosasWall"].update(model.wallList)
     elements["MoosasSkylight"].update(model.skylightList)
     elements["MoosasGlazing"].update(model.glazingList)
+
+    invalid_skylights = [
+        skylight for skylight in elements["MoosasSkylight"]
+        if not _has_valid_parent_face(skylight)
+    ]
+    invalid_glazings = [
+        glazing for glazing in elements["MoosasGlazing"]
+        if not _has_valid_parent_face(glazing)
+    ]
+    if invalid_skylights or invalid_glazings:
+        print(
+            "WARNING: skipping openings without a valid parent face: "
+            f"{len(invalid_glazings)} glazing, {len(invalid_skylights)} skylight"
+        )
+    elements["MoosasSkylight"] = {
+        skylight for skylight in elements["MoosasSkylight"]
+        if _has_valid_parent_face(skylight)
+    }
+    elements["MoosasGlazing"] = {
+        glazing for glazing in elements["MoosasGlazing"]
+        if _has_valid_parent_face(glazing)
+    }
 
     for face in elements["MoosasFace"]:
         root.append(face.to_xml(model, writeGeometry=write_geometry))

@@ -318,6 +318,12 @@ class SimulationContractTests(unittest.TestCase):
                 "MoosasPy.simulation.airflow.runner.getZoneAndPath",
                 return_value=([zone], airflow_paths),
             ), patch(
+                "MoosasPy.simulation.airflow.runner.cleanseNetwork",
+                return_value=(airflow_paths, [zone]),
+            ), patch(
+                "MoosasPy.simulation.airflow.runner._path_results",
+                return_value=(),
+            ), patch(
                 "MoosasPy.simulation.airflow.runner._solve_sensible_heat",
                 return_value=[[298.15]],
             ), patch(

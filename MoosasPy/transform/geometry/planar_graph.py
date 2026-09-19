@@ -450,7 +450,7 @@ class TopoNetwork(object):
         if len(edge_list) == 0:
             return TopoNetwork()
         edge_list = [i for i in edge_list if model.wallList[i].force_2d() != None]
-        edge_list = [i for i in edge_list if model.wallList[i].height > 0.9]
+        edge_list = [i for i in edge_list if model.wallList[i].height >= 0.1]
         edges = [TopoEdge(i, model.wallList[i]) for i in edge_list]
 
         return TopoNetwork(edges=edges)

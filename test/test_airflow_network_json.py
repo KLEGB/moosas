@@ -172,3 +172,5 @@ def test_rdf_model_runs_airflow_simulation():
     assert all(command.returncode == 0 for command in result.commands)
     assert all(len(zone.temperatures) == 2 for zone in result.zones)
     assert all(len(zone.ach_values) == 2 for zone in result.zones)
+    assert result.path_results
+    assert len(result.path_results) == len({path["uid"] for path in result.path_results})

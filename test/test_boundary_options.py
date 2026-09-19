@@ -64,7 +64,7 @@ def test_air_boundary_projection_creates_only_a_wall():
     assert len(model.glazingList) == 0
 
 
-def test_air_boundary_requires_two_model_spaces():
+def test_air_boundary_without_model_spaces_is_valid():
     model = MoosasModel()
     model.levelList = [0.0, 3.0]
     wall = MoosasWall.fromProjection(
@@ -76,7 +76,10 @@ def test_air_boundary_requires_two_model_spaces():
     )
     model.wallList = [wall]
 
-    with pytest.raises(ValueError, match="must connect exactly two model spaces"):
+    assert validate_model(model) is model
+
+    wall.space = ["missing-space"]
+    with pytest.raises(ValueError, match="references an unknown model space"):
         validate_model(model)
 
 

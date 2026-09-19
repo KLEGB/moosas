@@ -5,23 +5,18 @@ from ...model import MoosasModel
 from ...utils import np, shapely
 from ...utils.constant import geom
 from ...utils.tools import searchBy
-from ..geometry.element import MoosasFace, MoosasGlazing, MoosasSkylight, MoosasWall
+from ..geometry.element import (
+    MoosasFace,
+    MoosasGlazing,
+    MoosasSkylight,
+    MoosasWall,
+    attach_glazing_to_parent,
+)
 
 
 def match_face_glazing(face: MoosasFace | MoosasWall, glazing: MoosasSkylight | MoosasGlazing) -> bool:
     """Attach glazing to a containing or coincident opaque parent face."""
-    face_projection = face.force_2d(region=True)
-    glazing_projection = glazing.force_2d(region=True)
-    if shapely.get_dimensions(face_projection) == shapely.get_dimensions(glazing_projection) == 1:
-        for point in shapely.points(shapely.get_coordinates(glazing_projection)):
-            if shapely.distance(face_projection, point) > 2 * geom.POINT_PRECISION:
-                return False
-        face.add_glazing(glazing)
-        return True
-    if shapely.contains(face_projection, glazing_projection):
-        face.add_glazing(glazing)
-        return True
-    return False
+    return attach_glazing_to_parent(face, glazing, tolerance=2 * geom.POINT_PRECISION)
 
 
 def attach_glazing_to_faces(model: MoosasModel) -> MoosasModel:

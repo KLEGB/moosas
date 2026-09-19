@@ -255,17 +255,42 @@ class MoosasRDF(Graph):
         self.encodeStorey(model)
         for tmp in model.buildingTemplate.keys():
             self.encodeProgram(tmp, model.buildingTemplate[tmp])
-        for geo in model.geometryList:
-            self.encodeGeo(geo)
+        spaces = []
+        self.skipped_spaces = []
         for space in model.spaceList + model.voidList:
+            # A void is intentionally allowed to have no floor or ceiling.  Its
+            # boundary topology is still needed by downstream model viewers.
+            if self._space_has_complete_topology(space) or self._space_has_void_topology(space):
+                spaces.append(space)
+            else:
+                self.skipped_spaces.append(str(getattr(space, "id", "")))
+        for space_id in self.skipped_spaces:
+            print(f"RDF: skipped incomplete space {space_id}")
+
+        valid_uids = set()
+        valid_geometry_ids = set()
+        for space in spaces:
+            for element in self._space_elements(space):
+                valid_uids.add(str(element.Uid))
+                for face_id in mixItemListToList(element.faceId):
+                    valid_geometry_ids.add(str(face_id))
+                for glazing in mixItemListToList(getattr(element, "glazingElement", [])):
+                    valid_uids.add(str(glazing.Uid))
+                    for face_id in mixItemListToList(glazing.faceId):
+                        valid_geometry_ids.add(str(face_id))
+
+        for geo in model.geometryList:
+            if str(geo.faceId) in valid_geometry_ids:
+                self.encodeGeo(geo)
+        for space in spaces:
             self.encodeSpace(space, ExportIFC)
         
 
         mElements = {
-            "MoosasFace": set(model.faceList),
-            "MoosasWall": set(model.wallList),
-            "MoosasSkylight": set(model.skylightList),
-            "MoosasGlazing": set(model.glazingList),
+            "MoosasFace": {element for element in model.faceList if str(element.Uid) in valid_uids},
+            "MoosasWall": {element for element in model.wallList if str(element.Uid) in valid_uids},
+            "MoosasSkylight": {element for element in model.skylightList if str(element.Uid) in valid_uids},
+            "MoosasGlazing": {element for element in model.glazingList if str(element.Uid) in valid_uids},
         }
         uidSet = mElements['MoosasFace'] | mElements['MoosasWall'] | mElements['MoosasSkylight'] | mElements[
             'MoosasGlazing']
@@ -289,6 +314,54 @@ class MoosasRDF(Graph):
             self.add((shading_uri, self.pgd.hasSurfaceType, self.moosas.Shading))
             for face_id in mixItemListToList(shading.faceId):
                 self.add((shading_uri, self.moosas.hasFace, URIRef(str(face_id))))
+
+    @staticmethod
+    def _space_has_complete_topology(space):
+        floor = getattr(space, "floor", None)
+        ceiling = getattr(space, "ceiling", None)
+        edge = getattr(space, "edge", None)
+        if floor is None or ceiling is None or edge is None:
+            return False
+        floor_faces = mixItemListToList(getattr(floor, "face", []))
+        ceiling_faces = mixItemListToList(getattr(ceiling, "face", []))
+        edge_walls = mixItemListToList(getattr(edge, "wall", []))
+        return len(floor_faces) > 0 and len(ceiling_faces) > 0 and len(edge_walls) > 0
+
+    @staticmethod
+    def _space_is_void(space):
+        """Return the transform model's semantic void flag safely."""
+        try:
+            return bool(space.is_void())
+        except (AttributeError, TypeError):
+            return False
+
+    @classmethod
+    def _space_has_void_topology(cls, space):
+        """A void is serializable when it has at least one boundary wall.
+
+        Floor and ceiling are optional for voids, but an empty void would not
+        provide anything that the SketchUp-side adapter could reconstruct.
+        """
+        if not cls._space_is_void(space):
+            return False
+        edge = getattr(space, "edge", None)
+        edge_walls = mixItemListToList(getattr(edge, "wall", [])) if edge is not None else []
+        return len(edge_walls) > 0
+
+    @staticmethod
+    def _space_elements(space):
+        elements = []
+        for topology in (getattr(space, "floor", None), getattr(space, "ceiling", None)):
+            if topology is not None:
+                elements.extend(mixItemListToList(getattr(topology, "face", [])))
+        edge = getattr(space, "edge", None)
+        if edge is not None:
+            elements.extend(mixItemListToList(getattr(edge, "wall", [])))
+        result = []
+        for element in elements:
+            result.append(element)
+            result.extend(mixItemListToList(getattr(element, "glazingElement", [])))
+        return result
 
     def encodeScheduleOntology(self):
         self.add((self.pgd.Schedule, self.rdf.type, self.rdfs.Class))
@@ -753,7 +826,9 @@ class MoosasRDF(Graph):
         self.add((URIRef(f"Space_{space.id}"), self.moosas.Uid, Literal(space.id)))
         # Semantic type must be restored before ``is_void`` validates inclined roofs.
         self.add((URIRef(f"Space_{space.id}"), self.moosas.spaceType,
-                  Literal(getattr(space, "space_type", "room"))))
+                  Literal("void" if self._space_is_void(space) else getattr(space, "space_type", "room"))))
+        self.add((URIRef(f"Space_{space.id}"), self.moosas.isVoid,
+                  Literal(self._space_is_void(space))))
         self.add((URIRef(f"Space_{space.id}"), self.moosas.conditioned,
                   Literal(space.conditioned)))
         self.add((URIRef(f"Space_{space.id}"), self.moosas.boundaryWKT,

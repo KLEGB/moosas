@@ -2000,147 +2000,95 @@ def splitOnZ(geoBase: shapely.Geometry, level: float, EPS: float = 1e-9) -> list
     5. Classify rings into upper/lower groups based on z-coordinates
     """
 
-    # ------------------- Step 1: Extract coordinates and insert intersection points -------------------
-    # Get original 3D coordinates (remove closing point which duplicates first point)
-    coords = shapely.get_coordinates(geoBase, include_z=True)[:-1].tolist()
-    new_coords = []
-    intersections = []  # Store all intersection points with z=level plane
+    coordinates = shapely.get_coordinates(geoBase, include_z=True)
+    if len(coordinates) == 0:
+        return [[], []]
 
-    for i in range(len(coords)):
-        p1 = coords[i]
-        p2 = coords[(i + 1) % len(coords)]
-        z1, z2 = p1[2], p2[2]
-
-        # Add current vertex to new coordinate list
-        new_coords.append(p1)
-        if np.abs(z1 - level) < EPS:
-            intersections.append(p1)
-            continue
-        if np.abs(z2 - level) < EPS:
-            continue
-        # Check if edge intersects z=level plane (exclude endpoints on plane)
-        if (z1 - level) * (z2 - level) < -EPS and abs(z1 - z2) > EPS:
-            # Calculate intersection using linear interpolation
-            t = (level - z1) / (z2 - z1)
-            intersect_pt = [
-                p1[0] + t * (p2[0] - p1[0]),
-                p1[1] + t * (p2[1] - p1[1]),
-                level
-            ]
-            # Insert intersection point and record
-            new_coords.append(intersect_pt)
-            intersections.append(intersect_pt)
-
-    # Return original polygon if insufficient intersections
-
-    if len(intersections) < 2:
-        return [
-            [geoBase],  # Upper group (original)
-            []  # Lower group (empty)
-        ]
-    # ------------------- Step 2: Reorder path to start from first intersection -------------------
-    # Find position of first intersection point
-    start_idx = -1
-    for i, pt in enumerate(new_coords):
-        if any(np.linalg.norm(np.array(pt) - np.array(ip)) < EPS for ip in intersections):
-            start_idx = i
-            break
-
-    if start_idx == -1:
-        return [
-            [geoBase],
-            []
-        ]
-
-    # Reorder coordinates to start from first intersection
-    shifted_coords = new_coords[start_idx:] + new_coords[:start_idx]
-
-    # Close the reordered path
-    shifted_coords.append(shifted_coords[0])
-
-    # ------------------- Step 3: Split path into segments at intersection points -------------------
-    segments = []
-    current_segment = []
-
-    for pt in shifted_coords:
-        current_segment.append(pt)
-
-        # Split segment when encountering intersection (not first point)
-        is_intersect = any(np.linalg.norm(np.array(pt) - np.array(ip)) < EPS for ip in intersections)
-        if is_intersect and len(current_segment) > 1:
-            segments.append(current_segment)
-            current_segment = [pt]  # Start new segment with intersection point
-
-    # Handle last segment
-    if len(current_segment) > 1:
-        segments.append(current_segment)
-
-    # ------------------- Step 4: Close segments to form rings -------------------
-    # Close each segment by appending first point to end
-    rings = [seg + [seg[0]] for seg in segments]
-
-    # ------------------- Step 5: Classify rings into upper/lower groups -------------------
-    def classify_ring(ring, level):
-        """Classify ring as 'upper' (z > level) or 'lower' (z < level)
-
-        Parameters
-        ----------
-        ring : list
-            List of 3D points forming a closed ring
-        level : float
-            Cutting height threshold
-
-        Returns
-        -------
-        str
-            'upper' if average z > level, 'lower' if average z < level, 'unknown' otherwise
-        """
-        # Calculate average z-value excluding intersection points (z=level)
-        z_values = []
-        for pt in ring:
-            if abs(pt[2] - level) > EPS:
-                z_values.append(pt[2])
-
-        if not z_values:
-            return 'unknown'
-        avg_z = np.mean(z_values)
-        return 'upper' if avg_z > level else 'lower'
-
-    upper_rings = []
-    lower_rings = []
-
-    for ring in rings:
-        category = classify_ring(ring, level)
-        if category == 'upper':
-            upper_rings.append(ring)
-        elif category == 'lower':
-            lower_rings.append(ring)
-
-    # ------------------- Generate final polygons -------------------
-    final_polygons_upper = []
-    final_polygons_lower = []
-
-    # Create upper polygons
-    for ring in upper_rings:
-        try:
-            poly = shapely.polygons(ring)
-            final_polygons_upper.append(poly)
-        except Exception:
-            continue
-
-    # Create lower polygons
-    for ring in lower_rings:
-        try:
-            poly = shapely.polygons(ring)
-            final_polygons_lower.append(poly)
-        except Exception:
-            continue
-
-    # Return original polygon if no valid polygons generated
-    if len(final_polygons_upper) + len(final_polygons_lower) == 0:
+    z_values = coordinates[:, 2]
+    if np.max(z_values) <= level + EPS:
+        return [[], [geoBase]]
+    if np.min(z_values) >= level - EPS:
         return [[geoBase], []]
 
-    return [final_polygons_upper, final_polygons_lower]
+    proj = Projection(
+        origin=shapely.points(coordinates[0]),
+        unitZ=faceNormal(geoBase),
+    )
+    world_rings = shapely.get_rings(geoBase)
+    if len(world_rings) == 0:
+        return [[geoBase], []]
+    uv_rings = [shapely.force_2d(proj.toUV(ring)) for ring in world_rings]
+    hole_coordinates = [shapely.get_coordinates(ring) for ring in uv_rings[1:]]
+    if len(hole_coordinates) > 0:
+        geo_proj = shapely.polygons(shapely.get_coordinates(uv_rings[0]), hole_coordinates)
+    else:
+        geo_proj = shapely.polygons(shapely.get_coordinates(uv_rings[0]))
+    geo_proj = shapely.set_precision(geo_proj, geom.POINT_PRECISION)
+
+    uv_coordinates = shapely.get_coordinates(geo_proj)
+    if len(uv_coordinates) == 0:
+        return [[geoBase], []]
+
+    z_gradient = np.array([proj.axisX[2], proj.axisY[2]], dtype=float)
+    gradient_norm = np.linalg.norm(z_gradient)
+    if gradient_norm <= EPS:
+        return [[geoBase], []]
+
+    minx = float(np.min(uv_coordinates[:, 0]))
+    maxx = float(np.max(uv_coordinates[:, 0]))
+    miny = float(np.min(uv_coordinates[:, 1]))
+    maxy = float(np.max(uv_coordinates[:, 1]))
+    center = np.array([(minx + maxx) / 2.0, (miny + maxy) / 2.0], dtype=float)
+
+    signed_distance = (np.dot(z_gradient, center) + proj.origin.array[2] - level) / gradient_norm
+    plane_point = center - signed_distance * (z_gradient / gradient_norm)
+    tangent = np.array([-z_gradient[1], z_gradient[0]], dtype=float) / gradient_norm
+    normal = z_gradient / gradient_norm
+
+    span = max(maxx - minx, maxy - miny, 1.0)
+    extent = 4.0 * (span + abs(signed_distance) + 10.0)
+    line_start = plane_point - tangent * extent
+    line_end = plane_point + tangent * extent
+    upper_mask = shapely.polygons([
+        line_start,
+        line_end,
+        line_end + normal * extent,
+        line_start + normal * extent,
+        line_start,
+    ])
+    lower_mask = shapely.polygons([
+        line_start,
+        line_end,
+        line_end - normal * extent,
+        line_start - normal * extent,
+        line_start,
+    ])
+
+    def _collect_split_parts(clipped_geometry: shapely.Geometry) -> list[shapely.Geometry]:
+        if shapely.is_empty(clipped_geometry):
+            return []
+        valid_geometry = shapely.make_valid(clipped_geometry)
+        parts = [part for part in shapely.get_parts(valid_geometry) if shapely.get_dimensions(part) == 2]
+        world_parts = []
+        for part in parts:
+            if shapely.area(part) <= geom.AREA_PRECISION:
+                continue
+            try:
+                world_parts.append(proj.toWorld(part))
+            except Exception:
+                continue
+        return world_parts
+
+    upper_parts = _collect_split_parts(
+        shapely.intersection(geo_proj, upper_mask, grid_size=geom.POINT_PRECISION)
+    )
+    lower_parts = _collect_split_parts(
+        shapely.intersection(geo_proj, lower_mask, grid_size=geom.POINT_PRECISION)
+    )
+
+    if len(upper_parts) + len(lower_parts) == 0:
+        return [[geoBase], []]
+    return [upper_parts, lower_parts]
 
 
 def splitFace2d(geoBaseProj: shapely.Geometry, curveProj: shapely.Geometry) -> list[list[shapely.Geometry]]:

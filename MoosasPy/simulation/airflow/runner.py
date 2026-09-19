@@ -15,7 +15,8 @@ from ..contracts import SimulationResult
 from ..engine import NativeEngine
 from ..runner import Runner
 from ..workspace import SimulationWorkspace, WorkspaceReport
-from .network import VENT_EXE_SUFFIX, buildNetworkFile, getZoneAndPath, pathTopology
+from .network import VENT_EXE_SUFFIX, buildNetworkFile, getZoneAndPath, pathTopology, cleanseNetwork, applyWindPressure
+from ...transform.geometry.geos import Vector
 from .parser import (
     AIR_DENSITY,
     build_matrix,
@@ -107,6 +108,7 @@ class AirflowResult(SimulationResult):
     converged: bool = False
     iteration_count: int = 0
     residual: float = float("inf")
+    path_results: tuple[dict, ...] = ()
 
 
 class AirflowRunner(Runner):
@@ -127,6 +129,11 @@ class AirflowRunner(Runner):
         work_dir=None,
         timeout_seconds=300.0,
         engine: NativeEngine | None = None,
+        wind_direction_vector=None,
+        wind_speed=0.0,
+        indoor_temperature=None,
+        thermal=True,
+        alpha=0.22,
     ):
         super().__init__(timeout_seconds=timeout_seconds, engine=engine)
         if int(max_iterations) <= 0:
@@ -144,6 +151,13 @@ class AirflowRunner(Runner):
         self.contam_exe = contam_exe
         self.simread_exe = simread_exe
         self.response_file = response_file
+        self.wind_direction_vector = wind_direction_vector
+        self.wind_speed = float(wind_speed)
+        self.indoor_temperature = indoor_temperature
+        self.thermal = bool(thermal)
+        self.alpha = float(alpha)
+        if not np.isfinite(self.wind_speed) or self.wind_speed < 0:
+            raise ValueError("wind_speed must be finite and non-negative")
 
     def run(self) -> AirflowResult:
         """Build the project and iterate airflow and zone sensible heat balance."""
@@ -160,8 +174,22 @@ class AirflowRunner(Runner):
     def _run(self, workspace_report=None) -> AirflowResult:
         network_file = os.path.join(self.paths.project_dir, "model.json")
         project_file = os.path.join(self.paths.project_dir, "model.prj")
-        zones, airflow_paths = getZoneAndPath(self.model)
+        zones, airflow_paths = getZoneAndPath(self.model, calculate_heat=self.thermal and self.heat_loads is None)
         zones, airflow_paths = self._apply_heat_loads(zones, airflow_paths)
+        airflow_paths, zones = cleanseNetwork(airflow_paths, zones)
+        if not zones:
+            raise ValueError("No airflow zones connected to ambient")
+        for zone in zones:
+            if self.indoor_temperature is not None:
+                zone.temperature = float(self.indoor_temperature)
+            if not np.isfinite(zone.volume) or zone.volume <= 0:
+                raise ValueError(f"Invalid zone volume: {zone.userName}")
+        if self.wind_direction_vector is not None and self.wind_speed > 0:
+            direction = np.asarray(self.wind_direction_vector, dtype=float)
+            if direction.shape != (3,) or not np.all(np.isfinite(direction)) or np.linalg.norm(direction) == 0:
+                raise ValueError("wind_direction_vector must be a finite nonzero 3-vector")
+            direction /= np.linalg.norm(direction)
+            applyWindPressure(airflow_paths, Vector(direction.tolist()), speed=self.wind_speed, alpha=self.alpha)
         buildNetworkFile(
             model=self.model,
             pathList=airflow_paths,
@@ -192,9 +220,9 @@ class AirflowRunner(Runner):
                 airflow_matrix.copy(),
                 np.array([zone.heatLoad for zone in zones]),
                 self.outdoor_temperature,
-            )
+            ) if self.thermal else np.array([zone.temperature + 273.15 for zone in zones])
             temperature_values = (np.asarray(temperature, dtype=float) - 273.15).flatten()
-            ach_values = np.maximum(airflow_matrix[-1, :-1], airflow_matrix[:-1, -1])
+            ach_values = airflow_matrix[-1, :-1] / np.array([zone.volume for zone in zones])
             for index in range(len(zones)):
                 temperature_history[index].append(float(temperature_values[index]))
                 ach_history[index].append(float(ach_values[index]))
@@ -204,9 +232,13 @@ class AirflowRunner(Runner):
                 ach_residual = _relative_residual(ach_values, previous_ach)
                 residual = float(np.mean(np.concatenate((temperature_residual, ach_residual))))
 
-            _write_project_temperatures(temperature, project_file)
+            if not self.thermal:
+                residual = 0.0
+                break
             if residual <= self.convergence_tolerance:
                 break
+            if iteration_count < self.max_iterations:
+                _write_project_temperatures(temperature, project_file)
             previous_temperature = temperature_values
             previous_ach = ach_values
 
@@ -227,6 +259,7 @@ class AirflowRunner(Runner):
             converged=converged,
             iteration_count=iteration_count,
             residual=residual,
+            path_results=tuple(_path_results(project_file, airflow_paths, zones, self.flow_multiplier)),
             commands=tuple(commands),
             warnings=() if converged else ("Airflow iteration did not converge.",),
             workspace=workspace_report or WorkspaceReport(self.paths.workspace, True),
@@ -263,6 +296,38 @@ class AirflowRunner(Runner):
             commands=(contam_result, simread_result),
             workspace=WorkspaceReport(self.paths.workspace, True),
         )
+
+
+def _path_results(project_file, paths, zones, multiplier=1.0):
+    flows = read_flowpath(project_file[:-4] + ".lfr") * (3600.0 / AIR_DENSITY) * multiplier
+    topology = read_topology(project_file)
+    ordered = sorted({path.userName: path for path in paths}.values(), key=lambda p: p.prjIndex)
+    if len(flows) != len(ordered) or len(topology) != len(ordered):
+        raise ValueError("CONTAM path count does not match the RDF network")
+    names = {z.prjIndex: str(z.userName) for z in zones}
+    names[-1] = "ambient"
+    positions = {z.prjIndex: np.array([z.position_x, z.position_y, z.position_z]) for z in zones}
+    for index, item in enumerate(ordered):
+        source, target = map(int, topology[index])
+        if (source, target) != (item.fromZone, item.toZone):
+            raise ValueError("CONTAM path topology does not match the RDF network")
+        forward = float(np.maximum(flows[index], 0).sum())
+        reverse = float(-np.minimum(flows[index], 0).sum())
+        position = np.array([item.position_x, item.position_y, item.position_z])
+        delta = positions.get(target, position) - positions.get(source, position)
+        direction = np.asarray(item.orientation, dtype=float)
+        norm = np.linalg.norm(direction)
+        if norm > 0:
+            direction = direction / norm
+            if np.dot(direction, delta) < 0:
+                direction = -direction
+        area = float(item.pathWidth * item.pathHeight)
+        yield {"uid": str(item.userName), "from": names[source], "to": names[target],
+               "forward_m3_h": forward, "reverse_m3_h": reverse,
+               "direction": direction.tolist(), "area_m2": area,
+               "forward_velocity_m_s": forward / (3600 * area) if area > 0 else 0.0,
+               "reverse_velocity_m_s": reverse / (3600 * area) if area > 0 else 0.0,
+               "kind": item.pathType}
 
 
 def _relative_residual(current, previous):
