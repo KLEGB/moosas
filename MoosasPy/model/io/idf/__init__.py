@@ -11,7 +11,7 @@ from .version import (
     configure_idd,
     require_idf_version,
 )
-from .adapter import readIDF, writeIDF
+from .adapter import exportIDF, readIDF, writeIDF
 
 __all__ = [
     "MoosasSettings",
@@ -25,6 +25,7 @@ __all__ = [
     "bundled_template_idf_path",
     "configure_idd",
     "require_idf_version",
+    "exportIDF",
     "readIDF",
     "writeIDF",
 ]

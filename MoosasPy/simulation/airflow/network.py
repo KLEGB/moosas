@@ -412,7 +412,7 @@ class AfnZone(object):
             self.prjName = 'z' + '%03d' % max(int(self.prjIndex), 0)
 
     @classmethod
-    def fromElement(cls, space: MoosasSpace, temperature=27) -> AfnZone:
+    def fromElement(cls, space: MoosasSpace, temperature=27, calculate_heat=True) -> AfnZone:
         """
         Initialize an AfnZone instance with space data and settings.
         
@@ -430,7 +430,7 @@ class AfnZone(object):
         None
             This constructor does not return a value.
         """
-        if space.settings.get('zone_summerrad') is None:
+        if calculate_heat and space.settings.get('zone_summerrad') is None:
             raise ValueError(
                 f"Precomputed zone_summerrad is required for airflow zone {space.id}"
             )
@@ -453,7 +453,7 @@ class AfnZone(object):
         theZone["contam"] = {}
         theZone['element'] = space
         z = cls(**theZone)
-        z.heatLoad = z.calculateHeatLoad()
+        z.heatLoad = z.calculateHeatLoad() if calculate_heat else 0.0
         return z
 
     def calculateHeatLoad(self):
@@ -1013,7 +1013,7 @@ def applyWindPressure(pathList: list[AfnPath], windVector: Vector, speed: float 
     return pathList
 
 
-def getZoneAndPath(model):
+def getZoneAndPath(model, calculate_heat=True):
     """
     Constructs zone and path lists from a building model for airflow network analysis.
     
@@ -1039,7 +1039,7 @@ def getZoneAndPath(model):
         ),
     )
     for s in spaces:
-        zoneList.append(AfnZone.fromElement(s))
+        zoneList.append(AfnZone.fromElement(s, calculate_heat=calculate_heat))
         zoneList[-1].prjIndex = len(zoneList)
         zoneList[-1].prjName = 'z' + '%03d' % int(zoneList[-1].prjIndex)
         zone_paths: list[AfnPath] = []

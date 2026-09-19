@@ -1091,7 +1091,7 @@ class MoosasFace(MoosasElement):
         pointlist.pop()
 
         for bld_level in model.levelList:
-            if np.abs(_facebotheight - bld_level) < geom.POINT_PRECISION:
+            if np.abs(_facebotheight - bld_level) < geom.LEVEL_MAX_OFFSET:
                 self.level = bld_level
         if self.level is None:
             self.level = _facebotheight
@@ -1383,14 +1383,19 @@ class MoosasWall(MoosasElement):
                         self.level = model.levelList[i - 1]
                 break
 
-        # worst match: the wall locate below the whole building or above the whole building (mostly invalid)
+        # Worst match: the wall lies below/above the known levels. A level may
+        # already have been supplied by RDF while its matching top level was
+        # not, so resolve the two values independently before computing offsets.
         if self.level is None:
             if topheight <= model.levelList[0]:
                 self.level = model.levelList[0]
-                self.toplevel = model.levelList[0]
             else:
                 self.level = model.levelList[-1]
-                self.toplevel = model.levelList[-1]
+        if self.toplevel is None:
+            # Preserve the real upper geometry when no building level brackets
+            # the wall. This allows partially specified RDF to be exported to
+            # IDF instead of failing with ``topheight - None``.
+            self.toplevel = topheight
 
         self.offset = botheight - self.level
         self.topoffset = topheight - self.toplevel

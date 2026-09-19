@@ -34,6 +34,7 @@ class geom:
     # Maximum offset height (m),
     # which can also be understood as the minimum floor height
     LEVEL_MAX_OFFSET = 1.5
+    LEVEL_MIN_HEIGHT = 2.2
     # validation of the room
     ROOM_MIN_AREA = 1.0
     ROOM_MIN_DIMENSION = 0.9

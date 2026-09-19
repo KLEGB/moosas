@@ -17,9 +17,13 @@ def validate_model(model: MoosasModel) -> MoosasModel:
         if not wall.is_air_boundary or wall in residual_walls:
             continue
         adjacent_ids = {str(space_id) for space_id in wall.space}
-        if len(adjacent_ids) != 2 or not adjacent_ids.issubset(known_ids):
+        # An AirWall can be an internal virtual boundary, an exterior/open
+        # boundary attached to one space, or an unassigned open boundary.
+        # Requiring exactly two spaces rejects valid transparent exterior
+        # faces imported from SketchUp.
+        if not adjacent_ids.issubset(known_ids):
             issues.append(
-                f"air boundary {wall.Uid!r} must connect exactly two model spaces"
+                f"air boundary {wall.Uid!r} references an unknown model space"
             )
     for space in model.spaceList:
         if space.area <= 0:

@@ -383,6 +383,19 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     return zoneMap, templatesBySpaceId
 
 
+def exportIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None):
+    """Write an IDF file without constructing the optional IDF RDF alignment graph."""
+    from ....transform.alignment import default_template_idf_path
+
+    resolved_template = default_template_idf_path(idfTemplatePath)
+    _writeIDF_default(
+        model,
+        outputPath,
+        idfTemplatePath=resolved_template,
+        zoneNameToSpaceDict=zoneNameToSpaceDict,
+    )
+
+
 def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None) -> IDFConversionResult:
     """Write IDF and return its IDF-specific conversion state."""
     from ....transform.alignment import IDFtoOWL, default_template_idf_path, link_idf_graph_to_moosas
