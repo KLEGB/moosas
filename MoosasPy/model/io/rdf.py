@@ -282,6 +282,13 @@ class MoosasRDF(Graph):
                 self.encodeElement(face, "AirSkylight", uidSet, ExportIFC)
             else:
                 self.encodeElement(face, "Skylight", uidSet, ExportIFC)
+        for shading in model.shadingList:
+            shading_uri = URIRef(f"element_{shading.Uid}")
+            self.add((shading_uri, self.rdf.type, self.bot.Element))
+            self.add((shading_uri, self.moosas.Uid, Literal(shading.Uid)))
+            self.add((shading_uri, self.pgd.hasSurfaceType, self.moosas.Shading))
+            for face_id in mixItemListToList(shading.faceId):
+                self.add((shading_uri, self.moosas.hasFace, URIRef(str(face_id))))
 
     def encodeScheduleOntology(self):
         self.add((self.pgd.Schedule, self.rdf.type, self.rdfs.Class))
@@ -749,6 +756,8 @@ class MoosasRDF(Graph):
                   Literal(getattr(space, "space_type", "room"))))
         self.add((URIRef(f"Space_{space.id}"), self.moosas.conditioned,
                   Literal(space.conditioned)))
+        self.add((URIRef(f"Space_{space.id}"), self.moosas.boundaryWKT,
+              Literal(str(space.edge.force_2d()), datatype=self.geo.wktLiteral)))
 
         def _add_interface(interface_name: str, linked_element_uri: str, surface_type_uri, opaque_surface_uri=None):
             interface_uri = URIRef(interface_name)
@@ -1245,6 +1254,9 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     AirSkylights = rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.AirSkylight)
     if AirSkylights is not None:
         skyList = np.append(skyList, AirSkylights)
+    shadingList = mixItemListToList(
+        rdfGraph.getSubject(rdfGraph.pgd.hasSurfaceType, rdfGraph.moosas.Shading)
+    )
     pgList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.moosas.Program)
     pgList = mixItemListToList(pgList)
     spList = rdfGraph.getSubject(rdfGraph.rdf.type, rdfGraph.bot.Space)
@@ -1259,6 +1271,20 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     model.geoId = [geo.faceId for geo in model.geometryList]
     model.newIndex = len(model.geometryList)
     print()
+
+    for shading_uri in shadingList:
+        if shading_uri is None:
+            continue
+        shading_uri = URIRef(str(shading_uri))
+        uid = str(rdfGraph.getObject(shading_uri, rdfGraph.moosas.Uid))
+        geometry_uris = mixItemListToList(
+            rdfGraph.getObject(shading_uri, rdfGraph.moosas.hasFace)
+        )
+        face_ids = [
+            str(rdfGraph.getObject(URIRef(str(uri)), rdfGraph.moosas.faceId))
+            for uri in geometry_uris
+        ]
+        model.shadingList.append(MoosasElement(model, face_ids, uid=uid))
     # construct LevelList
     for i, levelUri in enumerate(levelList):
         levelUri = URIRef(str(levelUri))
@@ -1321,6 +1347,7 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
     #     print(f'\rLOADING: program {i + 1}/{len(pgList)}', end='')
     # print()
     # load Space
+    loaded_spaces = []
     for i, spaceUri in enumerate(spList):
         spaceUri = URIRef(str(spaceUri))
         topology = {"Floor": [], "Ceiling": [], "Edge": []}
@@ -1356,7 +1383,11 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
         if len(edgeElements) == 0 and floorTopo is None and ceilTopo is None:
             print(f'\rLOADING: space {i + 1}/{len(spList)} skipped empty topology', end='')
             continue
-        edgeTopo = MoosasEdge(edgeElements)
+        boundary_wkt = _first_or_none(
+            rdfGraph.getObject(spaceUri, rdfGraph.moosas.boundaryWKT)
+        )
+        boundary = shapely.from_wkt(str(boundary_wkt)) if boundary_wkt is not None else None
+        edgeTopo = MoosasEdge(edgeElements, boundary=boundary)
 
         spc = MoosasSpace(
             _floor=floorTopo,
@@ -1368,12 +1399,27 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
         )
         _decode_space_settings(rdfGraph, spaceUri, spc)
 
-        if spc.is_void():
-            model.voidList.append(spc)
-        else:
-            model.spaceList.append(spc)
+        loaded_spaces.append((spaceUri, spc))
         print(f'\rLOADING: space {i + 1}/{len(spList)}', end='')
     print()
+
+    spaces_by_uri = {str(space_uri): space for space_uri, space in loaded_spaces}
+    void_uris = set()
+    for space_uri, space in loaded_spaces:
+        contained = rdfGraph.getObject(space_uri, rdfGraph.bot.containsZone)
+        if contained is None:
+            continue
+        for void_uri in mixItemListToList(contained):
+            void = spaces_by_uri.get(str(void_uri))
+            if void is not None:
+                space.add_void(void)
+                void_uris.add(str(void_uri))
+
+    for space_uri, space in loaded_spaces:
+        if str(space_uri) in void_uris or space.is_void():
+            model.voidList.append(space)
+        else:
+            model.spaceList.append(space)
 
     return model
 

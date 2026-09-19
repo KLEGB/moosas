@@ -5,7 +5,7 @@ from collections import defaultdict
 from ...transform.importers.geo import _readGeo, preClassified
 from ...transform.geometry.geos import Vector
 from ..model import *
-from ...utils import ET, np
+from ...utils import ET, np, shapely
 
 
 def _xml_float_or_none(value):
@@ -241,7 +241,17 @@ def loadXml(filePath, geoPath):
             model.skylightList.append(element)
             print(f'\rLOADING: Faces {i + 1}/{len(root["skylight"])}', end='')
         print()
+    if "shading" in root:
+        shading_records = root["shading"] if isinstance(root["shading"], list) else [root["shading"]]
+        for element in shading_records:
+            face_ids = mixItemListToObject(str(element["faceId"]).split())
+            model.shadingList.append(
+                MoosasElement(model, face_ids, uid=str(element["Uid"]))
+            )
+
     # load space
+    loaded_spaces = {}
+    space_records = []
     for i, element in enumerate(root['space']):
         topology = {"Floor": None, "ceiling": None, "Edge": None}
         if "floor" in element['topology']:
@@ -257,7 +267,16 @@ def loadXml(filePath, geoPath):
         if "edge" in element['topology']:
             walls = [searchBy('Uid', face['Uid'], model.wallList, earlyEnd=True, asObject=True)[0] for face
                      in element['topology']['edge']['wall']]
-            topology["Edge"] = MoosasEdge(walls)
+            boundary_points = element.get("boundary", {}).get("pt", [])
+            if isinstance(boundary_points, str):
+                boundary_points = [boundary_points]
+            boundary = None
+            if boundary_points:
+                boundary = shapely.polygons(np.array([
+                    [float(value) for value in point.split()]
+                    for point in boundary_points
+                ]))
+            topology["Edge"] = MoosasEdge(walls, boundary=boundary)
         if topology["Edge"] is not None:
             Uid = str(element.get('id', None))
             spc = MoosasSpace(_floor=topology["Floor"], _ceiling=topology["ceiling"], _edge=topology["Edge"], Uid=Uid)
@@ -267,12 +286,25 @@ def loadXml(filePath, geoPath):
                     spc.settings[key] = float(element['setting'][key])
                 except ValueError:
                     spc.settings[key] = element['setting'][key]
-            if spc.is_void():
-                model.voidList.append(spc)
-            else:
-                model.spaceList.append(spc)
+            loaded_spaces[spc.id] = spc
+            space_records.append((spc, element))
         print(f'\rLOADING: space {i + 1}/{len(root["space"])}', end='')
     print()
+
+    void_ids = set()
+    for space, element in space_records:
+        for void_id in str(element.get("void", "")).split():
+            void = loaded_spaces.get(void_id)
+            if void is not None:
+                space.add_void(void)
+                void_ids.add(void_id)
+
+    for space, element in space_records:
+        serialized_void = str(element.get("is_void", "")).strip().lower() == "true"
+        if space.id in void_ids or serialized_void:
+            model.voidList.append(space)
+        else:
+            model.spaceList.append(space)
     return model
 
 

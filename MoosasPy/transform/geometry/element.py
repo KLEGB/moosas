@@ -2152,7 +2152,7 @@ class MoosasEdge:
     """
     __slots__ = ('wall', 'Uid', '__botBound', '__topBound', 'internalMass')
 
-    def __init__(self, walls: list[MoosasWall]):
+    def __init__(self, walls: list[MoosasWall], boundary: shapely.Geometry | None = None):
         """
         Initialize a boundary object composed of walls.
         
@@ -2173,6 +2173,12 @@ class MoosasEdge:
         if len(self.wall) < 3:
             raise GeometryError(walls, "A boundary requires at least 3 walls.")
         self.prepareBoundary()
+        if boundary is not None:
+            self.__botBound = shapely.force_2d(boundary)
+            for wall, factor in zip(self.wall, self.FactorOfWall):
+                wall.orientation = factor
+                for glazing in wall.glazingElement:
+                    glazing.orientation = factor
         self.internalMass: list[MoosasElement] = []
         for w in walls:
             self.internalMass += w.shading

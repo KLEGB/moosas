@@ -11,6 +11,7 @@ from MoosasPy.model import MoosasModel
 from MoosasPy.model.io.idf.version import configure_idd
 from MoosasPy.model.resources import configure_model_resources, rebuild_schedule_index
 from MoosasPy.transform import transform
+from MoosasPy.transform.geometry.element import MoosasElement
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -98,6 +99,30 @@ def test_semantic_model_formats_round_trip(semantic_model: MoosasModel, suffix: 
     assert len(restored.geometryList) == len(semantic_model.geometryList)
     assert len(restored.spaceList) == len(semantic_model.spaceList)
     assert len(restored.wallList) == len(semantic_model.wallList)
+
+
+@pytest.mark.parametrize("suffix", (".rdf", ".xml", ".json"))
+def test_semantic_formats_preserve_shading_and_void_area(
+    semantic_model: MoosasModel,
+    suffix: str,
+):
+    shading = MoosasElement(semantic_model, semantic_model.geometryList[0], uid="roundtrip-shading")
+    original_shading = semantic_model.shadingList
+    semantic_model.shadingList = [*original_shading, shading]
+    try:
+        with TemporaryDirectory() as directory:
+            file_path = Path(directory) / f"model{suffix}"
+            semantic_model.save(file_path)
+            restored = MoosasModel.load(file_path)
+    finally:
+        semantic_model.shadingList = original_shading
+
+    assert [(item.Uid, list(item.faceId)) for item in restored.shadingList] == [
+        (shading.Uid, list(shading.faceId))
+    ]
+    assert sum(space.area for space in restored.spaceList) == pytest.approx(
+        sum(space.area for space in semantic_model.spaceList)
+    )
 
 
 def test_rdf_round_trip_loads_spaces_in_stable_uri_order(semantic_model: MoosasModel):
