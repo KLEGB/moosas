@@ -21,6 +21,54 @@ INCH_METER_MULTIPLIER = 1
 INCH_METER_MULTIPLIER_SQR = 1
 
 
+def glazing_matches_parent(face, glazing, tolerance: float | None = None) -> bool:
+    """Return True when a face projection can host the glazing projection."""
+    tolerance = 2 * geom.POINT_PRECISION if tolerance is None else tolerance
+    face_projection = face.force_2d(region=True)
+    glazing_projection = glazing.force_2d(region=True)
+    if shapely.get_dimensions(face_projection) == shapely.get_dimensions(glazing_projection) == 1:
+        face_points = shapely.get_coordinates(face_projection)
+        glazing_points = shapely.get_coordinates(glazing_projection)
+        if len(face_points) < 2 or len(glazing_points) < 2:
+            return False
+        face_axis = face_points[-1] - face_points[0]
+        axis_length = np.linalg.norm(face_axis)
+        if axis_length <= geom.POINT_PRECISION:
+            return False
+        for point in shapely.points(glazing_points):
+            if shapely.distance(face_projection, point) > tolerance:
+                return False
+
+        unit_axis = face_axis / axis_length
+        face_min = 0.0
+        face_max = axis_length
+        glazing_scalars = [
+            float(np.dot(point - face_points[0], unit_axis))
+            for point in glazing_points
+        ]
+        glazing_min = min(glazing_scalars)
+        glazing_max = max(glazing_scalars)
+        return glazing_min >= face_min - tolerance and glazing_max <= face_max + tolerance
+
+    return bool(shapely.contains(face_projection, glazing_projection) or shapely.covers(face_projection, glazing_projection))
+
+
+def attach_glazing_to_parent(face, glazing, tolerance: float | None = None) -> bool:
+    """Attach glazing to a face when their projections satisfy the shared predicate."""
+    if not glazing_matches_parent(face, glazing, tolerance=tolerance):
+        return False
+    face.add_glazing(glazing)
+    return True
+
+
+def attach_glazing_to_candidates(glazing, candidates, tolerance: float | None = None):
+    """Attach glazing to the first matching candidate and return that parent."""
+    for candidate in candidates:
+        if attach_glazing_to_parent(candidate, glazing, tolerance=tolerance):
+            return candidate
+    return None
+
+
 def _getElement(*key: str, dictionary: dict, strict=True) -> np.ndarray:
     """
     Get values from a dictionary corresponding to given keys and return as a numpy array.
@@ -1550,18 +1598,25 @@ class MoosasWall(MoosasElement):
             if Vector(thisPoi - nextPoi).length() > geom.POINT_PRECISION:
                 edges = shapely.linestrings([thisPoi, nextPoi])
                 wallNew.append(cls.fromProjection(edges, bottom, top, model))
-        # oldGls = len(gls)
-        gls = [newg for g in gls for newg in MoosasGlazing.break_(g, breakPoints)]
-        # print("\n???", oldGls,len(gls))
-        # print("\n!!!",len(model.glazingList))
+
+        inherited_glazing = []
         for glazing in gls:
+            split_glazing = MoosasGlazing.break_(glazing, breakPoints)
+            inherited_glazing.extend(split_glazing)
+
+        for glazing in inherited_glazing:
             if glazing is not None:
                 if not glazing in model.glazingList:
                     model.glazingList = list(np.append(model.glazingList, glazing))
-                for wall in wallNew:
-                    if shapely.contains(wall.force_2d(), glazing.force_2d()):
-                        wall.add_glazing(glazing)
-                        break
+
+                # Prefer the split descendants of the original parent wall first.
+                parent = attach_glazing_to_candidates(glazing, wallNew)
+                if parent is not None:
+                    continue
+
+                # Fall back to the rest of the model only if the inherited descendants fail.
+                other_walls = [wall for wall in mixItemListToList(model.wallList) if wall not in wallNew]
+                attach_glazing_to_candidates(glazing, other_walls)
 
         return wallNew
 
