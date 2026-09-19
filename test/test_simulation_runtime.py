@@ -30,6 +30,7 @@ from MoosasPy.simulation.radiation.runner import (
     RadianceSky,
     RadianceTimeoutError,
 )
+from MoosasPy.simulation.radiation.sunlight import calculate_position_sun_hours
 from MoosasPy.simulation.runner import CommandError, CommandTimeoutError, Runner
 from MoosasPy.simulation.weather import Location
 from MoosasPy.simulation.weather.epw import convert_epw_to_wea
@@ -278,6 +279,26 @@ class SimulationWorkspaceTests(unittest.TestCase):
             )
 
         self.assertEqual(result[0], 0.0)
+
+    def test_sun_hours_count_only_unobstructed_rays(self):
+        position_ray = Ray(Vector([0, 0, 0]), Vector([0, 0, 1]))
+        sky = SimpleNamespace(
+            annual_sun=lambda leap_year: [Vector([0, 0, 1]), Vector([0, 0, 1])],
+        )
+
+        with patch(
+            "MoosasPy.simulation.radiation.sunlight.ray_test",
+            return_value=[None, Ray(position_ray.origin, position_ray.direction)],
+        ):
+            result = calculate_position_sun_hours(
+                position_ray,
+                sky,
+                geo_path="model.geo",
+                period_start=datetime(2026, 1, 1, 0),
+                period_end=datetime(2026, 1, 2, 0),
+            )
+
+        self.assertEqual(result.tolist(), [1.0])
 
     def test_model_radiation_traces_shared_sky_geometry_once(self):
         class Glazing:
