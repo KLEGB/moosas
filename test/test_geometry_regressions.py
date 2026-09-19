@@ -82,6 +82,28 @@ def test_attach_shading_controls_explicit_shading_faces():
     assert len(classify(True).shadingList) == 1
 
 
+def test_single_face_element_preserves_directed_normal():
+    model = MoosasModel()
+    geometry = MoosasGeometry(
+        shapely.polygons(np.array([
+            [0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 1.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0],
+        ])),
+        "south",
+        shapely.points([0.0, -1.0, 0.0]),
+    )
+    model.geometryList = [geometry]
+    model.geoId = [geometry.faceId]
+    element = MoosasElement(model, geometry)
+
+    assert np.allclose(element.normal, [0.0, -1.0, 0.0])
+    geometry.flip = True
+    assert np.allclose(element.normal, [0.0, 1.0, 0.0])
+
+
 def test_horizontal_faces_preserve_close_structural_levels():
     model = MoosasModel()
     lower = shapely.polygons(np.array([

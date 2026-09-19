@@ -525,7 +525,7 @@ class MoosasElement(object):
         """if the element contains multi faces,
         the normal has the best description of the faces will be returned"""
         if len(self.__geometries) == 1:
-            return Vector(self.__geometries[0].normal).uniform.unit().array
+            return Vector(self.__geometries[0].normal).unit().array
 
         # PCA1: get covariance matrix
         coordinates = shapely.get_coordinates([geo.face for geo in self.__geometries], include_z=True) - np.array(

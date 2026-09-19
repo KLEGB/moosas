@@ -1,48 +1,61 @@
-from MoosasPy.transform import TransformOptions, transform
-from MoosasPy.simulation.coupling.energy_radiation import run_energy_with_radiation
-from MoosasPy.simulation.weather import prepare_epw
+import tempfile
 
-model_noshading = transform(
-    "test/caseFile/DOE-facade.geo",
-    options=TransformOptions(attach_shading=False),
+import numpy as np
+
+from MoosasPy.model import MoosasModel
+from MoosasPy.simulation.radiation.calculation import (
+    _calculate_position_radiation_factors,
+    write_radiation_geometry,
 )
+from MoosasPy.transform.geometry.element import MoosasGeometry
+from MoosasPy.transform.geometry.geos import Ray, Vector
+from MoosasPy.transform.stages.classification import classify_model
+from MoosasPy.utils import shapely
 
-model_with_shading = transform(
-    "test/caseFile/DOE-facade.geo",
-    options=TransformOptions(attach_shading=True),
-)
 
-prepared = prepare_epw(
-    "MoosasPy/db/CHN_BJ_Beijing-Nanyuan.AP.545120_TMYx.epw",
-    "temp",
-)
+def test_attached_shading_blocks_radiation():
+    def build_model(attach_shading):
+        model = MoosasModel()
+        model.geometryList = [
+            MoosasGeometry(
+                shapely.polygons(np.array([
+                    [-2.0, -2.0, -1.0],
+                    [2.0, -2.0, -1.0],
+                    [2.0, 2.0, -1.0],
+                    [-2.0, 2.0, -1.0],
+                    [-2.0, -2.0, -1.0],
+                ])),
+                "floor",
+                shapely.points([0.0, 0.0, 1.0]),
+                4,
+            ),
+            MoosasGeometry(
+                shapely.polygons(np.array([
+                    [-1.0, -1.0, 1.0],
+                    [1.0, -1.0, 1.0],
+                    [1.0, 1.0, 1.0],
+                    [-1.0, 1.0, 1.0],
+                    [-1.0, -1.0, 1.0],
+                ])),
+                "shade",
+                shapely.points([0.0, 0.0, -1.0]),
+                -1,
+            ),
+        ]
+        model.geoId = [geometry.faceId for geometry in model.geometryList]
+        return classify_model(model, attach_shading=attach_shading)
 
-result_with_shading = run_energy_with_radiation(
-    model_with_shading,
-    weather=prepared.weather,
-    cumulative_skies=prepared.cumulative_skies,
-    spatial_scale="zone",
-)
+    factors = {}
+    with tempfile.TemporaryDirectory() as work_dir:
+        for attach_shading in (False, True):
+            model = build_model(attach_shading)
+            geo_path = write_radiation_geometry(model, work_dir=work_dir)
+            factors[attach_shading] = _calculate_position_radiation_factors(
+                Ray(Vector([0.0, 0.0, 0.0]), Vector([0.0, 0.0, 1.0])),
+                [Vector([0.0, 0.0, 1.0])],
+                geo_path=geo_path,
+                reflection=0,
+            )[0, 0]
 
-result_noshading = run_energy_with_radiation(
-    model_noshading,
-    weather=prepared.weather,
-    cumulative_skies=prepared.cumulative_skies,
-    spatial_scale="zone",
-)
-
-print("zone, cooling_without, cooling_with, cooling_delta, heating_without, heating_with, heating_delta")
-for space, without_shading, with_shading in zip(
-    model_with_shading.spaceList,
-    result_noshading.data["spaces"],
-    result_with_shading.data["spaces"],
-):
-    cooling_without = float(without_shading.load["cooling"])
-    cooling_with = float(with_shading.load["cooling"])
-    heating_without = float(without_shading.load["heating"])
-    heating_with = float(with_shading.load["heating"])
-    print(
-        f"{space.id}, {cooling_without:.2f}, {cooling_with:.2f}, "
-        f"{cooling_with - cooling_without:+.2f}, {heating_without:.2f}, "
-        f"{heating_with:.2f}, {heating_with - heating_without:+.2f}"
-    )
+    assert factors[False] == 1.0
+    assert factors[True] == 0.0

@@ -141,8 +141,8 @@ class ExampleIntegrationTests(unittest.TestCase):
             self.assertGreaterEqual(value, 0.0)
             component_total += value
         self.assertGreater(component_total, 0.0)
-        self.assertAlmostEqual(float(total["cooling"]), 5.24, places=2)
-        self.assertAlmostEqual(float(total["heating"]), 7.87, places=2)
+        self.assertAlmostEqual(float(total["cooling"]), 5.45, places=2)
+        self.assertAlmostEqual(float(total["heating"]), 7.28, places=2)
         self.assertAlmostEqual(float(total["lighting"]), 9.47, places=2)
         self.assertAlmostEqual(float(total["equipment"]), 14.08, places=2)
         self.assertAlmostEqual(float(total["total"]), component_total, places=6)
