@@ -1,108 +1,37 @@
 # MoosasRad
 
-`MoosasRad` is a command-line ray-to-geometry intersection engine used by MOOSAS radiation workflows.
+MoosasRad is the batched ray-to-geometry engine used by MOOSAS radiation workflows. `build.sh` builds and installs both Linux amd64 (`MoosasRad`) and Windows amd64 (`MoosasRad.exe`) executables with `CGO_ENABLED=0` and `GOAMD64=v1`.
 
-The executable reads:
+## Command line and files
 
-- one geometry file (`.geo`) describing the test meshes;
-- one ray file (`.i`) describing ray origins and directions;
-- and writes one output file (`.o`) containing one result line for each input ray.
-
-## Command Line
-
-```bash
+```text
 MoosasRad.exe -g geometry.geo -o result.o input.i
 ```
 
-Options:
+Each non-empty ray input line is `origin_x,origin_y,origin_z,dir_x,dir_y,dir_z`. The engine normalizes directions. Geometry is stored in `;`-terminated blocks with `fn,nx,ny,nz`, outer vertices `fv,x,y,z`, and optional hole vertices `fh,hole_index,x,y,z`. Hole indices may be sparse. Both LF and CRLF are supported; malformed geometry and zero normals fail the process.
 
-- `-h` / `-help`: print help text
-- `-g` / `-geo`: geometry input file
-- `-o` / `-output`: output file path
+Each output line contains the closest accepted hit point and reflected direction, or six `-1.00` values for a miss. Output ordering matches ray input order; coordinates and directions retain the existing two-decimal format.
 
-The final positional argument is the ray input file.
+## Intersection behavior
 
-## Ray Input File
+Faces with `abs(normal.z) > 1e-6` use the existing XY point-in-ring approximation. Vertical and near-vertical faces use a cached in-plane UV projection. Ring tests include the closing edge; concave polygons are supported. A 0.01 coordinate-unit tolerance is used at projected boundaries. Hole interiors pass rays through; hole boundaries count as solid.
 
-The ray file is plain text. Each non-empty line defines one ray:
+At load time the engine builds a deterministic, 16-bin SAH BVH over face bounds. Nodes and face indices are contiguous arrays shared read-only by workers. Leaves target eight faces; unsplittable or unprofitable nodes remain leaves, and depth is capped at 48. Bounds are expanded by the boundary tolerance and rounded outwards.
 
-```text
-origin_x,origin_y,origin_z,dir_x,dir_y,dir_z
-```
+Each worker reuses a traversal stack. Slab tests handle axis-parallel rays and origins inside a box; near nodes are visited first, and nodes beyond the closest real hit are pruned. Leaf tests retain the existing plane, projected polygon and hole predicates. Equal-distance hits are resolved by original face index, irrespective of tree traversal order. Only the final hit generates a reflected direction. The reference linear/sorted query is retained for differential tests. Boundary coefficients are cached at load time and output formatting uses a reusable byte buffer.
 
-Rules:
+SketchUp's triangulated compatibility export validates rounded triangles in the same supplied-normal projection as the engine. Degenerate pieces are listed in the adjacent `.geo.export.json`; the engine still rejects invalid geometry instead of silently dropping it. Analysis normal conventions, sky mapping, JSON protocol and MoosasPy algorithms are unchanged.
 
-- values are comma-separated floats;
-- one ray per line;
-- direction is normalized by the engine when loaded.
+## Build
 
-Example:
+Run `./build.sh stage /path/to/candidate` to cross-compile without replacing the installed binaries. Both targets are built in a temporary directory before being moved to the destination; build metadata is printed. Default `./build.sh` installs to this directory. Go 1.21.5 is used for both baseline and candidate, targeting `linux/amd64` and `windows/amd64`, `GOAMD64=v1`, `CGO_ENABLED=0`, with `-trimpath`. The host compiler being `windows/386` does not make the target programs 32-bit.
 
-```text
-0.50,1.20,3.00,0.00,1.00,0.20
-5.00,2.00,1.50,-0.40,0.80,0.45
-```
+## Reproducible current-model benchmark
 
-## Geometry Input File
+See [BVH_BENCHMARK.md](BVH_BENCHMARK.md) for the measured results, deployment hashes and the two documented pre-existing near-vertical XY tolerance false hits found by native SketchUp comparison.
 
-The geometry file uses MOOSAS `.geo`-style face blocks separated by `;`.
+`skp/scripts/rad_bvh_benchmark.rb` exports the visible full scene and samples 100 face instances, 25 area-weighted interior points each, with seed 4217 and 0.1 m normal offset. Component instance paths distinguish repeated definitions. Selection and visibility are not changed. The frozen scene, weather matrix and sampling manifest are kept in a runtime workload directory.
 
-Relevant records used by `MoosasRad`:
+Run `python/python.exe skp/scripts/benchmark_rad_bvh.py benchmark --workload WORKLOAD --output OUTPUT --baseline BASELINE_EXE --candidate CANDIDATE_EXE --threads 4`. On Windows hybrid-core CPUs add `--affinity-mask MASK` after checking core topology; the benchmark process and all its children inherit the same core mask. The driver warms up both programs and runs five alternating paired repetitions for Sunhour and Radiation. It captures the actual pipeline rays, verifies byte-identical engine outputs and equal JSON results, and measures complete engine calls, Python pipeline execution and Python process wall time separately. Engine redirection is isolated to the benchmark subprocess and does not modify MoosasPy or the installed executable.
 
-- `fn,nx,ny,nz`: face normal
-- `fv,x,y,z`: face vertex
-
-Example:
-
-```text
-f,0,FaceA
-fn,0,1,0
-fv,0,0,0
-fv,10,0,0
-fv,10,0,3
-fv,0,0,3
-fv,0,0,0
-;
-```
-
-Engine expectations:
-
-- each face block must contain one `fn` line and at least one closed vertex loop;
-- the engine treats each block as one polygon face;
-- only the outer loop is read by the current implementation;
-- holes are not parsed.
-
-## Output File
-
-The output file is plain text with one line per input ray:
-
-```text
-hit_x,hit_y,hit_z,reflected_dir_x,reflected_dir_y,reflected_dir_z
-```
-
-If a ray does not hit any face, the engine writes:
-
-```text
--1.00,-1.00,-1.00,-1.00,-1.00,-1.00
-```
-
-This sentinel means "no intersection".
-
-## Semantics
-
-For each input ray, `MoosasRad`:
-
-1. tests the ray against the provided faces;
-2. returns the first valid intersection found by the current scan order;
-3. computes and outputs the reflected ray at that hit point.
-
-The current executable is used by MOOSAS as a fast batched ray-hit test. In many workflows, callers only need to distinguish:
-
-- hit: output origin is not `(-1,-1,-1)`
-- miss: output origin is `(-1,-1,-1)`
-
-## Notes
-
-- face iteration order affects which hit is returned when multiple faces are intersected;
-- output values are formatted to two decimal places by the current Go implementation;
-- the current implementation reads regular files only and does not define a streaming API.
+For pure-query diagnostics, set `RAD_PROFILE_SCENE`, `RAD_PROFILE_RAYS` and `RAD_PROFILE_OUTPUT`, then run `GO111MODULE=off GOARCH=amd64 go test -run TestBVHRealSceneProfile -count=1`. It checks nearest face/distance against the linear reference before timing, reports five paired timings, build costs, query allocations and separately collected traversal counters. Without these variables the real-scene profile test is skipped; synthetic regressions still run.

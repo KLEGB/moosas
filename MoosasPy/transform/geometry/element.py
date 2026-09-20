@@ -3231,16 +3231,10 @@ class MoosasSpace(object):
                 load_schedule(self.parent, schedule_path)
         
 
-        load_intensity_fields = ("zone_ppsm", "zone_equipment", "zone_lighting")
         for key, value in template.items():
-            if key in load_intensity_fields:
-                try:
-                    value = float(value)
-                except (TypeError, ValueError) as error:
-                    raise ValueError(
-                        f"Building template '{buildingTemplateHint}' field '{key}' must be numeric; "
-                        f"got {value!r}. Store schedules separately from load intensities."
-                    ) from error
+            # Thermal loads may be a numeric intensity or a named Daily/Weekly
+            # schedule.  Resolve the latter at simulation time so the same
+            # model works for the energy and airflow/5R1C engines.
             self.settings[key] = value
     
 

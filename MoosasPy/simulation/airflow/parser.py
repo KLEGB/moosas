@@ -92,6 +92,38 @@ def read_topology(file_path):
     return topo[:, 3:5].astype(int)
 
 
+def build_mass_matrix(file_path):
+    """Return directional zone-to-zone airflow in CONTAM's native kg/s.
+
+    The final matrix node is outdoors. Rows identify source nodes and columns
+    identify receiving nodes, using the same path orientation as
+    :func:`build_matrix`.
+    """
+    if not file_path.endswith('.prj'):
+        raise ValueError(f"Expected a CONTAM .prj path, got {file_path!r}")
+    lfr_file = file_path[:-4] + '.lfr'
+    nfr_file = file_path[:-4] + '.nfr'
+    node_count = len(read_temp(nfr_file))
+    topology = read_topology(file_path)
+    path_flows = read_flowpath(lfr_file)
+    if len(topology) != len(path_flows):
+        raise ValueError("CONTAM flowpath and topology row counts differ")
+    matrix = np.zeros((node_count, node_count), dtype=float)
+    for nodes, flow_pair in zip(topology, path_flows):
+        source, target = map(int, nodes)
+        if source == -1:
+            source = node_count
+        if target == -1:
+            target = node_count
+        if not (1 <= source <= node_count and 1 <= target <= node_count):
+            raise ValueError(f"CONTAM topology node out of range: {tuple(nodes)}")
+        forward = float(np.maximum(flow_pair, 0.0).sum())
+        reverse = float(-np.minimum(flow_pair, 0.0).sum())
+        matrix[source - 1, target - 1] += forward
+        matrix[target - 1, source - 1] += reverse
+    return matrix
+
+
 def build_matrix(file_path):
     """
     Build an airflow network (AFN) matrix from *.lfr, *.nfr, and *.prj files with unit conversion.
@@ -113,33 +145,7 @@ def build_matrix(file_path):
         build AFN matrix from *.lfr,*.nfr and *.prj files
         the result's unit is transformed from kg/s into m3/h
     """
-    if file_path[-4:] != '.prj':
-        raise Exception(f'Wrong *.prj path: {file_path}')
-    lfrFile = file_path[:-4]+'.lfr'
-    nfrFile = file_path[:-4]+'.nfr'
-    zone_length = len(read_temp(nfrFile))
-    topology = read_topology(file_path)
-    airflow = read_flowpath(lfrFile)
-    # [n+1,n+1]2d matrix, n room and 1 ambt
-    matrix = [[0] * (zone_length) for x in range(zone_length)]
-    for flow, mass in zip(topology, airflow):
-        if flow[0] == -1:
-            flow[0] = zone_length
-        if flow[1] == -1:
-            flow[1] = zone_length
-        _from, _to = 0, 0
-        if mass[0] > 0:
-            _from += mass[0]
-        else:
-            _to -= mass[0]
-        if mass[1] > 0:
-            _from += mass[1]
-        else:
-            _to -= mass[1]
-        matrix[flow[0] - 1][flow[1] - 1] += _from
-        matrix[flow[1] - 1][flow[0] - 1] += _to
-
-    return np.array(matrix) * 3600.0 / AIR_DENSITY
+    return build_mass_matrix(file_path) * 3600.0 / AIR_DENSITY
 
 def read_file(path):
     """
