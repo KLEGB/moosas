@@ -3,6 +3,7 @@
 import json
 import os
 import re
+import warnings
 from rdflib import Graph, Namespace, Literal, URIRef
 from rdflib.namespace import RDF, RDFS, GEO, BRICK, WGS
 
@@ -37,6 +38,17 @@ def _first_or_none(val):
             return None
         return list(val)[0]
     return val
+
+
+def _as_rdf_values(value):
+    """Return RDF objects as a list without NumPy coercing a Literal to text."""
+    if value is None:
+        return []
+    if isinstance(value, np.ndarray):
+        return list(value.flatten())
+    if isinstance(value, (list, tuple, set)):
+        return list(value)
+    return [value]
 
 
 
@@ -266,6 +278,9 @@ class MoosasRDF(Graph):
                 self.skipped_spaces.append(str(getattr(space, "id", "")))
         for space_id in self.skipped_spaces:
             print(f"RDF: skipped incomplete space {space_id}")
+
+        # Old in-memory models may predate editable construction metadata.
+        _apply_element_parameter_defaults(model)
 
         valid_uids = set()
         valid_geometry_ids = set()
@@ -676,7 +691,8 @@ class MoosasRDF(Graph):
         self.add((URIRef(f"element_{Element.Uid}"), self.rdfs.comment, Literal(Element.description)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.Uid, Literal(Element.Uid)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.Offset, Literal(Element.offset)))
-        self.add((URIRef(f"element_{Element.Uid}"), self.moosas.U_Value, Literal(Element.U_Value)))
+        element_uri = URIRef(f"element_{Element.Uid}")
+        self.add((element_uri, self.moosas.U_Value, Literal(Element.U_Value)))
         self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasSurfaceType, self.moosas.term(typeName)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.hasLevel, URIRef(f"Level_{Element.level}")))
         self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasArea_m2, Literal(Element.area)))
@@ -700,6 +716,15 @@ class MoosasRDF(Graph):
             self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasAirFlow, URIRef(f"Space_{Element.space[0]}")))
             self.add(
                 (URIRef(f"element_{Element.Uid}"), self.pgd.hasAirFlow, URIRef(f"Space_{Element.space[1]}")))
+        # Keep legacy element predicates while making the editable element
+        # settings round-trip as a single extensible RDF representation.
+        for key, value in getattr(Element, 'settings', {}).items():
+            if value is None:
+                continue
+            self.add((element_uri, self.moosas.hasSetting, Literal(key)))
+            self.add((element_uri, self.moosas[key], Literal(value)))
+        for key in getattr(Element, 'explicit_settings', set()):
+            self.add((element_uri, self.moosas.explicitSetting, Literal(key)))
         if typeName in ("Glazing", "Skylight"):
             shgc = getattr(Element, "SHGC", None)
             if shgc is not None:
@@ -846,14 +871,15 @@ class MoosasRDF(Graph):
         # storage space settings
         for key in space.settings:
             value = space.settings[key]
+            if value is None:
+                continue
             if hasattr(value, "applyToIDF"):
                 continue
             self.add((URIRef(f"Space_{space.id}"), self.moosas.hasSetting, Literal(key)))
 
-            if _is_numeric_text(value):
-                self.add((URIRef(f"Space_{space.id}"), Literal(key), Literal(value)))
-            else:
-                self.add((URIRef(f"Space_{space.id}"), Literal(key), URIRef(str(value))))
+            self.add((URIRef(f"Space_{space.id}"), self.moosas[str(key)], Literal(value)))
+        for key in getattr(space, 'explicit_settings', []):
+            self.add((URIRef(f"Space_{space.id}"), self.moosas.explicitSetting, Literal(key)))
 
         self.add((URIRef(f"Space_{space.id}"), self.pgd.hasFloorArea_m2, Literal(space.area)))
         self.add((URIRef(f"Space_{space.id}"), self.pgd.hasVolume_m3, Literal(space.area * space.height)))
@@ -977,6 +1003,30 @@ class MoosasRDF(Graph):
         if isinstance(elementUri, str):
             elementUri = URIRef(str(elementUri))
 
+        def apply_element_settings(element):
+            """Read new generic element settings while accepting legacy RDF."""
+            settings = {}
+            for key_literal in _as_rdf_values(self.getObject(elementUri, self.moosas.hasSetting)):
+                key = str(_literal_to_python(key_literal))
+                value = _first_or_none(self.getObject(elementUri, self.moosas[key]))
+                if value is not None:
+                    settings[key] = _literal_to_python(value)
+            element.settings.update(settings)
+            element.explicit_settings.update(
+                str(_literal_to_python(v))
+                for v in _as_rdf_values(self.getObject(elementUri, self.moosas.explicitSetting))
+            )
+            # Element construction values from RDF must not be overwritten by
+            # the owner space template constructed later in the load process.
+            element.explicit_settings.update({'u_value', 'shgc'}.intersection(settings))
+            if 'u_value' in settings:
+                element.U_Value = float(settings['u_value'])
+            if isinstance(element, (MoosasGlazing, MoosasSkylight)):
+                if 'shgc' in settings:
+                    element.SHGC = float(settings['shgc'])
+                if 'operable' in settings:
+                    element.operable = float(settings['operable'])
+
         Uid = str(self.getObject(elementUri, self.moosas.Uid))
         surfaceTypeRaw = _first_or_none(self.getObject(elementUri, self.pgd.hasSurfaceType))
         surfaceType = URIRef(str(surfaceTypeRaw)) if surfaceTypeRaw is not None else None
@@ -999,6 +1049,7 @@ class MoosasRDF(Graph):
             if u_value is not None:
                 try:
                     element.U_Value = float(_literal_to_python(u_value))
+                    element.explicit_settings.add('u_value')
                 except Exception:
                     pass
             if isinstance(element, (MoosasGlazing, MoosasSkylight)):
@@ -1006,6 +1057,7 @@ class MoosasRDF(Graph):
                 if shgc is not None:
                     try:
                         element.SHGC = float(_literal_to_python(shgc))
+                        element.explicit_settings.add('shgc')
                     except Exception:
                         pass
                 operable = _first_or_none(self.getObject(elementUri, self.moosas.operable))
@@ -1014,6 +1066,7 @@ class MoosasRDF(Graph):
                         element.operable = float(_literal_to_python(operable))
                     except Exception:
                         pass
+            apply_element_settings(element)
             return element
 
         offset = float(self.getObject(elementUri, self.moosas.Offset))
@@ -1037,6 +1090,7 @@ class MoosasRDF(Graph):
         if u_value is not None:
             try:
                 element.U_Value = float(_literal_to_python(u_value))
+                element.explicit_settings.add('u_value')
             except Exception:
                 pass
         if isinstance(element, (MoosasGlazing, MoosasSkylight)):
@@ -1044,6 +1098,7 @@ class MoosasRDF(Graph):
             if shgc is not None:
                 try:
                     element.SHGC = float(_literal_to_python(shgc))
+                    element.explicit_settings.add('shgc')
                 except Exception:
                     pass
             operable = _first_or_none(self.getObject(elementUri, self.moosas.operable))
@@ -1052,6 +1107,7 @@ class MoosasRDF(Graph):
                     element.operable = float(_literal_to_python(operable))
                 except Exception:
                     pass
+        apply_element_settings(element)
         return element
 
     def isClass(self, _from: str, _class: URIRef) -> bool:
@@ -1242,8 +1298,142 @@ def _import_schedule_nodes(rdfGraph: MoosasRDF, model: MoosasModel):
 def _decode_space_settings(rdfGraph: MoosasRDF, spaceUri, spc: MoosasSpace):
     spcSettings = mixItemListToList(rdfGraph.getObject(spaceUri, rdfGraph.moosas.hasSetting))
     for key in spcSettings:
-        raw_value = _first_or_none(rdfGraph.getObject(spaceUri, Literal(key)))
-        spc.settings[str(key)] = _decode_space_setting_value(raw_value)
+        raw_value = _first_or_none(rdfGraph.getObject(spaceUri, rdfGraph.moosas[str(key)]))
+        canonical = raw_value is not None
+        if not canonical:
+            raw_value = _first_or_none(rdfGraph.getObject(spaceUri, Literal(key)))
+        spc.settings[str(key)] = raw_value.toPython() if canonical and isinstance(raw_value, Literal) else _decode_space_setting_value(raw_value)
+    if 'zone_inflitration' in spc.settings:
+        spc.settings.setdefault('zone_infiltration', spc.settings.pop('zone_inflitration'))
+    spc.explicit_settings = [str(k) for k in rdfGraph.objects(spaceUri, rdfGraph.moosas.explicitSetting)]
+
+
+# Editable construction metadata.  Volumetric heat capacity is stored in SI
+# units and is consumed directly by the 5R1C adapter.
+_WALL_DEFAULTS = {
+    'u_value': 0.5,
+    'volumetric_heat_capacity': 2116000.0,
+    'thickness': 0.2,
+    'reflection': 0.5,
+}
+_GLAZING_DEFAULTS = {
+    'u_value': 2.4,
+    'shgc': 0.6,
+    'operable': 0.5,
+    'reflection': 0.1,
+    'transparency': 0.7,
+}
+
+
+def _element_space_owners(model):
+    """Return deterministic owner spaces, including a space's openings."""
+    owners = {}
+    for space in list(model.spaceList) + list(model.voidList):
+        for element in space.getAllFaces(to_dict=False):
+            owners.setdefault(id(element), []).append(space)
+    return {key: sorted(value, key=lambda space: str(space.id))
+            for key, value in owners.items()}
+
+
+def _numeric_or_default(value, default):
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return float(default)
+    return value if np.isfinite(value) else float(default)
+
+
+def _space_parameter(owners, setting, default):
+    """Use the first non-null owner value for a shared element deterministically."""
+    for space in owners:
+        value = getattr(space, 'settings', {}).get(setting)
+        if value is not None:
+            return _numeric_or_default(value, default)
+    return float(default)
+
+
+def _rdf_element_setting_value(rdfGraph, element, key):
+    """Return the RDF value, preferring editable generic settings over legacy predicates."""
+    # Relative ``element_*`` URIs acquire a file:// base when parsed. Resolve by
+    # stable Moosas Uid rather than reconstructing a relative URI.
+    uris = list(rdfGraph.subjects(rdfGraph.moosas.Uid, Literal(str(element.Uid))))
+    if not uris:
+        uris = [URIRef(f"element_{element.Uid}")]
+    predicates = [rdfGraph.moosas[key], Literal(key)]
+    if key == 'u_value':
+        predicates.append(rdfGraph.moosas.U_Value)
+    elif key == 'shgc':
+        predicates.append(rdfGraph.moosas.SHGC)
+    elif key == 'operable':
+        predicates.append(rdfGraph.moosas.operable)
+    for uri in uris:
+        for predicate in predicates:
+            value = next(iter(rdfGraph.objects(uri, predicate)), None)
+            if value is not None:
+                return _literal_to_python(value)
+    return None
+
+
+def _set_element_setting(element, key, value):
+    if key == 'u_value':
+        element.U_Value = _numeric_or_default(value, _WALL_DEFAULTS['u_value'])
+    elif key == 'shgc':
+        element.SHGC = _numeric_or_default(value, _GLAZING_DEFAULTS['shgc'])
+    elif key == 'operable':
+        element.operable = _numeric_or_default(value, _GLAZING_DEFAULTS['operable'])
+    else:
+        element.settings[key] = _numeric_or_default(value, 0.0)
+
+
+def _apply_element_parameter_defaults(model, rdfGraph=None):
+    """Fill only missing opaque/glazing construction settings.
+
+    With ``rdfGraph``, fields supplied by RDF are preserved. This prevents
+    constructor defaults from masking the space-level U/SHGC fallback for old RDF.
+    """
+    owners = _element_space_owners(model)
+    opaque = {}
+    for space in list(model.spaceList) + list(model.voidList):
+        groups = space.getAllFaces(to_dict=True)
+        for role in ('MoosasWall', 'MoosasFloor', 'MoosasCeiling', 'InternalMass'):
+            for element in groups.get(role, ()):
+                opaque[id(element)] = element
+    groups = (
+        (list(opaque.values()), _WALL_DEFAULTS, {'u_value': 'zone_wallU'}),
+        (list(model.glazingList), _GLAZING_DEFAULTS,
+         {'u_value': 'zone_winU', 'shgc': 'zone_win_SHGC'}),
+    )
+    legacy_capacity_elements = []
+    for elements, defaults, space_fields in groups:
+        for element in elements:
+            settings = element.settings
+            element_owners = owners.get(id(element), ())
+            legacy_capacity = settings.pop('heat_storage_coefficient', None)
+            for key, fallback in defaults.items():
+                supplied = key in settings and settings[key] is not None
+                if rdfGraph is not None:
+                    rdf_value = _rdf_element_setting_value(rdfGraph, element, key)
+                    if rdf_value is not None:
+                        _set_element_setting(element, key, rdf_value)
+                        continue
+                    supplied = False
+                if supplied:
+                    continue
+                value = (_space_parameter(element_owners, space_fields[key], fallback)
+                         if key in space_fields else float(fallback))
+                _set_element_setting(element, key, value)
+            if rdfGraph is not None and legacy_capacity is None:
+                legacy_capacity = _rdf_element_setting_value(
+                    rdfGraph, element, 'heat_storage_coefficient')
+            if legacy_capacity is not None:
+                legacy_capacity_elements.append(str(element.Uid))
+    if legacy_capacity_elements:
+        warnings.warn(
+            "Legacy heat_storage_coefficient is not a volumetric heat capacity; "
+            "using volumetric_heat_capacity defaults for " + ", ".join(legacy_capacity_elements),
+            UserWarning,
+            stacklevel=2,
+        )
 
 
 def _decode_space_type(rdfGraph: MoosasRDF, spaceUri) -> str:
@@ -1496,5 +1686,8 @@ def loadRDF(input_path: str, fileFormat="turtle") -> MoosasModel:
         else:
             model.spaceList.append(space)
 
+    # Space settings are available only after the topology pass. Apply legacy
+    # U/SHGC fallbacks now, while preserving all RDF-supplied element settings.
+    _apply_element_parameter_defaults(model, rdfGraph)
     return model
 

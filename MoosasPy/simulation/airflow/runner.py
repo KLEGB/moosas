@@ -15,11 +15,15 @@ from ..contracts import SimulationResult
 from ..engine import NativeEngine
 from ..runner import Runner
 from ..workspace import SimulationWorkspace, WorkspaceReport
-from .network import VENT_EXE_SUFFIX, buildNetworkFile, getZoneAndPath, pathTopology, cleanseNetwork, applyWindPressure
+from .network import (
+    VENT_EXE_SUFFIX, AfnPath, AfnZone, buildNetworkFile, getZoneAndPath,
+    cleanseNetwork, applyWindPressure,
+)
 from ...transform.geometry.geos import Vector
 from .parser import (
     AIR_DENSITY,
     build_matrix,
+    build_mass_matrix,
     read_file,
     read_flowpath,
     read_topology,
@@ -109,6 +113,7 @@ class AirflowResult(SimulationResult):
     iteration_count: int = 0
     residual: float = float("inf")
     path_results: tuple[dict, ...] = ()
+    mass_flow_matrix_kg_s: np.ndarray | None = None
 
 
 class AirflowRunner(Runner):
@@ -134,6 +139,7 @@ class AirflowRunner(Runner):
         indoor_temperature=None,
         thermal=True,
         alpha=0.22,
+        network_dict=None,
     ):
         super().__init__(timeout_seconds=timeout_seconds, engine=engine)
         if int(max_iterations) <= 0:
@@ -156,6 +162,7 @@ class AirflowRunner(Runner):
         self.indoor_temperature = indoor_temperature
         self.thermal = bool(thermal)
         self.alpha = float(alpha)
+        self.network_dict = network_dict
         if not np.isfinite(self.wind_speed) or self.wind_speed < 0:
             raise ValueError("wind_speed must be finite and non-negative")
 
@@ -174,14 +181,26 @@ class AirflowRunner(Runner):
     def _run(self, workspace_report=None) -> AirflowResult:
         network_file = os.path.join(self.paths.project_dir, "model.json")
         project_file = os.path.join(self.paths.project_dir, "model.prj")
-        zones, airflow_paths = getZoneAndPath(self.model, calculate_heat=self.thermal and self.heat_loads is None)
+        if self.network_dict is None:
+            zones, airflow_paths = getZoneAndPath(
+                self.model, calculate_heat=self.thermal and self.heat_loads is None)
+        else:
+            zones = [AfnZone(**dict(value)) for value in self.network_dict.get("zones", {}).values()]
+            airflow_paths = [AfnPath(**dict(value)) for value in self.network_dict.get("paths", {}).values()]
+            if not zones:
+                raise ValueError("network_dict contains no airflow zones")
         zones, airflow_paths = self._apply_heat_loads(zones, airflow_paths)
-        airflow_paths, zones = cleanseNetwork(airflow_paths, zones)
+        if all(hasattr(z, "prjIndex") for z in zones) and all(
+                hasattr(p, "fromZone") and hasattr(p, "toZone") for p in airflow_paths):
+            airflow_paths, zones = cleanseNetwork(airflow_paths, zones)
         if not zones:
             raise ValueError("No airflow zones connected to ambient")
         for zone in zones:
             if self.indoor_temperature is not None:
-                zone.temperature = float(self.indoor_temperature)
+                if isinstance(self.indoor_temperature, dict):
+                    zone.temperature = float(self.indoor_temperature.get(str(zone.userName), zone.temperature))
+                else:
+                    zone.temperature = float(self.indoor_temperature)
             if not np.isfinite(zone.volume) or zone.volume <= 0:
                 raise ValueError(f"Invalid zone volume: {zone.userName}")
         if self.wind_direction_vector is not None and self.wind_speed > 0:
@@ -205,17 +224,27 @@ class AirflowRunner(Runner):
             network_file,
         ))
         commands = [afn_result]
+        if self.indoor_temperature is not None:
+            # The network generator formats temperatures to two decimals.
+            # Restore the full Picard iterate before computing buoyancy.
+            _write_project_temperatures(
+                np.asarray([z.temperature + 273.15 for z in zones]), project_file)
         temperature_history = [[] for _ in zones]
         ach_history = [[] for _ in zones]
         previous_temperature = None
         previous_ach = None
         residual = float("inf")
         airflow_matrix = None
+        mass_flow_matrix = None
 
         for iteration_count in range(1, self.max_iterations + 1):
             iteration_result = self._run_project(project_file)
             commands.extend(iteration_result.commands)
             airflow_matrix = np.asarray(iteration_result.airflow_matrix, dtype=float) * self.flow_multiplier
+            raw_mass_flow = iteration_result.mass_flow_matrix_kg_s
+            if raw_mass_flow is None:
+                raw_mass_flow = np.asarray(iteration_result.airflow_matrix, dtype=float) * AIR_DENSITY / 3600.0
+            mass_flow_matrix = np.asarray(raw_mass_flow, dtype=float) * self.flow_multiplier
             temperature = _solve_sensible_heat(
                 airflow_matrix.copy(),
                 np.array([zone.heatLoad for zone in zones]),
@@ -259,7 +288,9 @@ class AirflowRunner(Runner):
             converged=converged,
             iteration_count=iteration_count,
             residual=residual,
-            path_results=tuple(_path_results(project_file, airflow_paths, zones, self.flow_multiplier)),
+            path_results=tuple(_path_results(project_file, airflow_paths, zones, self.flow_multiplier))
+            if all(hasattr(p, "fromZone") and hasattr(p, "pathWidth") for p in airflow_paths) else (),
+            mass_flow_matrix_kg_s=mass_flow_matrix,
             commands=tuple(commands),
             warnings=() if converged else ("Airflow iteration did not converge.",),
             workspace=workspace_report or WorkspaceReport(self.paths.workspace, True),
@@ -272,14 +303,30 @@ class AirflowRunner(Runner):
         unknown_zones = set(self.heat_loads) - known_zones
         if unknown_zones:
             raise ValueError(f"Unknown airflow zones: {sorted(unknown_zones)}")
+        old_index_by_name = {zone.userName: int(zone.prjIndex) for zone in zones}
         zones = [zone for zone in zones if zone.userName in self.heat_loads]
         if not zones:
             raise ValueError("heat_loads must select at least one airflow zone.")
+        index_map = {}
         for index, zone in enumerate(zones, start=1):
+            index_map[old_index_by_name[zone.userName]] = index
             zone.prjIndex = index
             zone.prjName = f"z{index:03d}"
             zone.heatLoad = float(self.heat_loads[zone.userName])
-        return zones, pathTopology(airflow_paths, zones)
+        kept_paths = []
+        for item in airflow_paths:
+            source, target = int(item.fromZone), int(item.toZone)
+            if source != -1 and source not in index_map or target != -1 and target not in index_map:
+                continue
+            item.fromZone = -1 if source == -1 else index_map[source]
+            item.toZone = -1 if target == -1 else index_map[target]
+            kept_paths.append(item)
+        for index, item in enumerate(kept_paths, start=1):
+            item.prjIndex = index
+            if isinstance(item.element, dict):
+                item.element["prjIndex"] = index
+                item.element["userName"] = str(item.userName)
+        return zones, kept_paths
 
     def _run_project(self, project_file):
         contam_exe = self.contam_exe or self.paths.contamx
@@ -291,8 +338,15 @@ class AirflowRunner(Runner):
                 (simread_exe, project_file),
                 stdin=response_file,
             )
+        airflow_matrix = build_matrix(file_path=project_file)
+        try:
+            mass_flow = build_mass_matrix(file_path=project_file)
+        except (FileNotFoundError, OSError):
+            # Supports test/native adapters that provide only the legacy matrix.
+            mass_flow = np.asarray(airflow_matrix, dtype=float) * AIR_DENSITY / 3600.0
         return AirflowResult(
-            airflow_matrix=build_matrix(file_path=project_file),
+            airflow_matrix=airflow_matrix,
+            mass_flow_matrix_kg_s=mass_flow,
             commands=(contam_result, simread_result),
             workspace=WorkspaceReport(self.paths.workspace, True),
         )
@@ -348,8 +402,8 @@ def _write_project_temperatures(temperature, project_file):
     rows = np.array([
         re.split(r"[ ]+", line)
         for line in temperature_block.split("\n")[:-1]
-    ])
-    rows[:, 9] = temperature
+    ], dtype=object)
+    rows[:, 9] = np.asarray(temperature, dtype=float).astype(str)
     temperature_block = "\n".join(" ".join(row) for row in rows) + "\n"
     write_file(project_file, head, temperature_block, rear)
 

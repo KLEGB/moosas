@@ -380,7 +380,10 @@ def build_energy_input(model: MoosasModel,
 
         template_type = _space_template_type(s)
         for field_name in ("zone_ppsm", "zone_equipment", "zone_lighting"):
-            resolved = _resolve_schedule_ref(model, template_type, field_name, theZone.params.get(field_name))
+            if field_name in getattr(s, 'explicit_settings', []):
+                resolved = float(s.settings[field_name])
+            else:
+                resolved = _resolve_schedule_ref(model, template_type, field_name, theZone.params.get(field_name))
             if resolved is not None:
                 theZone.updateParams(**{field_name: resolved})
 

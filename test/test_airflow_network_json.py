@@ -117,7 +117,7 @@ def test_leakage_path_connects_zone_to_ambient():
     assert leakage.pathHeight == 3.0
     assert leakage.pathWidth == 12.0
     assert leakage.element["dtype"] == "plr_leak3"
-    assert leakage.element["area3"] == 1e-5
+    assert leakage.element["area3"] == pytest.approx(0.000122907)
 
 
 def test_moosas_afn_binary_generates_prj_from_json():
@@ -144,7 +144,7 @@ def test_moosas_afn_binary_generates_prj_from_json():
 
     assert "create such prjFile" in result.stdout
     assert "30.00 300.15 0.00 z001" in project_text
-    assert "0.222222 1.000000 0.500000 0.780000" in project_text
+    assert "0.222222 1.000000 0.500000 0.795970" in project_text
 
 
 def test_rdf_model_runs_airflow_simulation():

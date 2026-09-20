@@ -127,3 +127,23 @@ class rad:
     GROUND_REFLECTION = 0.2
     CONTENT_REFLECTION = 0.65
     DEFAULT_SHGC = 0.7
+
+
+class afn:
+    """Default numerical controls for the airflow and 5R1C coupling layer.
+
+    These are solver controls rather than building properties.  Physical
+    construction data belongs to Moosas elements and 5R1C coefficients belong
+    to the thermal backend parameters.
+    """
+    TIME_STEP_SECONDS = 3600.0
+    INITIAL_TEMPERATURE_C = 23.0
+    PREHEAT_ROUNDS = 10
+    COUPLING_MAX_ITERATIONS = 30
+    TEMPERATURE_TOLERANCE_C = 0.02
+    FLOW_TOLERANCE = 1e-3
+    RELAXATION = 0.5
+    INTERZONE_MAX_ITERATIONS = 80
+    INTERZONE_TOLERANCE_C = 1e-5
+    MASS_BALANCE_TOLERANCE_KG_S = 1e-4
+    OCCUPANCY_ACTIVE_THRESHOLD = 1e-9

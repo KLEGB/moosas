@@ -405,8 +405,12 @@ class ZoneTemplate():
         UFactor = float(UFactor)
         constr = [construction for construction in self.constructionList if construction.type == _type]
         if len(constr) > 0:
-            Ufc = [abs(construction.UFactor - UFactor) for construction in constr]
-            return np.array(constr)[np.argmin(Ufc)]
+            # Reuse only an equivalent construction. Selecting the nearest one
+            # silently discarded per-wall/window edits.
+            for construction in constr:
+                if abs(float(construction.UFactor) - UFactor) < 1e-8:
+                    if _type != 'window' or SHGC is None or abs(float(construction.layers[0].params.get('Solar_Heat_Gain_Coefficient', SHGC)) - float(SHGC)) < 1e-8:
+                        return construction
 
         construction = Construction.create(_type=_type, UFactor=UFactor, SHGC=SHGC)
         construction.applyToIDF(self.idf)
