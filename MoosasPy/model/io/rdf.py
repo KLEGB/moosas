@@ -669,7 +669,8 @@ class MoosasRDF(Graph):
         self.add((URIRef(f"element_{Element.Uid}"), self.rdfs.comment, Literal(Element.description)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.Uid, Literal(Element.Uid)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.Offset, Literal(Element.offset)))
-        self.add((URIRef(f"element_{Element.Uid}"), self.moosas.U_Value, Literal(Element.U_Value)))
+        element_uri = URIRef(f"element_{Element.Uid}")
+        self.add((element_uri, self.moosas.U_Value, Literal(Element.U_Value)))
         self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasSurfaceType, self.moosas.term(typeName)))
         self.add((URIRef(f"element_{Element.Uid}"), self.moosas.hasLevel, URIRef(f"Level_{Element.level}")))
         self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasArea_m2, Literal(Element.area)))
@@ -693,6 +694,15 @@ class MoosasRDF(Graph):
             self.add((URIRef(f"element_{Element.Uid}"), self.pgd.hasAirFlow, URIRef(f"Space_{Element.space[0]}")))
             self.add(
                 (URIRef(f"element_{Element.Uid}"), self.pgd.hasAirFlow, URIRef(f"Space_{Element.space[1]}")))
+        # Keep legacy element predicates while making the editable element
+        # settings round-trip as a single extensible RDF representation.
+        for key, value in getattr(Element, 'settings', {}).items():
+            if value is None:
+                continue
+            self.add((element_uri, self.moosas.hasSetting, Literal(key)))
+            self.add((element_uri, self.moosas[key], Literal(value)))
+        for key in getattr(Element, 'explicit_settings', set()):
+            self.add((element_uri, self.moosas.explicitSetting, Literal(key)))
         if typeName in ("Glazing", "Skylight"):
             shgc = getattr(Element, "SHGC", None)
             if shgc is not None:
@@ -837,14 +847,15 @@ class MoosasRDF(Graph):
         # storage space settings
         for key in space.settings:
             value = space.settings[key]
+            if value is None:
+                continue
             if hasattr(value, "applyToIDF"):
                 continue
             self.add((URIRef(f"Space_{space.id}"), self.moosas.hasSetting, Literal(key)))
 
-            if _is_numeric_text(value):
-                self.add((URIRef(f"Space_{space.id}"), Literal(key), Literal(value)))
-            else:
-                self.add((URIRef(f"Space_{space.id}"), Literal(key), URIRef(str(value))))
+            self.add((URIRef(f"Space_{space.id}"), self.moosas[str(key)], Literal(value)))
+        for key in getattr(space, 'explicit_settings', []):
+            self.add((URIRef(f"Space_{space.id}"), self.moosas.explicitSetting, Literal(key)))
 
         self.add((URIRef(f"Space_{space.id}"), self.pgd.hasFloorArea_m2, Literal(space.area)))
         self.add((URIRef(f"Space_{space.id}"), self.pgd.hasVolume_m3, Literal(space.area * space.height)))
@@ -968,6 +979,26 @@ class MoosasRDF(Graph):
         if isinstance(elementUri, str):
             elementUri = URIRef(str(elementUri))
 
+        def apply_element_settings(element):
+            """Read new generic element settings while accepting legacy RDF."""
+            settings = {}
+            for key_literal in self.getObject(elementUri, self.moosas.hasSetting):
+                key = str(_literal_to_python(key_literal))
+                value = _first_or_none(self.getObject(elementUri, self.moosas[key]))
+                if value is not None:
+                    settings[key] = _literal_to_python(value)
+            element.settings.update(settings)
+            element.explicit_settings.update(
+                str(_literal_to_python(v)) for v in self.getObject(elementUri, self.moosas.explicitSetting)
+            )
+            if 'u_value' in settings:
+                element.U_Value = float(settings['u_value'])
+            if isinstance(element, (MoosasGlazing, MoosasSkylight)):
+                if 'shgc' in settings:
+                    element.SHGC = float(settings['shgc'])
+                if 'operable' in settings:
+                    element.operable = float(settings['operable'])
+
         Uid = str(self.getObject(elementUri, self.moosas.Uid))
         surfaceTypeRaw = _first_or_none(self.getObject(elementUri, self.pgd.hasSurfaceType))
         surfaceType = URIRef(str(surfaceTypeRaw)) if surfaceTypeRaw is not None else None
@@ -1005,6 +1036,7 @@ class MoosasRDF(Graph):
                         element.operable = float(_literal_to_python(operable))
                     except Exception:
                         pass
+            apply_element_settings(element)
             return element
 
         offset = float(self.getObject(elementUri, self.moosas.Offset))
@@ -1043,6 +1075,7 @@ class MoosasRDF(Graph):
                     element.operable = float(_literal_to_python(operable))
                 except Exception:
                     pass
+        apply_element_settings(element)
         return element
 
     def isClass(self, _from: str, _class: URIRef) -> bool:
@@ -1233,8 +1266,14 @@ def _import_schedule_nodes(rdfGraph: MoosasRDF, model: MoosasModel):
 def _decode_space_settings(rdfGraph: MoosasRDF, spaceUri, spc: MoosasSpace):
     spcSettings = mixItemListToList(rdfGraph.getObject(spaceUri, rdfGraph.moosas.hasSetting))
     for key in spcSettings:
-        raw_value = _first_or_none(rdfGraph.getObject(spaceUri, Literal(key)))
-        spc.settings[str(key)] = _decode_space_setting_value(raw_value)
+        raw_value = _first_or_none(rdfGraph.getObject(spaceUri, rdfGraph.moosas[str(key)]))
+        canonical = raw_value is not None
+        if not canonical:
+            raw_value = _first_or_none(rdfGraph.getObject(spaceUri, Literal(key)))
+        spc.settings[str(key)] = raw_value.toPython() if canonical and isinstance(raw_value, Literal) else _decode_space_setting_value(raw_value)
+    if 'zone_inflitration' in spc.settings:
+        spc.settings.setdefault('zone_infiltration', spc.settings.pop('zone_inflitration'))
+    spc.explicit_settings = [str(k) for k in rdfGraph.objects(spaceUri, rdfGraph.moosas.explicitSetting)]
 
 
 def _decode_space_type(rdfGraph: MoosasRDF, spaceUri) -> str:

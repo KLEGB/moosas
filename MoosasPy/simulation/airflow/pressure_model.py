@@ -138,10 +138,10 @@ def callXgb(xgbInput, xgbOutput=None) -> np.ndarray:
         alpha = 0.22
         airDensity = 1.205
     """
-    from xgboost import XGBRegressor
-    bst = XGBRegressor()
+    from xgboost import Booster, DMatrix
+    bst = Booster()
     # print(os.path.join(path.libDir, r"vent\xgb.json"))
-    bst.load_model(os.path.join(path.libDir, r"vent\xgb.json"))
+    bst.load_model(os.path.join(path.libDir, 'vent', 'xgb.json'))
     inputs = []
     if isinstance(xgbInput, str):
         with open(xgbInput, 'r') as f:
@@ -156,7 +156,10 @@ def callXgb(xgbInput, xgbOutput=None) -> np.ndarray:
         inputs = xgbInput
 
     # predict
-    outputs = bst.predict(np.array(inputs))
+    inputs = np.asarray(inputs, dtype=float)
+    if not np.all(np.isfinite(inputs)):
+        raise ValueError('Invalid facade geometry produced non-finite wind pressure inputs')
+    outputs = bst.predict(DMatrix(inputs, feature_names=bst.feature_names))
     # get output
     if xgbOutput is not None:
         text = ""

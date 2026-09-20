@@ -452,7 +452,7 @@ class MoosasElement(object):
     fromDict: construct an element from a dictionary which may be given by toDictionary method from a xmlTree
 
     """
-    __slots__ = ['__geometries', 'level', 'offset', 'Uid','U_Value', '__glazingElement', 'parent', 'neighbor', 'isOuter', 'space',
+    __slots__ = ['__geometries', 'level', 'offset', 'Uid', '_u_value', 'settings', 'explicit_settings', '__glazingElement', 'parent', 'neighbor', 'isOuter', 'space',
                  'shading','description']
 
     def __init__(self, model: MoosasContainer,
@@ -493,7 +493,12 @@ class MoosasElement(object):
         self.level: float = level
         self.offset: float = offset
         self.shading = []
-        self.U_Value: float = 1.8  # default U value, can be changed by user
+        # Element properties are intentionally kept separate from zone settings.
+        # The legacy U_Value attribute remains a property backed by this mapping.
+        self.settings = {}
+        self.explicit_settings = set()
+        self._u_value: float = 1.8
+        self.U_Value = 1.8
         self.__glazingElement: list[MoosasElement] = mixItemListToList(
             glazingElement) if glazingElement is not None else []
         if glazingId is not None:
@@ -521,6 +526,16 @@ class MoosasElement(object):
     @property
     def geometry(self):
         return self.__geometries
+
+    @property
+    def U_Value(self):
+        return self.settings.get('u_value', self._u_value)
+
+    @U_Value.setter
+    def U_Value(self, value):
+        self._u_value = value
+        if hasattr(self, 'settings'):
+            self.settings['u_value'] = value
 
     @property
     def glazingElement(self) -> list[MoosasGlazing | MoosasSkylight]:
@@ -1829,7 +1844,7 @@ class MoosasGlazing(MoosasWall):
     parentFace: the Uid of parent MoosasWall element
     orientation: normal facing outside.
     """
-    __slots__ = ['parentFace','SHGC','operable']
+    __slots__ = ['parentFace', '_shgc', '_operable']
 
     def __init__(self, model: MoosasContainer, faceId: str | list[str] | np.ndarray[str], level: float = None,
                  offset: float = None, glazingId=None,
@@ -1871,8 +1886,10 @@ class MoosasGlazing(MoosasWall):
         super(MoosasGlazing, self).__init__(model, faceId, level=level, offset=offset, glazingElement=glazingElement,
                                             space=space, glazingId=glazingId, uid=uid)
         self.parentFace: MoosasWall | None = None
-        self.SHGC: float | None = None
-        self.operable: float = operable
+        self._shgc: float | None = None
+        self._operable: float = operable
+        self.SHGC = None
+        self.operable = operable
         if self.offset < -0.2:
             new_level = model.levelList[model.levelList.index(self.level) - 1]
             # print('\nMOVE!!!!!!!!!!!!!!!!!!!!!!!!!!!',new_level)
@@ -1882,6 +1899,24 @@ class MoosasGlazing(MoosasWall):
             new_level = model.levelList[model.levelList.index(self.toplevel) - 1]
             self.topoffset = self.toplevel + self.topoffset - new_level
             self.toplevel = new_level
+
+    @property
+    def SHGC(self):
+        return self.settings.get('shgc', self._shgc)
+
+    @SHGC.setter
+    def SHGC(self, value):
+        self._shgc = value
+        self.settings['shgc'] = value
+
+    @property
+    def operable(self):
+        return self.settings.get('operable', self._operable)
+
+    @operable.setter
+    def operable(self, value):
+        self._operable = value
+        self.settings['operable'] = value
 
     @classmethod
     def fromProjection(cls, prjLine: shapely.Geometry, bottom: float, top: float, model: MoosasContainer,
@@ -2705,7 +2740,7 @@ class MoosasSpace(object):
 
     """
     __slots__ = ['floor', 'edge', 'ceiling', '__void', '__id','__uniqueId', '__neighbor', 'internalMass', 'settings',
-                 'description', 'space_type', 'conditioned']
+                 'description', 'space_type', 'conditioned', 'explicit_settings']
 
     def __init__(self, _floor: MoosasFloor | None, _edge: MoosasEdge, _ceiling: MoosasFloor | None,
                  void: list[MoosasSpace] = None, Uid: str = None, space_type: str = "room",
@@ -2734,6 +2769,7 @@ class MoosasSpace(object):
         self.description = ""
         self.space_type = space_type
         self.conditioned = bool(conditioned)
+        self.explicit_settings = []
 
         self.__neighbor = {}
         self.internalMass: list[MoosasElement] = _edge.internalMass
@@ -3211,10 +3247,13 @@ class MoosasSpace(object):
         if 'zone_wallU' in self.settings:
             faceDict = self.getAllFaces(to_dict=True)
             for face in faceDict['MoosasWall']+faceDict['MoosasFloor']+faceDict['MoosasCeiling']:
-                face.U_Value = self.settings['zone_wallU']
+                if 'u_value' not in getattr(face, 'explicit_settings', set()):
+                    face.U_Value = self.settings['zone_wallU']
             for face in faceDict['MoosasGlazing']+faceDict['MoosasSkylight']:
-                face.U_Value = self.settings['zone_winU']
-                face.SHGC = self.settings['zone_win_SHGC']
+                if 'u_value' not in getattr(face, 'explicit_settings', set()):
+                    face.U_Value = self.settings['zone_winU']
+                if 'shgc' not in getattr(face, 'explicit_settings', set()):
+                    face.SHGC = self.settings['zone_win_SHGC']
 
 
     def add_neighbor(self, neighbor_id, element: MoosasElement):

@@ -992,7 +992,9 @@ def applyWindPressure(pathList: list[AfnPath], windVector: Vector, speed: float 
     from .pressure_model import pressureInput, callXgb
     if speed is not None:
         windVector *= speed
-    geometry_paths = [path_item for path_item in pathList if path_item.geometry is not None]
+    geometry_paths = [path_item for path_item in pathList if path_item.geometry is not None
+                      and -1 in (path_item.fromZone, path_item.toZone)
+                      and not Vector.parallel(path_item.orientation, [0, 0, 1])]
     if not geometry_paths:
         for path_item in pathList:
             path_item.pressure = 0.0
@@ -1031,6 +1033,7 @@ def getZoneAndPath(model, calculate_heat=True):
     """
     pathList: list[AfnPath] = []
     zoneList: list[AfnZone] = []
+    seen_paths = set()
     spaces = sorted(
         list(model.spaceList),
         key=lambda s: (
@@ -1057,6 +1060,9 @@ def getZoneAndPath(model, calculate_heat=True):
             )
         )
         for p in zone_paths:
+            if p.userName in seen_paths:
+                continue  # An internal opening is encountered from both adjacent rooms.
+            seen_paths.add(p.userName)
             pathList.append(p)
             pathList[-1].prjIndex = len(pathList)
     pathList = pathTopology(pathList, zoneList)
