@@ -293,6 +293,9 @@ class MoosasRDF(Graph):
                     valid_uids.add(str(glazing.Uid))
                     for face_id in mixItemListToList(glazing.faceId):
                         valid_geometry_ids.add(str(face_id))
+        for shading in model.shadingList:
+            for face_id in mixItemListToList(shading.faceId):
+                valid_geometry_ids.add(str(face_id))
 
         for geo in model.geometryList:
             if str(geo.faceId) in valid_geometry_ids:

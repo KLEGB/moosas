@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -11,7 +12,7 @@ from MoosasPy.model import MoosasModel
 from MoosasPy.model.io.idf.version import configure_idd
 from MoosasPy.model.resources import configure_model_resources, rebuild_schedule_index
 from MoosasPy.transform import transform
-from MoosasPy.transform.geometry.element import MoosasElement
+from MoosasPy.transform.geometry.element import MoosasElement, MoosasGeometry
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -101,14 +102,40 @@ def test_semantic_model_formats_round_trip(semantic_model: MoosasModel, suffix: 
     assert len(restored.wallList) == len(semantic_model.wallList)
 
 
+def test_json_round_trip_preserves_empty_shading(semantic_model: MoosasModel):
+    original_shading = semantic_model.shadingList
+    semantic_model.shadingList = []
+    try:
+        with TemporaryDirectory() as directory:
+            file_path = Path(directory) / "model.json"
+            semantic_model.save(file_path)
+            document = json.loads(file_path.read_text(encoding="utf-8"))
+            document["shading"] = None
+            file_path.write_text(json.dumps(document), encoding="utf-8")
+            restored = MoosasModel.load(file_path)
+    finally:
+        semantic_model.shadingList = original_shading
+
+    assert restored.shadingList == []
+
+
 @pytest.mark.parametrize("suffix", (".rdf", ".xml", ".json"))
 def test_semantic_formats_preserve_shading_and_void_area(
     semantic_model: MoosasModel,
     suffix: str,
 ):
-    shading = MoosasElement(semantic_model, semantic_model.geometryList[0], uid="roundtrip-shading")
+    source_geometry = semantic_model.geometryList[0]
+    shading_geometry = MoosasGeometry(
+        source_geometry.face,
+        "roundtrip-shading-geometry",
+        source_geometry.normal,
+        -1,
+    )
     original_shading = semantic_model.shadingList
-    semantic_model.shadingList = [*original_shading, shading]
+    semantic_model.geometryList.append(shading_geometry)
+    semantic_model.geoId.append(shading_geometry.faceId)
+    shading = MoosasElement(semantic_model, shading_geometry, uid="roundtrip-shading")
+    semantic_model.shadingList = [shading]
     try:
         with TemporaryDirectory() as directory:
             file_path = Path(directory) / f"model{suffix}"
@@ -116,6 +143,8 @@ def test_semantic_formats_preserve_shading_and_void_area(
             restored = MoosasModel.load(file_path)
     finally:
         semantic_model.shadingList = original_shading
+        semantic_model.geometryList.pop()
+        semantic_model.geoId.pop()
 
     assert [(item.Uid, list(item.faceId)) for item in restored.shadingList] == [
         (shading.Uid, list(shading.faceId))

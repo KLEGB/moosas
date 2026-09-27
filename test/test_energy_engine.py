@@ -30,6 +30,22 @@ def test_space_perimeter_area_is_limited_to_floor_area():
     assert space.perimeter_zone_area == 100.0
 
 
+def test_integral_decimal_occupancy_hours_are_accepted():
+    row = "3,100,30,20,10,0,0,0,0,0,0.5,2,0.5,26,0.5,18,2,2,8.0,18.0,0,0,0,0,0,0.5,1"
+
+    space = parse_spaces([row])[0]
+
+    assert space.occupancy_start_hour == 8
+    assert space.occupancy_end_hour == 18
+
+
+def test_fractional_occupancy_hours_are_rejected():
+    row = "3,100,30,20,10,0,0,0,0,0,0.5,2,0.5,26,0.5,18,2,2,8.5,18,0,0,0,0,0,0.5,1"
+
+    with pytest.raises(ValueError, match="occupancy_start_hour must be an integer"):
+        parse_spaces([row])
+
+
 def test_public_lighting_uses_solar_altitude_in_degrees():
     lighting = _lighting(
         latitude=np.radians(39.93),

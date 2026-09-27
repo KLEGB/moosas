@@ -177,6 +177,13 @@ def _schedulable(value: str, schedules: dict[str, np.ndarray]) -> SchedulableVal
             raise ValueError(f"Unknown schedule {value!r}") from exc
 
 
+def _integer(value: str, field_name: str) -> int:
+    number = float(value)
+    if not number.is_integer():
+        raise ValueError(f"{field_name} must be an integer")
+    return int(number)
+
+
 def parse_spaces(rows: list[str], schedule_path: str | None = None) -> list[Space]:
     schedules = _load_schedules(schedule_path)
     spaces = []
@@ -201,7 +208,8 @@ def parse_spaces(rows: list[str], schedule_path: str | None = None) -> list[Spac
             cooling_setpoint_humidity=_schedulable(fields[14], schedules),
             heating_setpoint_temp=_schedulable(fields[15], schedules),
             cooling_eer=float(fields[16]), heating_eer=float(fields[17]),
-            occupancy_start_hour=int(fields[18]), occupancy_end_hour=int(fields[19]),
+            occupancy_start_hour=_integer(fields[18], "occupancy_start_hour"),
+            occupancy_end_hour=_integer(fields[19], "occupancy_end_hour"),
             occupant_density=_schedulable(fields[20], schedules),
             fresh_air_per_person=_schedulable(fields[21], schedules),
             occupant_heat_gain=_schedulable(fields[22], schedules),

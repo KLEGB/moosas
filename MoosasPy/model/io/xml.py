@@ -287,7 +287,7 @@ def loadXml(filePath, geoPath):
             model.skylightList.append(element)
             print(f'\rLOADING: Faces {i + 1}/{len(root["skylight"])}', end='')
         print()
-    if "shading" in root:
+    if root.get("shading"):
         shading_records = root["shading"] if isinstance(root["shading"], list) else [root["shading"]]
         for element in shading_records:
             face_ids = mixItemListToObject(str(element["faceId"]).split())
