@@ -24,7 +24,6 @@ def classify_model(
     classified_ids = []
     for geometry in model.geometryList:
         if geometry.category == -1:
-            geometry.setCategory()
             if attach_shading:
                 model.shadingList.append(MoosasElement(model, geometry))
             classified_ids.append(geometry.faceId)

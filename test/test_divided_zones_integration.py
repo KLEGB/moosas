@@ -2,13 +2,16 @@ from functools import lru_cache
 from io import StringIO
 import math
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
+import numpy as np
 import pytest
 
 from MoosasPy.simulation.energy.runner import EnergyRunner
 from MoosasPy.simulation.weather import Location
 from MoosasPy.simulation.weather.epw import read_weather_csv
 from MoosasPy.transform import TransformOptions, transform
+from MoosasPy.utils import shapely
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -66,6 +69,42 @@ def test_courtyard_case_generates_two_sided_air_boundaries():
     assert len(model.spaceList) == 53
     assert len(air_walls) == 18
     assert all(len({str(space_id) for space_id in wall.space}) == 2 for wall in air_walls)
+
+
+def test_divided_zones_preserve_explicit_shading_geometry():
+    source = (CASE_DIRECTORY / "test0_6spacesIntersection.geo").read_text(encoding="utf-8")
+    shading = """\
+f,-1,preserved_shading
+fn,0.447,0.000,-0.894
+fv,0.000,-2.000,20.000
+fv,4.000,-2.000,22.000
+fv,4.000,-4.000,22.000
+fv,0.000,-4.000,20.000
+fh,0,1.000,-2.500,20.500
+fh,0,3.000,-2.500,21.500
+fh,0,3.000,-3.500,21.500
+fh,0,1.000,-3.500,20.500
+;
+"""
+    with TemporaryDirectory() as directory:
+        source_path = Path(directory) / "divided-with-shading.geo"
+        source_path.write_text(f"{source.rstrip()}\n{shading}", encoding="utf-8")
+        model = transform(
+            str(source_path),
+            input_type="geo",
+            stdout=StringIO(),
+            options=TransformOptions(divided_zones=True, attach_shading=True),
+        )
+
+    preserved = next(item for item in model.shadingList if item.firstFaceId == "preserved_shading")
+    geometry = preserved.geometry[0]
+    rings = shapely.get_rings(geometry.face)
+    outer = shapely.get_coordinates(rings[0], include_z=True)[:-1]
+    hole = shapely.get_coordinates(rings[1], include_z=True)[:-1]
+
+    assert geometry.category == -1
+    assert np.ptp(outer[:, 2]) == pytest.approx(2.0)
+    assert np.ptp(hole[:, 2]) == pytest.approx(1.0)
 
 
 @pytest.mark.skipif(

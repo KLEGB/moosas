@@ -11,11 +11,12 @@ from ..geometry.geos import Vector
 def convexify_model(model: MoosasModel) -> MoosasModel:
     """Build a convexified geometry-only model from active model elements."""
     geometry_by_id = {geometry.faceId: geometry for geometry in model.geometryList}
+    shading_geometry = [geometry for geometry in model.geometryList if geometry.category == -1]
     source_geometry = []
     for element in model.getAllFaces():
         for face_id in mixItemListToList(element.faceId):
             geometry = geometry_by_id.get(face_id)
-            if geometry is not None and geometry not in source_geometry:
+            if geometry is not None and geometry.category != -1 and geometry not in source_geometry:
                 source_geometry.append(geometry)
 
     categories = [geometry.category for geometry in source_geometry]
@@ -57,7 +58,7 @@ def convexify_model(model: MoosasModel) -> MoosasModel:
             convex_normals,
             convex_faces,
         )
-    ]
+    ] + shading_geometry
     convex_model.geoId = [geometry.faceId for geometry in convex_model.geometryList]
     convex_model.newIndex = model.newIndex
     return convex_model
