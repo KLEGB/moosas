@@ -4,11 +4,13 @@ import json
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from xml.etree import ElementTree
 
 from eppy.modeleditor import IDF
 import pytest
 
 from MoosasPy.model import MoosasModel
+from MoosasPy.model.io.idf.adapter import IDFtoXml, _idf_build_artifacts
 from MoosasPy.model.io.idf.version import configure_idd
 from MoosasPy.model.resources import configure_model_resources, rebuild_schedule_index
 from MoosasPy.transform import transform
@@ -200,6 +202,101 @@ def test_idf_air_boundaries_use_native_simple_mixing(semantic_model: MoosasModel
     assert air_boundary.Simple_Mixing_Schedule_Name == "Always On"
     assert air_surfaces
     assert len(idf.idfobjects["ZONEMIXING"]) == 0
+
+
+def test_idf_export_preserves_shading_geometry(semantic_model: MoosasModel):
+    source_geometry = semantic_model.geometryList[0]
+    shading_geometry = MoosasGeometry(
+        source_geometry.face,
+        "idf-shading-geometry",
+        source_geometry.normal,
+        -1,
+    )
+    shading = MoosasElement(semantic_model, shading_geometry, uid="idf-shading")
+    original_shading = semantic_model.shadingList
+    semantic_model.geometryList.append(shading_geometry)
+    semantic_model.geoId.append(shading_geometry.faceId)
+    semantic_model.shadingList = [shading]
+    try:
+        with TemporaryDirectory() as directory:
+            file_path = Path(directory) / "shading.idf"
+            semantic_model.save(file_path)
+            configure_idd()
+            idf = IDF(str(file_path))
+    finally:
+        semantic_model.shadingList = original_shading
+        semantic_model.geometryList.pop()
+        semantic_model.geoId.pop()
+
+    exported = idf.idfobjects["SHADING:BUILDING:DETAILED"]
+    expected_vertices = [
+        tuple(point)
+        for point in source_geometry.face.exterior.coords[:-1]
+    ]
+    actual_vertices = [
+        (
+            float(exported[0][f"Vertex_{index}_Xcoordinate"]),
+            float(exported[0][f"Vertex_{index}_Ycoordinate"]),
+            float(exported[0][f"Vertex_{index}_Zcoordinate"]),
+        )
+        for index in range(1, int(exported[0].Number_of_Vertices) + 1)
+    ]
+
+    assert [item.Name for item in exported] == ["idf-shading"]
+    assert len(actual_vertices) == len(expected_vertices)
+    for actual, expected in zip(actual_vertices, expected_vertices):
+        assert actual == pytest.approx(expected)
+
+
+def test_idf_import_serializes_detailed_shading_geometry(semantic_model: MoosasModel):
+    base_vertices = (
+        (0.0, 0.0),
+        (2.0, 0.0),
+        (2.0, 2.0),
+        (0.0, 2.0),
+    )
+    expected_vertices = []
+    with TemporaryDirectory() as directory:
+        file_path = Path(directory) / "shading-source.idf"
+        semantic_model.save(file_path)
+        configure_idd()
+        idf = IDF(str(file_path))
+        base_surface_name = idf.idfobjects["BUILDINGSURFACE:DETAILED"][0].Name
+        for object_index, object_type in enumerate((
+            "Shading:Site:Detailed",
+            "Shading:Building:Detailed",
+            "Shading:Zone:Detailed",
+        )):
+            vertices = tuple(
+                (x, y, 5.0 + object_index)
+                for x, y in base_vertices
+            )
+            expected_vertices.append(vertices)
+            fields = {
+                "Name": object_type,
+                "Number_of_Vertices": len(vertices),
+            }
+            if object_type == "Shading:Zone:Detailed":
+                fields["Base_Surface_Name"] = base_surface_name
+            for index, (x, y, z) in enumerate(vertices, start=1):
+                fields[f"Vertex_{index}_Xcoordinate"] = x
+                fields[f"Vertex_{index}_Ycoordinate"] = y
+                fields[f"Vertex_{index}_Zcoordinate"] = z
+            idf.newidfobject(object_type, **fields)
+        idf.save()
+
+        records, faces, _, _ = _idf_build_artifacts(str(file_path))
+        xml_path = Path(directory) / "shading-source.xml"
+        IDFtoXml(str(file_path), str(xml_path))
+        shading_nodes = ElementTree.parse(xml_path).getroot().findall("shading")
+
+    shading_faces = [face for face in faces if face.cat == -1]
+    assert len([record for record in records if record.family == "shading"]) == 3
+    assert len(shading_faces) == 3
+    assert {node.findtext("faceId") for node in shading_nodes} == {
+        face.geo_id for face in shading_faces
+    }
+    assert {tuple(face.vertices) for face in shading_faces} == set(expected_vertices)
 
 
 def test_unconditioned_space_exports_only_zone_and_surfaces(semantic_model: MoosasModel):

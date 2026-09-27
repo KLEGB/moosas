@@ -296,7 +296,8 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
         'ZoneHVAC:IdealLoadsAirSystem',
         'NodeList',
         'Zone', 'WaterUse:Equipment', 'BuildingSurface:Detailed',
-                                       'FenestrationSurface:Detailed', 'Shading:Zone:Detailed', 'InternalMass',
+                           'FenestrationSurface:Detailed', 'Shading:Building:Detailed',
+                           'Shading:Zone:Detailed', 'Shading:Site:Detailed', 'InternalMass',
                                        'SurfaceProperty:ExposedFoundationPerimeter',
                                        'Space', 'SpaceList', 'ZoneMixing', 'Construction:AirBoundary',
                                        'DesignSpecification:OutdoorAir:SpaceList']
@@ -373,6 +374,17 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
         except Exception as e:
             print(f"\n  Warning: Face {fi} encoding failed - {e}")
     print()
+
+    for shading in model.shadingList:
+        geometries = list(shading.geometry)
+        for index, geometry in enumerate(geometries, start=1):
+            name = str(shading.Uid) if len(geometries) == 1 else f'{shading.Uid}-{index}'
+            shading_settings = MoosasSettings({
+                'key': 'Shading:Building:Detailed',
+                'Name': name,
+            })
+            input.encodeFace(shading_settings, geometry.face, geometry.normal)
+            shading_settings.applyToIDF(idf)
 
     # writing zonal settings
     for si, space in enumerate(idfSpaces):
@@ -1109,6 +1121,12 @@ def _idf_write_xml(outputPath: str, faces: list[_IDFUnifiedFace], rec_to_face: d
     for face in faces:
         level = str(_resolve_face_level(face))
         offset = str(face.offset)
+        if face.cat == -1:
+            node = ET.SubElement(root, "shading")
+            ET.SubElement(node, "Uid").text = face.uid
+            ET.SubElement(node, "faceId").text = face.geo_id
+            ET.SubElement(node, "normal").text = " ".join(str(value) for value in face.normal)
+            continue
         if face.cat in {4}:
             node = ET.SubElement(root, "face")
         elif face.cat in {2, 3, 0}:
@@ -1117,8 +1135,6 @@ def _idf_write_xml(outputPath: str, faces: list[_IDFUnifiedFace], rec_to_face: d
             node = ET.SubElement(root, "glazing")
         elif face.cat == 6:
             node = ET.SubElement(root, "skylight")
-        elif face.cat == -1:
-            continue
         else:
             node = ET.SubElement(root, "wall")
 
