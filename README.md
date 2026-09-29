@@ -10,6 +10,7 @@ simulation workflows.
 - Transform GEO, OBJ, and STL geometry into a structured `MoosasModel`.
 - Load and save RDF/Turtle, XML, JSON, and EnergyPlus IDF models.
 - Export graph JSON and gbXML, with dedicated IFC conversion utilities.
+- Export OpenFOAM volume meshes by extruding a MoosasGrid footprint.
 - Prepare weather data and cumulative sky models from user-provided EPW files.
 - Run rapid energy, solar-radiation, sunlight, Radiance daylight, and CONTAM
   airflow analyses.
@@ -80,6 +81,32 @@ weather = load_epw("custom.epw", "analysis-input/weather")
 result = EnergyRunner(model=model, weather=weather).run()
 print(result.data["total"])
 ```
+
+## OpenFOAM Volume Mesh Export
+
+Export a constant-section volume from an existing `MoosasGrid`:
+
+```python
+from MoosasPy.model.io import export_openfoam
+from MoosasPy.transform.geometry.grid import MoosasGrid
+
+# floor_face is one planar MoosasElement/MoosasFace from your model.
+grid = MoosasGrid(floor_face, gird_size=0.5, grid_offset=0.78)
+result = export_openfoam(grid, "cases/room", height=3.0, layers=12)
+print(result.primary_path)  # cases/room/constant/polyMesh
+```
+
+This writes the five OpenFOAM mesh files and a `constant/moosasGrid.json`
+cell-to-grid mapping. The volume covers the complete footprint, including
+clipped perimeter cells and holes; its base is the source face, independent of
+the sampling height. All boundary patches default to walls. Use metres for
+geometry and supply your own field boundary conditions and solver settings.
+
+This exporter supports a single planar footprint extruded along its local Z
+axis, not arbitrary room solids, varying ceiling heights, internal obstacles,
+or automatic window/door patches. Existing meshes are not overwritten.
+See [OpenFOAM export details](doc/openfoam.md) for parameters, mapping semantics,
+and `checkMesh` validation.
 
 ## Model and Simulation Domains
 

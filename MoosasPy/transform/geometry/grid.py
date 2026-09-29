@@ -64,7 +64,10 @@ class MoosasGrid(MoosasElement):
             # Use the dominant polygon to avoid costly unions on fragmented faces.
             face_geometry = max(face_parts, key=shapely.area)
         self.proj = Projection.fromPolygon(face_geometry)
-        self.UVFace = self.proj.toUV(face_geometry)
+        # Project rings separately: the legacy polygon projection can discard
+        # holes, which would fill voids in an exported volume mesh.
+        rings = [self.proj.toUV(ring) for ring in shapely.get_rings(face_geometry)]
+        self.UVFace = shapely.polygons(rings[0], holes=rings[1:] or None)
         bbox = shapely.bounds(self.UVFace)
         if grid_size is None:
             grid_size = max(bbox[2] - bbox[0], bbox[3] - bbox[1]) / 5
