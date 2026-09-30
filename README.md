@@ -111,11 +111,17 @@ entry point with `scenario="indoor"` or `scenario="outdoor"` and explicit
 `conditions`. It writes a complete OpenFOAM Foundation 12 case:
 
 ```python
-import json
-from pathlib import Path
 from MoosasPy.simulation.airflow import OpenFoamRunner
 
-conditions = json.loads(Path("example/openfoam_outdoor.json").read_text())
+conditions = {
+    "viscosity": 1.5e-5,
+    "turbulence_intensity": 0.05,
+    "turbulence_length": 1.0,
+    "iterations": 1000,
+    "velocity": [2.0, 0.0, 0.0],
+    "domain": [[-100.0, 120.0, 0.0], [0.0, 240.0, 45.0]],
+    "inside_point": [-90.0, 130.0, 5.0],
+}
 saved = model.save("cases/wind/case.foam", scenario="outdoor",
                    grid_size=4, conditions=conditions)
 result = OpenFoamRunner(saved.primary_path.parent).run()

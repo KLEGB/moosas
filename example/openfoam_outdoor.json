@@ -1,9 +1,0 @@
-{
-  "viscosity": 0.000015,
-  "turbulence_intensity": 0.05,
-  "turbulence_length": 1.0,
-  "iterations": 1000,
-  "velocity": [2.0, 0.0, 0.0],
-  "domain": [[-100.0, 120.0, 0.0], [0.0, 240.0, 45.0]],
-  "inside_point": [-90.0, 130.0, 5.0]
-}

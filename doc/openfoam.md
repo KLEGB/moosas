@@ -42,23 +42,22 @@ checkMesh -help
 首轮支持一个房间、一个指定入口和一个指定出口，计算等温速度场和压力场。
 GEO 不包含完整运行工况，需要另外提供边界条件。
 
-完整示例使用 `test6_twoVolumes.geo` 的第 37 个空间，入口为
-`gls_g_80`、出口为 `gls_g_79`：
-
-```powershell
-./.venv/Scripts/python.exe example/simulate_openfoam_geo.py --source test/caseFile/test6_twoVolumes.geo --case temp/my-indoor --scenario indoor --space 37 --grid-size 2 --conditions example/openfoam_indoor.json
-```
-
-对应 Python 用法：
+以下代码使用 `test6_twoVolumes.geo` 的第 37 个空间，入口为
+`gls_g_80`、出口为 `gls_g_79`。在仓库根目录运行：
 
 ```python
-import json
-from pathlib import Path
 from MoosasPy.transform import transform
 from MoosasPy.simulation.airflow import OpenFoamRunner
 
 model = transform("test/caseFile/test6_twoVolumes.geo", input_type="geo")
-conditions = json.loads(Path("example/openfoam_indoor.json").read_text())
+conditions = {
+    "viscosity": 1.5e-5,
+    "turbulence_intensity": 0.05,
+    "turbulence_length": 1.0,
+    "iterations": 1000,
+    "inlet": {"opening": "gls_g_80", "velocity": [0.409451, 0.286966, 0.0]},
+    "outlet": {"opening": "gls_g_79", "pressure": 0.0},
+}
 saved = model.save(
     "cases/indoor/case.foam",
     scenario="indoor",
@@ -70,7 +69,7 @@ result = OpenFoamRunner(saved.primary_path.parent).run()
 print(result.successful, result.converged, result.patch_flows)
 ```
 
-工况文件中：
+工况参数中：
 
 - `inlet.opening`：选中房间的窗或天窗 `Uid`。
 - `inlet.velocity`：世界坐标系下的速度向量，单位 m/s，必须指向房间内部。
@@ -92,21 +91,30 @@ for index, space in enumerate(model.spaceList):
 
 ## 3. 室外风环境
 
-示例使用 `test0_6spacesIntersection.geo` 的完整建筑外表面：
-
-```powershell
-./.venv/Scripts/python.exe example/simulate_openfoam_geo.py --source test/caseFile/test0_6spacesIntersection.geo --case temp/my-outdoor --scenario outdoor --grid-size 4 --conditions example/openfoam_outdoor.json
-```
-
-Python 保存调用为：
+以下代码使用 `test0_6spacesIntersection.geo` 的完整建筑外表面：
 
 ```python
-model.save(
+from MoosasPy.transform import transform
+from MoosasPy.simulation.airflow import OpenFoamRunner
+
+model = transform("test/caseFile/test0_6spacesIntersection.geo", input_type="geo")
+conditions = {
+    "viscosity": 1.5e-5,
+    "turbulence_intensity": 0.05,
+    "turbulence_length": 1.0,
+    "iterations": 1000,
+    "velocity": [2.0, 0.0, 0.0],
+    "domain": [[-100.0, 120.0, 0.0], [0.0, 240.0, 45.0]],
+    "inside_point": [-90.0, 130.0, 5.0],
+}
+saved = model.save(
     "cases/outdoor/case.foam",
     scenario="outdoor",
     grid_size=4,
     conditions=conditions,
 )
+result = OpenFoamRunner(saved.primary_path.parent).run()
+print(result.successful, result.converged, result.patch_flows)
 ```
 
 室外不传 `space_index`。额外工况字段：
@@ -167,7 +175,7 @@ CFD 算例要求目标目录为空，避免混入旧结果。
 达到迭代上限时会返回明确的警告；网格或原生命令失败时抛出异常。
 已有非零求解时刻的算例不能直接重跑，请保存到新目录。
 
-示例脚本还写出 `moosasResult.json`；用 ParaView 打开 `case.foam` 查看 U、p。
+可从 `OpenFoamResult` 读取进出口流量和流量不平衡率；用 ParaView 打开 `case.foam` 查看 U、p。
 
 ## 6. 仅导出单房间体网格
 

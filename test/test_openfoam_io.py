@@ -316,10 +316,8 @@ def test_stale_mesh_sidecars_are_not_mixed_with_new_mesh(tmp_path):
 
 @pytest.mark.skipif(shutil.which("checkMesh") is None, reason="OpenFOAM checkMesh is not installed")
 def test_openfoam_checkmesh_accepts_real_geo(geo_model, tmp_path):
-    from example.export_openfoam_room import write_case_dictionaries
-
     geo_model.save(tmp_path / "room.foam", space_index=0, grid_size=1.0, layers=8)
-    write_case_dictionaries(tmp_path)
+    write_checkmesh_dictionaries(tmp_path)
     result = subprocess.run(
         [shutil.which("checkMesh"), "-case", str(tmp_path), "-allTopology", "-allGeometry"],
         capture_output=True, text=True, timeout=60,
@@ -335,7 +333,18 @@ def test_openfoam_checkmesh_accepts_export(tmp_path, with_hole):
     hole = shapely.Polygon([(0.8, 0.8, 0), (1.2, 0.8, 0), (1.2, 1.2, 0), (0.8, 1.2, 0)])
     grid = make_grid(holes=[hole] if with_hole else None)
     openfoam._write_grid_mesh(grid, tmp_path, height=2, layers=2)
-    system = tmp_path / "system"
+    write_checkmesh_dictionaries(tmp_path)
+    result = subprocess.run(
+        [shutil.which("checkMesh"), "-case", str(tmp_path), "-allTopology", "-allGeometry"],
+        capture_output=True, text=True, timeout=60,
+    )
+    output = result.stdout + result.stderr
+    assert result.returncode == 0, output
+    assert "Mesh OK" in output, output
+
+
+def write_checkmesh_dictionaries(case_dir):
+    system = case_dir / "system"
     system.mkdir()
     header = 'FoamFile { version 2.0; format ascii; class dictionary; object %s; }\n'
     (system / "controlDict").write_text(
@@ -349,10 +358,3 @@ def test_openfoam_checkmesh_accepts_export(tmp_path, with_hole):
         "interpolationSchemes { default linear; } snGradSchemes { default corrected; }\n"
     )
     (system / "fvSolution").write_text(header % "fvSolution" + "solvers {}\n")
-    result = subprocess.run(
-        [shutil.which("checkMesh"), "-case", str(tmp_path), "-allTopology", "-allGeometry"],
-        capture_output=True, text=True, timeout=60,
-    )
-    output = result.stdout + result.stderr
-    assert result.returncode == 0, output
-    assert "Mesh OK" in output, output
