@@ -61,7 +61,8 @@ class SimulationContractTests(unittest.TestCase):
 
         self.assertEqual(
             set(airflow.__all__),
-            {"AirflowResult", "AirflowRunner", "AirflowZoneResult", "create_openfoam_workspace"},
+            {"AirflowResult", "AirflowRunner", "AirflowZoneResult", "create_openfoam_workspace",
+             "OpenFoamResult", "OpenFoamRunner"},
         )
         for legacy_name in ("iterateFile", "iterateProjects", "contam_iteration", "runFile"):
             self.assertFalse(hasattr(airflow, legacy_name))

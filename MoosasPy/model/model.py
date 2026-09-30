@@ -57,11 +57,11 @@ class MoosasModel(MoosasContainer):
 
         return load_model(file_path)
 
-    def save(self, file_path: str | Path) -> SaveResult:
-        """Save this model to a supported semantic model format."""
+    def save(self, file_path: str | Path, **format_options) -> SaveResult:
+        """Save by target suffix, with options specific to that format."""
         from .io import save_model
 
-        return save_model(self, file_path)
+        return save_model(self, file_path, **format_options)
 
     def autoDescribe(self):
         """automatically generate description for each space and element in the model, based on their geometry and settings.

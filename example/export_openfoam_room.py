@@ -16,9 +16,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from MoosasPy.model.io import export_openfoam  # noqa: E402
 from MoosasPy.transform import transform  # noqa: E402
-from MoosasPy.transform.geometry.grid import MoosasGrid  # noqa: E402
 
 
 DEFAULT_SOURCE = PROJECT_ROOT / "test" / "caseFile" / "test0_6spacesIntersection.geo"
@@ -62,28 +60,15 @@ def export_room(
 ):
     """Transform a GEO model and export one room's floor as a volume mesh."""
     model = transform(str(source), input_type="geo", stdout=StringIO())
-    if not 0 <= space_index < len(model.spaceList):
-        raise IndexError(
-            f"space_index {space_index} is outside 0..{len(model.spaceList) - 1}"
-        )
-
-    space = model.spaceList[space_index]
-    if space.floor is None or len(space.floor.face) != 1:
-        raise ValueError("The selected room must have exactly one floor face")
-
-    grid = MoosasGrid(space.floor.face[0], gird_size=grid_size, grid_offset=0.78)
-    result = export_openfoam(
-        grid,
-        case_dir,
-        height=space.height,
+    marker = case_dir / f"{case_dir.name}.foam"
+    result = model.save(
+        marker,
+        space_index=space_index,
+        grid_size=grid_size,
         layers=layers,
     )
     write_case_dictionaries(case_dir)
-
-    # ParaView recognizes an empty .foam marker and reads constant/polyMesh.
-    marker = case_dir / f"{case_dir.name}.foam"
-    marker.touch(exist_ok=False)
-    return model, space, grid, result, marker
+    return model, model.spaceList[space_index], result
 
 
 def main() -> None:
@@ -95,7 +80,7 @@ def main() -> None:
     parser.add_argument("--layers", type=int, default=8)
     args = parser.parse_args()
 
-    model, space, grid, result, marker = export_room(
+    model, space, result = export_room(
         args.source.resolve(),
         args.case.resolve(),
         space_index=args.space_index,
@@ -106,9 +91,8 @@ def main() -> None:
     print(f"Exported space: {args.space_index} ({space.id})")
     print(f"Floor area: {space.area:.3f} m2")
     print(f"Height: {space.height:.3f} m")
-    print(f"Valid MoosasGrid samples: {len(grid.gridPoints)}")
-    print(f"OpenFOAM mesh: {result.primary_path}")
-    print(f"ParaView marker: {marker}")
+    print(f"OpenFOAM mesh: {result.primary_path.parent / 'constant' / 'polyMesh'}")
+    print(f"ParaView marker: {result.primary_path}")
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ simulation workflows.
 - Transform GEO, OBJ, and STL geometry into a structured `MoosasModel`.
 - Load and save RDF/Turtle, XML, JSON, and EnergyPlus IDF models.
 - Export graph JSON and gbXML, with dedicated IFC conversion utilities.
-- Export OpenFOAM volume meshes by extruding a MoosasGrid footprint.
+- Save a selected room as an OpenFOAM volume mesh through model.save.
 - Prepare weather data and cumulative sky models from user-provided EPW files.
 - Run rapid energy, solar-radiation, sunlight, Radiance daylight, and CONTAM
   airflow analyses.
@@ -84,29 +84,47 @@ print(result.data["total"])
 
 ## OpenFOAM Volume Mesh Export
 
-Export a constant-section volume from an existing `MoosasGrid`:
+Save a selected constant-section room using the same entry point as IDF:
 
 ```python
-from MoosasPy.model.io import export_openfoam
-from MoosasPy.transform.geometry.grid import MoosasGrid
+from MoosasPy.transform import transform
 
-# floor_face is one planar MoosasElement/MoosasFace from your model.
-grid = MoosasGrid(floor_face, gird_size=0.5, grid_offset=0.78)
-result = export_openfoam(grid, "cases/room", height=3.0, layers=12)
-print(result.primary_path)  # cases/room/constant/polyMesh
+model = transform("test/caseFile/test0_6spacesIntersection.geo", input_type="geo")
+result = model.save("cases/room/room.foam", space_index=0, grid_size=0.5, layers=12)
+print(result.primary_path)  # cases/room/room.foam
 ```
 
-This writes the five OpenFOAM mesh files and a `constant/moosasGrid.json`
+This writes a ParaView marker, five mesh files and a `constant/moosasGrid.json`
 cell-to-grid mapping. The volume covers the complete footprint, including
 clipped perimeter cells and holes; its base is the source face, independent of
 the sampling height. All boundary patches default to walls. Use metres for
 geometry and supply your own field boundary conditions and solver settings.
 
-This exporter supports a single planar footprint extruded along its local Z
-axis, not arbitrary room solids, varying ceiling heights, internal obstacles,
+This exporter supports a single horizontal floor and constant room height.
+It does not support arbitrary room solids, varying ceiling heights, internal obstacles,
 or automatic window/door patches. Existing meshes are not overwritten.
 See [OpenFOAM export details](doc/openfoam.md) for parameters, mapping semantics,
 and `checkMesh` validation.
+
+For an isothermal indoor or outdoor CFD simulation, use the same `model.save`
+entry point with `scenario="indoor"` or `scenario="outdoor"` and explicit
+`conditions`. It writes a complete OpenFOAM Foundation 12 case:
+
+```python
+import json
+from pathlib import Path
+from MoosasPy.simulation.airflow import OpenFoamRunner
+
+conditions = json.loads(Path("example/openfoam_outdoor.json").read_text())
+saved = model.save("cases/wind/case.foam", scenario="outdoor",
+                   grid_size=4, conditions=conditions)
+result = OpenFoamRunner(saved.primary_path.parent).run()
+print(result.successful, result.converged, result.relative_flow_imbalance)
+```
+
+See the [GEO-to-CFD guide](doc/openfoam.md) for runnable indoor/outdoor examples,
+environment setup, opening IDs, physical assumptions, and real-GEO verification.
+The runner preserves mesh/solver logs and reports nonconvergence explicitly.
 
 ## Model and Simulation Domains
 

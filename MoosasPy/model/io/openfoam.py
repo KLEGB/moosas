@@ -27,7 +27,58 @@ _PATCH_NAMES = ("bottom", "top", "walls")
 _PATCH_TYPES = {"wall", "patch", "symmetry", "symmetryPlane"}
 
 
-def export_openfoam(
+def write_openfoam(
+    model,
+    target: Path,
+    *,
+    space_index: int | None = None,
+    grid_size: float = 1.0,
+    layers: int = 1,
+    scenario: str = "mesh",
+    conditions: dict | None = None,
+) -> SaveResult:
+    """Save a room mesh or a complete indoor/outdoor OpenFOAM 12 case.
+
+    The target is a ParaView .foam marker; its parent is the case directory.
+    The default mesh scenario extrudes a horizontal, constant-section room.
+    CFD scenarios require explicit physical conditions and defer volume meshing
+    to OpenFOAM's snappyHexMesh via the simulation runner.
+    """
+    from ...transform.geometry.grid import MoosasGrid
+
+    if scenario in {"indoor", "outdoor"}:
+        from ._foam_case import write_case
+
+        if layers != 1:
+            raise ValueError("layers applies only to scenario='mesh'")
+        return write_case(model, target, scenario, space_index, grid_size, conditions)
+    if scenario != "mesh" or conditions is not None:
+        raise ValueError("Use scenario mesh, indoor, or outdoor; conditions require a CFD scenario")
+    if space_index is None:
+        raise TypeError("space_index is required for a room mesh")
+    if (isinstance(space_index, (bool, np.bool_))
+            or not isinstance(space_index, Integral)
+            or not 0 <= space_index < len(model.spaceList)):
+        raise ValueError("space_index must identify an existing model space")
+    grid_size = _finite_number(grid_size, "grid_size")
+    if grid_size <= 0:
+        raise ValueError("grid_size must be positive")
+    space = model.spaceList[space_index]
+    if space.floor is None or len(space.floor.face) != 1:
+        raise ValueError("The selected room must have exactly one floor face")
+    floor = space.floor.face[0]
+    coordinates = shapely.get_coordinates(floor.face, include_z=True)
+    if not len(coordinates) or np.ptp(coordinates[:, 2]) > 1e-8:
+        raise ValueError("The selected room must have a horizontal floor")
+    if target.exists():
+        raise FileExistsError(f"Export file already exists: {target}")
+    grid = MoosasGrid(floor, gird_size=grid_size, grid_offset=0.78)
+    result = _write_grid_mesh(grid, target.parent, height=space.height, layers=layers)
+    target.touch(exist_ok=False)
+    return SaveResult(primary_path=target, generated_paths=(*result.generated_paths, target))
+
+
+def _write_grid_mesh(
     grid: MoosasGrid,
     case_dir: str | Path,
     *,
