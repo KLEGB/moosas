@@ -12,15 +12,16 @@ from ....utils import path
 
 
 class ZoneTemplate():
-    __slots__ = ("idf", "zoneObject", "objectList", "constructionList", "scheduleList")
+    __slots__ = ("idf", "zoneObject", "objectList", "constructionList", "scheduleList", "hvac_mode")
     FALLBACK_ZONE_HEIGHT = 3.5
 
-    def __init__(self, idf, zoneObject, objectList, constructionList, scheduleList):
+    def __init__(self, idf, zoneObject, objectList, constructionList, scheduleList, hvac_mode="ideal_loads"):
         self.idf = idf
         self.zoneObject = copy.deepcopy(zoneObject)
         self.objectList = copy.deepcopy(objectList)
         self.constructionList = copy.deepcopy(constructionList)
         self.scheduleList = copy.deepcopy(scheduleList)
+        self.hvac_mode = hvac_mode
 
     @staticmethod
     def _match_zone_related_object(idfObject, zoneName: str):
@@ -121,7 +122,7 @@ class ZoneTemplate():
         return area, volume, height
 
     @classmethod
-    def fromIDF(cls, idf: IDF, zoneName: str = ""):
+    def fromIDF(cls, idf: IDF, zoneName: str = "", hvac_mode: str = "ideal_loads"):
         """
         Initialize the object by extracting and processing construction and zone-related data from an IDF file.
         
@@ -149,7 +150,7 @@ class ZoneTemplate():
 
         if templateZone is None:
             print(f"******Warning: no Zone found with Name='{zoneName}' in template IDF")
-            return cls(idf, MoosasSettings({}), {}, constructionList, {})
+            return cls(idf, MoosasSettings({}), {}, constructionList, {}, hvac_mode)
 
         zoneObject = MoosasSettings.fromIdfObject(templateZone)
 
@@ -165,11 +166,7 @@ class ZoneTemplate():
                       'DesignSpecification:OutdoorAir',
                       'DesignSpecification:ZoneAirDistribution',
                       'ZoneControl:Thermostat',
-                      'ThermostatSetpoint:DualSetpoint',
-                      'ZoneHVAC:EquipmentConnections',
-                      'ZoneHVAC:EquipmentList',
-                      'ZoneHVAC:IdealLoadsAirSystem',
-                      'NodeList']
+                      'ThermostatSetpoint:DualSetpoint']
         objectList = {}
         sourceObjectList = {}
         found, unfound = [], []
@@ -191,6 +188,84 @@ class ZoneTemplate():
             objectList[objHint] = template
             sourceObjectList[objHint] = selectedObj
             found.append(objHint)
+
+        equipment_connections = next((
+            obj for obj in idf.idfobjects['ZoneHVAC:EquipmentConnections']
+            if str(obj['Zone_Name']).strip() == zoneName
+        ), None) if hvac_mode == "simple" else None
+        if equipment_connections is not None:
+            equipment_list_name = str(
+                equipment_connections['Zone_Conditioning_Equipment_List_Name']
+            ).strip()
+            equipment_list = next((
+                obj for obj in idf.idfobjects['ZoneHVAC:EquipmentList']
+                if str(obj['Name']).strip() == equipment_list_name
+            ), None)
+            if equipment_list is None:
+                raise ValueError(
+                    f"Zone '{zoneName}' references missing ZoneHVAC:EquipmentList "
+                    f"'{equipment_list_name}'"
+                )
+
+            equipment_refs = []
+            equipment_index = 1
+            while f'Zone_Equipment_{equipment_index}_Object_Type' in equipment_list.objls:
+                equipment_type = str(
+                    equipment_list[f'Zone_Equipment_{equipment_index}_Object_Type']
+                ).strip()
+                equipment_name = str(
+                    equipment_list[f'Zone_Equipment_{equipment_index}_Name']
+                ).strip()
+                if equipment_type or equipment_name:
+                    equipment_refs.append((equipment_type, equipment_name))
+                equipment_index += 1
+
+            if len(equipment_refs) != 1:
+                raise ValueError(
+                    f"Simple HVAC migration requires exactly one zone equipment object for "
+                    f"Zone '{zoneName}'; found {len(equipment_refs)}"
+                )
+
+            supported_equipment = {
+                'ZONEHVAC:BASEBOARD:CONVECTIVE:ELECTRIC': 'ZoneHVAC:Baseboard:Convective:Electric',
+                'ZONEHVAC:IDEALLOADSAIRSYSTEM': 'ZoneHVAC:IdealLoadsAirSystem',
+            }
+            source_type, source_name = equipment_refs[0]
+            equipment_type = supported_equipment.get(source_type.upper())
+            if equipment_type is None:
+                raise ValueError(
+                    f"Simple HVAC migration does not support '{source_type}' in Zone '{zoneName}'"
+                )
+            equipment = next((
+                obj for obj in idf.idfobjects[equipment_type]
+                if str(obj['Name']).strip() == source_name
+            ), None)
+            if equipment is None:
+                raise ValueError(
+                    f"Zone '{zoneName}' references missing {equipment_type} '{source_name}'"
+                )
+
+            for object_type, source_object in (
+                ('ZoneHVAC:EquipmentConnections', equipment_connections),
+                ('ZoneHVAC:EquipmentList', equipment_list),
+                (equipment_type, equipment),
+            ):
+                objectList[object_type] = MoosasSettings.fromIdfObject(source_object)
+                sourceObjectList[object_type] = source_object
+                found.append(object_type)
+
+            if equipment_type == 'ZoneHVAC:IdealLoadsAirSystem':
+                node_list_name = str(
+                    equipment_connections['Zone_Air_Inlet_Node_or_NodeList_Name']
+                ).strip()
+                node_list = next((
+                    obj for obj in idf.idfobjects['NodeList']
+                    if str(obj['Name']).strip() == node_list_name
+                ), None)
+                if node_list is not None:
+                    objectList['NodeList'] = MoosasSettings.fromIdfObject(node_list)
+                    sourceObjectList['NodeList'] = node_list
+                    found.append('NodeList')
         print('foundObj:', found)
         print('unfoundObj:', unfound)
 
@@ -210,7 +285,7 @@ class ZoneTemplate():
                     scheduleList[objHint][field] = MoosasSettings.fromIdfObject(ref_obj)
                     scheduleList[objHint][field].updateParams(**{"Name": ""})
 
-        return cls(idf, zoneObject, objectList, constructionList, scheduleList)
+        return cls(idf, zoneObject, objectList, constructionList, scheduleList, hvac_mode)
 
     @classmethod
     def createFromZone(cls, zone: MoosasSpace, idfTemplatePath=None, baseTemplate=None, zoneName: str = ""):
@@ -227,7 +302,8 @@ class ZoneTemplate():
                        baseTemplate.zoneObject,
                        baseTemplate.objectList,
                        baseTemplate.constructionList,
-                       baseTemplate.scheduleList)
+                       baseTemplate.scheduleList,
+                       baseTemplate.hvac_mode)
 
         if template.isEmpty():
             return template
@@ -439,7 +515,7 @@ class ZoneTemplate():
             self.zoneObject.updateParams(
                 **{'Name': zone.id, 'Floor_Area': zone.area, 'Volume': zone.area * zone.height}
             )
-            return ZoneTemplate(self.idf, self.zoneObject, {}, self.constructionList, {})
+            return ZoneTemplate(self.idf, self.zoneObject, {}, self.constructionList, {}, self.hvac_mode)
 
         # rename and update Schedule
         for objHint in self.scheduleList:
@@ -580,6 +656,20 @@ class ZoneTemplate():
                 zone.settings['zone_pfav'] = ach * zoneTemplateVolume * 3600  # m3/h-pp
         zone.settings['zone_pfav'] = float(zone.settings['zone_pfav'])
 
+        if self.hvac_mode == "ideal_loads":
+            self.objectList.update({
+                'ZoneHVAC:EquipmentConnections': MoosasSettings({'key': 'ZoneHVAC:EquipmentConnections'}),
+                'ZoneHVAC:EquipmentList': MoosasSettings({
+                    'key': 'ZoneHVAC:EquipmentList',
+                    'Zone_Equipment_1_Object_Type': 'ZoneHVAC:IdealLoadsAirSystem',
+                    'Zone_Equipment_1_Name': '',
+                    'Zone_Equipment_1_Cooling_Sequence': 1,
+                    'Zone_Equipment_1_Heating_or_NoLoad_Sequence': 1,
+                }),
+                'ZoneHVAC:IdealLoadsAirSystem': MoosasSettings({'key': 'ZoneHVAC:IdealLoadsAirSystem'}),
+                'NodeList': MoosasSettings({'key': 'NodeList'}),
+            })
+
         params = {
             'ZoneInfiltration:DesignFlowRate':
                 {'Name': zone.id + '_Infiltration', 'Zone_or_ZoneList_Name': zone.id,
@@ -637,30 +727,38 @@ class ZoneTemplate():
             'ZoneHVAC:EquipmentConnections':
                 {'Zone_Name': zone.id,
                  'Zone_Conditioning_Equipment_List_Name': zone.id + '_EquipmentList',
-                 'Zone_Air_Inlet_Node_or_NodeList_Name': zone.id + ' Inlets',
                  'Zone_Air_Node_Name': 'Node ' + zone.id + ' Zone',
-                 'Zone_Return_Air_Node_or_NodeList_Name': 'Node ' + zone.id + ' Out',
-                 'Zone_Air_Exhaust_Node_or_NodeList_Name': ''
                  },
             'ZoneHVAC:EquipmentList':
-                {'Name': zone.id + '_EquipmentList',
-                 'Zone_Equipment_1_Name': zone.id + '_Ideal Loads Air'
-                 },
-            'ZoneHVAC:IdealLoadsAirSystem':
-                {'Name': zone.id + '_Ideal Loads Air',
-                 'Zone_Supply_Air_Node_Name': 'Node ' + zone.id + ' In',
-                 'Zone_Exhaust_Air_Node_Name': '',
-                 "Design_Specification_Outdoor_Air_Object_Name":
-                 zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
-                 },
+                {'Name': zone.id + '_EquipmentList'},
             'NodeList':
                 {'Name': zone.id + " Inlets",
                  'Node_1_Name': "Node " + zone.id + " In"
                  }
         }
 
+        equipment_list = self.objectList.get('ZoneHVAC:EquipmentList')
+        if equipment_list is not None:
+            equipment_type = equipment_list.params['Zone_Equipment_1_Object_Type']
+            source_name = equipment_list.params['Zone_Equipment_1_Name']
+            equipment_name = f'{zone.id}_{source_name}'
+            params['ZoneHVAC:EquipmentList']['Zone_Equipment_1_Name'] = equipment_name
+            params[equipment_type] = {'Name': equipment_name}
+            if equipment_type == 'ZoneHVAC:IdealLoadsAirSystem':
+                params['ZoneHVAC:EquipmentConnections'].update({
+                    'Zone_Air_Inlet_Node_or_NodeList_Name': zone.id + ' Inlets',
+                    'Zone_Return_Air_Node_or_NodeList_Name': 'Node ' + zone.id + ' Out',
+                    'Zone_Air_Exhaust_Node_or_NodeList_Name': '',
+                })
+                params[equipment_type].update({
+                    'Zone_Supply_Air_Node_Name': 'Node ' + zone.id + ' In',
+                    'Zone_Exhaust_Air_Node_Name': '',
+                    'Design_Specification_Outdoor_Air_Object_Name':
+                        zone.id if 'DesignSpecification:OutdoorAir' in self.objectList else '',
+                })
+
         for key in self.objectList:
-            self.objectList[key].updateParams(**params[key])
+            self.objectList[key].updateParams(**params.get(key, {}))
 
         # block items:
         # blockObjects = ['DesignSpecification:OutdoorAir', 'DesignSpecification:ZoneAirDistribution']
@@ -673,7 +771,7 @@ class ZoneTemplate():
         self.zoneObject.updateParams(
             **{'Name': zone.id, 'Floor_Area': zone.area, 'Volume': zone.area * zone.height})
 
-        return ZoneTemplate(self.idf, self.zoneObject, self.objectList, self.constructionList, self.scheduleList)
+        return ZoneTemplate(self.idf, self.zoneObject, self.objectList, self.constructionList, self.scheduleList, self.hvac_mode)
 
     def applyToIDF(self, idf=None):
         if idf == None:

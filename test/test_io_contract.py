@@ -10,10 +10,11 @@ from eppy.modeleditor import IDF
 import pytest
 
 from MoosasPy.model import MoosasModel
+from MoosasPy.model.io.idf import exportIDF
 from MoosasPy.model.io.idf.adapter import IDFtoXml, _idf_build_artifacts
 from MoosasPy.model.io.idf.input import encodeFace
 from MoosasPy.model.io.idf.model import FaceDefault, MoosasSettings
-from MoosasPy.model.io.idf.version import configure_idd
+from MoosasPy.model.io.idf.version import bundled_template_idf_path, configure_idd
 from MoosasPy.model.resources import configure_model_resources, rebuild_schedule_index
 from MoosasPy.transform import transform
 from MoosasPy.transform.geometry.element import MoosasElement, MoosasGeometry
@@ -218,6 +219,85 @@ def test_idf_face_encoding_removes_unused_vertex_fields():
     assert "Vertex_4_Xcoordinate" not in settings.params
     assert "Vertex_4_Ycoordinate" not in settings.params
     assert "Vertex_4_Zcoordinate" not in settings.params
+
+
+def test_idf_export_clones_simple_baseboard_hvac_per_zone(semantic_model: MoosasModel):
+    configure_idd()
+    with TemporaryDirectory() as directory:
+        directory = Path(directory)
+        template_path = directory / "baseboard-template.idf"
+        output_path = directory / "baseboard-export.idf"
+        template = IDF(str(bundled_template_idf_path()))
+        connection = template.idfobjects["ZONEHVAC:EQUIPMENTCONNECTIONS"][0]
+        zone_name = str(connection.Zone_Name)
+        equipment_list = next(
+            item for item in template.idfobjects["ZONEHVAC:EQUIPMENTLIST"]
+            if str(item.Name) == str(connection.Zone_Conditioning_Equipment_List_Name)
+        )
+        equipment_list.Zone_Equipment_1_Object_Type = "ZoneHVAC:Baseboard:Convective:Electric"
+        equipment_list.Zone_Equipment_1_Name = "template electric baseboard"
+        template.newidfobject(
+            "ZONEHVAC:BASEBOARD:CONVECTIVE:ELECTRIC",
+            Name="template electric baseboard",
+            Availability_Schedule_Name="Always On",
+            Heating_Design_Capacity_Method="HeatingDesignCapacity",
+            Heating_Design_Capacity=1000.0,
+            Efficiency=1.0,
+        )
+        template.saveas(str(template_path))
+
+        exportIDF(
+            semantic_model,
+            str(output_path),
+            idfTemplatePath=str(template_path),
+            zoneNameToSpaceDict={zone_name: [str(space.id) for space in semantic_model.spaceList]},
+            hvac_mode="simple",
+        )
+        exported = IDF(str(output_path))
+
+    equipment_lists = exported.idfobjects["ZONEHVAC:EQUIPMENTLIST"]
+    baseboards = exported.idfobjects["ZONEHVAC:BASEBOARD:CONVECTIVE:ELECTRIC"]
+    baseboards_by_name = {str(baseboard.Name): baseboard for baseboard in baseboards}
+
+    assert len(equipment_lists) == len(semantic_model.spaceList)
+    assert len(baseboards_by_name) == len(semantic_model.spaceList)
+    assert not exported.idfobjects["SURFACEPROPERTY:INCIDENTSOLARMULTIPLIER"]
+    assert all(
+        equipment_list.Zone_Equipment_1_Object_Type == "ZoneHVAC:Baseboard:Convective:Electric"
+        and str(equipment_list.Zone_Equipment_1_Name) in baseboards_by_name
+        for equipment_list in equipment_lists
+    )
+
+
+def test_idf_export_uses_ideal_loads_for_complex_office_template(semantic_model: MoosasModel):
+    template_path = PROJECT_ROOT / "temp" / "90032007981091.idf"
+    if not template_path.is_file():
+        pytest.skip("office template attachment is not present")
+
+    with TemporaryDirectory() as directory:
+        output_path = Path(directory) / "office-ideal-loads.idf"
+        exportIDF(
+            semantic_model,
+            str(output_path),
+            idfTemplatePath=str(template_path),
+            zoneNameToSpaceDict={"Space 0 ZN": [str(space.id) for space in semantic_model.spaceList]},
+        )
+        configure_idd()
+        exported = IDF(str(output_path))
+
+    assert not exported.idfobjects["AIRLOOPHVAC"]
+    assert not exported.idfobjects["PLANTLOOP"]
+    assert not exported.idfobjects["ZONEHVAC:AIRDISTRIBUTIONUNIT"]
+    ideal_loads = {
+        str(equipment.Name): equipment
+        for equipment in exported.idfobjects["ZONEHVAC:IDEALLOADSAIRSYSTEM"]
+    }
+    assert len(ideal_loads) == len(semantic_model.spaceList)
+    assert all(
+        equipment_list.Zone_Equipment_1_Object_Type == "ZoneHVAC:IdealLoadsAirSystem"
+        and str(equipment_list.Zone_Equipment_1_Name) in ideal_loads
+        for equipment_list in exported.idfobjects["ZONEHVAC:EQUIPMENTLIST"]
+    )
 
 
 def test_idf_export_preserves_shading_geometry(semantic_model: MoosasModel):

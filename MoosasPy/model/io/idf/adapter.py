@@ -85,7 +85,7 @@ def _normalize_zone_name_to_space_dict(zoneNameToSpaceDict):
     return normalized
 
 
-def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zoneName: str = "") -> dict[str, parser.ZoneTemplate]:
+def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zoneName: str = "", hvac_mode: str = "ideal_loads") -> dict[str, parser.ZoneTemplate]:
     """
     Load one zone template and return independent templates keyed by space id.
 
@@ -110,7 +110,13 @@ def loadIDFTemplate(model: MoosasModel, idfTemplatePath=None, spaceIds=None, zon
     idfTemplatePath = require_idf_version(idfTemplatePath or bundled_template_idf_path())
 
     idf = IDF(idfTemplatePath)
-    zTemplate: parser.ZoneTemplate = parser.ZoneTemplate.fromIDF(idf, zoneName=zoneName)
+    if hvac_mode not in {"simple", "ideal_loads"}:
+        raise ValueError("hvac_mode must be 'simple' or 'ideal_loads'")
+    zTemplate: parser.ZoneTemplate = parser.ZoneTemplate.fromIDF(
+        idf,
+        zoneName=zoneName,
+        hvac_mode=hvac_mode,
+    )
     if zTemplate.isEmpty():
         print(f"\n******Warning: no valid zone template was found for Name='{zoneName}'")
         return {}
@@ -199,7 +205,26 @@ def _copy_idf_schedule_files(template_path, output_path):
         if source.is_file():
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
-def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None):
+
+
+def _idf_hvac_object_types(idf):
+    """Return template object classes that belong to an explicit HVAC graph."""
+    prefixes = (
+        'AIRFLOWNETWORK', 'AIRLOOPHVAC', 'AIRTERMINAL', 'AVAILABILITYMANAGER',
+        'BOILER', 'BRANCH', 'CHILLER', 'COIL', 'CONNECTOR', 'CONTROLLER',
+        'COOLINGTOWER', 'DUCT:', 'EVAPORATIVECOOLER', 'FAN', 'HEATEXCHANGER',
+        'HVACTEMPLATE', 'MIXER', 'NODELIST', 'OUTDOORAIR:', 'PLANTLOOP',
+        'PLANTEQUIPMENT', 'PUMP', 'SETPOINTMANAGER', 'SPLITTER', 'THERMOSTAT',
+        'ZONEHVAC', 'SPACEHVAC',
+    )
+    return [
+        object_type
+        for object_type in idf.idfobjects
+        if object_type.upper().startswith(prefixes)
+    ]
+
+
+def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None, hvac_mode: str = "ideal_loads"):
     """
     Write an EnergyPlus Input Data File (IDF) based on a MoosasModel.
 
@@ -257,6 +282,7 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
             idfTemplatePath=idfTemplatePath,
             spaceIds=mappedSpaceIds,
             zoneName=zoneName,
+            hvac_mode=hvac_mode,
         )
         if not thisTemplates:
             print(f"\n******Warning: skip empty template for zone '{zoneName}'")
@@ -299,9 +325,12 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
                            'FenestrationSurface:Detailed', 'Shading:Building:Detailed',
                            'Shading:Zone:Detailed', 'Shading:Site:Detailed', 'InternalMass',
                                        'SurfaceProperty:ExposedFoundationPerimeter',
+                                       'SurfaceProperty:IncidentSolarMultiplier',
                                        'Space', 'SpaceList', 'ZoneMixing', 'Construction:AirBoundary',
                                        'DesignSpecification:OutdoorAir:SpaceList']
     idf = zTemplate.idf
+    if hvac_mode == "ideal_loads":
+        removeHint.extend(_idf_hvac_object_types(idf))
     for h in removeHint:
         idf.idfobjects[h] = []
         print(f"\rIDF: cleaning existing objects: {h}", end='')
@@ -400,8 +429,13 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     return zoneMap, templatesBySpaceId
 
 
-def exportIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None):
-    """Write an IDF file without constructing the optional IDF RDF alignment graph."""
+def exportIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None, hvac_mode: str = "ideal_loads"):
+    """Write an IDF file without constructing the optional IDF RDF alignment graph.
+
+    ``hvac_mode='ideal_loads'`` removes the template HVAC graph and creates
+    one Ideal Loads system per conditioned target zone. ``hvac_mode='simple'``
+    preserves the currently supported single Zone HVAC equipment migration.
+    """
     from ....transform.alignment import default_template_idf_path
 
     resolved_template = default_template_idf_path(idfTemplatePath)
@@ -410,11 +444,17 @@ def exportIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNam
         outputPath,
         idfTemplatePath=resolved_template,
         zoneNameToSpaceDict=zoneNameToSpaceDict,
+        hvac_mode=hvac_mode,
     )
 
 
-def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None) -> IDFConversionResult:
-    """Write IDF and return its IDF-specific conversion state."""
+def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneNameToSpaceDict=None, hvac_mode: str = "ideal_loads") -> IDFConversionResult:
+    """Write IDF and return its IDF-specific conversion state.
+
+    The default ``ideal_loads`` mode is intended for heterogeneous templates;
+    use ``simple`` only when the template's Zone HVAC equipment is supported
+    by the explicit simple migration path.
+    """
     from ....transform.alignment import IDFtoOWL, default_template_idf_path, link_idf_graph_to_moosas
 
     resolved_template = default_template_idf_path(idfTemplatePath)
@@ -423,6 +463,7 @@ def writeIDF(model: MoosasModel, outputPath: str, idfTemplatePath=None, zoneName
         outputPath,
         idfTemplatePath=resolved_template,
         zoneNameToSpaceDict=zoneNameToSpaceDict,
+        hvac_mode=hvac_mode,
     )
     generated_graph = IDFtoOWL(outputPath)
     linked_graph, uri_map = link_idf_graph_to_moosas(generated_graph, model)
