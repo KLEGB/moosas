@@ -18,7 +18,7 @@ class buildingType:
 class geom:
     LEVEL_MIN_AREA = 5.0  # minimum total floor area
     CURTAIN_MIN_OFFSET = 0.1  # Identify thresholds for curtain walls, which can speed up curtain wall identification
-    HORIZONTAL_ANGLE_THRESHOLD = 30
+    HORIZONTAL_ANGLE_THRESHOLD = 45
     HORIZONTAL_ANGLE_THRESHOLD = np.cos(HORIZONTAL_ANGLE_THRESHOLD / 180 * np.pi)  # Because the point multiplication of
     # the normal vector is used to determine whether it is a horizontal plane or not, it is necessary to take sin
     PATH_MAX_DEPTH = 50  # Deep search stack is deep, too deep will affect the speed, too shallow is easy to identify

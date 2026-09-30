@@ -33,7 +33,7 @@ airBoundaryDefault ={
     "Name": "Moosas Air Boundary",
     "Air_Exchange_Method": "SimpleMixing",
     "Simple_Mixing_Air_Changes_per_Hour": 0.5,
-    "Simple_Mixing_Schedule_Name": "Always On",
+    "Simple_Mixing_Schedule_Name": "",
 }
 
 class Construction(MoosasSettings):

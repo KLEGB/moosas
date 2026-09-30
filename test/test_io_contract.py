@@ -11,10 +11,14 @@ import pytest
 
 from MoosasPy.model import MoosasModel
 from MoosasPy.model.io.idf.adapter import IDFtoXml, _idf_build_artifacts
+from MoosasPy.model.io.idf.input import encodeFace
+from MoosasPy.model.io.idf.model import FaceDefault, MoosasSettings
 from MoosasPy.model.io.idf.version import configure_idd
 from MoosasPy.model.resources import configure_model_resources, rebuild_schedule_index
 from MoosasPy.transform import transform
 from MoosasPy.transform.geometry.element import MoosasElement, MoosasGeometry
+from MoosasPy.transform.geometry.geos import Vector
+from MoosasPy.utils import shapely
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -199,9 +203,21 @@ def test_idf_air_boundaries_use_native_simple_mixing(semantic_model: MoosasModel
     assert air_boundary.Name == "Moosas Air Boundary"
     assert air_boundary.Air_Exchange_Method == "SimpleMixing"
     assert air_boundary.Simple_Mixing_Air_Changes_per_Hour == pytest.approx(0.5)
-    assert air_boundary.Simple_Mixing_Schedule_Name == "Always On"
+    assert air_boundary.Simple_Mixing_Schedule_Name == ""
     assert air_surfaces
     assert len(idf.idfobjects["ZONEMIXING"]) == 0
+
+
+def test_idf_face_encoding_removes_unused_vertex_fields():
+    settings = MoosasSettings(FaceDefault)
+    triangle = shapely.polygons(((0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0)))
+
+    encodeFace(settings, triangle, Vector(0.0, 0.0, 1.0))
+
+    assert settings.params["Number_of_Vertices"] == 3
+    assert "Vertex_4_Xcoordinate" not in settings.params
+    assert "Vertex_4_Ycoordinate" not in settings.params
+    assert "Vertex_4_Zcoordinate" not in settings.params
 
 
 def test_idf_export_preserves_shading_geometry(semantic_model: MoosasModel):

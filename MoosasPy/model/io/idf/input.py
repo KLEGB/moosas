@@ -131,11 +131,13 @@ def encodeFace(obj: MoosasSettings, polygon: shapely.Geometry, normal: Vector):
     None
         This function modifies the `obj` in place and does not return a value.
     """
-    coordinates = shapely.get_coordinates(polygon, include_z=True)
-    obj.params['Number_of_Vertices'] = len(coordinates) - 1
+    coordinates = shapely.get_coordinates(polygon, include_z=True)[:-1]
+    for field in [field for field in obj.params if field.startswith('Vertex_')]:
+        del obj.params[field]
+    obj.params['Number_of_Vertices'] = len(coordinates)
     if Vector.dot(ccwNormal(polygon), normal) < 0:
         coordinates = coordinates[::-1]
-    for i, point in enumerate(coordinates[:-1]):
+    for i, point in enumerate(coordinates):
         obj.params[f'Vertex_{i + 1}_Xcoordinate'] = np.round(point[0], 2)
         obj.params[f'Vertex_{i + 1}_Ycoordinate'] = np.round(point[1], 2)
         obj.params[f'Vertex_{i + 1}_Zcoordinate'] = np.round(point[2], 2)

@@ -3,6 +3,7 @@ from io import StringIO
 import math
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -11,7 +12,9 @@ from MoosasPy.simulation.energy.runner import EnergyRunner
 from MoosasPy.simulation.weather import Location
 from MoosasPy.simulation.weather.epw import read_weather_csv
 from MoosasPy.transform import TransformOptions, transform
+from MoosasPy.transform.geometry.element import MoosasSpace
 from MoosasPy.utils import shapely
+from MoosasPy.utils.constant import geom
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -38,6 +41,25 @@ def test_attic_is_preserved_without_divided_zones():
     )
 
     assert sum(space.space_type == "attic" for space in model.spaceList) == 1
+
+
+def test_roof_classification_accepts_a_30_degree_slope():
+    target_roof_normal_z = math.cos(math.radians(30.21))
+
+    assert target_roof_normal_z >= geom.HORIZONTAL_ANGLE_THRESHOLD
+
+
+def test_attic_is_not_rejected_by_standard_room_height():
+    space = object.__new__(MoosasSpace)
+    space.floor = SimpleNamespace(level=2.43, offset=0.0)
+    space.ceiling = SimpleNamespace(level=3.2076, offset=0.0)
+    space.space_type = "room"
+
+    assert space.is_void()
+
+    space.space_type = "attic"
+
+    assert not space.is_void()
 
 
 @pytest.mark.parametrize(

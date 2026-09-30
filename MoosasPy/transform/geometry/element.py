@@ -3131,16 +3131,16 @@ class MoosasSpace(object):
         """
         if not self.floor or not self.ceiling:
             return True
+        # Inclined roof faces do not cover the footprint in XY projection. An attic
+        # is validated by its existing floor, eave walls and roof topology instead.
+        if self.space_type == "attic":
+            return False
         if (
             self.ceiling.level + self.ceiling.offset
             - self.floor.level - self.floor.offset
             < geom.LEVEL_MAX_OFFSET
         ):
             return True
-        # Inclined roof faces do not cover the footprint in XY projection. An attic
-        # is validated by its existing floor, eave walls and roof topology instead.
-        if self.space_type == "attic":
-            return False
         if self.floor.area < self.area - geom.AREA_PRECISION:
             return True
         if self.ceiling.area < self.area - geom.AREA_PRECISION:
