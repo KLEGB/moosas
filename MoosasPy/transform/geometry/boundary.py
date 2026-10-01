@@ -125,7 +125,7 @@ def calculate_wwr(cats, faces, normals):
             continue
 
         if abs(normal[2]) < 1e-3:
-            if int(cat) == 1:
+            if int(cat) in (1, 5):
                 total_window_area += area
             else:
                 total_wall_area += area
@@ -160,7 +160,8 @@ def _create_window_on_wall(face, normal, wwr, margin_ratio=0.1):
     vertical = face[3] - face[0]
     horizontal_unit = horizontal / (np.linalg.norm(horizontal) + 1e-10)
     vertical_unit = vertical / (np.linalg.norm(vertical) + 1e-10)
-    scale = np.sqrt(wwr) * (1 - 2 * margin_ratio)
+    wall_to_window_ratio = wwr / (1 - wwr)
+    scale = np.sqrt(wall_to_window_ratio)
     half_width = np.linalg.norm(horizontal) * scale / 2
     half_height = np.linalg.norm(vertical) * scale / 2
     window = np.array([
