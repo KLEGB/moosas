@@ -27,9 +27,9 @@ _PATCH_NAMES = ("bottom", "top", "walls")
 _PATCH_TYPES = {"wall", "patch", "symmetry", "symmetryPlane"}
 
 
-def write_openfoam(
+def exportFoam(
     model,
-    target: Path,
+    target: str | Path,
     *,
     space_index: int | None = None,
     grid_size: float = 1.0,
@@ -45,6 +45,8 @@ def write_openfoam(
     to OpenFOAM's snappyHexMesh via the simulation runner.
     """
     from ...transform.geometry.grid import MoosasGrid
+
+    target = Path(target)
 
     if scenario in {"indoor", "outdoor"}:
         from ._foam_case import write_case

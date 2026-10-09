@@ -12,7 +12,8 @@ import pytest
 import shapely
 
 from MoosasPy.model import MoosasModel
-from MoosasPy.model.io import openfoam
+from MoosasPy.model.io import foam
+from MoosasPy.model.io.foam import exportFoam
 from MoosasPy.transform.geometry.element import MoosasElement, MoosasGeometry
 from MoosasPy.transform.geometry.grid import MoosasGrid
 from MoosasPy.transform import transform
@@ -31,7 +32,7 @@ def geo_model():
 ])
 def test_save_real_geo_room_through_model(geo_model, tmp_path, index, area, base):
     target = tmp_path / "room" / "room.foam"
-    result = geo_model.save(target, space_index=index, grid_size=1.0, layers=8)
+    result = exportFoam(geo_model, target, space_index=index, grid_size=1.0, layers=8)
     assert len(geo_model.spaceList) == 6
     assert result.primary_path == target
     assert target.read_bytes() == b""
@@ -42,20 +43,31 @@ def test_save_real_geo_room_through_model(geo_model, tmp_path, index, area, base
     assert points[:, 2].max() == pytest.approx(base + 4.4)
 
 
-def test_save_real_geo_through_dispatcher(tmp_path):
-    from MoosasPy.model.io import save_model
-
+def test_export_real_geo_through_function(tmp_path):
     source = Path(__file__).parent / "caseFile" / "test3_geomove.geo"
     model = transform(str(source), input_type="geo", stdout=StringIO())
-    result = save_model(model, tmp_path / "room.foam", space_index=0, layers=4)
+    result = exportFoam(model, str(tmp_path / "room.foam"), space_index=0, layers=4)
     assert result.primary_path == tmp_path / "room.foam"
     check_volume_mesh(tmp_path, 33.0368 * 9.26)
+
+
+@pytest.mark.parametrize("entry_point", ["model", "dispatcher"])
+def test_generic_save_rejects_openfoam(geo_model, tmp_path, entry_point):
+    from MoosasPy.model.io import save_model
+
+    target = tmp_path / "room.foam"
+    with pytest.raises(ValueError, match="exportFoam"):
+        if entry_point == "model":
+            geo_model.save(target, space_index=0)
+        else:
+            save_model(geo_model, target, space_index=0)
+    assert not list(tmp_path.iterdir())
 
 
 @pytest.mark.parametrize("size", [0, -1, float("nan"), True])
 def test_save_rejects_invalid_grid_size(geo_model, tmp_path, size):
     with pytest.raises(ValueError, match="grid_size"):
-        geo_model.save(tmp_path / "room.foam", space_index=0, grid_size=size)
+        exportFoam(geo_model, tmp_path / "room.foam", space_index=0, grid_size=size)
     assert not list(tmp_path.iterdir())
 
 
@@ -63,21 +75,21 @@ def test_save_does_not_overwrite_existing_marker(geo_model, tmp_path):
     target = tmp_path / "room.foam"
     target.write_text("existing")
     with pytest.raises(FileExistsError):
-        geo_model.save(target, space_index=0)
+        exportFoam(geo_model, target, space_index=0)
     assert target.read_text() == "existing"
     assert not (tmp_path / "constant").exists()
 
 
 def test_save_openfoam_requires_explicit_room(geo_model, tmp_path):
     with pytest.raises(TypeError, match="space_index"):
-        geo_model.save(tmp_path / "room.foam")
+        exportFoam(geo_model, tmp_path / "room.foam")
     assert not list(tmp_path.iterdir())
 
 
 @pytest.mark.parametrize("index", [-1, 6, True, 0.5])
 def test_save_openfoam_rejects_invalid_room(geo_model, tmp_path, index):
     with pytest.raises(ValueError, match="space_index"):
-        geo_model.save(tmp_path / "room.foam", space_index=index)
+        exportFoam(geo_model, tmp_path / "room.foam", space_index=index)
     assert not list(tmp_path.iterdir())
 
 
@@ -183,7 +195,7 @@ def test_export_covers_whole_floor_and_preserves_grid_mapping(tmp_path):
     grid = make_grid()
     original_mask = grid.mask
     original_points = grid.gridPoints.copy()
-    result = openfoam._write_grid_mesh(grid, tmp_path, height=3, layers=3)
+    result = foam._write_grid_mesh(grid, tmp_path, height=3, layers=3)
 
     points, volumes, patches = check_volume_mesh(tmp_path, 12, expected_wall_area=24)
     # The 2x2 floor needs 3x3 columns including half-width perimeter cells.
@@ -210,7 +222,7 @@ def test_export_covers_whole_floor_and_preserves_grid_mapping(tmp_path):
 
 def test_sloping_projection_and_explicit_base_offset(tmp_path):
     grid = make_grid([(1, 0, 0), (1, 0, 2), (1, 2, 2), (1, 2, 0)])
-    openfoam._write_grid_mesh(grid, tmp_path, height=2, layers=2, base_offset=0.25)
+    foam._write_grid_mesh(grid, tmp_path, height=2, layers=2, base_offset=0.25)
     points, _, _ = check_volume_mesh(tmp_path, 8)
     # The legacy projection chooses -X; sampling offset must not move the mesh.
     np.testing.assert_allclose(points.min(axis=0), (-1.25, 0, 0), atol=1e-8)
@@ -228,7 +240,7 @@ def test_clipped_concave_and_holed_cells_are_conformal(tmp_path, footprint):
         [(x, y, 0) for x, y in footprint.exterior.coords],
         holes=[shapely.force_3d(shapely.Polygon(ring)) for ring in footprint.interiors],
     )
-    openfoam._write_grid_mesh(grid, tmp_path, height=1.5, layers=2)
+    foam._write_grid_mesh(grid, tmp_path, height=1.5, layers=2)
     check_volume_mesh(tmp_path, footprint.area * 1.5, expected_wall_area=footprint.length * 1.5)
 
 
@@ -242,15 +254,15 @@ def test_clipped_concave_and_holed_cells_are_conformal(tmp_path, footprint):
 ])
 def test_invalid_options_do_not_write_files(tmp_path, options):
     with pytest.raises((ValueError, TypeError)):
-        openfoam._write_grid_mesh(make_grid(), tmp_path / "case", **options)
+        foam._write_grid_mesh(make_grid(), tmp_path / "case", **options)
     assert not (tmp_path / "case").exists()
 
 
 def test_boundary_types_and_repeatable_output(tmp_path):
     grid = make_grid(size=3)  # No valid samples, but a nonempty volume domain.
     options = {"height": 1, "patch_types": {"top": "patch", "bottom": "patch"}}
-    openfoam._write_grid_mesh(grid, tmp_path / "first", **options)
-    openfoam._write_grid_mesh(grid, tmp_path / "second", **options)
+    foam._write_grid_mesh(grid, tmp_path / "first", **options)
+    foam._write_grid_mesh(grid, tmp_path / "second", **options)
     _, _, patches = check_volume_mesh(tmp_path / "first", 4)
     assert patches["top"]["type"] == "patch"
     for path in (tmp_path / "first").rglob("*"):
@@ -260,16 +272,16 @@ def test_boundary_types_and_repeatable_output(tmp_path):
 
 def test_existing_mesh_is_not_silently_overwritten(tmp_path):
     grid = make_grid()
-    openfoam._write_grid_mesh(grid, tmp_path, height=1)
+    foam._write_grid_mesh(grid, tmp_path, height=1)
     before = (tmp_path / "constant" / "polyMesh" / "points").read_bytes()
     with pytest.raises(FileExistsError):
-        openfoam._write_grid_mesh(grid, tmp_path, height=2)
+        foam._write_grid_mesh(grid, tmp_path, height=2)
     assert (tmp_path / "constant" / "polyMesh" / "points").read_bytes() == before
 
 
 def test_inclined_face_keeps_world_geometry_and_volume(tmp_path):
     grid = make_grid([(4, 5, 6), (6, 5, 6), (6, 6.6, 7.2), (4, 6.6, 7.2)])
-    openfoam._write_grid_mesh(grid, tmp_path, height=2, layers=4)
+    foam._write_grid_mesh(grid, tmp_path, height=2, layers=4)
     points, _, _ = check_volume_mesh(tmp_path, 8, expected_wall_area=16)
     source = np.array([(4, 5, 6), (6, 5, 6), (6, 6.6, 7.2), (4, 6.6, 7.2)])
     # Source corners remain on the base, with a congruent top 2m along local Z.
@@ -286,7 +298,7 @@ def test_grid_holes_exclude_sampling_points_and_remain_unmodified(tmp_path):
     assert grid.UVFace.area == pytest.approx(3.84)
     for point in grid.gridPoints:
         assert not hole.contains(point)
-    openfoam._write_grid_mesh(grid, tmp_path, height=1)
+    foam._write_grid_mesh(grid, tmp_path, height=1)
     check_volume_mesh(tmp_path, 3.84, expected_wall_area=9.6)
     assert grid.UVFace.wkb == before
 
@@ -301,7 +313,7 @@ def test_invalid_grid_is_rejected_before_writing(tmp_path, attribute, value):
     grid = make_grid()
     setattr(grid, attribute, value)
     with pytest.raises(ValueError):
-        openfoam._write_grid_mesh(grid, tmp_path / "case", height=1)
+        foam._write_grid_mesh(grid, tmp_path / "case", height=1)
     assert not (tmp_path / "case").exists()
 
 
@@ -310,13 +322,13 @@ def test_stale_mesh_sidecars_are_not_mixed_with_new_mesh(tmp_path):
     mesh_dir.mkdir(parents=True)
     (mesh_dir / "cellZones").write_text("old zones")
     with pytest.raises(FileExistsError):
-        openfoam._write_grid_mesh(make_grid(), tmp_path, height=1)
+        foam._write_grid_mesh(make_grid(), tmp_path, height=1)
     assert not (mesh_dir / "points").exists()
 
 
 @pytest.mark.skipif(shutil.which("checkMesh") is None, reason="OpenFOAM checkMesh is not installed")
 def test_openfoam_checkmesh_accepts_real_geo(geo_model, tmp_path):
-    geo_model.save(tmp_path / "room.foam", space_index=0, grid_size=1.0, layers=8)
+    exportFoam(geo_model, tmp_path / "room.foam", space_index=0, grid_size=1.0, layers=8)
     write_checkmesh_dictionaries(tmp_path)
     result = subprocess.run(
         [shutil.which("checkMesh"), "-case", str(tmp_path), "-allTopology", "-allGeometry"],
@@ -332,7 +344,7 @@ def test_openfoam_checkmesh_accepts_real_geo(geo_model, tmp_path):
 def test_openfoam_checkmesh_accepts_export(tmp_path, with_hole):
     hole = shapely.Polygon([(0.8, 0.8, 0), (1.2, 0.8, 0), (1.2, 1.2, 0), (0.8, 1.2, 0)])
     grid = make_grid(holes=[hole] if with_hole else None)
-    openfoam._write_grid_mesh(grid, tmp_path, height=2, layers=2)
+    foam._write_grid_mesh(grid, tmp_path, height=2, layers=2)
     write_checkmesh_dictionaries(tmp_path)
     result = subprocess.run(
         [shutil.which("checkMesh"), "-case", str(tmp_path), "-allTopology", "-allGeometry"],

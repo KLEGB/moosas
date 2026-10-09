@@ -1,4 +1,4 @@
-"""OpenFOAM Foundation 12 isothermal RANS case generation for model.save."""
+"""OpenFOAM Foundation 12 isothermal RANS case generation for exportFoam."""
 
 from __future__ import annotations
 

@@ -10,6 +10,7 @@ import pytest
 import shapely
 
 from MoosasPy.transform import transform
+from MoosasPy.model.io.foam import exportFoam
 
 
 @pytest.fixture(scope="module")
@@ -65,7 +66,7 @@ def test_real_geo_saves_complete_case(building, indoor_model, tmp_path, scenario
     model = indoor_model if scenario == "indoor" else building
     options = dict(space_index=37) if scenario == "indoor" else {}
     conditions = indoor_conditions() if scenario == "indoor" else outdoor_conditions()
-    result = model.save(tmp_path / "case.foam", scenario=scenario, grid_size=2,
+    result = exportFoam(model, tmp_path / "case.foam", scenario=scenario, grid_size=2,
                         conditions=conditions, **options)
     assert result.primary_path == tmp_path / "case.foam"
     for name in ("system/blockMeshDict", "system/snappyHexMeshDict", "system/controlDict",
@@ -83,14 +84,14 @@ def test_indoor_rejects_unknown_openings_before_writing(indoor_model, tmp_path):
     conditions = indoor_conditions()
     conditions["inlet"]["opening"] = "missing"
     with pytest.raises(ValueError, match="opening"):
-        indoor_model.save(tmp_path / "case.foam", scenario="indoor", space_index=37,
-                          conditions=conditions)
+        exportFoam(indoor_model, tmp_path / "case.foam", scenario="indoor", space_index=37,
+                   conditions=conditions)
     assert not list(tmp_path.iterdir())
 
 
 def test_outdoor_requires_explicit_physical_conditions(building, tmp_path):
     with pytest.raises(ValueError, match="conditions"):
-        building.save(tmp_path / "case.foam", scenario="outdoor")
+        exportFoam(building, tmp_path / "case.foam", scenario="outdoor")
     assert not list(tmp_path.iterdir())
 
 
@@ -98,7 +99,7 @@ def test_outdoor_rejects_point_inside_building(building, tmp_path):
     conditions = outdoor_conditions()
     conditions["inside_point"] = [-56, 180, 2]
     with pytest.raises(ValueError, match="inside_point"):
-        building.save(tmp_path / "case.foam", scenario="outdoor", conditions=conditions)
+        exportFoam(building, tmp_path / "case.foam", scenario="outdoor", conditions=conditions)
     assert not list(tmp_path.iterdir())
 
 
@@ -106,8 +107,8 @@ def test_indoor_rejects_outward_inlet_velocity(indoor_model, tmp_path):
     conditions = indoor_conditions()
     conditions["inlet"]["velocity"] = [-0.409451, -0.286966, 0]
     with pytest.raises(ValueError, match="into the room"):
-        indoor_model.save(tmp_path / "case.foam", scenario="indoor", space_index=37,
-                          conditions=conditions)
+        exportFoam(indoor_model, tmp_path / "case.foam", scenario="indoor", space_index=37,
+                   conditions=conditions)
     assert not list(tmp_path.iterdir())
 
 
@@ -115,7 +116,7 @@ def test_case_does_not_overwrite_existing_files(building, tmp_path):
     existing = tmp_path / "notes.txt"
     existing.write_text("keep")
     with pytest.raises(FileExistsError):
-        building.save(tmp_path / "case.foam", scenario="outdoor", conditions=outdoor_conditions())
+        exportFoam(building, tmp_path / "case.foam", scenario="outdoor", conditions=outdoor_conditions())
     assert existing.read_text() == "keep"
     assert not (tmp_path / "constant").exists()
 
@@ -127,8 +128,8 @@ def test_iteration_limit_is_not_reported_as_success(indoor_model, tmp_path, iter
 
     conditions = indoor_conditions()
     conditions["iterations"] = iterations
-    indoor_model.save(tmp_path / "case.foam", scenario="indoor", space_index=37,
-                      grid_size=2, conditions=conditions)
+    exportFoam(indoor_model, tmp_path / "case.foam", scenario="indoor", space_index=37,
+               grid_size=2, conditions=conditions)
     result = OpenFoamRunner(tmp_path).run()
     assert not result.converged
     assert not result.successful
@@ -145,7 +146,7 @@ def test_real_geo_solves_and_conserves_flow(building, indoor_model, tmp_path, sc
     model = indoor_model if scenario == "indoor" else building
     conditions = indoor_conditions() if scenario == "indoor" else outdoor_conditions()
     options = dict(space_index=37) if scenario == "indoor" else {}
-    model.save(tmp_path / "case.foam", scenario=scenario, grid_size=2 if scenario == "indoor" else 4,
+    exportFoam(model, tmp_path / "case.foam", scenario=scenario, grid_size=2 if scenario == "indoor" else 4,
                conditions=conditions, **options)
     result = OpenFoamRunner(tmp_path, timeout_seconds=180).run()
     assert result.successful

@@ -1,16 +1,17 @@
 # 从 GEO 到 OpenFOAM：保存、网格、求解
 
-统一入口是 `model.save(...)` / `save_model(model, ...)`，文件后缀决定格式：
+OpenFOAM 只通过 `MoosasPy.model.io.foam.exportFoam` 导出；通用的 `model.save(...)` / `save_model(model, ...)` 不接受 `.foam`：
 
 ```python
 from MoosasPy.transform import transform
+from MoosasPy.model.io.foam import exportFoam
 
 model = transform("test/caseFile/test0_6spacesIntersection.geo", input_type="geo")
 model.save("building.idf")
-model.save("cases/room/room.foam", space_index=0, grid_size=1.0, layers=8)
+exportFoam(model, "cases/room/room.foam", space_index=0, grid_size=1.0, layers=8)
 ```
 
-不再提供独立的 `export_openfoam` 接口。`SaveResult.primary_path` 是传入的目标文件；
+`exportFoam` 显式接收 `space_index`、`grid_size`、`layers`、`scenario` 和 `conditions` 参数。`SaveResult.primary_path` 是传入的目标文件；
 OpenFOAM 的 `.foam` 是 ParaView 入口，其父目录就是算例目录。
 `generated_paths` 列出保存操作生成的全部文件。`load` 不支持读取 `.foam`。
 
@@ -48,6 +49,7 @@ GEO 不包含完整运行工况，需要另外提供边界条件。
 ```python
 from MoosasPy.transform import transform
 from MoosasPy.simulation.airflow import OpenFoamRunner
+from MoosasPy.model.io.foam import exportFoam
 
 model = transform("test/caseFile/test6_twoVolumes.geo", input_type="geo")
 conditions = {
@@ -58,7 +60,8 @@ conditions = {
     "inlet": {"opening": "gls_g_80", "velocity": [0.409451, 0.286966, 0.0]},
     "outlet": {"opening": "gls_g_79", "pressure": 0.0},
 }
-saved = model.save(
+saved = exportFoam(
+    model,
     "cases/indoor/case.foam",
     scenario="indoor",
     space_index=37,
@@ -96,6 +99,7 @@ for index, space in enumerate(model.spaceList):
 ```python
 from MoosasPy.transform import transform
 from MoosasPy.simulation.airflow import OpenFoamRunner
+from MoosasPy.model.io.foam import exportFoam
 
 model = transform("test/caseFile/test0_6spacesIntersection.geo", input_type="geo")
 conditions = {
@@ -107,7 +111,8 @@ conditions = {
     "domain": [[-100.0, 120.0, 0.0], [0.0, 240.0, 45.0]],
     "inside_point": [-90.0, 130.0, 5.0],
 }
-saved = model.save(
+saved = exportFoam(
+    model,
     "cases/outdoor/case.foam",
     scenario="outdoor",
     grid_size=4,
@@ -182,7 +187,7 @@ CFD 算例要求目标目录为空，避免混入旧结果。
 默认 `scenario="mesh"` 保留无需 OpenFOAM 的网格保存功能：
 
 ```python
-model.save("cases/room/room.foam", space_index=0, grid_size=1, layers=8)
+exportFoam(model, "cases/room/room.foam", space_index=0, grid_size=1, layers=8)
 ```
 
 必须指定房间；只支持一个水平楼板的等截面拉伸。

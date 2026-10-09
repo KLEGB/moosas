@@ -10,7 +10,7 @@ simulation workflows.
 - Transform GEO, OBJ, and STL geometry into a structured `MoosasModel`.
 - Load and save RDF/Turtle, XML, JSON, and EnergyPlus IDF models.
 - Export graph JSON and gbXML, with dedicated IFC conversion utilities.
-- Save a selected room as an OpenFOAM volume mesh through model.save.
+- Export a selected room as an OpenFOAM volume mesh through `exportFoam`.
 - Prepare weather data and cumulative sky models from user-provided EPW files.
 - Run rapid energy, solar-radiation, sunlight, Radiance daylight, and CONTAM
   airflow analyses.
@@ -84,13 +84,14 @@ print(result.data["total"])
 
 ## OpenFOAM Volume Mesh Export
 
-Save a selected constant-section room using the same entry point as IDF:
+Export a selected constant-section room with the dedicated OpenFOAM function:
 
 ```python
 from MoosasPy.transform import transform
+from MoosasPy.model.io.foam import exportFoam
 
 model = transform("test/caseFile/test0_6spacesIntersection.geo", input_type="geo")
-result = model.save("cases/room/room.foam", space_index=0, grid_size=0.5, layers=12)
+result = exportFoam(model, "cases/room/room.foam", space_index=0, grid_size=0.5, layers=12)
 print(result.primary_path)  # cases/room/room.foam
 ```
 
@@ -106,11 +107,12 @@ or automatic window/door patches. Existing meshes are not overwritten.
 See [OpenFOAM export details](doc/openfoam.md) for parameters, mapping semantics,
 and `checkMesh` validation.
 
-For an isothermal indoor or outdoor CFD simulation, use the same `model.save`
-entry point with `scenario="indoor"` or `scenario="outdoor"` and explicit
+For an isothermal indoor or outdoor CFD simulation, use `exportFoam`
+with `scenario="indoor"` or `scenario="outdoor"` and explicit
 `conditions`. It writes a complete OpenFOAM Foundation 12 case:
 
 ```python
+from MoosasPy.model.io.foam import exportFoam
 from MoosasPy.simulation.airflow import OpenFoamRunner
 
 conditions = {
@@ -122,7 +124,7 @@ conditions = {
     "domain": [[-100.0, 120.0, 0.0], [0.0, 240.0, 45.0]],
     "inside_point": [-90.0, 130.0, 5.0],
 }
-saved = model.save("cases/wind/case.foam", scenario="outdoor",
+saved = exportFoam(model, "cases/wind/case.foam", scenario="outdoor",
                    grid_size=4, conditions=conditions)
 result = OpenFoamRunner(saved.primary_path.parent).run()
 print(result.successful, result.converged, result.relative_flow_imbalance)

@@ -1,4 +1,4 @@
-"""Run model.save-generated OpenFOAM Foundation 12 cases in an active FOAM environment."""
+"""Run exportFoam-generated OpenFOAM Foundation 12 cases in an active FOAM environment."""
 
 from dataclasses import dataclass, field
 import json

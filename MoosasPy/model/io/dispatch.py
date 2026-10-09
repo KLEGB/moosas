@@ -51,9 +51,9 @@ def save_model(model, file_path: str | Path, **format_options) -> SaveResult:
     target = Path(file_path)
     model_format = _model_format(target)
     if model_format == "foam":
-        from .openfoam import write_openfoam
-
-        return write_openfoam(model, target, **format_options)
+        raise ValueError(
+            "OpenFOAM export requires MoosasPy.model.io.foam.exportFoam"
+        )
     supported_formats = {"rdf", "ttl", "xml", "json", "idf", "graph", "gbxml"}
     if model_format not in supported_formats:
         raise ValueError(f"Unsupported model save format: {model_format or target}")
