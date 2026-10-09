@@ -47,6 +47,8 @@ def exportFoam(
     from ...transform.geometry.grid import MoosasGrid
 
     target = Path(target)
+    if target.suffix.lower() != ".foam":
+        raise ValueError("OpenFOAM export target must use the .foam suffix")
 
     if scenario in {"indoor", "outdoor"}:
         from ._foam_case import write_case
