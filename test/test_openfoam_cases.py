@@ -4,6 +4,7 @@ from io import StringIO
 from pathlib import Path
 import json
 import shutil
+import subprocess
 
 import numpy as np
 import pytest
@@ -121,39 +122,63 @@ def test_case_does_not_overwrite_existing_files(building, tmp_path):
     assert not (tmp_path / "constant").exists()
 
 
+def _run_case_with_openfoam(case_dir):
+    """Exercise the exported files using OpenFOAM's own command-line tools."""
+    logs = {}
+    for command in (
+        ("surfaceCheck", "constant/geometry/model.stl"),
+        ("blockMesh",),
+        ("snappyHexMesh", "-overwrite"),
+        ("checkMesh", "-allTopology", "-meshQuality"),
+        ("foamRun", "-solver", "incompressibleFluid"),
+    ):
+        result = subprocess.run(command, cwd=case_dir, capture_output=True,
+                                text=True, timeout=180)
+        logs[command[0]] = result.stdout + result.stderr
+        assert result.returncode == 0, logs[command[0]]
+    return logs
+
+
 @pytest.mark.skipif(shutil.which("foamRun") is None, reason="OpenFOAM 12 is not on PATH")
 @pytest.mark.parametrize("iterations", [1, 26])
 def test_iteration_limit_is_not_reported_as_success(indoor_model, tmp_path, iterations):
-    from MoosasPy.simulation.airflow import OpenFoamRunner
-
     conditions = indoor_conditions()
     conditions["iterations"] = iterations
     exportFoam(indoor_model, tmp_path / "case.foam", scenario="indoor", space_index=37,
                grid_size=2, conditions=conditions)
-    result = OpenFoamRunner(tmp_path).run()
-    assert not result.converged
-    assert not result.successful
-    assert result.warnings
-    assert result.time_directory.name == str(iterations)
-    assert (tmp_path / "log.foamRun").is_file()
+    logs = _run_case_with_openfoam(tmp_path)
+    assert "solution converged" not in logs["foamRun"].lower()
+    assert (tmp_path / str(iterations) / "U").is_file()
 
 
 @pytest.mark.skipif(shutil.which("foamRun") is None, reason="OpenFOAM 12 is not on PATH")
 @pytest.mark.parametrize("scenario", ["indoor", "outdoor"])
 def test_real_geo_solves_and_conserves_flow(building, indoor_model, tmp_path, scenario):
-    from MoosasPy.simulation.airflow.openfoam import OpenFoamRunner
-
     model = indoor_model if scenario == "indoor" else building
     conditions = indoor_conditions() if scenario == "indoor" else outdoor_conditions()
     options = dict(space_index=37) if scenario == "indoor" else {}
     exportFoam(model, tmp_path / "case.foam", scenario=scenario, grid_size=2 if scenario == "indoor" else 4,
                conditions=conditions, **options)
-    result = OpenFoamRunner(tmp_path, timeout_seconds=180).run()
-    assert result.successful
-    assert result.converged
-    assert result.relative_flow_imbalance < 0.01
-    assert np.isfinite(list(result.patch_flows.values())).all()
-    assert any(value < 0 for value in result.patch_flows.values())
-    assert any(value > 0 for value in result.patch_flows.values())
-    assert (result.time_directory / "U").is_file()
-    assert (result.time_directory / "p").is_file()
+    logs = _run_case_with_openfoam(tmp_path)
+    assert "Surface is closed" in logs["surfaceCheck"]
+    assert "Mesh OK" in logs["checkMesh"]
+    assert "solution converged" in logs["foamRun"].lower()
+    time_directories = [path for path in tmp_path.iterdir()
+                        if path.is_dir() and path.name.replace(".", "", 1).isdigit()
+                        and float(path.name) > 0]
+    latest = max(time_directories, key=lambda path: float(path.name))
+    for name in ("U", "p", "k", "epsilon"):
+        assert (latest / name).is_file()
+    manifest = json.loads((tmp_path / "constant/moosasCase.json").read_text())
+    flows = []
+    for patch in manifest["flow_patches"]:
+        reports = list((tmp_path / "postProcessing" / f"flow_{patch}").glob("*/surfaceFieldValue.dat"))
+        assert len(reports) == 1
+        rows = [line.split() for line in reports[0].read_text().splitlines()
+                if line.strip() and not line.lstrip().startswith("#")]
+        assert float(rows[-1][0]) == float(latest.name)
+        flows.append(float(rows[-1][1]))
+    assert np.isfinite(flows).all()
+    assert any(value < 0 for value in flows)
+    assert any(value > 0 for value in flows)
+    assert abs(sum(flows)) / -sum(value for value in flows if value < 0) < 0.01

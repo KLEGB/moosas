@@ -1,6 +1,5 @@
 """ventilation support files"""
 from .workspace import create_openfoam_workspace
-from .openfoam import OpenFoamResult, OpenFoamRunner
 # from .ventXgb import callXgb
 from .runner import (
     AirflowResult,
@@ -9,8 +8,6 @@ from .runner import (
 )
 
 __all__ = [
-    "OpenFoamResult",
-    "OpenFoamRunner",
     "AirflowResult",
     "AirflowRunner",
     "AirflowZoneResult",

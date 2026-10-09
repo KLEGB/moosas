@@ -42,7 +42,7 @@ def exportFoam(
     The target is a ParaView .foam marker; its parent is the case directory.
     The default mesh scenario extrudes a horizontal, constant-section room.
     CFD scenarios require explicit physical conditions and defer volume meshing
-    to OpenFOAM's snappyHexMesh via the simulation runner.
+    to OpenFOAM's snappyHexMesh, which is run outside MoosasPy.
     """
     from ...transform.geometry.grid import MoosasGrid
 

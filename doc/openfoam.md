@@ -1,4 +1,4 @@
-# 从 GEO 到 OpenFOAM：保存、网格、求解
+# 从 GEO 到 OpenFOAM：导出算例
 
 OpenFOAM 只通过 `MoosasPy.model.io.foam.exportFoam` 导出；通用的 `model.save(...)` / `save_model(model, ...)` 不接受 `.foam`：
 
@@ -48,7 +48,6 @@ GEO 不包含完整运行工况，需要另外提供边界条件。
 
 ```python
 from MoosasPy.transform import transform
-from MoosasPy.simulation.airflow import OpenFoamRunner
 from MoosasPy.model.io.foam import exportFoam
 
 model = transform("test/caseFile/test6_twoVolumes.geo", input_type="geo")
@@ -68,8 +67,7 @@ saved = exportFoam(
     grid_size=2,
     conditions=conditions,
 )
-result = OpenFoamRunner(saved.primary_path.parent).run()
-print(result.successful, result.converged, result.patch_flows)
+print(saved.primary_path.parent)  # 交给 OpenFOAM 的算例目录
 ```
 
 工况参数中：
@@ -98,7 +96,6 @@ for index, space in enumerate(model.spaceList):
 
 ```python
 from MoosasPy.transform import transform
-from MoosasPy.simulation.airflow import OpenFoamRunner
 from MoosasPy.model.io.foam import exportFoam
 
 model = transform("test/caseFile/test0_6spacesIntersection.geo", input_type="geo")
@@ -118,8 +115,7 @@ saved = exportFoam(
     grid_size=4,
     conditions=conditions,
 )
-result = OpenFoamRunner(saved.primary_path.parent).run()
-print(result.successful, result.converged, result.patch_flows)
+print(saved.primary_path.parent)  # 交给 OpenFOAM 的算例目录
 ```
 
 室外不传 `space_index`。额外工况字段：
@@ -161,26 +157,21 @@ system/{blockMeshDict,snappyHexMeshDict,meshQualityDict,controlDict,fvSchemes,fv
 `moosasCase.json` 保存场景、模型空间、网格间距和用户工况，便于复现。
 CFD 算例要求目标目录为空，避免混入旧结果。
 
-## 5. 求解与成功判定
+## 5. 在 OpenFOAM 中运行
 
-`OpenFoamRunner` 依次执行表面检查、背景网格、贴体网格、网格检查、求解。
-它复用项目的 `Runner` / `NativeEngine`，支持单命令超时，并保留 `log.*` 日志。
+MoosasPy 到导出算例为止，不启动网格工具或求解器，也不判断收敛。
+在已加载 OpenFOAM Foundation 12 环境的终端中进入算例目录，再由 OpenFOAM 执行：
 
-成功必须同时满足：
+```sh
+surfaceCheck constant/geometry/model.stl
+blockMesh
+snappyHexMesh -overwrite
+checkMesh -allTopology -meshQuality
+foamRun -solver incompressibleFluid
+```
 
-1. 表面闭合、无非法三角形。
-2. `checkMesh -allTopology -meshQuality` 报告 `Mesh OK`。
-3. p、U、k、epsilon 达到设定的 1e-4 残差阈值。
-4. 结果场存在、数值有限且单元数一致。
-5. 最终边界流量与结果场对应同一迭代步，进出口相对流量不平衡小于 1%。
-
-流量符号约定：流入为负、流出为正，单位 m³/s。
-这里只计算恒密度流动，因此体积流量守恒也对应质量守恒。
-`successful=False` 或 `converged=False` 的结果不能作为收敛结果使用。
-达到迭代上限时会返回明确的警告；网格或原生命令失败时抛出异常。
-已有非零求解时刻的算例不能直接重跑，请保存到新目录。
-
-可从 `OpenFoamResult` 读取进出口流量和流量不平衡率；用 ParaView 打开 `case.foam` 查看 U、p。
+检查命令输出及 `postProcessing/flow_*` 中的边界流量；用 ParaView 打开
+`case.foam` 查看 U、p。求解结果、收敛判断和失败处理由外部 OpenFOAM 工作流负责。
 
 ## 6. 仅导出单房间体网格
 
@@ -217,7 +208,7 @@ OpenFOAM 在 PATH 中时，测试会真正执行原生程序；缺少程序时�
 | 室外 | test0_6spacesIntersection.geo | 背景网格 4 m | 344 | 2.78e-12 |
 
 本机复核产物在 `temp/openfoam-indoor-verified` 和 `temp/openfoam-outdoor-verified`。
-另外，test0 的全部六个房间和 test3_geomove 均有统一保存入口的网格回归测试，
+另外，test0 的全部六个房间和 test3_geomove 均有专用导出入口的网格回归测试，
 原有 IDF 保存由 I/O 测试继续覆盖。
 
 几何表面按项目既有的 0.01 m 精度合并顶点、匹配共享边、去除重复面并统一法向；

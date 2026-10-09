@@ -113,7 +113,6 @@ with `scenario="indoor"` or `scenario="outdoor"` and explicit
 
 ```python
 from MoosasPy.model.io.foam import exportFoam
-from MoosasPy.simulation.airflow import OpenFoamRunner
 
 conditions = {
     "viscosity": 1.5e-5,
@@ -126,13 +125,12 @@ conditions = {
 }
 saved = exportFoam(model, "cases/wind/case.foam", scenario="outdoor",
                    grid_size=4, conditions=conditions)
-result = OpenFoamRunner(saved.primary_path.parent).run()
-print(result.successful, result.converged, result.relative_flow_imbalance)
+print(saved.primary_path.parent)  # OpenFOAM case directory
 ```
 
 See the [GEO-to-CFD guide](doc/openfoam.md) for runnable indoor/outdoor examples,
 environment setup, opening IDs, physical assumptions, and real-GEO verification.
-The runner preserves mesh/solver logs and reports nonconvergence explicitly.
+Run meshing and solving with OpenFOAM's own command-line tools or workflow.
 
 ## Model and Simulation Domains
 
