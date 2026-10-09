@@ -10,6 +10,7 @@ simulation workflows.
 - Transform GEO, OBJ, and STL geometry into a structured `MoosasModel`.
 - Load and save RDF/Turtle, XML, JSON, and EnergyPlus IDF models.
 - Export graph JSON and gbXML, with dedicated IFC conversion utilities.
+- Export a selected room as an OpenFOAM volume mesh through `exportFoam`.
 - Prepare weather data and cumulative sky models from user-provided EPW files.
 - Run rapid energy, solar-radiation, sunlight, Radiance daylight, and CONTAM
   airflow analyses.
@@ -80,6 +81,56 @@ weather = load_epw("custom.epw", "analysis-input/weather")
 result = EnergyRunner(model=model, weather=weather).run()
 print(result.data["total"])
 ```
+
+## OpenFOAM Volume Mesh Export
+
+Export a selected constant-section room with the dedicated OpenFOAM function:
+
+```python
+from MoosasPy.transform import transform
+from MoosasPy.model.io.foam import exportFoam
+
+model = transform("test/caseFile/test0_6spacesIntersection.geo", input_type="geo")
+result = exportFoam(model, "cases/room/room.foam", space_index=0, grid_size=0.5, layers=12)
+print(result.primary_path)  # cases/room/room.foam
+```
+
+This writes a ParaView marker, five mesh files and a `constant/moosasGrid.json`
+cell-to-grid mapping. The volume covers the complete footprint, including
+clipped perimeter cells and holes; its base is the source face, independent of
+the sampling height. All boundary patches default to walls. Use metres for
+geometry and supply your own field boundary conditions and solver settings.
+
+This exporter supports a single horizontal floor and constant room height.
+It does not support arbitrary room solids, varying ceiling heights, internal obstacles,
+or automatic window/door patches. Existing meshes are not overwritten.
+See [OpenFOAM export details](doc/openfoam.md) for parameters, mapping semantics,
+and `checkMesh` validation.
+
+For an isothermal indoor or outdoor CFD simulation, use `exportFoam`
+with `scenario="indoor"` or `scenario="outdoor"` and explicit
+`conditions`. It writes a complete OpenFOAM Foundation 12 case:
+
+```python
+from MoosasPy.model.io.foam import exportFoam
+
+conditions = {
+    "viscosity": 1.5e-5,
+    "turbulence_intensity": 0.05,
+    "turbulence_length": 1.0,
+    "iterations": 1000,
+    "velocity": [2.0, 0.0, 0.0],
+    "domain": [[-100.0, 120.0, 0.0], [0.0, 240.0, 45.0]],
+    "inside_point": [-90.0, 130.0, 5.0],
+}
+saved = exportFoam(model, "cases/wind/case.foam", scenario="outdoor",
+                   grid_size=4, conditions=conditions)
+print(saved.primary_path.parent)  # OpenFOAM case directory
+```
+
+See the [GEO-to-CFD guide](doc/openfoam.md) for runnable indoor/outdoor examples,
+environment setup, opening IDs, physical assumptions, and real-GEO verification.
+Run meshing and solving with OpenFOAM's own command-line tools or workflow.
 
 ## Model and Simulation Domains
 

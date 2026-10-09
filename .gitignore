@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 __temp__/
 temp/
+example/
 workplace/
 
 # C extensions

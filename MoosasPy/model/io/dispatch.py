@@ -46,13 +46,19 @@ def load_model(file_path: str | Path):
     raise ValueError(f"Unsupported model load format: {model_format or source}")
 
 
-def save_model(model, file_path: str | Path) -> SaveResult:
+def save_model(model, file_path: str | Path, **format_options) -> SaveResult:
     """Save a model using the capabilities defined for the target format."""
     target = Path(file_path)
     model_format = _model_format(target)
+    if model_format == "foam":
+        raise ValueError(
+            "OpenFOAM export requires MoosasPy.model.io.foam.exportFoam"
+        )
     supported_formats = {"rdf", "ttl", "xml", "json", "idf", "graph", "gbxml"}
     if model_format not in supported_formats:
         raise ValueError(f"Unsupported model save format: {model_format or target}")
+    if format_options:
+        raise TypeError(f"{model_format} save does not accept format options")
     path_utils.checkBuildDir(str(target))
 
     if model_format in {"rdf", "ttl"}:

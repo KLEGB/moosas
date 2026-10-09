@@ -1,4 +1,4 @@
-"""Model loading and saving used by ``MoosasModel``."""
+"""Model I/O through a single format-dispatched save interface."""
 
 from .dispatch import load_model, save_model
 from .result import SaveResult
