@@ -126,6 +126,42 @@ def test_json_round_trip_preserves_empty_shading(semantic_model: MoosasModel):
     assert restored.shadingList == []
 
 
+@pytest.mark.parametrize("suffix", (".xml", ".json", ".idf"))
+def test_single_room_formats_round_trip(tmp_path, suffix):
+    from MoosasPy.transform.importers.geo import writeGeo
+
+    rings = [
+        [(0, 0, 0), (0, 4, 0), (4, 4, 0), (4, 0, 0)],
+        [(0, 0, 3), (4, 0, 3), (4, 4, 3), (0, 4, 3)],
+        [(0, 0, 0), (4, 0, 0), (4, 0, 3), (0, 0, 3)],
+        [(4, 0, 0), (4, 4, 0), (4, 4, 3), (4, 0, 3)],
+        [(4, 4, 0), (0, 4, 0), (0, 4, 3), (4, 4, 3)],
+        [(0, 4, 0), (0, 0, 0), (0, 0, 3), (0, 4, 3)],
+        [(0, 1, 1), (0, 1, 2), (0, 2, 2), (0, 2, 1)],
+    ]
+    normals = [(0, 0, -1), (0, 0, 1), (0, -1, 0), (1, 0, 0),
+               (0, 1, 0), (-1, 0, 0), (-1, 0, 0)]
+    geometry = [
+        MoosasGeometry(shapely.Polygon(ring), f"g_{index}", normal,
+                       0 if index < 6 else 1, errors="raise")
+        for index, (ring, normal) in enumerate(zip(rings, normals))
+    ]
+    source = tmp_path / "single.geo"
+    writeGeo(str(source), geoList=geometry)
+    model = transform(str(source), input_type="geo", stdout=StringIO())
+    assert len(model.spaceList) == 1
+    assert len(model.glazingList) == 1
+    target = tmp_path / f"single{suffix}"
+    model.save(target)
+    restored = MoosasModel.load(target)
+    assert len(restored.spaceList) == 1
+    assert len(restored.glazingList) == 1
+    assert restored.spaceList[0].area == pytest.approx(16)
+    # IDF export already offsets window edges inward by 0.1 m.
+    expected_area = 0.64 if suffix == ".idf" else 1.0
+    assert restored.glazingList[0].area == pytest.approx(expected_area)
+
+
 @pytest.mark.parametrize("suffix", (".rdf", ".xml", ".json"))
 def test_semantic_formats_preserve_shading_and_void_area(
     semantic_model: MoosasModel,

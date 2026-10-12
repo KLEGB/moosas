@@ -189,6 +189,15 @@ def loadXml(filePath, geoPath):
     model = preClassified(model)
     # read the tree to dict
     root = praseXml(filePath)['model']
+    for tag in ("face", "wall", "glazing", "skylight", "shading", "space"):
+        records = root.get(tag, [])
+        if isinstance(records, dict):
+            records = [records]
+        elif records is None or records == "":
+            records = []
+        if not isinstance(records, list):
+            raise ValueError(f"Model {tag} records must be objects or lists")
+        root[tag] = records
 
     # construct LevelList
     level = set()
@@ -288,8 +297,7 @@ def loadXml(filePath, geoPath):
             print(f'\rLOADING: Faces {i + 1}/{len(root["skylight"])}', end='')
         print()
     if root.get("shading"):
-        shading_records = root["shading"] if isinstance(root["shading"], list) else [root["shading"]]
-        for element in shading_records:
+        for element in root["shading"]:
             face_ids = mixItemListToObject(str(element["faceId"]).split())
             model.shadingList.append(
                 MoosasElement(model, face_ids, uid=str(element["Uid"]))
@@ -311,8 +319,11 @@ def loadXml(filePath, geoPath):
                         element['topology']['ceiling']['face']]
             topology["ceiling"] = MoosasFloor(ceilings)
         if "edge" in element['topology']:
+            edge_walls = element['topology']['edge']['wall']
+            if isinstance(edge_walls, dict):
+                edge_walls = [edge_walls]
             walls = [searchBy('Uid', face['Uid'], model.wallList, earlyEnd=True, asObject=True)[0] for face
-                     in element['topology']['edge']['wall']]
+                     in edge_walls]
             boundary_points = element.get("boundary", {}).get("pt", [])
             if isinstance(boundary_points, str):
                 boundary_points = [boundary_points]

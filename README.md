@@ -149,6 +149,9 @@ XML, JSON, and IDF models enter through `MoosasModel.load()`. MoosasPy reads and
 writes EnergyPlus 26.1 IDFs with its bundled 26.1 `Energy+.idd`; older IDFs must
 be migrated with the official EnergyPlus Transition chain first.
 
+XML, JSON, and IDF loading supports both single-room and multi-room models,
+including a single window or skylight record.
+
 See the [MoosasPy documentation](doc/document.md) for transformation options,
 supported model formats, thermal settings, simulation APIs, native resources,
 and release instructions.
