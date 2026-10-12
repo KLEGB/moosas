@@ -355,7 +355,7 @@ class AirflowRunner(Runner):
 def _path_results(project_file, paths, zones, multiplier=1.0):
     flows = read_flowpath(project_file[:-4] + ".lfr") * (3600.0 / AIR_DENSITY) * multiplier
     topology = read_topology(project_file)
-    ordered = sorted(paths, key=lambda p: p.prjIndex)
+    ordered = sorted({path.userName: path for path in paths}.values(), key=lambda p: p.prjIndex)
     if len(flows) != len(ordered) or len(topology) != len(ordered):
         raise ValueError("CONTAM path count does not match the RDF network")
     names = {z.prjIndex: str(z.userName) for z in zones}

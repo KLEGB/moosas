@@ -24,8 +24,14 @@ INCH_METER_MULTIPLIER_SQR = 1
 def glazing_matches_parent(face, glazing, tolerance: float | None = None) -> bool:
     """Return True when a face projection can host the glazing projection."""
     tolerance = 2 * geom.POINT_PRECISION if tolerance is None else tolerance
-    face_projection = face.force_2d(region=True)
-    glazing_projection = glazing.force_2d(region=True)
+    try:
+        face_projection = face.force_2d(region=True)
+        glazing_projection = glazing.force_2d(region=True)
+    except GeometryError:
+        # A nearly zero-width SketchUp face can collapse to fewer than three
+        # unique vertices after precision reduction. It cannot host a
+        # glazing element, but it must not abort the whole model transform.
+        return False
     if shapely.get_dimensions(face_projection) == shapely.get_dimensions(glazing_projection) == 1:
         face_points = shapely.get_coordinates(face_projection)
         glazing_points = shapely.get_coordinates(glazing_projection)
@@ -588,7 +594,7 @@ class MoosasElement(object):
         """if the element contains multi faces,
         the normal has the best description of the faces will be returned"""
         if len(self.__geometries) == 1:
-            return Vector(self.__geometries[0].normal).uniform.unit().array
+            return Vector(self.__geometries[0].normal).unit().array
 
         # PCA1: get covariance matrix
         coordinates = shapely.get_coordinates([geo.face for geo in self.__geometries], include_z=True) - np.array(
@@ -1143,24 +1149,28 @@ class MoosasFace(MoosasElement):
         super(MoosasFace, self).__init__(model, faceId, level=level, offset=offset, glazingElement=glazingElement,
                                          space=space, glazingId=glazingId, uid=uid)
         self.parentFloors: list[MoosasFloor] = []
-        # calculates the plane elevation
-        pointlist = shapely.get_coordinates(self.face, include_z=True)
-        coordinates_z = pointlist[:, 2]
-        # Ver1.2 Changing to an average height to define the surface height is prone to errors on the bottom surface
-        _facebotheight = np.round(np.mean(coordinates_z), 3)
-        if np.isnan(_facebotheight):
+        coordinates_z = shapely.get_coordinates(self.face, include_z=True)[:, 2]
+        inclined = abs(float(self.normal[2])) < 0.99
+        reference_height = float(np.round(
+            np.min(coordinates_z) if inclined else np.mean(coordinates_z), 3
+        ))
+        if not np.isfinite(reference_height):
             raise GeometryError(self.face, "invalid geometry")
-        pointlist = list(pointlist)
-        pointlist.pop()
 
-        for bld_level in model.levelList:
-            if np.abs(_facebotheight - bld_level) < geom.LEVEL_MAX_OFFSET:
-                self.level = bld_level
         if self.level is None:
-            self.level = _facebotheight
-            model.levelList.append(self.level)
-            model.levelList.sort()
-        self.offset = _facebotheight - self.level
+            nearest = min(model.levelList, key=lambda z: (abs(z - reference_height), z)) if model.levelList else None
+            tolerance = geom.LEVEL_MAX_OFFSET if inclined else geom.POINT_PRECISION
+            frozen = getattr(model, "_levels_frozen", False)
+            if nearest is not None and (abs(nearest - reference_height) <= tolerance + 1e-9 or (frozen and not inclined)):
+                self.level = nearest
+            elif frozen:
+                raise GeometryError(self.face, "inclined face has no storey within LEVEL_MAX_OFFSET")
+            else:
+                self.level = reference_height
+                model.levelList.append(self.level)
+                model.levelList.sort()
+        if offset is None:
+            self.offset = reference_height - self.level
 
     @classmethod
     def fromDict(cls, elementDict, model: MoosasContainer):
@@ -2247,7 +2257,7 @@ class MoosasEdge:
     """
     __slots__ = ('wall', 'Uid', '__botBound', '__topBound', 'internalMass')
 
-    def __init__(self, walls: list[MoosasWall]):
+    def __init__(self, walls: list[MoosasWall], boundary: shapely.Geometry | None = None):
         """
         Initialize a boundary object composed of walls.
         
@@ -2268,6 +2278,12 @@ class MoosasEdge:
         if len(self.wall) < 3:
             raise GeometryError(walls, "A boundary requires at least 3 walls.")
         self.prepareBoundary()
+        if boundary is not None:
+            self.__botBound = shapely.force_2d(boundary)
+            for wall, factor in zip(self.wall, self.FactorOfWall):
+                wall.orientation = factor
+                for glazing in wall.glazingElement:
+                    glazing.orientation = factor
         self.internalMass: list[MoosasElement] = []
         for w in walls:
             self.internalMass += w.shading
@@ -3231,10 +3247,19 @@ class MoosasSpace(object):
                 load_schedule(self.parent, schedule_path)
         
 
+        load_intensity_fields = ("zone_ppsm", "zone_equipment", "zone_lighting")
         for key, value in template.items():
             # Thermal loads may be a numeric intensity or a named Daily/Weekly
             # schedule.  Resolve the latter at simulation time so the same
             # model works for the energy and airflow/5R1C engines.
+            if key in load_intensity_fields:
+                try:
+                    value = float(value)
+                except (TypeError, ValueError) as error:
+                    raise ValueError(
+                        f"Building template '{buildingTemplateHint}' field '{key}' must be numeric; "
+                        f"got {value!r}. Store schedules separately from load intensities."
+                    ) from error
             self.settings[key] = value
     
 

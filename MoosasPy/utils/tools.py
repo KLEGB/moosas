@@ -2,6 +2,7 @@ from __future__ import annotations
 import string
 import random
 import shutil
+import tempfile
 from .support import os, sys, np, json
 from .error import FileError
 
@@ -28,7 +29,10 @@ class MoosasPath(object):
         self.libDir = os.path.join(MoosasPlusDirectory, 'libs')
         self.dataBaseDir = os.path.join(MoosasPlusDirectory, 'db')
         self.dataDir = os.path.join(MoosasPlusDirectory, 'data')
-        self.tempDir = os.path.join(MoosasPlusDirectory, '__temp__')
+        # Conversion and simulation scratch files belong to the OS temporary
+        # area, not inside the installed extension. Keep packaged data paths
+        # relative to the project so the extension can live on any drive.
+        self.tempDir = os.path.join(tempfile.gettempdir(), 'Moosas')
 
     @staticmethod
     def clean(dir):

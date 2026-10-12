@@ -247,6 +247,23 @@ def _divideBoundaryByEdge(boundaries: list[TopoBound], edgeList: list[TopoBound]
     return boundaries
 
 
+def _unique_boundaries(boundaries):
+    """Record each closed region once, regardless of loop start/direction.
+
+    Keeping a parent after a failed split can rediscover the same inner ring
+    through several of its edges. Those discoveries must not create duplicate
+    spaces or repeat work in the recursive subdivision.
+    """
+    unique = []
+    for boundary in boundaries:
+        geometry = boundary.geometry
+        if shapely.get_dimensions(geometry) != 2 or shapely.area(geometry) <= geom.POINT_PRECISION ** 2:
+            continue
+        if not any(shapely.equals(geometry, kept.geometry) for kept in unique):
+            unique.append(boundary)
+    return unique
+
+
 def _divideBoundary(boundaries: list[TopoBound], edgeList: list[TopoBound] | list[TopoEdge]) -> list[TopoBound]:
     """
     Recursively divide boundaries using internal edges to decompose complex regions into minimal boundaries.
@@ -286,6 +303,7 @@ def _divideBoundary(boundaries: list[TopoBound], edgeList: list[TopoBound] | lis
     """
 
     """1. build a sub set of the eligible edges that are not coveredBy by the boundaries"""
+    boundaries = _unique_boundaries(boundaries)
     delLine = []
     for i, line in enumerate(edgeList):
         if isinstance(line, TopoEdge):
@@ -322,6 +340,8 @@ def _divideBoundary(boundaries: list[TopoBound], edgeList: list[TopoBound] | lis
 
                     """2.3.1 if one of the path in None:"""
                     if len(path1) * len(path2) == 0:
+                        # No two-sided cut: the original enclosure still exists.
+                        boundSplit.append(bound)
                         """2.3.1.1 means there is an inner ring. 
                         find it and add if the ring is not exist in the boundaries
                         There are two possibilities:
@@ -332,7 +352,10 @@ def _divideBoundary(boundaries: list[TopoBound], edgeList: list[TopoBound] | lis
                                                    avoidEdge=[targetEdge])
                         if len(innerRing) > 0:
                             innerRing = np.append(innerRing,[targetEdge.nodeLoop[1]])
-                            boundSplit.append(TopoBound(innerRing))
+                            ring = TopoBound(innerRing)
+                            if not any(shapely.equals(ring.geometry, existing.geometry)
+                                       for existing in boundaries + boundSplit):
+                                boundSplit.append(ring)
                     else:
                         # connect the path
                         pathSplit = TopoBound(np.append(path1, np.flip(path2)))
@@ -356,11 +379,12 @@ def _divideBoundary(boundaries: list[TopoBound], edgeList: list[TopoBound] | lis
                     boundSplit.append(bound)
 
         """3. call _divideBoundaryByEdge until len(eligible) == 0"""
+        boundSplit = _unique_boundaries(boundSplit)
         if edgeListLen != len(edgeList):
             boundaries = _divideBoundary(boundSplit, edgeList)
         else:
             boundaries = boundSplit
-    return boundaries
+    return _unique_boundaries(boundaries)
 
 
 def outerBoundary(model: MoosasContainer, bld_level: float) -> list[shapely.Geometry]:
@@ -396,6 +420,25 @@ def outerBoundary(model: MoosasContainer, bld_level: float) -> list[shapely.Geom
     """calculate the outer boundaries (the biggest boundaries) of each network"""
     boundaries = [network.outerBoundary() for network in networks]
     return [bound.geometry for boundList in boundaries for bound in boundList]
+
+
+def _partition_network(network):
+    """Extract bounded faces from the existing planar graph without losing area.
+
+    Polygonization ignores dangling/bridge edges as cuts. Nested rings remain
+    separate boundaries and are assigned as holes during space assembly.
+    No virtual walls or geometry beyond the input enclosure are introduced.
+    """
+    lines = [shapely.linestrings(shapely.get_coordinates([edge.fromLocation, edge.toLocation])) for edge in network.edges]
+    polygons = shapely.get_parts(shapely.polygonize(lines))
+    by_location = {tuple(shapely.get_coordinates(node.location)[0]): node for node in network.nodes}
+    boundaries = []
+    for polygon in polygons:
+        # Interior rings have their own bounded polygon in polygonize's output.
+        coordinates = shapely.get_coordinates(shapely.get_exterior_ring(polygon))
+        nodes = [by_location[tuple(point)] for point in coordinates]
+        boundaries.append(TopoBound(nodes))
+    return _unique_boundaries(boundaries)
 
 
 def closed_contour_calculation(model: MoosasContainer, bld_level: float) -> MoosasContainer:
@@ -442,7 +485,7 @@ def closed_contour_calculation(model: MoosasContainer, bld_level: float) -> Moos
 
     for boundGroup, network in zip(boundaries, networks):
         """divide the boundaries by node or edges inside"""
-        boundGroup = _divideBoundary(boundGroup, network.edges)
+        boundGroup = _partition_network(network)
         boundariesNew += boundGroup
 
     # 2.5 展平 boundary_list，检查是否顺时针并转换为 edge。

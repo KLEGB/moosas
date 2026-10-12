@@ -246,25 +246,20 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
                 "zone_infiltration": 0.0,
             })
     print()
-    progress = 0
+    # A bounded face can enclose independent rings. Subtract each direct
+    # child's full footprint once, whether that child is a room or a void.
+    # Comparing immutable edge polygons avoids order-dependent containment.
     for level in model.levelList:
-        level_spaces = np.array(spaces)[searchBy("level", level, spaces)]
-        for index, space in enumerate(level_spaces):
-            progress += 1
-            print(f"\rPACKING: attach void to space {progress}/{len(spaces)}", end="")
-            for other in level_spaces[index:]:
-                if space == other:
-                    continue
-                if shapely.contains_properly(space.force_2d(), other.force_2d()):
-                    if other.is_void() and space not in other.void:
-                        space.add_void(other)
-                    else:
-                        model.voidList.append(MoosasSpace(None, other.edge, None))
-                if shapely.contains_properly(other.force_2d(), space.force_2d()):
-                    if space.is_void() and other not in space.void:
-                        other.add_void(space)
-                    else:
-                        model.voidList.append(MoosasSpace(None, space.edge, None))
+        level_spaces = [space for space in spaces if space.level == level]
+        footprints = {space: space.edge.force_2d() for space in level_spaces}
+        for child in level_spaces:
+            parents = [parent for parent in level_spaces if parent is not child
+                       and shapely.contains_properly(footprints[parent], footprints[child])]
+            if not parents:
+                continue
+            parent = min(parents, key=lambda item: shapely.area(footprints[item]))
+            hole = MoosasSpace(None, child.edge, None)
+            parent.add_void(hole)
     print()
     for space in spaces:
         if space.is_void():

@@ -225,47 +225,38 @@ def _fastOverlap(wall1: shapely.Geometry, wall2: shapely.Geometry) -> bool:
 
 
 def cleanseDuplicatedLevel(model: MoosasContainer) -> MoosasContainer:
-    """
-    Remove duplicated levels and reassign geometries to the bottom level.
-    
-    Parameters
-    ----------
-    model : MoosasContainer
-        The input model containing a list of levels and faces. The levels are evaluated 
-        for duplication based on the total area of associated faces, and redundant levels 
-        are removed. Faces from removed levels are reassigned to the preceding level.
-    
-    Returns
-    -------
-    MoosasContainer
-        The modified model with duplicated levels removed. Faces that were on removed levels 
-        are offset and assigned to the nearest lower level. The levelList is updated accordingly.
-    """
-    """remove duplicated levels,
-     and put geometries on those levels onto the bottom level
+    """Keep the largest horizontal-area candidates subject to storey spacing.
 
-    *** One of the duplicated level would be removed from MoosasContainer.levelList.
-
-     """
-    cleaned = True
-    while cleaned:
-        cleaned = False
-        del_level = []
-        for i in range(1, len(model.levelList)):
-            target = searchBy('level', model.levelList[i], model.faceList)
-            # print(f'level {model.levelList[i]}, floors {len(target)}')
-            # plot_object(np.array(model.faceList)[target])
-            sum_area = np.sum([shapely.area(model.faceList[item].force_2d()) for item in target])
-            if (sum_area < geom.LEVEL_MIN_AREA) or (model.levelList[i] - model.levelList[i-1]< geom.LEVEL_MIN_HEIGHT):
-                for item in target:
-                    model.faceList[item].offset = \
-                        model.faceList[item].level + model.faceList[item].offset - model.levelList[i - 1]
-                    model.faceList[item].level = model.levelList[i - 1]
-                del_level.append(i)
-                cleaned = True
-                model.levelList = np.delete(model.levelList, del_level).tolist()
-                break
+    Areas are measured before reassignment, so traversal order and merged area
+    cannot change the selected elevations. Inclined roofs do not vote for levels.
+    """
+    candidates = sorted(set(model.levelList))
+    if not candidates:
+        return model
+    areas = {}
+    for level in candidates:
+        footprints = [face.force_2d() for face in model.faceList
+                      if face.level == level and abs(float(face.normal[2])) >= 0.99]
+        areas[level] = float(shapely.area(shapely.union_all(footprints))) if footprints else 0.0
+    spacing = getattr(geom, "LEVEL_MIN_HEIGHT", geom.LEVEL_MAX_OFFSET)
+    retained = []
+    for level in sorted(candidates, key=lambda z: (-areas[z], z)):
+        if areas[level] < geom.LEVEL_MIN_AREA:
+            continue
+        if all(abs(level - kept) >= spacing - 1e-9 for kept in retained):
+            retained.append(level)
+    # Preserve a usable reference for small models with no area-qualified level.
+    if not retained:
+        retained = [min(candidates, key=lambda z: (-areas[z], z))]
+    retained.sort()
+    for face in list(model.faceList) + list(model.skylightList):
+        if face.level not in retained:
+            reference_height = face.level + face.offset
+            face.level = min(retained, key=lambda z: (abs(z - reference_height), z))
+            face.offset = reference_height - face.level
+    model.levelList = retained
     return model
+
 
 def cleanseOverlapFace(model: MoosasContainer) -> MoosasContainer:
     """
@@ -659,31 +650,6 @@ def _coPlannerCleanse(elements: np.ndarray[MoosasElement]) -> (np.ndarray[Moosas
     currentFaceNum = 0
     redundant = []
 
-    def _endpoint_key(point) -> tuple[int, int]:
-        """Round a 2D point to the same integer key format used by getEdgeStr()."""
-        return tuple(int(coord * 100) for coord in point[:2])
-
-    def _edge_endpoint_keys(edge_str: str) -> tuple[tuple[int, int], tuple[int, int]]:
-        """Decode an edge string back into its two 2D endpoint keys."""
-        values = [int(item) for item in edge_str.split('_') if item != '']
-        first = tuple(values[:2])
-        second = tuple(values[3:5])
-        return first, second
-
-    def _is_trivalent_node(shared_edge: str, pair: set[int], elements: np.ndarray[MoosasElement]) -> bool:
-        """Return True when either endpoint of a shared edge is touched by a third wall endpoint."""
-        first_key, second_key = _edge_endpoint_keys(shared_edge)
-        for idx, element in enumerate(elements):
-            if idx in pair:
-                continue
-            coordinates = shapely.get_coordinates(element.force_2d())
-            if len(coordinates) < 2:
-                continue
-            element_keys = {_endpoint_key(coordinates[0]), _endpoint_key(coordinates[-1])}
-            if first_key in element_keys or second_key in element_keys:
-                return True
-        return False
-
     while currentFaceNum != faceNum:
         currentFaceNum = faceNum
         edgeDict = {}
@@ -704,9 +670,6 @@ def _coPlannerCleanse(elements: np.ndarray[MoosasElement]) -> (np.ndarray[Moosas
                 if Vector.parallel(Vector(elements[faces[0]].normal), Vector(elements[faces[1]].normal)):
                     coedges = set(elements[faces[0]].getEdgeStr()) & set(elements[faces[1]].getEdgeStr())
                     if len([edge_str for edge_str in list(coedges) if len(edgeDict[edge_str]) > 2]) == 0:
-                        shared_edges = [edge_str for edge_str in list(coedges) if len(edgeDict[edge_str]) == 2]
-                        if any(_is_trivalent_node(shared_edge, set(faces), elements) for shared_edge in shared_edges):
-                            continue
                         _dissolveFaces.append({faces[0],faces[1]})
 
         """Merge dissolve groups"""

@@ -26,8 +26,13 @@ import networkx as nx
 from copy import deepcopy
 from dataclasses import replace
 from ..workspace import SimulationWorkspace
-from ..airflow.balance import BalanceModel, AirflowThermalBoundary
+from ..airflow.balance import BalanceModel, BalanceState, AirflowThermalBoundary
 import shapely
+import csv
+import json
+import time
+import uuid
+from collections import deque
 
 
 def _linear_interpolate_nan_series(values):
@@ -1197,7 +1202,7 @@ class EnergyAirflowCoupler(object):
         energyDict : dict, optional
             Network dictionary override.
         iteration : int, default 1
-            Maximum airflow and sensible-heat iterations per hour.
+            Maximum outer airflow/thermal iterations per hour; also caps 5R1C coupling.
         Returns
         -------
         tuple[AirflowZoneResult, ...]
@@ -1237,20 +1242,48 @@ class EnergyAirflowCoupler(object):
         )
         return result.zones
 
+    def _record_coupling_timing(self, settings, kind, row):
+        """Append one durable CSV row; distinguish repeated HOYs with call_id."""
+        folder = (settings.get('coupling') or {}).get('timing_dir')
+        folder = folder or self.runtime.get('coupling_default_timing_dir') or os.path.join(self.runtime['vent_paths'].workspace, 'coupling_timing')
+        os.makedirs(folder, exist_ok=True)
+        filename = os.path.join(folder, kind + '.csv')
+        exists = os.path.exists(filename) and os.path.getsize(filename) > 0
+        with open(filename, 'a', newline='', encoding='utf-8') as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(row))
+            if not exists:
+                writer.writeheader()
+            writer.writerow(row)
+        self.runtime['coupling_timing_dir'] = str(folder)
+
     def _ventilation_task_5r1c(self, hoy, iteration, inf_p, settings):
-        """Run a transactional CONTAM/5R1C fixed-point step from the last state."""
+        """Transactional solve with timing, bounded rounds and explicit fallback."""
         base_paths = self.runtime['vent_paths']
+        self.runtime['coupling_default_timing_dir'] = os.path.join(base_paths.workspace, 'coupling_timing')
         saved = {key: self.runtime[key] for key in (
-            'balance_model', 'balance_state', 'balance_network_id', 'balance_parameters', 'balance_signature') if key in self.runtime}
+            'balance_model', 'balance_state', 'balance_network_id', 'balance_parameters', 'balance_signature', 'coupling_last_diagnostics') if key in self.runtime}
         trial_paths = VentPaths.create(work_dir=base_paths.workspace)
         self.runtime['vent_paths'] = trial_paths
+        self.runtime['coupling_call_id'] = uuid.uuid4().hex
+        self.runtime['coupling_last_iteration'] = 0
+        started = time.perf_counter()
         try:
-            return self._solve_5r1c_hour(hoy, iteration, inf_p, settings)
-        except Exception:
-            for key in ('balance_model', 'balance_state', 'balance_network_id', 'balance_parameters', 'balance_signature'):
+            result = self._solve_5r1c_hour(hoy, iteration, inf_p, settings)
+            self._record_coupling_timing(settings, 'hours', {
+                'call_id': self.runtime['coupling_call_id'], 'phase': self.runtime.get('coupling_phase', 'independent'),
+                'hoy': int(hoy), 'iterations': result.iteration_count,
+                'elapsed_seconds': time.perf_counter() - started,
+                'status': 'converged' if result.converged else 'tail_mean', 'error': ''})
+            return result
+        except Exception as exc:
+            for key in ('balance_model', 'balance_state', 'balance_network_id', 'balance_parameters', 'balance_signature', 'coupling_last_diagnostics'):
                 self.runtime.pop(key, None)
             self.runtime.update(saved)
             self.runtime['balance_failed_workspace'] = trial_paths.workspace
+            self._record_coupling_timing(settings, 'hours', {
+                'call_id': self.runtime['coupling_call_id'], 'phase': self.runtime.get('coupling_phase', 'independent'),
+                'hoy': int(hoy), 'iterations': self.runtime.get('coupling_last_iteration', 0),
+                'elapsed_seconds': time.perf_counter() - started, 'status': 'failed', 'error': str(exc)})
             raise
         finally:
             self.runtime['vent_paths'] = base_paths
@@ -1272,12 +1305,23 @@ class EnergyAirflowCoupler(object):
         trial = old_t.copy()
         cp = balance.parameters.air_specific_heat_j_kgk
         coupling = {**settings, **(settings.get("coupling") or {})}
-        max_coupling = int(coupling.get("max_iterations", afn.COUPLING_MAX_ITERATIONS))
+        requested = int(iteration)
+        configured = int(coupling.get('max_iterations', afn.COUPLING_MAX_ITERATIONS))
+        max_coupling = min(requested, configured)
         t_tol = float(coupling.get("temperature_tolerance_c", afn.TEMPERATURE_TOLERANCE_C))
         f_tol = float(coupling.get("flow_tolerance", afn.FLOW_TOLERANCE))
         relax = float(coupling.get("relaxation", afn.RELAXATION))
-        if max_coupling < 2 or t_tol <= 0 or f_tol <= 0 or not 0 < relax <= 1:
+        policy = coupling.get('on_nonconvergence', 'tail_mean')
+        tail_count = int(coupling.get('tail_iterations', 3))
+        budget = coupling.get('max_hour_seconds')
+        budget = None if budget is None else float(budget)
+        if (max_coupling < 1 or t_tol <= 0 or f_tol <= 0 or not 0 < relax <= 1
+                or tail_count < 1 or policy not in {'tail_mean', 'error'}
+                or (budget is not None and (not np.isfinite(budget) or budget <= 0))):
             raise ValueError("Invalid 5R1C airflow coupling configuration")
+        started = time.perf_counter()
+        tail = deque(maxlen=tail_count)
+        self.runtime['coupling_last_iteration'] = 0
         solar = {
             str(zone.get('userName', key)): float(zone.get('zone_transmitted_solar_w', 0.0))
             for key, zone in self.networkDict.get('zones', {}).items()
@@ -1290,63 +1334,115 @@ class EnergyAirflowCoupler(object):
         flow_residual = float("inf")
         candidate = committed
         airflow_result = None
+        exit_reason = 'iteration_limit'
+        converged = False
         for coupling_iteration in range(1, max_coupling + 1):
-            indoor = dict(zip(balance.zone_ids, trial))
-            airflow_result = AirflowRunner(
-                model=self.model,
-                outdoor_temperature=self.runtime.get("outdoor_temperature", 25),
-                heat_loads={z: 0.0 for z in balance.zone_ids},
-                max_iterations=1,
-                flow_multiplier=1.0,  # CONTAM already includes explicit leakage paths.
-                paths=self.runtime["vent_paths"],
-                thermal=False,
-                indoor_temperature=indoor,
-                network_dict=self.networkDict,
-            ).run()
-            if airflow_result.mass_flow_matrix_kg_s is None:
-                raise RuntimeError("CONTAM did not return its native kg/s airflow matrix")
-            source_names = tuple(z.user_name for z in airflow_result.zones)
-            source_matrix = np.asarray(airflow_result.mass_flow_matrix_kg_s, dtype=float)
-            full_matrix = np.zeros((len(balance.zone_ids) + 1, len(balance.zone_ids) + 1), dtype=float)
-            target_nodes = [balance.index[name] for name in source_names] + [len(balance.zone_ids)]
-            full_matrix[np.ix_(target_nodes, target_nodes)] = source_matrix
-            boundary = AirflowThermalBoundary.from_mass_matrix(
-                balance.zone_ids, full_matrix, cp_j_kgk=cp)
-            candidate, _ = balance.step(
-                committed, hoy, self.runtime.get("outdoor_temperature", 25), gains, boundary,
-                ideal_hvac=bool(settings.get("ideal_hvac", True)))
-            candidate_t = np.asarray(candidate.ta_c, dtype=float)
-            t_residual = float(np.max(np.abs(candidate_t - trial)))
-            current_flow = full_matrix
-            if previous_flow is not None:
-                denom = max(float(np.linalg.norm(previous_flow)), 1e-12)
-                flow_residual = float(np.linalg.norm(current_flow - previous_flow) / denom)
-                if t_residual <= t_tol and flow_residual <= f_tol:
-                    existing = {z.user_name: z for z in airflow_result.zones}
-                    project_file = os.path.join(airflow_result.workspace.path, "project", "model.prj")
-                    _write_project_temperatures(
-                        np.asarray([candidate_t[balance.index[name]] + 273.15 for name in source_names]),
-                        project_file)
-                    zone_out = tuple(
-                        replace(existing[name], temperatures=(float(candidate_t[i]),),
-                                ach_values=(float(full_matrix[-1, i] * afn.TIME_STEP_SECONDS
-                                                  / balance.parameters.air_density_kg_m3
-                                                  / balance.volume[i]),))
-                        if name in existing else AirflowZoneResult(
-                            user_name=name, project_name="", heat_load=0.0,
-                            volume=float(balance.volume[i]), temperatures=(float(candidate_t[i]),),
-                            ach_values=(0.0,))
-                        for i, name in enumerate(balance.zone_ids))
-                    self.runtime["balance_state"] = candidate
-                    return replace(airflow_result, zones=zone_out, converged=True,
-                                   iteration_count=coupling_iteration,
-                                   residual=max(t_residual, flow_residual),
-                                   warnings=airflow_result.warnings)
-            previous_flow = current_flow.copy()
+            if budget is not None and time.perf_counter() - started >= budget:
+                exit_reason = 'time_budget'
+                break
+            self.runtime['coupling_last_iteration'] = coupling_iteration
+            tick = time.perf_counter()
+            contam_seconds = thermal_seconds = 0.0
+            inner_iterations = None
+            error = ''
+            t_residual = float('inf')
+            try:
+                indoor = dict(zip(balance.zone_ids, trial))
+                runner_kwargs = {}
+                if budget is not None:
+                    runner_kwargs['timeout_seconds'] = min(300.0, max(0.001, budget - (tick - started)))
+                afn_start = time.perf_counter()
+                try:
+                    airflow_result = AirflowRunner(
+                        model=self.model, outdoor_temperature=self.runtime.get("outdoor_temperature", 25),
+                        heat_loads={z: 0.0 for z in balance.zone_ids}, max_iterations=1,
+                        flow_multiplier=1.0, paths=self.runtime["vent_paths"], thermal=False,
+                        indoor_temperature=indoor, network_dict=self.networkDict, **runner_kwargs).run()
+                finally:
+                    contam_seconds = time.perf_counter() - afn_start
+                if airflow_result.mass_flow_matrix_kg_s is None:
+                    raise RuntimeError("CONTAM did not return its native kg/s airflow matrix")
+                source_names = tuple(z.user_name for z in airflow_result.zones)
+                source_matrix = np.asarray(airflow_result.mass_flow_matrix_kg_s, dtype=float)
+                full_matrix = np.zeros((len(balance.zone_ids) + 1, len(balance.zone_ids) + 1), dtype=float)
+                target_nodes = [balance.index[name] for name in source_names] + [len(balance.zone_ids)]
+                full_matrix[np.ix_(target_nodes, target_nodes)] = source_matrix
+                boundary = AirflowThermalBoundary.from_mass_matrix(balance.zone_ids, full_matrix, cp_j_kgk=cp)
+                thermal_start = time.perf_counter()
+                try:
+                    candidate, inner_iterations = balance.step(
+                        committed, hoy, self.runtime.get("outdoor_temperature", 25), gains, boundary,
+                        ideal_hvac=bool(settings.get("ideal_hvac", True)))
+                finally:
+                    thermal_seconds = time.perf_counter() - thermal_start
+                candidate_t = np.asarray(candidate.ta_c, dtype=float)
+                if not np.isfinite([candidate.ta_c, candidate.ts_c, candidate.tm_c]).all():
+                    raise ValueError('5R1C produced non-finite candidate state')
+                t_residual = float(np.max(np.abs(candidate_t - trial)))
+                if previous_flow is not None:
+                    denom = max(float(np.linalg.norm(previous_flow)), 1e-12)
+                    flow_residual = float(np.linalg.norm(full_matrix - previous_flow) / denom)
+                    converged = t_residual <= t_tol and flow_residual <= f_tol
+                tail.append((candidate, full_matrix.copy()))
+            except Exception as exc:
+                error = str(exc)
+                raise
+            finally:
+                self._record_coupling_timing(settings, 'iterations', {
+                    'call_id': self.runtime['coupling_call_id'], 'phase': self.runtime.get('coupling_phase', 'independent'),
+                    'hoy': int(hoy), 'iteration': coupling_iteration, 'iteration_limit': max_coupling,
+                    'elapsed_seconds': time.perf_counter() - tick, 'contam_seconds': contam_seconds,
+                    'thermal_seconds': thermal_seconds, 'thermal_internal_iterations': inner_iterations,
+                    'temperature_residual_c': t_residual if np.isfinite(t_residual) else None,
+                    'relative_flow_residual': flow_residual if np.isfinite(flow_residual) else None,
+                    'status': 'failed' if error else ('converged' if converged else 'candidate'), 'error': error})
+            if converged:
+                exit_reason = 'converged'
+                break
+            previous_flow = full_matrix.copy()
             trial = (1.0 - relax) * trial + relax * candidate_t
-        raise RuntimeError(
-            f"CONTAM-5R1C did not converge at hoy={hoy} after {max_coupling} iterations "
-            f"(temperature={t_residual:.6g} C, flow={flow_residual:.6g})")
+        if not converged:
+            if policy == 'error' or not tail:
+                raise RuntimeError(
+                    f"CONTAM-5R1C did not converge at hoy={hoy} after {self.runtime['coupling_last_iteration']} iterations "
+                    f"(temperature={t_residual:.6g} C, flow={flow_residual:.6g}, reason={exit_reason})")
+            # Every candidate took one step from the same committed state.
+            # Averaging all three nodes prevents a mixed, inconsistent hour state.
+            candidate = BalanceState(balance.zone_ids, *(
+                tuple(np.mean([getattr(item[0], field) for item in tail], axis=0))
+                for field in ('ta_c', 'ts_c', 'tm_c')))
+            full_matrix = np.mean([item[1] for item in tail], axis=0)
+        candidate_t = np.asarray(candidate.ta_c, dtype=float)
+        existing = {z.user_name: z for z in airflow_result.zones}
+        diagnostics = {'hoy': int(hoy), 'converged': converged, 'exit_reason': exit_reason,
+                       'iterations': self.runtime['coupling_last_iteration'], 'iteration_limit': max_coupling,
+                       'tail_samples': 0 if converged else len(tail), 'policy': policy,
+                       'temperature_residual_c': t_residual,
+                       'relative_flow_residual': flow_residual if np.isfinite(flow_residual) else None}
+        project_file = os.path.join(airflow_result.workspace.path, "project", "model.prj")
+        _write_project_temperatures(
+            np.asarray([candidate_t[balance.index[name]] + 273.15 for name in source_names]), project_file)
+        with open(os.path.join(airflow_result.workspace.path, 'coupling_diagnostics.json'), 'w', encoding='utf-8') as handle:
+            json.dump(diagnostics, handle, indent=2, allow_nan=False)
+        zone_out = tuple(
+            replace(existing[name], temperatures=(float(candidate_t[i]),),
+                    ach_values=(float(full_matrix[-1, i] * afn.TIME_STEP_SECONDS
+                                      / balance.parameters.air_density_kg_m3 / balance.volume[i]),))
+            if name in existing else AirflowZoneResult(
+                user_name=name, project_name="", heat_load=0.0, volume=float(balance.volume[i]),
+                temperatures=(float(candidate_t[i]),), ach_values=(0.0,))
+            for i, name in enumerate(balance.zone_ids))
+        warning = () if converged else (
+            f'CONTAM-5R1C not converged; tail_mean of {len(tail)} candidates; raw path_results/project flow files refer to final CONTAM trial.',)
+        # Files and structured result must be built successfully before committing.
+        result = replace(airflow_result, zones=zone_out, converged=converged,
+                         iteration_count=self.runtime['coupling_last_iteration'], residual=max(t_residual, flow_residual),
+                         mass_flow_matrix_kg_s=full_matrix.copy(),
+                         airflow_matrix=full_matrix * afn.TIME_STEP_SECONDS / balance.parameters.air_density_kg_m3,
+                         warnings=airflow_result.warnings + warning)
+        self.runtime['balance_state'] = candidate
+        self.runtime['coupling_last_diagnostics'] = diagnostics
+        return result
 
     @staticmethod
     def _is_variable_flow_path_dict(path_obj: dict, eps=1e-9) -> bool:
@@ -1461,7 +1557,7 @@ class EnergyAirflowCoupler(object):
         energyDict : dict, optional
             Network dictionary override.
         iteration : int, default 3
-            Maximum airflow and sensible-heat iterations per hour.
+            Maximum outer airflow/thermal iterations per hour; also caps 5R1C coupling.
         timestep : int, default 1
             Hour step size. Number of hoy samples is
             `len(range(start_hoy, end_hoy + 1, timestep))`.
@@ -1574,12 +1670,14 @@ class EnergyAirflowCoupler(object):
             # ties select its first hour, not the coldest hour of the full year.
             preheat_hoy = max(hoys, key=heat_at)
             self.runtime["outdoor_temperature"] = full_weather_t[preheat_hoy]
+            self.runtime['coupling_phase'] = 'preheat'
             for _ in range(int(preheat)):
                 self.ventilationTask(preheat_hoy, energyDict=self.networkDict,
                                      iteration=iteration, inf_p=inf_p, mode=mode)
         if thermal_backend == '5r1c':
             self.runtime['balance_preheat'] = {'hoy': preheat_hoy, 'rounds': int(preheat)}
 
+        self.runtime['coupling_phase'] = 'hourly'
         for hi, hoy in enumerate(hoys):
             print("--------------------Hoy:", hoy)
             self.runtime['outdoor_temperature'] = outdoor_series[hi]

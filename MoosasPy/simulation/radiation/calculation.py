@@ -372,9 +372,7 @@ def ray_test(rays: Iterable[Ray], model=None, geo_path: str = None,
             '-o', result_path,
             ray_path
         ]
-        print('radiation ray command:', command, flush=True)
-        ray_result = Runner().run_command(command)
-        print('radiation ray returncode:', ray_result.returncode, flush=True)
+        Runner().run_command(command)
 
         with open(result_path, 'r') as f:
             result = f.read().split('\n')

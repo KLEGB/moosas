@@ -100,6 +100,6 @@ def calculate_position_sun_hours(position_ray: Ray | Iterable[Ray], sky,
 
     resultHour = []
     for rayArraySE in rayIdx:
-        resultHour.append(len([ref for ref in refRay[rayArraySE[0]:rayArraySE[1]] if ref is not None]))
+        resultHour.append(len([ref for ref in refRay[rayArraySE[0]:rayArraySE[1]] if ref is None]))
 
     return np.array(resultHour).astype(float) / totalDays
