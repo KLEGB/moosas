@@ -34,6 +34,7 @@ class geom:
     # Maximum offset height (m),
     # which can also be understood as the minimum floor height
     LEVEL_MAX_OFFSET = 1.5
+    LEVEL_MIN_HEIGHT = 2.2  # minimum spacing between retained storey elevations
     # validation of the room
     ROOM_MIN_AREA = 1.0
     ROOM_MIN_DIMENSION = 0.9
@@ -139,7 +140,7 @@ class afn:
     TIME_STEP_SECONDS = 3600.0
     INITIAL_TEMPERATURE_C = 23.0
     PREHEAT_ROUNDS = 10
-    COUPLING_MAX_ITERATIONS = 30
+    COUPLING_MAX_ITERATIONS = 10
     TEMPERATURE_TOLERANCE_C = 0.02
     FLOW_TOLERANCE = 1e-3
     RELAXATION = 0.5

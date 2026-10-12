@@ -20,45 +20,27 @@ def classify_model(
     attach_shading: bool = False,
 ) -> MoosasModel | None:
     """Classify source geometry into building elements and establish levels."""
-    print("\rLOADING: Predefining existing tag on faces...", end="")
+    model._levels_frozen = False
     classified_ids = []
+    predefined_faces = {}
+    predefined_walls = []
     for geometry in model.geometryList:
-        if geometry.category == -1:
-            if attach_shading:
-                model.shadingList.append(MoosasElement(model, geometry))
+        if geometry.category in (-2, -1):
+            if geometry.category == -1:
+                if attach_shading:
+                    model.shadingList.append(MoosasElement(model, geometry))
             classified_ids.append(geometry.faceId)
-        elif geometry.category == 4:
+        elif geometry.category in (4, 6):
+            predefined_faces[geometry.faceId] = geometry.category
+        elif geometry.category in (3, 5):
+            predefined_walls.append((geometry, geometry.category))
             classified_ids.append(geometry.faceId)
-            geometry.setCategory()
-            face = MoosasFace(model, geometry)
-            model.faceList.append(face)
-            if face.level not in model.levelList:
-                model.levelList.append(face.level)
-                model.levelList.sort()
-        elif geometry.category == 6:
-            classified_ids.append(geometry.faceId)
-            geometry.setCategory()
-            face = MoosasSkylight(model, geometry)
-            model.skylightList.append(face)
-            if face.level not in model.levelList:
-                model.levelList.append(face.level)
-                model.levelList.sort()
-
-    for geometry in model.geometryList:
-        if geometry.category == 3:
-            classified_ids.append(geometry.faceId)
-            geometry.setCategory()
-            model.wallList.append(MoosasWall(model, geometry))
-        elif geometry.category == 5:
-            classified_ids.append(geometry.faceId)
-            geometry.setCategory()
-            model.glazingList.append(MoosasGlazing(model, geometry))
 
     print()
     if triangulate_faces:
         deleted_indices = []
         for index, geometry in enumerate(model.geometryList):
-            if geometry.faceId in classified_ids:
+            if geometry.faceId in classified_ids or geometry.faceId in predefined_faces:
                 continue
             print(f"\rLOADING: triangulate horizontal faces {index + 1}/{len(model.geoId)}", end="")
             if np.abs(Vector.dot(geometry.normal, shapely.points([0, 0, 1]))) >= geom.HORIZONTAL_ANGLE_THRESHOLD:
@@ -78,33 +60,46 @@ def classify_model(
         model.geometryList = list(np.delete(model.geometryList, deleted_indices))
         print(f"\t\tprocessing faces: {len(deleted_indices)}")
 
-    for index, geometry in enumerate(model.geometryList):
-        if geometry.faceId in classified_ids:
-            continue
-        print(f"\rLOADING: Filtering horizontal faces {index + 1}/{len(model.geoId)}", end="")
-        if np.abs(Vector.dot(geometry.normal, shapely.points([0, 0, 1]))) >= 0.99:
-            face = MoosasSkylight(model, geometry) if geometry.category != 0 else MoosasFace(model, geometry)
-            (model.skylightList if geometry.category != 0 else model.faceList).append(face)
-            if face.level not in model.levelList:
-                model.levelList.append(face.level)
-                model.levelList.sort()
-    print()
+    def load_surface(geometry):
+        predefined = predefined_faces.get(geometry.faceId)
+        skylight = predefined == 6 if predefined is not None else geometry.category not in (0, 2)
+        if predefined is not None:
+            geometry.setCategory()
+        face = MoosasSkylight(model, geometry) if skylight else MoosasFace(model, geometry)
+        (model.skylightList if skylight else model.faceList).append(face)
+        classified_ids.append(geometry.faceId)
 
-    for index, geometry in enumerate(model.geometryList):
-        if geometry.faceId in classified_ids:
-            continue
-        print(f"\rLOADING: Filtering inclined faces {index + 1}/{len(model.geoId)}", end="")
-        if 0.99 > np.abs(Vector.dot(geometry.normal, shapely.points([0, 0, 1]))) >= geom.HORIZONTAL_ANGLE_THRESHOLD:
-            face = MoosasSkylight(model, geometry) if geometry.category != 0 else MoosasFace(model, geometry)
-            (model.skylightList if geometry.category != 0 else model.faceList).append(face)
-            if face.level not in model.levelList:
-                model.levelList.append(face.level)
-                model.levelList.sort()
-
+    # Even explicitly tagged roofs/floors must wait for horizontal references.
+    for geometry in model.geometryList:
+        if geometry.faceId not in classified_ids and abs(Vector(geometry.normal).array[2]) >= 0.99:
+            load_surface(geometry)
     if not model.levelList:
+        print("******Warning: no horizontal storey reference found")
         return None
-
     model = cleanseDuplicatedLevel(model)
+    model._levels_frozen = True
+
+    for geometry in model.geometryList:
+        if geometry.faceId in classified_ids:
+            continue
+        nz = abs(Vector(geometry.normal).array[2])
+        if geom.HORIZONTAL_ANGLE_THRESHOLD <= nz < 0.99 or geometry.faceId in predefined_faces:
+            try:
+                load_surface(geometry)
+            except GeometryError as error:
+                # An unmatched slope stays geometry/shading, never a cutting level.
+                classified_ids.append(geometry.faceId)
+                print(f"******Warning: {geometry.faceId}: {error}")
+                if attach_shading:
+                    z = float(np.min(shapely.get_coordinates(geometry.face, include_z=True)[:, 2]))
+                    nearest = min(model.levelList, key=lambda level: (abs(level - z), level))
+                    model.shadingList.append(MoosasElement(model, geometry, level=nearest, offset=z-nearest))
+
+    for geometry, category in predefined_walls:
+        geometry.setCategory()
+        (model.wallList if category == 3 else model.glazingList).append(
+            MoosasWall(model, geometry) if category == 3 else MoosasGlazing(model, geometry)
+        )
     print(f"\t\ttotal horizontal faces: {len(model.faceList)} skylights: {len(model.skylightList)}")
 
     if break_wall_vertical:

@@ -225,42 +225,38 @@ def _fastOverlap(wall1: shapely.Geometry, wall2: shapely.Geometry) -> bool:
 
 
 def cleanseDuplicatedLevel(model: MoosasContainer) -> MoosasContainer:
-    """
-    Remove duplicated levels and reassign geometries to the bottom level.
-    
-    Parameters
-    ----------
-    model : MoosasContainer
-        The input model containing a list of levels and faces. The levels are evaluated 
-        for duplication based on the total area of associated faces, and redundant levels 
-        are removed. Faces from removed levels are reassigned to the preceding level.
-    
-    Returns
-    -------
-    MoosasContainer
-        The modified model with duplicated levels removed. Faces that were on removed levels 
-        are offset and assigned to the nearest lower level. The levelList is updated accordingly.
-    """
-    """remove duplicated levels,
-     and put geometries on those levels onto the bottom level
+    """Keep the largest horizontal-area candidates subject to storey spacing.
 
-    *** One of the duplicated level would be removed from MoosasContainer.levelList.
-
-     """
-    del_level = []
-    for i in range(1, len(model.levelList)):
-        target = searchBy('level', model.levelList[i], model.faceList)
-        # print(f'level {model.levelList[i]}, floors {len(target)}')
-        # plot_object(np.array(model.faceList)[target])
-        sum_area = np.sum([shapely.area(model.faceList[item].force_2d()) for item in target])
-        if sum_area < geom.LEVEL_MIN_AREA:
-            for item in target:
-                model.faceList[item].offset = \
-                    model.faceList[item].level + model.faceList[item].offset - model.levelList[i - 1]
-                model.faceList[item].level = model.levelList[i - 1]
-            del_level.append(i)
-    model.levelList = np.delete(model.levelList, del_level).tolist()
+    Areas are measured before reassignment, so traversal order and merged area
+    cannot change the selected elevations. Inclined roofs do not vote for levels.
+    """
+    candidates = sorted(set(model.levelList))
+    if not candidates:
+        return model
+    areas = {}
+    for level in candidates:
+        footprints = [face.force_2d() for face in model.faceList
+                      if face.level == level and abs(float(face.normal[2])) >= 0.99]
+        areas[level] = float(shapely.area(shapely.union_all(footprints))) if footprints else 0.0
+    spacing = getattr(geom, "LEVEL_MIN_HEIGHT", geom.LEVEL_MAX_OFFSET)
+    retained = []
+    for level in sorted(candidates, key=lambda z: (-areas[z], z)):
+        if areas[level] < geom.LEVEL_MIN_AREA:
+            continue
+        if all(abs(level - kept) >= spacing - 1e-9 for kept in retained):
+            retained.append(level)
+    # Preserve a usable reference for small models with no area-qualified level.
+    if not retained:
+        retained = [min(candidates, key=lambda z: (-areas[z], z))]
+    retained.sort()
+    for face in list(model.faceList) + list(model.skylightList):
+        if face.level not in retained:
+            reference_height = face.level + face.offset
+            face.level = min(retained, key=lambda z: (abs(z - reference_height), z))
+            face.offset = reference_height - face.level
+    model.levelList = retained
     return model
+
 
 def cleanseOverlapFace(model: MoosasContainer) -> MoosasContainer:
     """
