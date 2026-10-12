@@ -3120,6 +3120,17 @@ class MoosasSpace(object):
             polygon = self.edge.force_2d(top)
         return polygon
 
+    def getWeightCenter(self) -> np.ndarray:
+        """Return the geometric center of the space boundary and vertical extent."""
+        centroid = shapely.centroid(self.force_2d())
+        if self.is_void():
+            bottom = self.edge.level
+            top = self.edge.toplevel
+        else:
+            bottom = self.floor.level + self.floor.offset
+            top = self.ceiling.level + self.ceiling.offset
+        return np.array([centroid.x, centroid.y, (bottom + top) / 2.0])
+
     def is_void(self):
         """
         Check if the space is considered void based on floor and ceiling area conditions.

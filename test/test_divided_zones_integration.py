@@ -62,6 +62,22 @@ def test_attic_is_not_rejected_by_standard_room_height():
     assert not space.is_void()
 
 
+def test_divided_zone_space_center_uses_boundary_centroid():
+    model = transform(
+        str(CASE_DIRECTORY / "test90_restockwithattic.geo"),
+        input_type="geo",
+        stdout=StringIO(),
+        options=TransformOptions(divided_zones=True),
+    )
+
+    attic = next(space for space in model.spaceList if space.space_type == "attic")
+    centroid = shapely.centroid(attic.force_2d())
+    center = attic.getWeightCenter()
+
+    assert center[:2] == pytest.approx((centroid.x, centroid.y))
+    assert center[2] == pytest.approx(attic.floor.level + attic.height / 2.0)
+
+
 @pytest.mark.parametrize(
     "case_name",
     (
