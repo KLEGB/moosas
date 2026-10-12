@@ -10,6 +10,8 @@ import os.path
 import sys
 import time
 
+import shapely
+
 from .stages.assembly import assemble_model
 from .stages.boundary import prepare_boundary_geometry
 from .stages.classification import classify_model
@@ -27,6 +29,21 @@ from .importers.stl import _readStl
 from ..model import MoosasModel
 from ..model.resources import configure_model_resources
 from ..utils import np
+
+
+def _sort_spaces(model: MoosasModel) -> MoosasModel:
+    """Order generated spaces deterministically by level and plan position."""
+    def sort_key(space):
+        centroid = shapely.centroid(space.force_2d())
+        return (
+            float(space.level),
+            float(centroid.y),
+            float(centroid.x),
+            str(space.id),
+        )
+
+    model.spaceList = sorted(model.spaceList, key=sort_key)
+    return model
 
 
 def complete_topology(model: MoosasModel) -> MoosasModel:
@@ -323,6 +340,7 @@ def structured(
         attach_shading=options.attach_shading,
         standardize=options.standardize,
     )
+    model = _sort_spaces(model)
     t6 = time.time()
     t7 = time.time()
 
@@ -350,7 +368,6 @@ def structured(
     print(f"Total Duration     {'%.3fs' % (t7 - t0)}\t100%")
 
     return model
-
 
 
 

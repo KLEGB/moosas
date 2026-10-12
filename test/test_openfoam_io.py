@@ -43,6 +43,20 @@ def test_save_real_geo_room_through_model(geo_model, tmp_path, index, area, base
     assert points[:, 2].max() == pytest.approx(base + 4.4)
 
 
+def test_transformed_spaces_have_stable_plan_order(geo_model):
+    spaces = geo_model.spaceList
+    keys = [
+        (
+            space.level,
+            float(shapely.centroid(space.force_2d()).y),
+            float(shapely.centroid(space.force_2d()).x),
+            str(space.id),
+        )
+        for space in spaces
+    ]
+    assert keys == sorted(keys)
+
+
 def test_export_real_geo_through_function(tmp_path):
     source = Path(__file__).parent / "caseFile" / "test3_geomove.geo"
     model = transform(str(source), input_type="geo", stdout=StringIO())
