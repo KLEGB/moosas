@@ -15,7 +15,8 @@ import shapely
 from .stages.assembly import assemble_model
 from .stages.boundary import prepare_boundary_geometry
 from .stages.classification import classify_model
-from .stages.cleansing import cleanse_model
+from .stages.cleansing import attach_explicit_shading, cleanse_model
+from .geometry.cleanse import cleanseDuplicatedWall
 from .stages.convexification import convexify_model
 from .stages.finalization import finalize_model
 from .stages.generation import CCRSpaceGeneration
@@ -236,6 +237,10 @@ def structured(
             solve_overlap=options.solve_overlap,
         )
         model = split_wall_intersections(model, options.break_wall_horizontal)
+        if options.solve_duplicated and options.break_wall_horizontal:
+            model = cleanseDuplicatedWall(model)
+        if options.attach_shading:
+            model = attach_explicit_shading(model)
         t2 = time.time()
         t3 = time.time()
 
@@ -368,7 +373,5 @@ def structured(
     print(f"Total Duration     {'%.3fs' % (t7 - t0)}\t100%")
 
     return model
-
-
 
 

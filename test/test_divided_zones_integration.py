@@ -43,6 +43,49 @@ def test_attic_is_preserved_without_divided_zones():
     assert sum(space.space_type == "attic" for space in model.spaceList) == 1
 
 
+def test_duplicate_walls_are_removed_before_shading_attachment():
+    model = transform(
+        str(CASE_DIRECTORY / "test90_restockwithattic.geo"),
+        input_type="geo",
+        stdout=StringIO(),
+        options=TransformOptions(divided_zones=False),
+    )
+
+    for first_index, first_wall in enumerate(model.wallList):
+        for second_wall in model.wallList[first_index + 1:]:
+            assert not (
+                first_wall.level == second_wall.level
+                and first_wall.toplevel == second_wall.toplevel
+                and first_wall.is_air_boundary == second_wall.is_air_boundary
+                and shapely.equals(first_wall.force_2d(), second_wall.force_2d())
+            )
+
+
+def test_inclined_roof_faces_are_not_room_ceilings():
+    model = transform(
+        str(CASE_DIRECTORY / "test90_restockwithattic.geo"),
+        input_type="geo",
+        stdout=StringIO(),
+        options=TransformOptions(divided_zones=False),
+    )
+
+    room_spaces = [
+        space
+        for space in model.spaceList
+        if space.space_type == "room" and space.level == 0
+    ]
+    roof_ids = {"f_37", "f_38", "f_39", "f_40"}
+
+    assert room_spaces
+    assert all(
+        roof_ids.isdisjoint({str(face.faceId) for face in space.ceiling.face})
+        for space in room_spaces
+    )
+
+    attic = next(space for space in model.spaceList if space.space_type == "attic")
+    assert roof_ids <= {str(face.faceId) for face in attic.ceiling.face}
+
+
 def test_roof_classification_accepts_a_30_degree_slope():
     target_roof_normal_z = math.cos(math.radians(30.21))
 

@@ -12,6 +12,7 @@ from ..geometry.cleanse import (
     cleanseOverlapFace,
     cleanseOverlapWall,
 )
+from ..geometry.element import MoosasElement
 from .glazing import attach_glazing_to_faces
 
 
@@ -43,3 +44,14 @@ def cleanse_model(
         model = cleanseOverlapWall(model)
         model = cleanseOverlapFace(model)
     return model, wall_counts
+
+
+def attach_explicit_shading(model: MoosasModel) -> MoosasModel:
+    """Create explicit shading elements after all wall cleansing is complete."""
+    existing_shading = {element.faceId for element in model.shadingList}
+    model.shadingList.extend(
+        MoosasElement(model, geometry)
+        for geometry in model.geometryList
+        if geometry.category == -1 and geometry.faceId not in existing_shading
+    )
+    return model

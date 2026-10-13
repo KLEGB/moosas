@@ -10,6 +10,7 @@ from MoosasPy.simulation.radiation.calculation import (
 from MoosasPy.transform.geometry.element import MoosasGeometry
 from MoosasPy.transform.geometry.geos import Ray, Vector
 from MoosasPy.transform.stages.classification import classify_model
+from MoosasPy.transform.stages.cleansing import attach_explicit_shading, cleanse_model
 from MoosasPy.utils import shapely
 
 
@@ -43,7 +44,16 @@ def test_attached_shading_blocks_radiation():
             ),
         ]
         model.geoId = [geometry.faceId for geometry in model.geometryList]
-        return classify_model(model, attach_shading=attach_shading)
+        model = classify_model(model, attach_shading=attach_shading)
+        model, _ = cleanse_model(
+            model,
+            solve_duplicated=False,
+            solve_redundant=False,
+            solve_overlap=False,
+        )
+        if attach_shading:
+            model = attach_explicit_shading(model)
+        return model
 
     factors = {}
     with tempfile.TemporaryDirectory() as work_dir:

@@ -26,9 +26,6 @@ def classify_model(
     predefined_walls = []
     for geometry in model.geometryList:
         if geometry.category in (-2, -1):
-            if geometry.category == -1:
-                if attach_shading:
-                    model.shadingList.append(MoosasElement(model, geometry))
             classified_ids.append(geometry.faceId)
         elif geometry.category in (4, 6):
             predefined_faces[geometry.faceId] = geometry.category

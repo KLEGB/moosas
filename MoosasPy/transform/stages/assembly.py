@@ -35,6 +35,15 @@ def identify_basement_spaces(model: MoosasModel) -> MoosasModel:
     return model
 
 
+def _horizontal_face_indices(model: MoosasModel, level) -> list[int]:
+    """Return only horizontal faces available at a storey level."""
+    return [
+        index
+        for index in searchBy("level", level, model.faceList)
+        if abs(float(model.faceList[index].normal[2])) >= 0.99
+    ]
+
+
 def order_connected_walls(walls: list) -> list | None:
     """Order walls into one closed 2D ring without changing their geometry."""
     if len(walls) < 3:
@@ -175,7 +184,7 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
     progress = 0
     for level in model.levelList:
         edge_indices = searchBy("level", level, model.edgeList)
-        face_indices = searchBy("level", level, model.faceList)
+        face_indices = _horizontal_face_indices(model, level)
         for edge_index in edge_indices:
             progress += 1
             try:
@@ -203,7 +212,7 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
     progress = 0
     for level, top_level in zip(model.levelList[:-1], model.levelList[1:]):
         edge_indices = searchBy("level", level, model.edgeList)
-        face_indices = searchBy("level", top_level, model.faceList)
+        face_indices = _horizontal_face_indices(model, top_level)
         for edge_index in edge_indices:
             progress += 1
             try:

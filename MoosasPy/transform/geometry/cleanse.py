@@ -347,37 +347,33 @@ def cleanseDuplicatedWall(model: MoosasContainer) -> MoosasContainer:
     *** One of the duplicated walls would be removed from MoosasContainer.wallList.
 
     """
-    """build up tue duplication check list"""
-    duplicateCheckList: list[list[int]] = []
-    duplicatedWall: list[int] = []
-    edge2d = [w.force_2d() for w in model.wallList]
+    """build up the duplication check list"""
+    duplicateCheckList: list[tuple[int, int]] = []
     for bld_level in model.levelList:
-
-        wall_list = searchBy('level', bld_level, model.wallList)
-        wall_group: list[list[int]] = _groupByCollinear(listToGroup=wall_list,
-                                                        listOfNormal=[model.wallList[w].normal for w in
-                                                                      wall_list],
-                                                        listOfGeometry=[model.wallList[w].force_2d() for w in
-                                                                        wall_list])
-        for wall_list in wall_group:
-            for i in range(len(wall_list)):
-                duplicateCheckList.append(wall_list[i:])
+        wall_indices = searchBy('level', bld_level, model.wallList)
+        for first_index, first_wall in enumerate(wall_indices):
+            for second_wall in wall_indices[first_index + 1:]:
+                if (
+                    model.wallList[first_wall].is_air_boundary
+                    == model.wallList[second_wall].is_air_boundary
+                    and equals(
+                        model.wallList[first_wall].force_2d(),
+                        model.wallList[second_wall].force_2d(),
+                    )
+                ):
+                    duplicateCheckList.append((first_wall, second_wall))
 
     """check if the walls are duplicated, and dissolve that wall into the others"""
-    for wl, task in enumerate(duplicateCheckList):
+    duplicatedWall: set[int] = set()
+    for wl, (first_wall, second_wall) in enumerate(duplicateCheckList):
         print(f'\rCLEANSE: Duplicated wall checking: {wl}/{len(duplicateCheckList)}', end='')
-        for i in range(1, len(task)):
-            if (
-                equals(edge2d[task[0]], edge2d[task[i]])
-                and model.wallList[task[0]].is_air_boundary
-                == model.wallList[task[i]].is_air_boundary
-            ):
-                model.wallList[task[i]].dissolve(model.wallList[task[0]])
-                duplicatedWall.append(task[0])
-                break
+        if first_wall in duplicatedWall or second_wall in duplicatedWall:
+            continue
+        model.wallList[first_wall].dissolve(model.wallList[second_wall])
+        duplicatedWall.add(second_wall)
 
     print()
-    model.wallList = np.delete(model.wallList, duplicatedWall)
+    model.wallList = np.delete(model.wallList, list(duplicatedWall))
     return model
 
 
