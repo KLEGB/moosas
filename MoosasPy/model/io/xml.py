@@ -298,7 +298,8 @@ def loadXml(filePath, geoPath):
     # load space
     loaded_spaces = {}
     space_records = []
-    for i, element in enumerate(root['space']):
+    spaces = root['space'] if isinstance(root['space'], list) else [root['space']]
+    for i, element in enumerate(spaces):
         topology = {"Floor": None, "ceiling": None, "Edge": None}
         if "floor" in element['topology']:
             element['topology']['floor']['face'] = mixItemListToList(element['topology']['floor']['face'])
@@ -334,7 +335,7 @@ def loadXml(filePath, geoPath):
                     spc.settings[key] = element['setting'][key]
             loaded_spaces[spc.id] = spc
             space_records.append((spc, element))
-        print(f'\rLOADING: space {i + 1}/{len(root["space"])}', end='')
+        print(f'\rLOADING: space {i + 1}/{len(spaces)}', end='')
     print()
 
     void_ids = set()

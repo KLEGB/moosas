@@ -8,12 +8,15 @@ for arbitrary building solids. No OpenFOAM installation is needed to export.
 from __future__ import annotations
 
 import json
+import shutil
+import tempfile
 from numbers import Integral
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 import shapely
+from shapely.errors import GEOSException
 from shapely.geometry.polygon import orient
 from shapely.ops import triangulate
 
@@ -25,6 +28,85 @@ if TYPE_CHECKING:
 
 _PATCH_NAMES = ("bottom", "top", "walls")
 _PATCH_TYPES = {"wall", "patch", "symmetry", "symmetryPlane"}
+
+
+def inspectFoamSpace(model, space_index: int) -> dict:
+    """Inspect one room using the same surface rules as indoor export.
+
+    The result contains JSON-compatible space and opening metadata, patch
+    readiness, room closure, and diagnostics. Physical CFD conditions are not
+    checked here. Clients should use this public API instead of _foam_case.
+    """
+    from ._foam_case import _conformal_surface, _surface_triangles
+
+    if (isinstance(space_index, (bool, np.bool_))
+            or not isinstance(space_index, Integral)
+            or not 0 <= space_index < len(model.spaceList)):
+        available = f"0 to {len(model.spaceList) - 1}" if model.spaceList else "none (model has no spaces)"
+        raise ValueError(f"Space Index must be a zero-based integer; available indices: {available}.")
+
+    faces = model.spaceList[space_index].getAllFaces(to_dict=True)
+    boundaries = faces["MoosasFloor"] + faces["MoosasCeiling"] + faces["MoosasWall"]
+    openings = list({str(opening.Uid): (kind, opening)
+                     for kind in ("MoosasGlazing", "MoosasSkylight")
+                     for opening in faces[kind]}.values())
+    details = []
+    diagnostics = []
+    for kind, opening in openings:
+        parents = [face for face in boundaries
+                   if any(str(candidate.Uid) == str(opening.Uid) for candidate in face.glazingElement)]
+        problems = []
+        if not parents:
+            problems.append(f"Opening {opening.Uid} has no parent room boundary face.")
+        for parent in parents:
+            try:
+                _surface_triangles(parent, {"opening": opening})
+            except (ValueError, TypeError, GEOSException) as error:
+                problems.append(f"Opening {opening.Uid}, parent {parent.Uid}: {error}")
+        details.append({
+            "uid": str(opening.Uid), "type": kind, "area": float(opening.area),
+            "parent_uids": [str(parent.Uid) for parent in parents],
+            "patch_valid": not problems,
+            "status": "; ".join(problems) if problems else "Ready for inlet/outlet patch",
+        })
+        diagnostics.extend(problems)
+
+    valid_uids = {item["uid"] for item in details if item["patch_valid"]}
+    for parent in boundaries:
+        selected = {str(opening.Uid): opening for opening in parent.glazingElement
+                    if str(opening.Uid) in valid_uids}
+        if len(selected) > 1:
+            try:
+                _surface_triangles(parent, selected)
+            except (ValueError, TypeError, GEOSException) as error:
+                diagnostics.append(f"Opening selection conflict on {parent.Uid}: {error}")
+
+    room_closed = False
+    try:
+        triangles = []
+        source_uids = []
+        for face in boundaries:
+            surface = _surface_triangles(face, {})
+            triangles.extend(surface)
+            source_uids.extend([str(face.Uid)] * len(surface))
+        if not triangles:
+            raise ValueError("Selected room has no boundary surfaces.")
+        _conformal_surface(triangles, source_uids=source_uids)
+        room_closed = True
+    except (ValueError, TypeError, GEOSException) as error:
+        diagnostics.append(str(error))
+    if len(openings) < 2:
+        diagnostics.append(
+            f"Indoor export needs two distinct opening Uids; this room has {len(openings)}. "
+            "Check glazing-to-wall association and wall-plane alignment if openings are missing."
+        )
+    return {
+        "spaces": [{"index": index, "id": str(space.id)}
+                   for index, space in enumerate(model.spaceList)],
+        "openings": details,
+        "room_closed": room_closed,
+        "diagnostics": diagnostics,
+    }
 
 
 def exportFoam(
@@ -43,6 +125,8 @@ def exportFoam(
     The default mesh scenario extrudes a horizontal, constant-section room.
     CFD scenarios require explicit physical conditions and defer volume meshing
     to OpenFOAM's snappyHexMesh, which is run outside MoosasPy.
+    The case directory must be absent or empty. Files are staged beside it and
+    published together. Competing exports cannot replace a completed case.
     """
     from ...transform.geometry.grid import MoosasGrid
 
@@ -55,7 +139,9 @@ def exportFoam(
 
         if layers != 1:
             raise ValueError("layers applies only to scenario='mesh'")
-        return write_case(model, target, scenario, space_index, grid_size, conditions)
+        return _save_case(target, lambda staged_target: write_case(
+            model, staged_target, scenario, space_index, grid_size, conditions
+        ))
     if scenario != "mesh" or conditions is not None:
         raise ValueError("Use scenario mesh, indoor, or outdoor; conditions require a CFD scenario")
     if space_index is None:
@@ -77,9 +163,69 @@ def exportFoam(
     if target.exists():
         raise FileExistsError(f"Export file already exists: {target}")
     grid = MoosasGrid(floor, gird_size=grid_size, grid_offset=0.78)
-    result = _write_grid_mesh(grid, target.parent, height=space.height, layers=layers)
-    target.touch(exist_ok=False)
-    return SaveResult(primary_path=target, generated_paths=(*result.generated_paths, target))
+
+    def write_mesh(staged_target):
+        result = _write_grid_mesh(grid, staged_target.parent, height=space.height, layers=layers)
+        staged_target.touch(exist_ok=False)
+        return SaveResult(staged_target, (*result.generated_paths, staged_target))
+
+    return _save_case(target, write_mesh)
+
+
+def _require_empty_case(case_dir):
+    # Never follow a case-directory symlink into user data, including a dangling
+    # link. Parent aliases are resolved separately for the staging directory.
+    if case_dir.is_symlink() or (case_dir.exists() and (
+        not case_dir.is_dir() or any(case_dir.iterdir())
+    )):
+        raise FileExistsError(f"OpenFOAM case directory must be empty: {case_dir}")
+
+
+def _save_case(target, writer):
+    """Stage a complete case and publish without replacing a populated directory."""
+    case_dir = target.parent.absolute()
+    _require_empty_case(case_dir)
+    case_dir = case_dir.parent.resolve() / case_dir.name
+    case_dir.parent.mkdir(parents=True, exist_ok=True)
+    # Unique sibling directories keep publication on the same filesystem. A
+    # hard-killed writer may leave its own staging directory, but cannot block
+    # a retry or make another exporter clean up its files.
+    stage_dir = Path(tempfile.mkdtemp(prefix=f".{case_dir.name}.moosas-", dir=case_dir.parent))
+    try:
+        result = writer(stage_dir / target.name)
+        final_result = SaveResult(
+            target.parent / result.primary_path.relative_to(stage_dir),
+            tuple(target.parent / path.relative_to(stage_dir) for path in result.generated_paths),
+        )
+        _require_empty_case(case_dir)
+        restore_empty = case_dir.exists()
+        try:
+            if restore_empty:
+                # rmdir refuses files added since the check. Keep it inside
+                # the rollback guard in case publication is interrupted here.
+                try:
+                    case_dir.rmdir()
+                except OSError:
+                    # A competing exporter may already have removed the empty
+                    # directory. Windows can report access denied during that
+                    # removal; publication can still safely choose one winner.
+                    if case_dir.exists():
+                        raise
+            # Unlike copying files, renaming a populated directory cannot
+            # replace a populated winner, even when exporters race this check.
+            stage_dir.rename(case_dir)
+        except BaseException:
+            if restore_empty:
+                try:
+                    case_dir.mkdir()
+                except FileExistsError:
+                    pass  # Preserve a destination created by somebody else.
+            raise
+        return final_result
+    finally:
+        # Only this call's unique staging directory is a cleanup target.
+        if stage_dir.exists():
+            shutil.rmtree(stage_dir)
 
 
 def _write_grid_mesh(

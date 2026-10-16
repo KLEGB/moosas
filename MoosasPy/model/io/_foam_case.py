@@ -46,39 +46,73 @@ def _project_polygon(polygon, origin, axes):
     return shapely.Polygon(rings[0], rings[1:])
 
 
-def _surface_triangles(element, openings):
-    """Triangulate each planar face, cutting selected openings in its own plane."""
-    result = []
-    covered = set()
+def _planar_surfaces(element):
+    """Combine coplanar parts before assigning openings to surface patches."""
+    groups = []
     for polygon in np.asarray(element.face, dtype=object).reshape(-1):
         xyz = shapely.get_coordinates(shapely.get_exterior_ring(polygon), include_z=True)
+        if len(xyz) < 4 or not np.isfinite(xyz).all():
+            raise ValueError(f"Invalid surface: {element.Uid}")
         origin = xyz[0]
         normal = np.sum(np.cross(xyz[:-1] - origin, xyz[1:] - origin), axis=0)
         length = np.linalg.norm(normal)
-        if length <= 1e-12 or not np.isfinite(xyz).all():
+        if length <= 1e-12:
             raise ValueError(f"Invalid surface: {element.Uid}")
         normal /= length
-        x_axis = xyz[1] - origin
+        x_axis = next((point - origin for point in xyz[1:]
+                       if np.linalg.norm(point - origin) > 1e-12), None)
+        if x_axis is None:
+            raise ValueError(f"Invalid surface: {element.Uid}")
         x_axis /= np.linalg.norm(x_axis)
         axes = np.column_stack((x_axis, np.cross(normal, x_axis)))
-        if np.max(np.abs((xyz - origin) @ normal)) > 0.02:
+        coords = shapely.get_coordinates(polygon, include_z=True)
+        if not np.isfinite(coords).all() or np.max(np.abs((coords - origin) @ normal)) > 0.02:
             raise ValueError(f"Non-planar surface: {element.Uid}")
-        footprint = _project_polygon(polygon, origin, axes)
-        glazing = [_project_polygon(part, origin, axes)
-                   for opening in element.glazingElement
-                   for part in np.asarray(opening.face, dtype=object).reshape(-1)]
-        if glazing:
-            footprint = shapely.union(footprint, shapely.intersection(
-                shapely.Polygon(footprint.exterior), shapely.union_all(glazing)))
+        for group_origin, group_axes, group_normal, parts in groups:
+            if (abs(np.dot(normal, group_normal)) >= 1 - 1e-8
+                    and np.max(np.abs((coords - group_origin) @ group_normal)) <= 0.02):
+                parts.append(_project_polygon(polygon, group_origin, group_axes))
+                break
+        else:
+            groups.append((origin, axes, normal, [_project_polygon(polygon, origin, axes)]))
+    return groups
+
+
+def _surface_triangles(element, openings):
+    """Form each wall from its opaque parts and associated coplanar openings."""
+    result = []
+    covered = set()
+    for origin, axes, normal, parts in _planar_surfaces(element):
+        footprint = shapely.union_all(parts)
+        apertures = {}
+        for opening in element.glazingElement:
+            attached = []
+            for part in np.asarray(opening.face, dtype=object).reshape(-1):
+                coords = shapely.get_coordinates(part, include_z=True)
+                if (not len(coords) or not np.isfinite(coords).all()
+                        or np.max(np.abs((coords - origin) @ normal)) > 0.02):
+                    continue
+                projected = _project_polygon(part, origin, axes)
+                if projected.distance(footprint) <= 1e-8:
+                    attached.append(projected)
+            if attached:
+                apertures[opening.Uid] = shapely.union_all(attached)
+        # Include boundary cutouts in full. Clipping to the opaque exterior
+        # would discard doors and floor-level windows situated in those cutouts.
+        footprint = shapely.union_all([footprint, *apertures.values()])
         # Closed windows remain wall. Selected openings become separate patches.
         regions = {}
         opaque = footprint
         for name, opening in openings.items():
-            parts = [_project_polygon(part, origin, axes)
-                     for part in np.asarray(opening.face, dtype=object).reshape(-1)]
-            aperture = shapely.intersection(footprint, shapely.union_all(parts))
-            if aperture.area <= 1e-8:
+            aperture = apertures.get(opening.Uid)
+            if aperture is None or aperture.area <= 1e-8:
                 continue
+            for other_name, other in regions.items():
+                if shapely.intersection(aperture, other).area > 1e-8:
+                    raise ValueError(
+                        f"Selected openings {opening.Uid} and {openings[other_name].Uid} "
+                        f"overlap on parent face {element.Uid}"
+                    )
             covered.add(name)
             regions[name] = aperture
             opaque = shapely.difference(opaque, aperture)
@@ -99,7 +133,11 @@ def _surface_triangles(element, openings):
             if not np.isclose(area, region.area, rtol=1e-8, atol=1e-8):
                 raise ValueError(f"Unable to preserve complete surface {element.Uid}")
     if set(openings) != covered:
-        raise ValueError("Selected opening does not intersect its parent face")
+        missing = ", ".join(str(openings[name].Uid) for name in sorted(set(openings) - covered))
+        raise ValueError(
+            f"Selected opening {missing} does not intersect parent face {element.Uid}; "
+            "check that the opening is coplanar with and touches its parent surface"
+        )
     return result
 
 
@@ -140,14 +178,19 @@ def _contains_point(triangles, point):
     return len(np.unique(np.round(distance[hits], 8))) % 2 == 1
 
 
-def _conformal_surface(triangles):
+def _conformal_surface(triangles, *, source_uids=None):
     """Use model precision once, then node shared edges and orient the shell."""
     vertices = np.round(np.vstack([v for _, v in triangles]) / geom.POINT_PRECISION) * geom.POINT_PRECISION
     points, inverse = np.unique(vertices, axis=0, return_inverse=True)
     tree = cKDTree(points)
     faces = []
+    owners = []
+    if source_uids is None:
+        source_uids = [patch for patch, _ in triangles]
+    if len(source_uids) != len(triangles):
+        raise ValueError("Surface source identifiers must align with triangles")
     seen = {}
-    for (patch, _), ring in zip(triangles, inverse.reshape(-1, 3)):
+    for (patch, _), ring, owner in zip(triangles, inverse.reshape(-1, 3), source_uids):
         key = tuple(sorted(ring))
         if len(set(ring)) < 3:
             raise ValueError("Geometry contains features smaller than model precision")
@@ -172,10 +215,12 @@ def _conformal_surface(triangles):
             boundary.extend(index for _, index in sorted(split))
         if len(boundary) == 3:
             faces.append([patch, boundary])
+            owners.append(owner)
         else:
             center = len(points)
             points = np.vstack((points, np.mean(points[ring], axis=0)))
             faces.extend([patch, [a, b, center]] for a, b in zip(boundary, boundary[1:] + boundary[:1]))
+            owners.extend([owner] * len(boundary))
     edges = defaultdict(list)
     for i, (_, face) in enumerate(faces):
         for a, b in zip(face, face[1:] + face[:1]):
@@ -183,7 +228,11 @@ def _conformal_surface(triangles):
     bad = [edge for edge, users in edges.items() if len(users) != 2]
     if bad:
         sample = [(points[a].tolist(), points[b].tolist(), len(edges[(a, b)])) for a, b in bad[:3]]
-        raise ValueError(f"Model surface is not closed at {len(bad)} edges: {sample}")
+        source_sample = sorted({str(owners[index]) for edge in bad[:3] for index, _ in edges[edge]})
+        raise ValueError(
+            f"Model surface is not closed at {len(bad)} edges: {sample}. "
+            f"Source surfaces at these edges: {', '.join(source_sample)}"
+        )
     adjacency = defaultdict(list)
     for users in edges.values():
         (a, direction_a), (b, direction_b) = users
@@ -312,6 +361,7 @@ def write_case(model, target, scenario, space_index, grid_size, conditions):
     if isinstance(iterations, bool) or not isinstance(iterations, Integral) or iterations < 1:
         raise ValueError("iterations must be a positive integer")
     triangles = []
+    source_uids = []
     pressure = 0.0
     if scenario == "indoor":
         if (isinstance(space_index, bool) or not isinstance(space_index, Integral)
@@ -337,7 +387,9 @@ def write_case(model, target, scenario, space_index, grid_size, conditions):
         pressure = _number(conditions["outlet"]["pressure"], "outlet pressure")
         for element in faces["MoosasFloor"] + faces["MoosasCeiling"] + faces["MoosasWall"]:
             cut = {name: g for name, g in selected.items() if g in element.glazingElement}
-            triangles.extend(_surface_triangles(element, cut))
+            surface = _surface_triangles(element, cut)
+            triangles.extend(surface)
+            source_uids.extend([element.Uid] * len(surface))
         if not {"inlet", "outlet"}.issubset({name for name, _ in triangles}):
             raise ValueError("Selected openings must belong to room boundary faces")
         coords = np.vstack([v for _, v in triangles])
@@ -363,7 +415,9 @@ def write_case(model, target, scenario, space_index, grid_size, conditions):
         faces = model.getAllFaces(dumpUseless=True)
         for element in list(faces["MoosasFace"]) + list(faces["MoosasWall"]):
             if element.isOuter:
-                triangles.extend(_surface_triangles(element, {}))
+                surface = _surface_triangles(element, {})
+                triangles.extend(surface)
+                source_uids.extend([element.Uid] * len(surface))
         if not triangles:
             raise ValueError("Model has no exterior building surfaces")
         coords = np.vstack([v for _, v in triangles])
@@ -381,7 +435,7 @@ def write_case(model, target, scenario, space_index, grid_size, conditions):
         block_patches.extend((("ground", "wall"), ("top", "symmetry")))
     if np.linalg.norm(velocity) <= 0:
         raise ValueError("Inlet velocity must be nonzero")
-    triangles = _conformal_surface(triangles)
+    triangles = _conformal_surface(triangles, source_uids=source_uids)
     if _contains_point(triangles, inside) != (scenario == "indoor"):
         raise ValueError("inside_point must be in the selected fluid region")
     if scenario == "indoor":

@@ -15,6 +15,8 @@ exportFoam(model, "cases/room/room.foam", space_index=0, grid_size=1.0, layers=8
 OpenFOAM 的 `.foam` 是 ParaView 入口，其父目录就是算例目录。
 `generated_paths` 列出保存操作生成的全部文件。`load` 不支持读取 `.foam`。
 
+室内导出前可调用公开的 `inspectFoamSpace(model, space_index)` 检查房间边界和开口。返回值包含 `spaces`、`openings`、`room_closed` 和 `diagnostics`；每个开口包含 `uid`、`type`、`area`、`parent_uids`、`patch_valid`、`status`。此检查使用与导出相同的几何规则，不检查速度、压力等物理条件。插件和其他客户端不应调用 `_foam_case` 中的私有函数。
+
 ## 1. 准备运行环境
 
 保存算例不依赖 OpenFOAM。生成 CFD 网格、检查和求解需要
@@ -38,7 +40,7 @@ checkMesh -help
 以下命令从仓库根目录执行。本机 Python 是 `./.venv/Scripts/python.exe`；
 其他环境替换为安装了 MoosasPy 的 Python。
 
-## 2. 室内空气流动
+## 2. 室内空气流动o
 
 首轮支持一个房间、一个指定入口和一个指定出口，计算等温速度场和压力场。
 GEO 不包含完整运行工况，需要另外提供边界条件。
@@ -89,6 +91,13 @@ for index, space in enumerate(model.spaceList):
 
 不能把示例的开口 ID 直接套用到另一个 GEO。
 模型没有所需开口时，应补充实际开口几何；程序不会替用户虚构送排风口。
+
+室内外壳由墙、楼板、天花板及其已关联的开口共同组成。墙内孔洞、落地门窗和墙边缺口
+可以保留：导出器先将同一平面的墙片与关联玻璃面合并，再为选中的入口、出口划分 patch；
+未选中的开口按封闭墙面处理。无需为了开口而手工补成一张完整墙面。
+没有关联开口覆盖的真实缺口仍会报未闭合，入口与出口重叠也会报错。
+厚墙模型应统一采用室内空气边界：玻璃分析面与父墙共面，楼板、天花板与墙边相接。
+不会把相隔墙厚的玻璃自动投影到内墙，也不会自动缩裁建筑外侧楼板。
 
 ## 3. 室外风环境
 
