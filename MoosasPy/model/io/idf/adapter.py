@@ -216,7 +216,7 @@ def _idf_hvac_object_types(idf):
         'HVACTEMPLATE', 'MIXER', 'NODELIST', 'OUTDOORAIR:', 'PLANTLOOP',
         'ENERGYMANAGEMENTSYSTEM',
         'PLANTEQUIPMENT', 'PUMP', 'SETPOINTMANAGER', 'SPLITTER', 'THERMOSTAT',
-        'ZONEHVAC', 'SPACEHVAC',
+        'ZONEHVAC', 'SPACEHVAC', 'SIZING:SYSTEM',
     )
     return [
         object_type
@@ -331,6 +331,9 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
                                        'SurfaceProperty:IncidentSolarMultiplier',
                                        'Space', 'SpaceList', 'ZoneMixing', 'Construction:AirBoundary',
                                        'DesignSpecification:OutdoorAir:SpaceList']
+    # These template-level objects refer to the template's zones or air loops.
+    # They cannot be retained after ideal-loads export replaces those objects.
+    removeHint.append('ZoneList')
     idf = zTemplate.idf
     if hvac_mode == "ideal_loads":
         removeHint.extend(_idf_hvac_object_types(idf))
@@ -1354,5 +1357,3 @@ def readIDF(idfPath: str, geoPath: str = None, xmlPath: str = None) -> IDFConver
         IDFtoXml(idfPath, temp_xml)
         model = loadXml(temp_xml, temp_geo)
         return build_result(model)
-
-

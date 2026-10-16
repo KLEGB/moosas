@@ -336,6 +336,39 @@ def test_idf_export_uses_ideal_loads_for_complex_office_template(semantic_model:
     )
 
 
+def test_idf_export_removes_template_zone_groups_and_system_sizing(semantic_model: MoosasModel):
+    configure_idd()
+    with TemporaryDirectory() as directory:
+        directory = Path(directory)
+        template_path = directory / "stale-template.idf"
+        output_path = directory / "stale-export.idf"
+        template = IDF(str(bundled_template_idf_path()))
+        zone_name = str(template.idfobjects["ZONE"][0].Name)
+        template.newidfobject(
+            "ZONELIST",
+            Name="stale zone group",
+            Zone_1_Name=zone_name,
+        )
+        template.newidfobject(
+            "SIZING:SYSTEM",
+            AirLoop_Name="stale air loop",
+        )
+        template.saveas(str(template_path))
+
+        exportIDF(
+            semantic_model,
+            str(output_path),
+            idfTemplatePath=str(template_path),
+            zoneNameToSpaceDict={
+                zone_name: [str(space.id) for space in semantic_model.spaceList]
+            },
+        )
+        exported = IDF(str(output_path))
+
+    assert not exported.idfobjects["ZONELIST"]
+    assert not exported.idfobjects["SIZING:SYSTEM"]
+
+
 def test_idf_export_preserves_shading_geometry(semantic_model: MoosasModel):
     source_geometry = semantic_model.geometryList[0]
     shading_geometry = MoosasGeometry(
