@@ -1,5 +1,6 @@
 ﻿import re
 import os
+import hashlib
 
 from eppy.modeleditor import IDF
 
@@ -488,10 +489,50 @@ class ZoneTemplate():
                     if _type != 'window' or SHGC is None or abs(float(construction.layers[0].params.get('Solar_Heat_Gain_Coefficient', SHGC)) - float(SHGC)) < 1e-8:
                         return construction
 
-        construction = Construction.create(_type=_type, UFactor=UFactor, SHGC=SHGC)
+        # Template constructions are reused above whenever their thermal
+        # properties match. New objects need deterministic names because
+        # short random names collide in large exports.
+        signature = "|".join([
+            _type,
+            f"{UFactor:.8f}",
+            "" if SHGC is None else f"{float(SHGC):.8f}",
+        ])
+        digest = hashlib.sha1(signature.encode("ascii")).hexdigest()[:12]
+        prefix = "MoosasWindow" if _type == "window" else "MoosasOpaque"
+        construction_name = self._unique_idf_name(
+            "Construction",
+            f"{prefix}_{digest}",
+        )
+        layer_type = "WindowMaterial:SimpleGlazingSystem" if _type == "window" else "Material"
+        layer_prefix = "MoosasGlazingMaterial" if _type == "window" else "MoosasOpaqueMaterial"
+        layer_name = self._unique_idf_name(
+            layer_type,
+            f"{layer_prefix}_{digest}",
+        )
+        construction = Construction.create(
+            _type=_type,
+            UFactor=UFactor,
+            SHGC=SHGC,
+            construction_name=construction_name,
+            layer_name=layer_name,
+        )
         construction.applyToIDF(self.idf)
         self.constructionList.append(construction)
         return construction
+
+    def _unique_idf_name(self, object_type, base_name):
+        """Return a stable name that is unused in the current IDF object type."""
+        existing = {
+            str(obj["Name"]).strip()
+            for obj in self.idf.idfobjects[object_type]
+            if str(obj["Name"]).strip()
+        }
+        candidate = base_name
+        suffix = 2
+        while candidate in existing:
+            candidate = f"{base_name}_{suffix}"
+            suffix += 1
+        return candidate
 
     def appliedToZone(self, zone: MoosasSpace):
         """

@@ -23,6 +23,9 @@ def finalize_model(
         model = attach_shading_content(model)
     if standardize:
         model = standardize_model(model)
+    for wall in model.wallList:
+        if wall.is_air_boundary and len({str(space_id) for space_id in wall.space}) != 2:
+            wall.setCategory(0)
     return validate_model(model)
 
 

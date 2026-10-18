@@ -346,7 +346,7 @@ class MoosasGeometry(object):
         -------
         None
         """
-        if cat:
+        if cat is not None:
             self.__category = cat
         else:
             if self.category == 3 or self.category == 4 or self.category == -1:

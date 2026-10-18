@@ -14,6 +14,7 @@ from MoosasPy.model.io.idf import exportIDF
 from MoosasPy.model.io.idf.adapter import IDFtoXml, _idf_build_artifacts
 from MoosasPy.model.io.idf.input import encodeFace
 from MoosasPy.model.io.idf.model import FaceDefault, MoosasSettings
+from MoosasPy.model.io.idf.parser import ZoneTemplate
 from MoosasPy.model.io.idf.version import bundled_template_idf_path, configure_idd
 from MoosasPy.model.resources import configure_model_resources, rebuild_schedule_index
 from MoosasPy.transform import transform
@@ -255,6 +256,38 @@ def test_idf_face_encoding_removes_unused_vertex_fields():
     assert "Vertex_4_Xcoordinate" not in settings.params
     assert "Vertex_4_Ycoordinate" not in settings.params
     assert "Vertex_4_Zcoordinate" not in settings.params
+
+
+def test_new_idf_constructions_have_unique_deterministic_names():
+    configure_idd()
+    template_idf = IDF(str(bundled_template_idf_path()))
+    zone_template = ZoneTemplate.fromIDF(template_idf, zoneName="Room_4")
+
+    template_construction = next(
+        item for item in zone_template.constructionList if item.type == "opaque"
+    )
+    assert zone_template.getConstruction(
+        "opaque",
+        template_construction.UFactor,
+    ) is template_construction
+
+    first = zone_template.getConstruction("opaque", 0.731)
+    second = zone_template.getConstruction("opaque", 0.847)
+    repeated = zone_template.getConstruction("opaque", 0.731)
+
+    assert first is repeated
+    assert first.params["Name"] != second.params["Name"]
+    assert first.layers[0].params["Name"] != second.layers[0].params["Name"]
+    assert len({
+        str(obj["Name"]).strip()
+        for obj in template_idf.idfobjects["CONSTRUCTION"]
+        if str(obj["Name"]).strip()
+    }) == len(template_idf.idfobjects["CONSTRUCTION"])
+    assert len({
+        str(obj["Name"]).strip()
+        for obj in template_idf.idfobjects["MATERIAL"]
+        if str(obj["Name"]).strip()
+    }) == len(template_idf.idfobjects["MATERIAL"])
 
 
 def test_idf_export_clones_simple_baseboard_hvac_per_zone(semantic_model: MoosasModel):

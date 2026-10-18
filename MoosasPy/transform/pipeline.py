@@ -161,7 +161,6 @@ def transform(
         generation_method=method,
         t0=t0,
     )
-
     sys.stdout = sysout
     # print(len(model.spaceList))
     # print(len(model.voidList))
@@ -373,5 +372,3 @@ def structured(
     print(f"Total Duration     {'%.3fs' % (t7 - t0)}\t100%")
 
     return model
-
-

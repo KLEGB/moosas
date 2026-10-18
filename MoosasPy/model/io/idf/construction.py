@@ -49,8 +49,9 @@ class Construction(MoosasSettings):
             Variable number of MoosasSettings instances representing the layers.
             At least one layer must be provided.
         _name : str, optional
-            Name to assign to the instance. If not provided, a 4-character 
-            alphanumeric code is generated automatically.
+            Name to assign to the instance. If not provided, a legacy
+            generated name is used. IDF export should provide an explicit
+            unique name.
         
         Returns
         -------
@@ -62,7 +63,7 @@ class Construction(MoosasSettings):
             self.type = 'window'
         else:
             self.type = 'opaque'
-        _name = str(generate_code(4)) if _name is None else _name
+        _name = str(generate_code(12)) if _name is None else _name
         super().__init__(constructionDefault, Name=_name, Outside_Layer=layers[0].params['Name'])
         if len(layers) > 1:
             for lay in range(1, len(layers)):
@@ -77,7 +78,14 @@ class Construction(MoosasSettings):
             self.UFactor = 1 / RValue
 
     @classmethod
-    def create(cls, _type, UFactor,SHGC=None):
+    def create(
+        cls,
+        _type,
+        UFactor,
+        SHGC=None,
+        construction_name=None,
+        layer_name=None,
+    ):
         """
         Create a MoosasSettings instance based on the specified type and U-factor.
         
@@ -88,10 +96,15 @@ class Construction(MoosasSettings):
         _type : str
             The type of element to create; either 'window' or another type for opaque materials.
         UFactor : float or str
-            The U-factor value; will be converted to float and rounded to 2 decimal places.
+            The U-factor value; will be converted to float. Generated opaque
+            materials preserve the corresponding conductivity.
         SHGC : float, optional
             Solar Heat Gain Coefficient, required only for 'window' type. 
             Defaults to 0.48 if not provided and _type is 'window'.
+        construction_name : str, optional
+            Explicit IDF Construction name.
+        layer_name : str, optional
+            Explicit IDF material name for the generated single layer.
         
         Returns
         -------
@@ -101,10 +114,19 @@ class Construction(MoosasSettings):
         UFactor = float(UFactor)
         if _type == 'window':
             SHGC = .48 if SHGC is None else SHGC
-            layer = MoosasSettings(glzDefault, UFactor=np.round(UFactor,2), Name='g_' + generate_code(4),Solar_Heat_Gain_Coefficient=SHGC)
+            layer = MoosasSettings(
+                glzDefault,
+                UFactor=np.round(UFactor, 2),
+                Name=layer_name or 'g_' + generate_code(12),
+                Solar_Heat_Gain_Coefficient=SHGC,
+            )
         else:
-            layer = MoosasSettings(opaqueMassDefault, Conductivity=np.round(UFactor*0.1,2), Name='m_' + generate_code(4))
-        return cls(layer)
+            layer = MoosasSettings(
+                opaqueMassDefault,
+                Conductivity=UFactor * 0.1,
+                Name=layer_name or 'm_' + generate_code(12),
+            )
+        return cls(layer, _name=construction_name)
 
     @classmethod
     def fromIDFConstructionList(cls,idf,idfObject):
@@ -165,4 +187,3 @@ class Construction(MoosasSettings):
         super().applyToIDF(idf, rename)
         for layer in self.layers:
             layer.applyToIDF(idf, rename)
-

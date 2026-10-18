@@ -608,6 +608,18 @@ def _replace_one_sided_air_boundaries(boundaries, walls):
     ]
 
 
+def _is_internal_partition(segment, source_boundary, walls):
+    """Return whether a generated partition is not backed by a physical wall."""
+    boundary_parts = [source_boundary]
+    opaque_walls = [wall for wall in walls if not wall.is_air_boundary]
+    boundary_parts.extend(wall.force_2d() for wall in opaque_walls)
+    physical_boundary = shapely.union_all(boundary_parts)
+    return not shapely.covered_by(
+        segment,
+        shapely.buffer(physical_boundary, geom.POINT_PRECISION * 10),
+    )
+
+
 def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
     """
     Packs edges into a MoosasContainer by validating and processing boundary lists, and optionally subdividing complex faces into simpler polygons.
@@ -677,9 +689,10 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
                             if shapely.length(segment) <= geom.POINT_PRECISION:
                                 continue
                             if MoosasEdge.matchWall(segment, walls) is None:
-                                is_internal_partition = not shapely.covered_by(
+                                is_internal_partition = _is_internal_partition(
                                     segment,
-                                    shapely.buffer(source_boundary, geom.POINT_PRECISION),
+                                    source_boundary,
+                                    walls,
                                 )
                                 air_wall = MoosasWall.fromProjection(
                                     segment,
