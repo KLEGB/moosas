@@ -43,6 +43,7 @@ def build_space_topology(
     print("\r2LSB: Recording Boundary topology", end="")
     for space in model.spaceList:
         space.regenerateId()
+    _normalize_horizontal_faces(model)
 
     for index, space in enumerate(model.spaceList):
         print(f"\r2LSB: Recording Boundary topology {index}/{len(model.spaceList)}", end="")
@@ -60,6 +61,104 @@ def build_space_topology(
                 model.spaceIdDict[neighbor_id].add_neighbor(space.id, element)
     print()
     return model
+
+
+def _normalize_horizontal_faces(model: MoosasModel) -> None:
+    """Merge duplicate two-sided horizontal faces and order their spaces."""
+    face_roles = {}
+    for space in model.spaceList:
+        for role, floor in (("floor", space.floor), ("ceiling", space.ceiling)):
+            if floor is None:
+                continue
+            for face in floor.face:
+                if abs(float(face.normal[2])) < 0.99:
+                    continue
+                face_roles.setdefault(id(face), [face, []])[1].append((space, role))
+
+    horizontal_faces = [value[0] for value in face_roles.values()]
+    face_groups = {}
+    for face in horizontal_faces:
+        level_key = round(
+            float(face.level + face.offset) / geom.POINT_PRECISION
+        )
+        geometry_key = shapely.to_wkb(shapely.normalize(face.force_2d()))
+        face_groups.setdefault((level_key, geometry_key), []).append(face)
+    consumed = set()
+    replacements = {}
+    for index, face in enumerate(horizontal_faces):
+        if id(face) in consumed:
+            continue
+        roles = face_roles[id(face)][1]
+        level_key = round(
+            float(face.level + face.offset) / geom.POINT_PRECISION
+        )
+        geometry_key = shapely.to_wkb(shapely.normalize(face.force_2d()))
+        candidates = [
+            other for other in face_groups[(level_key, geometry_key)]
+            if id(other) not in consumed
+            and float(np.dot(face.normal, other.normal)) < -0.99
+        ]
+        if not candidates:
+            _order_horizontal_face_spaces(face, roles)
+            continue
+        other = max(candidates, key=lambda item: overlapArea(face.force_2d(), item.force_2d()))
+        other_roles = face_roles[id(other)][1]
+        face_space_roles = roles + other_roles
+        space_ids = {space.id for space, _ in face_space_roles}
+        if len(space_ids) != 2:
+            _order_horizontal_face_spaces(face, roles)
+            continue
+        lower = min(
+            (space for space, _ in face_space_roles),
+            key=lambda space: space.floor.level + space.floor.offset,
+        )
+        upper = max(
+            (space for space, _ in face_space_roles),
+            key=lambda space: space.floor.level + space.floor.offset,
+        )
+        if lower is upper or lower.id == upper.id:
+            _order_horizontal_face_spaces(face, roles)
+            continue
+        if not (
+            any(space is lower and role == "ceiling" for space, role in face_space_roles)
+            and any(space is upper and role == "floor" for space, role in face_space_roles)
+        ):
+            _order_horizontal_face_spaces(face, roles)
+            continue
+        canonical = face if float(face.normal[2]) > 0 else other
+        duplicate = other if canonical is face else face
+        canonical.space = [lower.id, upper.id]
+        canonical.isOuter = False
+        replacements[id(duplicate)] = canonical
+        consumed.update((id(face), id(other)))
+        _order_horizontal_face_spaces(canonical, [(lower, "ceiling"), (upper, "floor")])
+
+    if replacements:
+        for space in model.spaceList:
+            for floor in (space.floor, space.ceiling):
+                if floor is not None:
+                    floor.face = [
+                        replacements.get(id(face), face)
+                        for face in floor.face
+                    ]
+        model.faceList = [
+            replacements.get(id(face), face)
+            for face in model.faceList
+            if id(face) not in replacements
+        ]
+
+
+def _order_horizontal_face_spaces(face, roles) -> None:
+    """Store horizontal face spaces from the lower side to the upper side."""
+    spaces = {space.id: space for space, _ in roles}
+    if len(spaces) < 2:
+        face.space = list(spaces)
+        return
+    ordered = sorted(
+        spaces.values(),
+        key=lambda space: space.floor.level + space.floor.offset,
+    )
+    face.space = [space.id for space in ordered]
 
 
 def build_face_topology(model: MoosasModel) -> MoosasModel:

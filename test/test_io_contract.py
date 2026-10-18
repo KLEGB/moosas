@@ -4,15 +4,17 @@ import json
 from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from xml.etree import ElementTree
 
 from eppy.modeleditor import IDF
+import numpy as np
 import pytest
 
 from MoosasPy.model import MoosasModel
 from MoosasPy.model.io.idf import exportIDF
 from MoosasPy.model.io.idf.adapter import IDFtoXml, _idf_build_artifacts
-from MoosasPy.model.io.idf.input import encodeFace
+from MoosasPy.model.io.idf.input import createThermalSurface, encodeFace
 from MoosasPy.model.io.idf.model import FaceDefault, MoosasSettings
 from MoosasPy.model.io.idf.parser import ZoneTemplate
 from MoosasPy.model.io.idf.version import bundled_template_idf_path, configure_idd
@@ -127,8 +129,7 @@ def test_json_round_trip_preserves_empty_shading(semantic_model: MoosasModel):
     assert restored.shadingList == []
 
 
-@pytest.mark.parametrize("suffix", (".xml", ".json", ".idf"))
-def test_single_room_formats_round_trip(tmp_path, suffix):
+def _single_room_model(tmp_path):
     from MoosasPy.transform.importers.geo import writeGeo
 
     rings = [
@@ -152,6 +153,12 @@ def test_single_room_formats_round_trip(tmp_path, suffix):
     model = transform(str(source), input_type="geo", stdout=StringIO())
     assert len(model.spaceList) == 1
     assert len(model.glazingList) == 1
+    return model
+
+
+@pytest.mark.parametrize("suffix", (".xml", ".json", ".idf"))
+def test_single_room_formats_round_trip(tmp_path, suffix):
+    model = _single_room_model(tmp_path)
     target = tmp_path / f"single{suffix}"
     model.save(target)
     restored = MoosasModel.load(target)
@@ -256,6 +263,177 @@ def test_idf_face_encoding_removes_unused_vertex_fields():
     assert "Vertex_4_Xcoordinate" not in settings.params
     assert "Vertex_4_Ycoordinate" not in settings.params
     assert "Vertex_4_Zcoordinate" not in settings.params
+
+
+def _idf_vertex_normal(surface):
+    points = np.array([
+        [float(surface[f"Vertex_{index}_{axis}coordinate"]) for axis in "XYZ"]
+        for index in range(1, int(surface["Number_of_Vertices"]) + 1)
+    ])
+    points -= points[0]
+    normal = np.cross(points, np.roll(points, -1, axis=0)).sum(axis=0)
+    return normal / np.linalg.norm(normal)
+
+
+@pytest.mark.parametrize("axis_x,axis_y", [
+    ((1, 0, 0), (0, 1, 0)),
+    ((1, 0, 0), (0, -1, 0)),
+    ((1, 0, 0), (0, 0, 1)),
+    ((0, 1, 0), (0, 0, 1)),
+    ((1, 0, 0), (0, 0.8, 0.6)),
+])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_idf_face_encoding_uses_requested_right_hand_normal(axis_x, axis_y, reverse):
+    points = np.array([
+        x * np.array(axis_x) + y * np.array(axis_y)
+        for x, y in [(0, 0), (3, 0), (3, 1), (1, 1), (1, 3), (0, 3)]
+    ])
+    normal = np.cross(axis_x, axis_y)
+    settings = MoosasSettings(FaceDefault)
+
+    encodeFace(settings, shapely.Polygon(points[::-1] if reverse else points), Vector(normal))
+
+    assert _idf_vertex_normal(settings.params) == pytest.approx(normal)
+
+
+@pytest.mark.parametrize("surface_type", ["Floor", "Ceiling", "Roof"])
+@pytest.mark.parametrize("slope", [0.0, 0.5])
+def test_idf_horizontal_and_sloped_faces_have_outward_normals(surface_type, slope):
+    configure_idd()
+    idf = IDF(StringIO("Version,26.1;"))
+    polygon = shapely.Polygon([(0, 0, 3), (4, 0, 3),
+                               (4, 4, 3 + 4 * slope), (0, 4, 3 + 4 * slope)])
+    window_polygon = shapely.Polygon([
+        (1, 1, 3 + slope), (3, 1, 3 + slope),
+        (3, 3, 3 + 3 * slope), (1, 3, 3 + 3 * slope),
+    ])
+    glazing = SimpleNamespace(Uid="skylight", representation=lambda: window_polygon)
+    space = SimpleNamespace(
+        is_void=lambda: False,
+        ceiling=SimpleNamespace(face=[]),
+    )
+    model = SimpleNamespace(spaceIdDict={"room": space}, levelList=[0.0, 3.0])
+    element = SimpleNamespace(
+        parent=model, space=["room"], Uid="face", isOuter=True, level=3.0,
+        representation=lambda: polygon, glazingElement=[glazing],
+    )
+    if surface_type != "Floor":
+        space.ceiling.face.append(element)
+
+    createThermalSurface(idf, element, surface_type)
+    surfaces = idf.idfobjects["BUILDINGSURFACE:DETAILED"]
+
+    expected = np.array([0.0, -slope, 1.0])
+    expected /= np.linalg.norm(expected)
+    if surface_type == "Floor":
+        expected = -expected
+    assert _idf_vertex_normal(surfaces[0]) == pytest.approx(expected)
+    windows = idf.idfobjects["FENESTRATIONSURFACE:DETAILED"]
+    assert windows
+    for window in windows:
+        assert np.dot(_idf_vertex_normal(window), expected) > 0.99999
+
+
+def test_idf_shared_floor_ceiling_normals_are_opposite():
+    configure_idd()
+    idf = IDF(StringIO("Version,26.1;"))
+    polygon = shapely.Polygon([(0, 0, 3), (4, 0, 3), (4, 4, 3), (0, 4, 3)])
+    lower = SimpleNamespace(is_void=lambda: False, ceiling=SimpleNamespace(face=[]))
+    upper = SimpleNamespace(is_void=lambda: False, ceiling=SimpleNamespace(face=[]))
+    model = SimpleNamespace(spaceIdDict={"lower": lower, "upper": upper})
+    element = SimpleNamespace(
+        parent=model, space=["lower", "upper"], Uid="shared", isOuter=False,
+        representation=lambda: polygon, glazingElement=[],
+    )
+    lower.ceiling.face.append(element)
+
+    createThermalSurface(idf, element, "Ceiling", encodeWindow=False)
+    ceiling, floor = idf.idfobjects["BUILDINGSURFACE:DETAILED"]
+
+    assert ceiling.Surface_Type == "Ceiling"
+    assert floor.Surface_Type == "Floor"
+    assert _idf_vertex_normal(ceiling) == pytest.approx((0, 0, 1))
+    assert _idf_vertex_normal(floor) == pytest.approx((0, 0, -1))
+    assert ceiling.Outside_Boundary_Condition_Object == floor.Name
+    assert floor.Outside_Boundary_Condition_Object == ceiling.Name
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_idf_interzone_wall_and_windows_have_opposite_outward_normals(reverse):
+    configure_idd()
+    idf = IDF(StringIO("Version,26.1;"))
+    wall_points = [(0, 0, 0), (4, 0, 0), (4, 0, 3), (0, 0, 3)]
+    window_points = [(1, 0, 1), (3, 0, 1), (3, 0, 2), (1, 0, 2)]
+    wall_polygon = shapely.Polygon(wall_points[::-1] if reverse else wall_points)
+    window_polygon = shapely.Polygon(window_points[::-1] if reverse else window_points)
+    glazing = SimpleNamespace(Uid="window", representation=lambda: window_polygon)
+    edge = SimpleNamespace(wall=[], FactorOfWall=[Vector(0, -1, 0)])
+    south = SimpleNamespace(is_void=lambda: False, edge=edge)
+    north = SimpleNamespace(is_void=lambda: False)
+    model = SimpleNamespace(spaceIdDict={"south": south, "north": north})
+    wall = SimpleNamespace(
+        parent=model, space=["south", "north"], Uid="wall", isOuter=False,
+        representation=lambda: wall_polygon, glazingElement=[glazing],
+    )
+    edge.wall.append(wall)
+
+    createThermalSurface(idf, wall, "Wall")
+
+    first, second = idf.idfobjects["BUILDINGSURFACE:DETAILED"]
+    assert _idf_vertex_normal(first) == pytest.approx((0, -1, 0))
+    assert _idf_vertex_normal(second) == pytest.approx((0, 1, 0))
+    windows = {window.Name: window for window in idf.idfobjects["FENESTRATIONSURFACE:DETAILED"]}
+    assert windows
+    for window in windows.values():
+        host = first if window.Building_Surface_Name == first.Name else second
+        assert _idf_vertex_normal(window) == pytest.approx(_idf_vertex_normal(host))
+        paired_window = windows[window.Outside_Boundary_Condition_Object]
+        assert paired_window.Outside_Boundary_Condition_Object == window.Name
+        assert _idf_vertex_normal(paired_window) == pytest.approx(-_idf_vertex_normal(window))
+
+
+@pytest.mark.parametrize("vertex_direction", ["Counterclockwise", "Clockwise", None])
+def test_idf_export_surface_and_window_winding(tmp_path, vertex_direction):
+    model = _single_room_model(tmp_path)
+    configure_idd()
+    template = IDF(str(bundled_template_idf_path()))
+    if vertex_direction is None:
+        template.idfobjects["GLOBALGEOMETRYRULES"] = []
+    else:
+        template.idfobjects["GLOBALGEOMETRYRULES"][0].Vertex_Entry_Direction = vertex_direction
+    template_path = tmp_path / "template.idf"
+    template.saveas(str(template_path))
+    output_path = tmp_path / "oriented.idf"
+
+    exportIDF(model, str(output_path), idfTemplatePath=str(template_path))
+
+    exported = IDF(str(output_path))
+    assert exported.idfobjects["GLOBALGEOMETRYRULES"][0].Vertex_Entry_Direction == "Counterclockwise"
+    surfaces = {surface.Name: surface for surface in exported.idfobjects["BUILDINGSURFACE:DETAILED"]}
+    assert surfaces
+    for surface in surfaces.values():
+        normal = _idf_vertex_normal(surface)
+        if surface.Surface_Type == "Floor":
+            assert normal[2] < 0
+        elif surface.Surface_Type in {"Ceiling", "Roof"}:
+            assert normal[2] > 0
+        else:
+            space = model.spaceIdDict[surface.Zone_Name]
+            element = next(wall for wall in space.edge.wall if surface.Name == f"{space.id}-{wall.Uid}")
+            start, end = shapely.get_coordinates(element.force_2d())
+            midpoint = (start + end) / 2
+            footprint = space.force_2d()
+            assert not shapely.contains(footprint, shapely.Point(midpoint + normal[:2] * 0.05))
+            assert shapely.contains(footprint, shapely.Point(midpoint - normal[:2] * 0.05))
+        if surface.Outside_Boundary_Condition == "Surface":
+            neighbor = surfaces[surface.Outside_Boundary_Condition_Object]
+            assert _idf_vertex_normal(neighbor) == pytest.approx(-normal)
+    windows = exported.idfobjects["FENESTRATIONSURFACE:DETAILED"]
+    assert windows
+    for window in windows:
+        assert _idf_vertex_normal(window) == pytest.approx(
+            _idf_vertex_normal(surfaces[window.Building_Surface_Name])
+        )
 
 
 def test_new_idf_constructions_have_unique_deterministic_names():
@@ -442,8 +620,10 @@ def test_idf_export_preserves_shading_geometry(semantic_model: MoosasModel):
 
     assert [item.Name for item in exported] == ["idf-shading"]
     assert len(actual_vertices) == len(expected_vertices)
-    for actual, expected in zip(actual_vertices, expected_vertices):
+    for actual, expected in zip(sorted(actual_vertices), sorted(expected_vertices)):
         assert actual == pytest.approx(expected)
+    expected_normal = Vector(source_geometry.normal).unit().array
+    assert _idf_vertex_normal(exported[0]) == pytest.approx(expected_normal)
 
 
 def test_idf_import_serializes_detailed_shading_geometry(semantic_model: MoosasModel):

@@ -342,6 +342,16 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
         print(f"\rIDF: cleaning existing objects: {h}", end='')
     print()
 
+    geometry_rules = idf.idfobjects['GLOBALGEOMETRYRULES']
+    if not geometry_rules:
+        geometry_rules = [idf.newidfobject(
+            'GlobalGeometryRules',
+            Starting_Vertex_Position='UpperLeftCorner',
+            Coordinate_System='Relative',
+        )]
+    for rules in geometry_rules:
+        rules.Vertex_Entry_Direction = 'Counterclockwise'
+
     # add moosas defines objects
     # get type limits
     typeLimitsName = [idfobj['Name'] for idfobj in idf.idfobjects['ScheduleTypeLimits']]
@@ -386,10 +396,8 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
                 print(f"\rIDF: encoding faces: {fi+1}/{len(moElements['MoosasFace'])}", end='')
                 faceType = 'Floor'
                 space = idfSpaceById[spaceId]
-                if len(face.space) == 1:
-                    if space.ceiling:
-                        if face in space.ceiling.face:
-                            faceType = 'Roof'
+                if space.ceiling and face in space.ceiling.face:
+                    faceType = 'Roof' if len(face.space) == 1 else 'Ceiling'
                 wallU = face.settings.get('u_value', space.settings['zone_wallU'])
                 glazing = face.glazingElement[0] if face.glazingElement else None
                 winU = glazing.settings.get('u_value', space.settings['zone_winU']) if glazing else space.settings['zone_winU']

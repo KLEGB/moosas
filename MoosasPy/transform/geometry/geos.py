@@ -797,7 +797,7 @@ class Projection(Ray):
     @property
     def axisY(self):
         """
-        Return the Y-axis vector computed as the cross product of X-axis and Z-axis vectors.
+        Return the Y-axis vector of the right-handed local coordinate system.
         
         Parameters
         ----------
@@ -807,9 +807,9 @@ class Projection(Ray):
         Returns
         -------
         numpy.ndarray
-            A 3D vector representing the Y-axis, computed as the cross product of axisX and axisZ.
+            A 3D vector representing the Y-axis, computed as the cross product of axisZ and axisX.
         """
-        return np.cross(self.axisX, self.axisZ)
+        return np.cross(self.axisZ, self.axisX)
 
     def toUV(self, worldGeometry: shapely.Geometry):
         """
@@ -860,8 +860,7 @@ class Projection(Ray):
         coors = shapely.get_coordinates(worldGeometry, include_z=True)
         coors = np.nan_to_num(coors, nan=0)
         coor_new = [coor - self.origin.array for coor in coors]
-        if not (Vector.parallel(self.axisZ, np.array([0, 0, 1])) and Vector.parallel(self.axisX, np.array([1, 0, 0]))):
-            coor_new = [coor @ self.rotateMatrix for coor in coor_new]
+        coor_new = [coor @ self.rotateMatrix for coor in coor_new]
         coor_new = np.array([coor.flatten() for coor in coor_new])
         if dims == 0:
             return shapely.points(coor_new[0])
@@ -906,10 +905,7 @@ class Projection(Ray):
                 return shapely.polygons(shapely.get_coordinates(rings[0], include_z=True))
         UVGeometry = shapely.force_3d(UVGeometry, z=0)
         coors = shapely.get_coordinates(UVGeometry, include_z=True)
-        if not (Vector.parallel(self.axisZ, np.array([0, 0, 1])) and Vector.parallel(self.axisX, np.array([1, 0, 0]))):
-            coor_new = [coor @ np.linalg.inv(self.rotateMatrix) for coor in coors]
-        else:
-            coor_new = coors
+        coor_new = [coor @ np.linalg.inv(self.rotateMatrix) for coor in coors]
         coor_new = np.array([coor + self.origin.array for coor in coor_new])
 
         if shapely.get_dimensions(UVGeometry) == 0:
@@ -1084,19 +1080,8 @@ def is_ccw(geo: shapely.Geometry) -> bool:
         True if the ring is oriented counter-clockwise, False otherwise.
     """
 
-    poilist = shapely.get_coordinates(geo)
-    veclist = [poilist[i] - poilist[i - 1] for i in range(1, len(poilist))]
-    # NumPy 2.0 removed the two-dimensional-vector form of ``np.cross``.
-    # Preserve the former scalar z-component result for projected polygons.
-    crosslist = [
-        (veclist[i][0] * veclist[i - 1][1] - veclist[i][1] * veclist[i - 1][0])
-        if len(veclist[i]) == 2
-        else np.cross(veclist[i], veclist[i - 1])
-        for i in range(len(veclist))
-    ]
-    ccw = np.sum([2 for vec in crosslist if vec > 0])
-    ccw -= len(crosslist)
-    return ccw < 0
+    ring = geo.exterior if isinstance(geo, shapely.Polygon) else shapely.LinearRing(shapely.get_coordinates(geo))
+    return bool(shapely.is_ccw(ring))
 
 
 def selfIntersect(geo: shapely.Geometry) -> bool:
@@ -1404,7 +1389,8 @@ def offset(polygon: shapely.Geometry, offset: float) -> shapely.Geometry:
 
 def faceNormal(poly: shapely.Geometry, EPS: float = geom.POINT_PRECISION) -> Vector:
     """
-    Compute stable normal vector for 3D polygon (handles non-convex/non-coplanar vertices)
+    Compute a stable plane normal for a 3D polygon, independent of vertex winding.
+    Use ``ccwNormal`` when the normal must follow the exterior vertex order.
 
     Parameters
     ----------
@@ -1423,7 +1409,7 @@ def faceNormal(poly: shapely.Geometry, EPS: float = geom.POINT_PRECISION) -> Vec
     -----
     - Uses PCA + SVD for non-coplanar vertices (most stable method)
     - Falls back to edge cross product for triangular faces (faster)
-    - Ensures consistent orientation via right-hand rule
+    - The plane-normal sign does not encode the polygon's vertex winding
     """
     # ------------------- Step 1: Validate input and extract 3D coordinates -------------------
 
@@ -1487,8 +1473,7 @@ def faceNormal(poly: shapely.Geometry, EPS: float = geom.POINT_PRECISION) -> Vec
 
 def ccwNormal(poly: shapely.Geometry, EPS: float = geom.POINT_PRECISION) -> Vector:
     """
-    enhance Normal method for 3D polygon to ensure the normal pass the ccw test.
-    using the faceNormal method.
+    Return the right-hand normal determined by the polygon's exterior winding.
 
     Parameters
     ----------
@@ -1500,8 +1485,7 @@ def ccwNormal(poly: shapely.Geometry, EPS: float = geom.POINT_PRECISION) -> Vect
     Returns
     -------
     Vector
-        Unit normal vector (x, y, z) of shape (3,)
-        Returns None if computation fails (invalid input/insufficient vertices)
+        Unit normal vector (x, y, z) consistent with counterclockwise vertices.
 
     Notes
     -----

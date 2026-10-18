@@ -351,17 +351,27 @@ def cleanseDuplicatedWall(model: MoosasContainer) -> MoosasContainer:
     duplicateCheckList: list[tuple[int, int]] = []
     for bld_level in model.levelList:
         wall_indices = searchBy('level', bld_level, model.wallList)
-        for first_index, first_wall in enumerate(wall_indices):
-            for second_wall in wall_indices[first_index + 1:]:
-                if (
-                    model.wallList[first_wall].is_air_boundary
-                    == model.wallList[second_wall].is_air_boundary
-                    and equals(
-                        model.wallList[first_wall].force_2d(),
-                        model.wallList[second_wall].force_2d(),
-                    )
-                ):
-                    duplicateCheckList.append((first_wall, second_wall))
+        wall_groups = {}
+        for wall_index in wall_indices:
+            wall = model.wallList[wall_index]
+            geometry = shapely.normalize(wall.force_2d())
+            group_key = (
+                bool(wall.is_air_boundary),
+                shapely.to_wkb(geometry),
+            )
+            wall_groups.setdefault(group_key, []).append(wall_index)
+        for wall_group in wall_groups.values():
+            for first_index, first_wall in enumerate(wall_group):
+                for second_wall in wall_group[first_index + 1:]:
+                    if (
+                        model.wallList[first_wall].is_air_boundary
+                        == model.wallList[second_wall].is_air_boundary
+                        and equals(
+                            model.wallList[first_wall].force_2d(),
+                            model.wallList[second_wall].force_2d(),
+                        )
+                    ):
+                        duplicateCheckList.append((first_wall, second_wall))
 
     """check if the walls are duplicated, and dissolve that wall into the others"""
     duplicatedWall: set[int] = set()

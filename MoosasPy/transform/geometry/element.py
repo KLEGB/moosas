@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 import re
 
-from .geos import Projection, Vector, faceNormal, simplify, overlapArea, equals, selfIntersect, makeValid, bBox
+from .geos import Projection, Vector, faceNormal, is_ccw, simplify, overlapArea, equals, selfIntersect, makeValid, bBox
 from .triangulation import triangulate2dFace
 from ...utils import generate_code, searchBy, mixItemListToObject, mixItemListToList, encodeParams, GeometryError
 from ...utils import shapely, np, ET
@@ -2580,22 +2580,7 @@ class MoosasEdge:
         bool
             True if the polygon is oriented counter-clockwise, False otherwise.
         """
-        # Improved method for shapely.is_ccw()
-        # accepts both convex & non-convex polygons锛宐ut maintains lower efficiency
-        poilist = shapely.get_coordinates(self.__botBound)
-        veclist = [poilist[i] - poilist[i - 1] for i in range(1, len(poilist))]
-        crosslist = [
-            veclist[i][0] * veclist[i - 1][1] - veclist[i][1] * veclist[i - 1][0]
-            for i in range(len(veclist))
-        ]
-        ccw = np.sum([2 for crs in crosslist if crs < 0])
-        ccw -= len(crosslist)
-        # ccw: np.cross < 0 means that:
-        #   1. the corner is a convex corner in a ccw polygon;
-        #   2. the corner is a non-convex corner in a rccw polygon.
-        # convex corners are always more than non-convex corners.
-        # Therefore, ccw > 0 means that the polygon is ccw.
-        return ccw > 0
+        return is_ccw(self.__botBound)
 
     def get_polygon(self, target) -> shapely.Geometry:
         """

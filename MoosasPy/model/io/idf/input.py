@@ -31,7 +31,8 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
     Construction_Name_Window : str, optional
         Name of the construction used for any associated window surfaces. Default is "Office_External_Window".
     normal : Vector, optional
-        Normal vector to define the orientation of the surface. If None, it is automatically determined based on geometry and surface type.
+        Outward normal for the first zone. If None, it is determined from the
+        geometry and surface type. Vertices are counterclockwise from outside.
     
     Returns
     -------
@@ -80,10 +81,10 @@ def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
         kwargs["View_Factor_to_Ground"] = '0'
     ThermalSettings.updateParams(**kwargs)
     if normal is None:
-        if surfaceType == 'Floor':
-            normal = Vector(0, 0, 1)
-        elif surfaceType == 'Ceiling' or surfaceType == 'Roof':
-            normal = Vector(0, 0, -1)
+        if surfaceType in {'Floor', 'Ceiling', 'Roof'}:
+            normal = ccwNormal(element.representation())
+            if (normal.z > 0) == (surfaceType == 'Floor'):
+                normal = -normal
         else:
             try:
                 normal = space0.edge.FactorOfWall[space0.edge.wall.index(element)]

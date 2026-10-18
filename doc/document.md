@@ -218,6 +218,14 @@ MoosasPy reads and writes EnergyPlus 26.1 IDF files using the bundled 26.1
 `Energy+.idd`. Older IDFs must first be migrated with the official EnergyPlus
 Transition chain. MoosasPy does not provide an automatic legacy-IDF fallback.
 
+Exported surface vertices use `GlobalGeometryRules.Vertex Entry Direction =
+Counterclockwise`, viewed from outside the owning zone. Floors point downward;
+ceilings and roofs point upward, preserving the slope of inclined faces. Walls
+point out of the zone, windows follow their host surface, and paired interzone
+surfaces have opposite normals. The geometry projection basis is right-handed;
+rebuild models from source geometry rather than reusing caches made with the
+previous projection convention.
+
 ### Apply Thermal Settings
 
 Each `MoosasSpace` receives a default residential template during model

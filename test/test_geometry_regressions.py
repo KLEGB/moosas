@@ -18,14 +18,87 @@ from MoosasPy.transform.geometry.element import (
     MoosasSpace,
     MoosasWall,
 )
-from MoosasPy.transform.geometry.geos import Projection, simplify
+from MoosasPy.transform.geometry.geos import Projection, ccwNormal, is_ccw, simplify
 from MoosasPy.transform.geometry.grid import MoosasGrid
 from MoosasPy.transform.geometry.planar_graph import TopoNetwork
 from MoosasPy.transform.geometry.planar_graph import TopoEdge
 from MoosasPy.transform.geometry.contour import _merge_tiny_partitions
 from MoosasPy.transform.stages.convexification import convexify_model
 from MoosasPy.transform.stages.classification import classify_model
+from MoosasPy.transform.stages.topology import _normalize_horizontal_faces
 from MoosasPy.utils import GeometryError, shapely
+
+
+@pytest.mark.parametrize("axis_z,axis_x", [
+    ((0, 0, 1), (1, 0, 0)),
+    ((0, 0, -1), (1, 0, 0)),
+    ((0, 0, 1), (-1, 0, 0)),
+    ((0, 0, -1), (-1, 0, 0)),
+    ((1, 0, 0), (0, 1, 0)),
+    ((-1, 0, 0), (0, 1, 0)),
+    ((0, 1, 0), (1, 0, 0)),
+    ((0, -1, 0), (1, 0, 0)),
+    ((0, -0.6, 0.8), (1, 0, 0)),
+])
+def test_projection_is_right_handed_and_round_trips(axis_z, axis_x):
+    projection = Projection((12.0, -7.0, 3.0), axis_z, axis_x)
+    local = shapely.Point(2.0, 4.0, 1.5)
+    expected = (
+        projection.origin.array
+        + 2.0 * np.array(axis_x)
+        + 4.0 * np.cross(axis_z, axis_x)
+        + 1.5 * np.array(axis_z)
+    )
+
+    assert np.linalg.det(projection.rotateMatrix) == pytest.approx(1.0)
+    world = projection.toWorld(local)
+    assert world.coords[0] == pytest.approx(expected)
+    assert projection.toUV(world).coords[0] == pytest.approx(local.coords[0])
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_ccw_check_handles_collinear_vertices(reverse):
+    points = [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (4, 1),
+              (4, 2), (3, 2), (2, 2), (1, 2), (0, 2), (0, 1)]
+    if reverse:
+        points.reverse()
+    polygon = shapely.Polygon(points)
+
+    assert is_ccw(polygon) == (not reverse)
+    assert is_ccw(polygon.exterior) == (not reverse)
+    assert is_ccw(shapely.LineString(polygon.exterior.coords)) == (not reverse)
+    edge = object.__new__(MoosasEdge)
+    edge._MoosasEdge__botBound = polygon
+    assert edge.is_ccw() == (not reverse)
+
+
+@pytest.mark.parametrize("points", [
+    [(0, 0), (2, 0), (0, 1)],
+    [(0, 0), (2, 0), (2, 1), (0, 1)],
+    [(0, 0), (3, 0), (3, 1), (1, 1), (1, 3), (0, 3)],
+    [(0, 0), (1, 0), (2, 0), (3, 0), (3, 2), (0, 2)],
+])
+@pytest.mark.parametrize("axis_x,axis_y", [
+    ((1, 0, 0), (0, 1, 0)),
+    ((1, 0, 0), (0, -1, 0)),
+    ((1, 0, 0), (0, 0, 1)),
+    ((0, 1, 0), (0, 0, 1)),
+    ((1, 0, 0), (0, 0.8, 0.6)),
+])
+@pytest.mark.parametrize("reverse", [False, True])
+def test_ccw_normal_follows_vertex_order(points, axis_x, axis_y, reverse):
+    vertices = np.array([
+        np.array([1000.0, 200.0, 3.0]) + x * np.array(axis_x) + y * np.array(axis_y)
+        for x, y in points
+    ])
+    expected = np.cross(axis_x, axis_y)
+    if reverse:
+        vertices = vertices[::-1]
+        expected = -expected
+
+    for start in range(len(vertices)):
+        polygon = shapely.Polygon(np.roll(vertices, start, axis=0))
+        assert ccwNormal(polygon).array == pytest.approx(expected)
 
 
 def test_simplify_keeps_a_narrow_valid_triangle_closed():
@@ -127,6 +200,60 @@ def test_horizontal_faces_preserve_close_structural_levels():
     assert model.levelList == [0.0, 1.219]
     assert upper_face.level == pytest.approx(1.219)
     assert upper_face.offset == pytest.approx(0.0)
+
+
+def test_shared_horizontal_faces_are_collapsed_and_ordered_by_storey():
+    polygon = shapely.polygons(np.array([
+        [0.0, 0.0, 1.0],
+        [2.0, 0.0, 1.0],
+        [2.0, 2.0, 1.0],
+        [0.0, 2.0, 1.0],
+        [0.0, 0.0, 1.0],
+    ]))
+    lower_face = SimpleNamespace(
+        normal=np.array([0.0, 0.0, 1.0]),
+        level=1.0,
+        offset=0.0,
+        space=["old-lower"],
+        isOuter=True,
+        parentFloors=[],
+        force_2d=lambda: shapely.force_2d(polygon),
+    )
+    upper_face = SimpleNamespace(
+        normal=np.array([0.0, 0.0, -1.0]),
+        level=1.0,
+        offset=0.0,
+        space=["old-upper"],
+        isOuter=True,
+        parentFloors=[],
+        force_2d=lambda: shapely.force_2d(polygon),
+    )
+    lower_floor = SimpleNamespace(level=0.0, offset=0.0, face=[])
+    lower_ceiling = SimpleNamespace(face=[lower_face])
+    upper_floor = SimpleNamespace(level=1.0, offset=0.0, face=[upper_face])
+    upper_ceiling = SimpleNamespace(face=[])
+    lower = SimpleNamespace(
+        id="lower",
+        floor=SimpleNamespace(level=0.0, offset=0.0, face=[]),
+        ceiling=lower_ceiling,
+    )
+    upper = SimpleNamespace(
+        id="upper",
+        floor=upper_floor,
+        ceiling=SimpleNamespace(level=2.0, offset=0.0, face=[]),
+    )
+    model = SimpleNamespace(
+        spaceList=[lower, upper],
+        faceList=[lower_face, upper_face],
+    )
+
+    _normalize_horizontal_faces(model)
+
+    assert model.faceList == [lower_face]
+    assert lower_ceiling.face == [lower_face]
+    assert upper_floor.face == [lower_face]
+    assert lower_face.space == ["lower", "upper"]
+    assert lower_face.isOuter is False
 
 
 def test_topology_node_keys_normalize_signed_zero():
