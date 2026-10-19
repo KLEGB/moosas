@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from io import StringIO
 from pathlib import Path
@@ -526,6 +527,64 @@ def test_idf_export_surface_and_window_winding(tmp_path, vertex_direction):
         assert _idf_vertex_normal(window) == pytest.approx(
             _idf_vertex_normal(surfaces[window.Building_Surface_Name])
         )
+
+
+@pytest.mark.parametrize("method", [
+    "Flow/Person", "Flow/Area", "Flow/Zone", "AirChanges/Hour", "Sum", "Maximum",
+])
+@pytest.mark.parametrize("hvac_mode", ["ideal_loads", "simple"])
+def test_idf_template_outdoor_air_keeps_method_and_all_flow_components(semantic_model, method, hvac_mode):
+    configure_idd()
+    idf = IDF(str(bundled_template_idf_path()))
+    template = ZoneTemplate.fromIDF(idf, zoneName="Room_4", hvac_mode=hvac_mode)
+    expected = {
+        "Outdoor_Air_Method": method,
+        "Outdoor_Air_Flow_per_Person": 0.0169901079552,
+        "Outdoor_Air_Flow_per_Zone_Floor_Area": 0.0003,
+        "Outdoor_Air_Flow_per_Zone": 0.02,
+        "Outdoor_Air_Flow_Air_Changes_per_Hour": 0.5,
+    }
+    template.objectList["DesignSpecification:OutdoorAir"] = MoosasSettings(
+        {"key": "DesignSpecification:OutdoorAir", "Name": "template outdoor air", **expected}
+    )
+    zone = copy.deepcopy(semantic_model.spaceList[0])
+    applied = template.appliedToZone(zone)
+    applied.applyToIDF(idf)
+    exported = next(o for o in idf.idfobjects["DESIGNSPECIFICATION:OUTDOORAIR"] if o.Name == zone.id)
+
+    for field, value in expected.items():
+        assert exported[field] == value
+    assert zone.settings["zone_pfav"] == pytest.approx(expected["Outdoor_Air_Flow_per_Person"] * 3600)
+
+
+def test_idf_export_template_person_outdoor_air_is_not_overwritten_by_zero_ach(tmp_path):
+    model = _single_room_model(tmp_path)
+    configure_idd()
+    template = IDF(str(bundled_template_idf_path()))
+    zone_name = template.idfobjects["ZONE"][0].Name
+    template.idfobjects["DESIGNSPECIFICATION:OUTDOORAIR"] = []
+    template.newidfobject(
+        "DesignSpecification:OutdoorAir", Name="regression outdoor air",
+        Outdoor_Air_Method="Sum", Outdoor_Air_Flow_per_Person=0.0169901079552,
+        Outdoor_Air_Flow_per_Zone_Floor_Area=0, Outdoor_Air_Flow_per_Zone=0,
+        Outdoor_Air_Flow_Air_Changes_per_Hour=0,
+    )
+    for sizing in template.idfobjects["SIZING:ZONE"]:
+        sizing.Design_Specification_Outdoor_Air_Object_Name = "regression outdoor air"
+    template_path = tmp_path / "outdoor-air-template.idf"
+    output_path = tmp_path / "outdoor-air-export.idf"
+    template.saveas(str(template_path))
+
+    exportIDF(model, str(output_path), idfTemplatePath=str(template_path),
+              zoneNameToSpaceDict={zone_name: [str(model.spaceList[0].id)]})
+
+    exported = IDF(str(output_path))
+    outdoor_air, = exported.idfobjects["DESIGNSPECIFICATION:OUTDOORAIR"]
+    assert outdoor_air.Outdoor_Air_Method == "Sum"
+    assert outdoor_air.Outdoor_Air_Flow_per_Person == pytest.approx(0.0169901079552)
+    assert outdoor_air.Outdoor_Air_Flow_Air_Changes_per_Hour == 0
+    system, = exported.idfobjects["ZONEHVAC:IDEALLOADSAIRSYSTEM"]
+    assert system.Design_Specification_Outdoor_Air_Object_Name == outdoor_air.Name
 
 
 def test_new_idf_constructions_have_unique_deterministic_names():

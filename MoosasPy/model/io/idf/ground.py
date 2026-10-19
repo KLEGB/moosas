@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 from hashlib import sha256
+from itertools import combinations
 from math import isclose, isfinite
 import warnings
 
@@ -72,6 +73,8 @@ def _select_policy(policies, zone):
 
 def _equivalent_ground_geometry(by_zone, selected):
     footprints = {}
+    interiors = {}
+    zones = {}
     levels = defaultdict(list)
     groups = defaultdict(list)
     for zone, surfaces in by_zone.items():
@@ -81,12 +84,14 @@ def _equivalent_ground_geometry(by_zone, selected):
             z = [point[2] for point in coordinates]
             if max(z) - min(z) > geom.POINT_PRECISION:
                 raise ValueError(f"F-factor ground export requires horizontal floors: '{surface.Name}'.")
-            polygon = shapely.set_precision(
-                shapely.Polygon([(x, y) for x, y, _ in coordinates]), geom.POINT_PRECISION,
-            )
+            raw_polygon = shapely.Polygon([(x, y) for x, y, _ in coordinates])
+            polygon = shapely.set_precision(raw_polygon, geom.POINT_PRECISION)
             if polygon.is_empty or not polygon.is_valid or polygon.area <= 0:
                 raise ValueError(f"Invalid ground floor footprint for surface '{surface.Name}'.")
             footprints[surface.Name] = polygon
+            # Test original interiors so grid overlay rounding cannot create overlaps.
+            interiors[surface.Name] = raw_polygon.buffer(-geom.POINT_PRECISION / 2)
+            zones[surface.Name] = zone
             level = round(z[0] / geom.POINT_PRECISION)
             levels[level].append(polygon)
             if boundary.casefold() == "groundfcfactormethod":
@@ -97,19 +102,24 @@ def _equivalent_ground_geometry(by_zone, selected):
     }
     geometry = {}
     for (level, source_factor), names in groups.items():
+        for first, second in combinations(names, 2):
+            if interiors[first].intersection(interiors[second]).area > 0:
+                raise ValueError(
+                    "Overlapping ground floors cannot be assigned an equivalent slab F-factor: "
+                    f"'{first}' (zone '{zones[first]}') and '{second}' (zone '{zones[second]}') "
+                    f"overlap beyond the {geom.POINT_PRECISION:g} m geometry tolerance."
+                )
         slabs = shapely.union_all([footprints[name] for name in names], grid_size=geom.POINT_PRECISION)
         components = slabs.geoms if slabs.geom_type == "MultiPolygon" else (slabs,)
         for slab in components:
             members = [name for name in names if slab.covers(footprints[name].representative_point())]
-            if not isclose(sum(footprints[name].area for name in members), slab.area,
-                           rel_tol=1e-9, abs_tol=geom.POINT_PRECISION ** 2):
-                raise ValueError("Overlapping ground floors cannot be assigned an equivalent slab F-factor.")
+            total_area = sum(footprints[name].area for name in members)
             perimeter = shapely.intersection(
                 slab.boundary, exterior_by_level[level], grid_size=geom.POINT_PRECISION,
             ).length
             for name in members:
                 area = footprints[name].area
-                allocated_perimeter = perimeter * area / slab.area
+                allocated_perimeter = perimeter * area / total_area
                 effective_perimeter = min(allocated_perimeter, footprints[name].length)
                 # EnergyPlus disallows exposed perimeter beyond the face boundary.
                 # Rescale F with it, preserving both F*P and equivalent resistance.

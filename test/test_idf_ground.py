@@ -1,11 +1,13 @@
 from io import StringIO
 
 import pytest
+import shapely
 from eppy.modeleditor import IDF
 
 from MoosasPy.model.io.idf import configure_idd
 from MoosasPy.model.io.idf.ground import apply_ground_templates, capture_ground_templates
 from MoosasPy.model.io.idf.materials import prune_unused_constructions_and_materials
+from MoosasPy.utils.constant import geom
 
 
 def empty_idf():
@@ -87,6 +89,80 @@ def test_partitioned_floor_uses_surface_areas_and_excludes_internal_edges():
     assert construction.Area == pytest.approx(8)
     assert construction.PerimeterExposed == pytest.approx(8)
     assert len(left.coords) == len(right.coords) == 4
+
+
+@pytest.mark.parametrize("seam_offset", [0, 0.0008, 0.001])
+def test_precision_scale_seams_preserve_face_areas_and_whole_slab_conductance(seam_offset):
+    idf = f_factor_template()
+    policies = capture_ground_templates(idf, {"template room": ["left", "right"]})
+    idf.idfobjects["BUILDINGSURFACE:DETAILED"] = []
+    surfaces = [
+        floor(idf, "left floor", "left", "ordinary", "Ground", rectangle(0, 0, 4, 4)),
+        floor(idf, "right floor", "right", "ordinary", "Ground",
+              rectangle(4 - seam_offset, 0, 8, 4)),
+    ]
+    coordinates = [list(surface.coords) for surface in surfaces]
+    footprints = [
+        shapely.set_precision(shapely.Polygon([(x, y) for x, y, _ in points]), geom.POINT_PRECISION)
+        for points in coordinates
+    ]
+    perimeter = shapely.union_all(footprints, grid_size=geom.POINT_PRECISION).length
+    area = sum(polygon.area for polygon in footprints)
+
+    apply_ground_templates(idf, policies)
+
+    constructions = {c.Name: c for c in idf.idfobjects["CONSTRUCTION:FFACTORGROUNDFLOOR"]}
+    assigned = [constructions[s.Construction_Name] for s in surfaces]
+    assert [list(surface.coords) for surface in surfaces] == coordinates
+    assert [c.Area for c in assigned] == pytest.approx([p.area for p in footprints])
+    assert sum(c.FFactor * c.PerimeterExposed for c in assigned) == pytest.approx(1.26 * perimeter)
+    assert all(c.Area / (c.FFactor * c.PerimeterExposed) == pytest.approx(area / (1.26 * perimeter))
+               for c in assigned)
+
+
+def test_sloped_t_junction_union_rounding_is_not_reported_as_overlap():
+    idf = f_factor_template()
+    policies = capture_ground_templates(idf, {"template room": ["lower", "upper"]})
+    idf.idfobjects["BUILDINGSURFACE:DETAILED"] = []
+    lower = [(0, 0, 0), (10, 0, 0), (10, 5.003, 0), (0, 5, 0)]
+    upper = [(0, 5, 0), (4, 5.0012, 0), (4, 10, 0), (0, 10, 0)]
+    surfaces = [
+        floor(idf, "lower floor", "lower", "ordinary", "Ground", lower),
+        floor(idf, "upper floor", "upper", "ordinary", "Ground", upper),
+    ]
+    raw = [shapely.Polygon([(x, y) for x, y, _ in points]) for points in (lower, upper)]
+    assert raw[0].intersection(raw[1]).area == pytest.approx(0)
+    footprints = [shapely.set_precision(polygon, geom.POINT_PRECISION) for polygon in raw]
+    slab = shapely.union_all(footprints, grid_size=geom.POINT_PRECISION)
+    area = sum(polygon.area for polygon in footprints)
+    assert abs(area - slab.area) > geom.POINT_PRECISION ** 2
+
+    apply_ground_templates(idf, policies)
+
+    constructions = {c.Name: c for c in idf.idfobjects["CONSTRUCTION:FFACTORGROUNDFLOOR"]}
+    assigned = [constructions[s.Construction_Name] for s in surfaces]
+    assert sum(c.Area for c in assigned) == pytest.approx(area)
+    assert sum(c.FFactor * c.PerimeterExposed for c in assigned) == pytest.approx(1.26 * slab.length)
+
+
+@pytest.mark.parametrize("coordinates", [
+    rectangle(0, 0, 4, 4),
+    rectangle(1, 1, 3, 3),
+    rectangle(2, 0, 6, 4),
+    rectangle(3.9989, 0, 8, 4),
+])
+def test_ground_overlap_beyond_precision_reports_surfaces_and_zones(coordinates):
+    idf = f_factor_template()
+    policies = capture_ground_templates(idf, {"template room": ["first zone", "second zone"]})
+    idf.idfobjects["BUILDINGSURFACE:DETAILED"] = []
+    floor(idf, "first floor", "first zone", "ordinary", "Ground", rectangle(0, 0, 4, 4))
+    floor(idf, "second floor", "second zone", "ordinary", "Ground", coordinates)
+
+    with pytest.raises(ValueError, match="Overlapping ground floors") as error:
+        apply_ground_templates(idf, policies)
+
+    assert all(name in str(error.value)
+               for name in ("first floor", "second floor", "first zone", "second zone"))
 
 
 def test_interior_zone_receives_area_weighted_equivalent_perimeter():

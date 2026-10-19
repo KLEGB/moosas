@@ -257,6 +257,12 @@ it is capped and the local F-factor scaled inversely, preserving total F*P and
 uniform equivalent resistance. This avoids negative resistance in tiny thermal
 partitions. Disconnected slabs, elevations, and different template F-factors are
 handled separately. Model vertices and wall segmentation are not changed.
+Ground-floor seams within `geom.POINT_PRECISION` (0.001 m) are accepted:
+overlap is tested on the original footprints after each is inset by half
+that tolerance, not inferred from precision-grid union area differences.
+Larger overlaps raise an error naming both surfaces and zones. Perimeter
+allocation is normalized by the sum of the member face areas, preserving
+total F*P despite seam and grid-overlay area differences.
 
 If a mapped template zone has no ground floor, its ground method can be inherited
 from other template zones only when unambiguous. Ambiguous methods,
@@ -267,6 +273,13 @@ the adapter does not invent them or reinterpret FC-factor temperatures.
 After export, construction and material definitions that are not reachable from
 remaining IDF consumers are removed using IDD references. References from internal
 mass, window shading, and control objects are included, not just surface layers.
+
+Template-based export retains `DesignSpecification:OutdoorAir`'s calculation
+method, independent per-person, per-area, per-zone and air-change rates, and
+schedule. Zero-valued components do not overwrite other components, and `Sum`
+or `Maximum` remain evaluated by EnergyPlus. `zone_pfav` records the per-person
+component in m3/(h person), not an aggregation of these rates. Model-authored
+templates can still set the per-person rate explicitly.
 
 ### Apply Thermal Settings
 

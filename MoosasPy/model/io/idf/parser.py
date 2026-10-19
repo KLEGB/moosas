@@ -681,20 +681,10 @@ class ZoneTemplate():
                 zone.settings['zone_pfav'] = ach * zoneTemplateVolume * 3600  # m3/h-pp
 
         if 'DesignSpecification:OutdoorAir' in self.objectList:
-            if 'Outdoor_Air_Flow_per_Zone' in self.objectList['DesignSpecification:OutdoorAir'].params:
-                inftM3s = self.objectList['DesignSpecification:OutdoorAir']['Outdoor_Air_Flow_per_Zone']  # {m3/s}
-                zone.settings['zone_pfav'] = inftM3s * 3600 / zone.settings['zone_ppsm'] / zone.area  # m3/h-pp
-            if 'Outdoor_Air_Flow_per_Zone_Floor_Area' in self.objectList['DesignSpecification:OutdoorAir'].params:
-                inftM3sM2 = self.objectList['DesignSpecification:OutdoorAir'][
-                    'Outdoor_Air_Flow_per_Zone_Floor_Area']  # {m3/s-m2}
-                zone.settings['zone_pfav'] = inftM3sM2 * 3600 / zone.settings['zone_ppsm']  # m3/h-pp
-            if 'Outdoor_Air_Flow_per_Person' in self.objectList['DesignSpecification:OutdoorAir'].params:
-                inftM3pp = self.objectList['DesignSpecification:OutdoorAir']['Outdoor_Air_Flow_per_Person']  # {m3/s-pp}
-                zone.settings['zone_pfav'] = inftM3pp * 3600  # m3/h-pp
-            if 'Outdoor_Air_Flow_Air_Changes_per_Hour' in self.objectList['DesignSpecification:OutdoorAir'].params:
-                ach = self.objectList['DesignSpecification:OutdoorAir'][
-                    'Outdoor_Air_Flow_Air_Changes_per_Hour']  # {ac/h}
-                zone.settings['zone_pfav'] = ach * zoneTemplateVolume * 3600  # m3/h-pp
+            # Keep the independent flow components and method in the IDF object.
+            # zone_pfav represents only its per-person component, not their total.
+            outdoor_air = self.objectList['DesignSpecification:OutdoorAir'].params
+            zone.settings['zone_pfav'] = float(outdoor_air.get('Outdoor_Air_Flow_per_Person', 0.00944)) * 3600
         zone.settings['zone_pfav'] = float(zone.settings['zone_pfav'])
 
         if self.hvac_mode == "ideal_loads":
@@ -752,9 +742,7 @@ class ZoneTemplate():
                  'Design_Specification_Zone_Air_Distribution_Object_Name': ''
                  },
             'DesignSpecification:OutdoorAir':
-                {'Name': zone.id,
-                 'Outdoor_Air_Flow_per_Person': zone.settings['zone_pfav'] / 3600,
-                 },
+                {'Name': zone.id},
             'DesignSpecification:ZoneAirDistribution':
                 {'Name': zone.id},
             'ZoneControl:Thermostat':
