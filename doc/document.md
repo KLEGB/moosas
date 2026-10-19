@@ -246,6 +246,28 @@ surfaces have opposite normals. The geometry projection basis is right-handed;
 rebuild models from source geometry rather than reusing caches made with the
 previous projection convention.
 
+Ground floors retain the mapped template's ground method, construction, and
+matching site ground-temperature object, rather than using the generic wall
+U-value. `Ground` uses `Site:GroundTemperature:BuildingSurface`;
+`GroundFCfactorMethod` uses the template F-factor and FC-factor temperatures.
+For each continuous slab, actual exposed perimeter (including courtyards, not
+shared edges) is allocated to floor faces by area. Each construction's area
+matches its face. If allocated perimeter exceeds the face's geometric perimeter,
+it is capped and the local F-factor scaled inversely, preserving total F*P and
+uniform equivalent resistance. This avoids negative resistance in tiny thermal
+partitions. Disconnected slabs, elevations, and different template F-factors are
+handled separately. Model vertices and wall segmentation are not changed.
+
+If a mapped template zone has no ground floor, its ground method can be inherited
+from other template zones only when unambiguous. Ambiguous methods,
+missing/incompatible constructions, and unsupported Foundation/preprocessor
+methods raise an export error. Missing ground temperatures produce a warning;
+the adapter does not invent them or reinterpret FC-factor temperatures.
+
+After export, construction and material definitions that are not reachable from
+remaining IDF consumers are removed using IDD references. References from internal
+mass, window shading, and control objects are included, not just surface layers.
+
 ### Apply Thermal Settings
 
 Each `MoosasSpace` receives a default residential template during model

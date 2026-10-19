@@ -19,6 +19,8 @@ from ..rdf import MoosasRDF, encodeURI, decodeURI
 from ..xml import loadXml
 from . import IDFConversionResult, construction, input, model, parser, schedule
 from .model import MoosasSettings
+from .ground import apply_ground_templates, capture_ground_templates
+from .materials import prune_unused_constructions_and_materials
 from .version import (
     bundled_template_idf_path,
     configure_idd,
@@ -335,6 +337,7 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
     # They cannot be retained after ideal-loads export replaces those objects.
     removeHint.append('ZoneList')
     idf = zTemplate.idf
+    groundTemplates = capture_ground_templates(idf, zoneMap)
     if hvac_mode == "ideal_loads":
         removeHint.extend(_idf_hvac_object_types(idf))
     for h in removeHint:
@@ -436,6 +439,8 @@ def _writeIDF_default(model: MoosasModel, outputPath: str, idfTemplatePath=None,
 
     if idfTemplatePath:
         _idf_apply_attic_mixing(idf, model, idfTemplatePath)
+    apply_ground_templates(idf, groundTemplates)
+    prune_unused_constructions_and_materials(idf)
     idf.save(outputPath)
     if idfTemplatePath:
         _copy_idf_schedule_files(idfTemplatePath, outputPath)

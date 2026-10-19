@@ -156,6 +156,76 @@ def _single_room_model(tmp_path):
     return model
 
 
+@pytest.mark.parametrize("ground_method", ["GroundFCfactorMethod", "Ground", "Foundation"])
+def test_idf_export_matches_template_ground_and_prunes_unused_materials(tmp_path, ground_method):
+    model = _single_room_model(tmp_path)
+    geometry_before = [list(g.face.exterior.coords) for g in model.geometryList]
+    configure_idd()
+    template = IDF(str(bundled_template_idf_path()))
+    zone_name = template.idfobjects["ZONE"][0].Name
+    for surface in template.idfobjects["BUILDINGSURFACE:DETAILED"]:
+        if surface.Zone_Name == zone_name and surface.Surface_Type.lower() == "floor":
+            surface.Outside_Boundary_Condition = "Outdoors"
+    template.newidfobject(
+        "Material", Name="test slab layer", Roughness="Rough", Thickness=0.2,
+        Conductivity=1.5, Density=2000, Specific_Heat=1000,
+    )
+    template.newidfobject("Construction", Name="test slab", Outside_Layer="test slab layer")
+    template.newidfobject("Construction", Name="unused test slab", Outside_Layer="unused test layer")
+    template.newidfobject(
+        "Material", Name="unused test layer", Roughness="Rough", Thickness=0.1,
+        Conductivity=1, Density=1000, Specific_Heat=1000,
+    )
+    template.newidfobject(
+        "Construction:FfactorGroundFloor", Name="test foundation",
+        FFactor=1.26, Area=1000, PerimeterExposed=300,
+    )
+    template.newidfobject(
+        "BuildingSurface:Detailed", Name="template ground floor", Zone_Name=zone_name,
+        Surface_Type="Floor", Outside_Boundary_Condition=ground_method,
+        Construction_Name="test foundation" if ground_method == "GroundFCfactorMethod" else "test slab",
+    )
+    temperature_key = ("Site:GroundTemperature:FCfactorMethod" if ground_method == "GroundFCfactorMethod"
+                       else "Site:GroundTemperature:BuildingSurface")
+    template.idfobjects[temperature_key] = []
+    temperatures = template.newidfobject(temperature_key)
+    for index, month in enumerate((
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December",
+    )):
+        temperatures[f"{month}_Ground_Temperature"] = 10 + index
+    expected_temperatures = list(temperatures.obj)
+    template_path = tmp_path / "ground-template.idf"
+    output_path = tmp_path / "ground-export.idf"
+    template.saveas(str(template_path))
+    kwargs = dict(idfTemplatePath=str(template_path),
+                  zoneNameToSpaceDict={zone_name: [str(model.spaceList[0].id)]})
+    if ground_method == "Foundation":
+        with pytest.raises(ValueError, match="Unsupported template ground method"):
+            exportIDF(model, str(output_path), **kwargs)
+        assert not output_path.exists()
+        return
+
+    exportIDF(model, str(output_path), **kwargs)
+
+    exported = IDF(str(output_path))
+    floor = next(s for s in exported.idfobjects["BUILDINGSURFACE:DETAILED"]
+                 if s.Surface_Type.lower() == "floor")
+    assert floor.Outside_Boundary_Condition == ground_method
+    assert list(exported.idfobjects[temperature_key][0].obj) == expected_temperatures
+    if ground_method == "GroundFCfactorMethod":
+        foundation, = exported.idfobjects["CONSTRUCTION:FFACTORGROUNDFLOOR"]
+        assert floor.Construction_Name == foundation.Name
+        assert (foundation.FFactor, foundation.Area, foundation.PerimeterExposed) == pytest.approx((1.26, 16, 16))
+    else:
+        assert floor.Construction_Name == "test slab"
+        assert any(m.Name == "test slab layer" for m in exported.idfobjects["MATERIAL"])
+        assert not exported.idfobjects["CONSTRUCTION:FFACTORGROUNDFLOOR"]
+    assert not any(c.Name == "unused test slab" for c in exported.idfobjects["CONSTRUCTION"])
+    assert not any(m.Name == "unused test layer" for m in exported.idfobjects["MATERIAL"])
+    assert [list(g.face.exterior.coords) for g in model.geometryList] == geometry_before
+
+
 @pytest.mark.parametrize("suffix", (".xml", ".json", ".idf"))
 def test_single_room_formats_round_trip(tmp_path, suffix):
     model = _single_room_model(tmp_path)
