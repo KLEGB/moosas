@@ -26,6 +26,8 @@ from MoosasPy.transform.geometry.polygon import GeometryOperator, GeometryValida
 from MoosasPy.transform.geometry.contour import _merge_tiny_partitions
 from MoosasPy.transform.stages.convexification import convexify_model
 from MoosasPy.transform.stages.classification import classify_model
+from MoosasPy.transform.stages.cleansing import attach_explicit_shading, cleanse_model
+from MoosasPy.transform.stages.splitting import split_wall_intersections
 from MoosasPy.transform.stages.topology import _normalize_horizontal_faces
 from MoosasPy.utils import GeometryError, shapely
 from MoosasPy.utils.constant import geom
@@ -50,6 +52,41 @@ def test_geo_import_preserves_millimetre_details(tmp_path):
     coordinates = shapely.get_coordinates(geometry[0].face, include_z=True)[:-1]
     assert coordinates.min(axis=0) == pytest.approx([0.003, 0.007, 3.123])
     assert coordinates.max(axis=0) == pytest.approx([1.003, 1.007, 3.123])
+
+
+@pytest.mark.parametrize("origin", [(0.001, 0.001), (1113.982, 155.463)])
+@pytest.mark.parametrize("transpose", [False, True])
+@pytest.mark.parametrize("crossing", [False, True], ids=["tee", "cross"])
+def test_wall_intersections_preserve_millimetre_junctions(origin, transpose, crossing):
+    coordinates = np.array([
+        (0.0, 0.0), (0.0, 8.008),
+        (-2.002 if crossing else 0.0, 4.002), (6.001, 4.002),
+    ]) + origin
+    if transpose:
+        coordinates = coordinates[:, ::-1]
+    start, end, branch_start, branch_end = coordinates
+    junction = np.array([start[0], branch_start[1]]) if not transpose else np.array([branch_start[0], start[1]])
+    model = MoosasModel()
+    model.levelList = [0.0, 3.0]
+    model.wallList = [
+        MoosasWall.fromProjection(shapely.LineString([first, second]), 0.0, 3.0, model)
+        for first, second in [(start, end), (branch_start, branch_end)]
+    ]
+
+    split_wall_intersections(model, enabled=True)
+
+    expected = [(start, junction), (junction, end)]
+    expected += [(branch_start, junction), (junction, branch_end)] if crossing else [(branch_start, branch_end)]
+    projections = [wall.force_2d() for wall in model.wallList]
+    assert len(projections) == len(expected)
+    for first, second in expected:
+        segment = shapely.set_precision(shapely.LineString([first, second]), geom.POINT_PRECISION)
+        assert any(shapely.equals(segment, projection) for projection in projections)
+    junction = shapely.set_precision(shapely.Point(junction), geom.POINT_PRECISION)
+    assert all(
+        any(shapely.equals(endpoint, junction) for endpoint in shapely.points(shapely.get_coordinates(projection)))
+        for projection in projections
+    )
 
 
 @pytest.mark.parametrize("offset", [(0, 0), (10000, 10000), (-10000, 25000)])
@@ -295,17 +332,27 @@ def test_attach_shading_controls_explicit_shading_faces():
         [0.0, 0.0, 0.0],
     ]))
 
-    def classify(attach_shading):
+    def prepare(attach_shading):
         model = MoosasModel()
         model.geometryList = [
             MoosasGeometry(face, "floor", shapely.points([0.0, 0.0, 1.0]), 4),
             MoosasGeometry(face, "shade", shapely.points([0.0, 0.0, 1.0]), -1),
         ]
         model.geoId = [geometry.faceId for geometry in model.geometryList]
-        return classify_model(model, attach_shading=attach_shading)
+        model = classify_model(model, attach_shading=attach_shading)
+        assert model.shadingList == []
+        model, _ = cleanse_model(
+            model,
+            solve_duplicated=False,
+            solve_redundant=False,
+            solve_overlap=False,
+        )
+        if attach_shading:
+            model = attach_explicit_shading(model)
+        return model
 
-    assert classify(False).shadingList == []
-    assert len(classify(True).shadingList) == 1
+    assert prepare(False).shadingList == []
+    assert [element.faceId for element in prepare(True).shadingList] == ["shade"]
 
 
 def test_single_face_element_preserves_directed_normal():

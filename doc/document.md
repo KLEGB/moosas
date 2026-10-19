@@ -173,8 +173,11 @@ can change the resulting partition count.
 The default coordinate and recognition precision is **0.001 m (1 mm)**,
 controlled by `geom.POINT_PRECISION`. GEO import retains its existing
 coordinate-clustering and floor-quantization rules at this precision.
-Preprocessing height groups and IDF vertex output use the same precision;
-area and angular thresholds are unchanged. Rebuild models from their original
+Wall-projection intersections, topology nodes, preprocessing height groups,
+and IDF vertex output use the same precision. In particular, wall splitting
+must not use a coarser intersection grid, which can shift shared junctions
+and merge adjacent room contours. Area, minimum room dimensions, and angular
+thresholds are unchanged. Rebuild models from their original
 geometry sources to benefit from the finer precision: loading an existing
 model or IDF cannot restore coordinates already discarded.
 

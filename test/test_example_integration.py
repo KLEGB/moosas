@@ -47,7 +47,7 @@ class ExampleIntegrationTests(unittest.TestCase):
             (0.0, 4.5, 9.0, 13.5, 18.0, 22.5, 27.0, 31.5, 36.0, 40.5, 45.0),
         )
         self.assertTrue(all(space.area > 0 for space in self.model.spaceList))
-        self.assertAlmostEqual(sum(space.area for space in self.model.spaceList), 28199.6484, places=4)
+        self.assertAlmostEqual(sum(space.area for space in self.model.spaceList), 28199.015, places=3)
 
         neighbor_pairs = {
             tuple(sorted((str(space.id), str(neighbor_id))))
@@ -67,7 +67,7 @@ class ExampleIntegrationTests(unittest.TestCase):
         self.assertEqual(len(active_air_walls), 36)
         self.assertEqual(
             sum(wall.is_air_boundary for wall in self.model.wall_remain),
-            22,
+            0,
         )
         self.assertTrue(all(len(set(wall.space)) == 2 for wall in active_air_walls))
 

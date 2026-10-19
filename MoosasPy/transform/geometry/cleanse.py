@@ -703,6 +703,8 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
     then subdivides the walls into smaller segments based on these intersections. It operates only
     on vertical faces (walls) and ignores 3D spatial relationships such as multi-level overlaps.
     The calculation is optimized by grouping walls by their normal directions using `_groupByNormal`.
+    Intersections use the same precision grid as wall projections and topology
+    nodes so splitting does not shift shared junctions onto a different grid.
     
     Parameters
     ----------
@@ -756,7 +758,7 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
             newWalls.append(wall)
             w2d = wall.force_2d()
             for w2dOther in otherWall2d:
-                intersection = shapely.intersection(w2d, w2dOther, grid_size= 1.5 * geom.POINT_PRECISION)
+                intersection = shapely.intersection(w2d, w2dOther, grid_size=geom.POINT_PRECISION)
                 # print(w2d, w2dOther,Vector.parallel(Vector(w2d), Vector(w2dOther)),intersection)
                 if (not shapely.is_empty(intersection)) and shapely.get_dimensions(intersection) == 0:
                     twins = shapely.points(shapely.get_coordinates(w2d))
@@ -815,7 +817,7 @@ def solveIntersectionVertical(model: MoosasContainer) -> MoosasContainer:
         #     parallel = [not(Vector.parallel(Vector(wall.normal), Vector(w.normal))) for w in wallElement]
         #     testSet2d = wall2d[parallel]
         #     for w2dOther in testSet2d:
-        #         intersection = shapely.intersection(w2d, w2dOther,grid_size=1.5*geom.POINT_PRECISION)
+        #         intersection = shapely.intersection(w2d, w2dOther,grid_size=geom.POINT_PRECISION)
         #         # print(w2d, w2dOther,Vector.parallel(Vector(w2d), Vector(w2dOther)),intersection)
         #         if (not shapely.is_empty(intersection)) and shapely.get_dimensions(intersection)==0:
         #             twins =shapely.points(shapely.get_coordinates(w2d))
