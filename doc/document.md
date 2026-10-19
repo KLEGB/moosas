@@ -170,6 +170,13 @@ not accepted. Concave-vertex detection uses the same orientation predicate.
 The shortest-valid-diagonal strategy is unchanged; correcting these predicates
 can change the resulting partition count.
 
+Wall loops alone do not define enclosed spaces. Open-to-sky courtyards remain
+holes in the surrounding building footprint, but are neither emitted as spaces
+or voids nor convex-partitioned by `divided_zones`. Physical overhead coverage is
+checked across higher storeys, so a roofed multi-storey atrium can still be
+assembled from stacked voids. Opaque roofs and glazed skylights count as cover;
+shading-only faces and air boundaries do not.
+
 The default coordinate and recognition precision is **0.001 m (1 mm)**,
 controlled by `geom.POINT_PRECISION`. GEO import retains its existing
 coordinate-clustering and floor-quantization rules at this precision.

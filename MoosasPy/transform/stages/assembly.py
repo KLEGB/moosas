@@ -6,7 +6,7 @@ from ...utils import mixItemListToList, np, shapely
 from ...utils.constant import geom
 from ...utils.tools import searchBy
 from ..geometry.cleanse import solveIntersectionHorizontal
-from ..geometry.contour import packing_edges
+from ..geometry.contour import overhead_projection, packing_edges
 from ..geometry.element import MoosasEdge, MoosasFace, MoosasFloor, MoosasSkylight, MoosasSpace
 from ..geometry.geos import GeometryError, Vector, overlapArea
 
@@ -178,6 +178,14 @@ def cap_floor_simple(boundary: shapely.Geometry, level, model: MoosasModel, base
 
 def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
     """Match floors and ceilings to edges, then build spaces and voids."""
+    # Snapshot real cover before missing floors are filled with air boundaries.
+    overhead = {level: overhead_projection(model, level) for level in model.levelList}
+    covered_edges = {
+        edge for edge in model.edgeList
+        if shapely.area(shapely.intersection(
+            edge.force_2d(), overhead[edge.level], grid_size=geom.POINT_PRECISION
+        )) > geom.AREA_PRECISION
+    }
     print("\rPACKING: Match floors", end="")
     remaining_faces = set(model.faceList)
     topology = [{"floor": None, "ceiling": None} for _ in model.edgeList]
@@ -187,6 +195,8 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
         face_indices = _horizontal_face_indices(model, level)
         for edge_index in edge_indices:
             progress += 1
+            if model.edgeList[edge_index] not in covered_edges:
+                continue
             try:
                 shadow_area = 0
                 matched_faces = []
@@ -215,6 +225,8 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
         face_indices = _horizontal_face_indices(model, top_level)
         for edge_index in edge_indices:
             progress += 1
+            if model.edgeList[edge_index] not in covered_edges:
+                continue
             try:
                 shadow_area = 0
                 matched_faces = []
@@ -271,6 +283,10 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
             parent.add_void(hole)
     print()
     for space in spaces:
+        if shapely.area(shapely.intersection(
+            space.force_2d(), overhead[space.level], grid_size=geom.POINT_PRECISION
+        )) <= geom.AREA_PRECISION:
+            continue
         if space.is_void():
             model.voidList.append(space)
         else:

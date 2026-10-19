@@ -578,6 +578,17 @@ def _direct_child_holes(edge, edges):
     ]
 
 
+def overhead_projection(model: MoosasContainer, level: float) -> shapely.Geometry:
+    """Project physical floors, roofs and skylights above a storey."""
+    return shapely.union_all([
+        face.force_2d()
+        for face in list(model.faceList) + list(model.skylightList)
+        if face.category in (0, 1)
+        and face.elevation > level + geom.POINT_PRECISION
+        and abs(float(face.normal[2])) >= geom.HORIZONTAL_ANGLE_THRESHOLD
+    ])
+
+
 def _replace_one_sided_air_boundaries(boundaries, walls):
     """Use a coincident opaque wall when an air wall bounds only one contour."""
     occurrence_count = {}
@@ -670,6 +681,7 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
         ]
         for levelIdx, bldLevel in enumerate(model.levelList):
             edges = np.array(model.edgeList)[searchBy('level', bldLevel, model.edgeList)]
+            overhead = overhead_projection(model, bldLevel)
             for edgeIdx, edge in enumerate(edges):
                 # ``contains`` considers a geometry to contain itself.  That
                 # made the current boundary an identical "hole", so a
@@ -677,6 +689,11 @@ def packing_edges(model: MoosasContainer, divided_zones) -> MoosasContainer:
                 # exterior removed and could not be divided.  A hole must lie
                 # strictly inside the boundary instead.
                 holes = _direct_child_holes(edge, edges)
+                footprint = shapely.difference(edge.force_2d(), shapely.union_all(holes))
+                if shapely.area(shapely.intersection(
+                    footprint, overhead, grid_size=geom.POINT_PRECISION
+                )) <= geom.AREA_PRECISION:
+                    continue
                 newEdges, _ = triangulate2dFace(edge.force_2d(), holes)
                 newEdges = _merge_tiny_partitions(newEdges)
                 if len(newEdges) > 1:

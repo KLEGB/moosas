@@ -152,6 +152,67 @@ def test_courtyard_case_generates_two_sided_air_boundaries():
     assert all(len({str(space_id) for space_id in wall.space}) == 2 for wall in air_walls)
 
 
+@pytest.mark.parametrize("divided", [False, True])
+@pytest.mark.parametrize("roof_category", [None, 0, 1, -1, 2])
+def test_courtyard_requires_a_physical_overhead_cover(tmp_path, divided, roof_category):
+    outer = [(0, 0), (20, 0), (20, 20), (0, 20)]
+    inner = [(5, 5), (15, 5), (15, 10), (10, 10), (10, 15), (5, 15)]
+    courtyard = shapely.Polygon(inner)
+    faces = []
+
+    def add_face(points, normal, name, category=0, hole=()):
+        lines = [f"f,{category},{name}", "fn," + ",".join(map(str, normal))]
+        lines.extend("fv," + ",".join(map(str, point)) for point in points)
+        lines.extend("fh,0," + ",".join(map(str, point)) for point in hole)
+        faces.append("\n".join(lines + [";"]))
+
+    for z in (0, 3, 6):
+        add_face(
+            [(x, y, z) for x, y in outer], (0, 0, 1), f"slab_{z}",
+            hole=[(x, y, z) for x, y in inner] if z else (),
+        )
+    if roof_category is not None:
+        add_face([(x, y, 6) for x, y in inner], (0, 0, 1), "cover", roof_category)
+    for ring_index, ring in enumerate((outer, inner)):
+        for index, (start, end) in enumerate(zip(ring, ring[1:] + ring[:1])):
+            dx, dy = end[0] - start[0], end[1] - start[1]
+            add_face(
+                [(*start, 0), (*end, 0), (*end, 6), (*start, 6)],
+                (dy, -dx, 0), f"wall_{ring_index}_{index}",
+            )
+    source = tmp_path / "courtyard.geo"
+    source.write_text("\n".join(faces), encoding="utf-8")
+
+    model = transform(
+        str(source), stdout=StringIO(),
+        options=TransformOptions(divided_zones=divided, attach_shading=True),
+    )
+    covered = roof_category in (0, 1)
+    courtyard_spaces = [
+        space for space in model.spaceList
+        if shapely.area(shapely.intersection(space.force_2d(), courtyard)) > geom.AREA_PRECISION
+    ]
+
+    assert bool(courtyard_spaces) == covered
+    assert all(
+        shapely.area(shapely.intersection(void.force_2d(), courtyard)) <= geom.AREA_PRECISION
+        for void in model.voidList
+    )
+    assert sum(space.area for space in model.spaceList) == pytest.approx(
+        800.0 if covered else 650.0
+    )
+    if not covered:
+        for wall in model.wallList:
+            assert shapely.length(
+                shapely.intersection(wall.force_2d(), courtyard)
+                .difference(shapely.boundary(courtyard))
+            ) <= geom.POINT_PRECISION
+    if divided:
+        assert all(
+            len(set(wall.space)) == 2 for wall in model.wallList if wall.is_air_boundary
+        )
+
+
 def test_divided_zones_preserve_explicit_shading_geometry():
     source = (CASE_DIRECTORY / "test0_6spacesIntersection.geo").read_text(encoding="utf-8")
     shading = """\
