@@ -1,5 +1,7 @@
 import numpy as np
 import copy
+from eppy import ext_field_functions as extff
+from eppy.bunchhelpers import makefieldname
 
 # IDF-specific settings models.
 SpaceDefault = {
@@ -328,22 +330,35 @@ class MoosasSettings(object):
         """
         if 'key' not in self.params.keys():
             return None
-        idfObject = idf.newidfobject(self.params['key'])
         if rename is None:
             rename = {}
+        key = self.params['key'].upper()
+        key_i = idf.model.dtls.index(key)
+        objidd = idf.idd_info[key_i]
+        objls = {makefieldname(comm['field'][0]) for comm in objidd[1:]}
+        extensible = extff.getextensible(objidd)
+        fields = {}
         for _name in self.params.keys():
             if _name in rename.keys():
                 _objName = rename[_name]
             else:
                 _objName = _name
-            if _name != 'key' and _name in idfObject.objls:
+            if _name != 'key' and (_name in objls
+                                   or (extensible and extff.islegalextensiblefield(objidd, _name))):
                 if str(self.params[_name]).isdecimal():
                     try:
                         self.params[_name] = float(self.params[_name])
                         self.params[_name] = np.round(self.params[_name],2)
                     except:
                         pass
-                idfObject[_objName] = self.params[_name]
+                fields[_objName] = self.params[_name]
+        missing = [name for name in fields if name not in objls]
+        if missing:
+            # Grow the IDD to the highest extensible index used (e.g. Vertex_178_* on large surfaces).
+            last = extff.extfieldint(objidd[-1]['field'][0], sep=' ')
+            extra = max(extff.extfieldint(name) for name in missing) - last
+            extff.increaseIDDfields(idf.block, idf.idd_info, key_i, key, extra * extensible)
+        return idf.newidfobject(self.params['key'], **fields)
 
     def __repr__(self):
         """String representation of the ThermalSettings object.
