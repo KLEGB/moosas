@@ -22,11 +22,164 @@ from MoosasPy.transform.geometry.geos import Projection, ccwNormal, is_ccw, simp
 from MoosasPy.transform.geometry.grid import MoosasGrid
 from MoosasPy.transform.geometry.planar_graph import TopoNetwork
 from MoosasPy.transform.geometry.planar_graph import TopoEdge
+from MoosasPy.transform.geometry.polygon import GeometryOperator, GeometryValidator
 from MoosasPy.transform.geometry.contour import _merge_tiny_partitions
 from MoosasPy.transform.stages.convexification import convexify_model
 from MoosasPy.transform.stages.classification import classify_model
 from MoosasPy.transform.stages.topology import _normalize_horizontal_faces
 from MoosasPy.utils import GeometryError, shapely
+from MoosasPy.utils.constant import geom
+from MoosasPy.transform.importers.geo import _readGeo
+
+
+def test_geo_import_preserves_millimetre_details(tmp_path):
+    source = tmp_path / "millimetre.geo"
+    source.write_text(
+        "f,0,millimetre\nfn,0,0,1\n"
+        "fv,0.0034,0.0074,3.1234\n"
+        "fv,1.0034,0.0074,3.1234\n"
+        "fv,1.0034,1.0074,3.1234\n"
+        "fv,0.0034,1.0074,3.1234\n;\n",
+        encoding="utf-8",
+    )
+
+    geometry = _readGeo(str(source))
+
+    assert geom.POINT_PRECISION == 0.001
+    assert len(geometry) == 1
+    coordinates = shapely.get_coordinates(geometry[0].face, include_z=True)[:-1]
+    assert coordinates.min(axis=0) == pytest.approx([0.003, 0.007, 3.123])
+    assert coordinates.max(axis=0) == pytest.approx([1.003, 1.007, 3.123])
+
+
+@pytest.mark.parametrize("offset", [(0, 0), (10000, 10000), (-10000, 25000)])
+@pytest.mark.parametrize("point,orientation", [
+    ((1, 0.1), 1),
+    ((1, -0.1), -1),
+    ((1, 0), 0),
+    ((3, 0), 0),
+    ((1, 0.00001), 1),
+    ((1, -0.00001), -1),
+])
+def test_polygon_orientation_is_translation_independent(offset, point, orientation):
+    a, b, c = np.array([(0, 0), (2, 0), point], dtype=float) + offset
+
+    assert GeometryValidator._is_collinear(a, b, c) == (orientation == 0)
+    assert GeometryValidator._is_left_on(a, b, c) == (orientation >= 0)
+    assert GeometryValidator._is_left_on(b, a, c) == (orientation <= 0)
+
+
+@pytest.mark.parametrize("offset", [(0, 0), (10000, 10000)])
+@pytest.mark.parametrize("points,expected", [
+    (((0, 0), (2, 0), (1, 0)), True),
+    (((0, 0), (2, 0), (2, 0)), True),
+    (((0, 0), (2, 0), (1, 0.1)), False),
+    (((0, 0), (2, 0), (3, 0)), False),
+    (((0, 0), (0, 2), (0, 1)), True),
+    (((0, 0), (0, 0), (0, 0)), True),
+    (((0, 0), (0, 0), (1, 0)), False),
+])
+def test_polygon_point_on_segment(points, expected, offset):
+    a, b, c = np.asarray(points, dtype=float) + offset
+
+    assert GeometryValidator._is_between(a, b, c) == expected
+    assert GeometryValidator._is_between(b, a, c) == expected
+
+
+@pytest.mark.parametrize("offset", [(0, 0), (10000, 10000), (-10000, 25000)])
+@pytest.mark.parametrize("points,expected", [
+    (((0, 0), (2, 2), (0, 2), (2, 0)), True),
+    (((0, 0), (2, 0), (2, 0), (3, 1)), True),
+    (((0, 0), (2, 0), (1, 0), (1, 1)), True),
+    (((0, 0), (2, 0), (-1, 0), (1, 0)), True),
+    (((0, 0), (2, 0), (-1, 0), (3, 0)), True),
+    (((0, 0), (2, 0), (3, 0), (4, 0)), False),
+    (((0, 0), (2, 0), (0, 0.1), (2, 0.1)), False),
+    (((0, 0), (2, 0), (0, 0.00001), (2, 0.00001)), False),
+    (((0, 0), (2, 0), (3, -1), (3, 1)), False),
+    (((0, 0), (0, 0), (-1, 0), (1, 0)), True),
+    (((0, 0), (0, 0), (1, 0), (2, 0)), False),
+    (((0, 0), (0, 0), (0, 0), (0, 0)), True),
+    (((0, 0), (0, 0), (1, 0), (1, 0)), False),
+])
+def test_polygon_segment_intersection_is_symmetric(points, expected, offset):
+    a, b, c, d = np.asarray(points, dtype=float) + offset
+    for first, second in [((a, b), (c, d)), ((c, d), (a, b))]:
+        for segment1 in (first, first[::-1]):
+            for segment2 in (second, second[::-1]):
+                assert GeometryValidator._is_intersect(*segment1, *segment2) == expected
+
+
+@pytest.mark.parametrize("offset", [(0, 0), (10000, 10000)])
+@pytest.mark.parametrize("points,pair,expected", [
+    ([(0, 0), (2, 0), (2, 2), (0, 2)], (0, 2), True),
+    ([(0, 0), (2, 0), (2, 2), (0, 2)], (0, 1), False),
+    ([(0, 0), (2, 0), (2, 2), (0, 2)], (0, 0), False),
+    ([(0, 0), (1, 0), (2, 0), (2, 2), (0, 2)], (0, 2), False),
+    ([(0, 0), (1, 0), (2, 0), (2, 2), (0, 2)], (1, 3), True),
+    ([(0, 0), (3, 0), (3, 1), (1, 1), (1, 3), (0, 3)], (2, 4), False),
+    ([(0, 0), (3, 0), (3, 1), (1, 1), (1, 3), (0, 3)], (0, 3), True),
+    ([(0, 0), (3, 0), (3, 1), (1, 1), (1, 3), (0, 3)], (1, 5), False),
+    ([(0, 0), (4, 0), (4, 4), (2, 2), (0, 4)], (0, 2), False),
+])
+def test_polygon_diagonal_is_strictly_internal(points, pair, expected, offset):
+    vertices = np.column_stack((np.asarray(points, dtype=float) + offset, np.zeros(len(points))))
+    # The current subpolygon need not use consecutive indices into the source.
+    source = np.repeat(vertices, 2, axis=0)
+    indices = list(range(0, len(source), 2))
+
+    assert GeometryValidator._is_diagonal(source, indices, *pair) == expected
+    assert GeometryValidator._is_diagonal(source, indices, *pair[::-1]) == expected
+
+
+@pytest.mark.parametrize("offset", [(0, 0), (10000, 10000), (-10000, 25000)])
+@pytest.mark.parametrize("points", [
+    [
+        (0, 0), (8, 0), (8, 4), (7, 4), (7, 2), (6, 2),
+        (6, 4), (5, 4), (5, 2), (4, 2), (4, 4), (0, 4),
+    ],
+    [(0, 0), (8, 0), (8, 4), (4, 3.9999), (0, 4)],
+])
+def test_convex_partition_is_translation_independent(offset, points):
+    points = np.asarray(points, dtype=float)
+
+    def partition(coordinates):
+        vertices = np.column_stack((coordinates, np.zeros(len(coordinates))))
+        _, _, _, faces, _ = GeometryConvexifier.convexify_faces(
+            [0], ["comb"], [np.array([0, 0, 1])], [vertices], [[]],
+        )
+        return [shapely.Polygon(face[:, :2]) for face in faces]
+
+    reference = partition(points)
+    translated = partition(points + offset)
+    union = shapely.union_all(translated)
+    original = shapely.Polygon(points + offset)
+
+    assert len(translated) == len(reference)
+    assert len(translated) > 1
+    assert all(part.is_valid and part.area > 0 for part in translated)
+    assert all(part.convex_hull.area - part.area < 1e-8 for part in translated)
+    assert union.symmetric_difference(original).area < 1e-8
+    assert sum(part.area for part in translated) - union.area == pytest.approx(0, abs=1e-8)
+    assert sorted(part.area for part in translated) == pytest.approx(sorted(part.area for part in reference))
+
+
+@pytest.mark.parametrize("offset", [(0, 0, 0), (10000, 10000, 3)])
+def test_hole_bridges_do_not_cross_polygon_or_holes(offset):
+    outer = np.array([(0, 0, 0), (10, 0, 0), (10, 10, 0), (0, 10, 0)]) + offset
+    holes = {
+        0: np.array([(2, 2, 0), (2, 4, 0), (4, 4, 0), (4, 2, 0)]) + offset,
+        1: np.array([(6, 6, 0), (6, 8, 0), (8, 8, 0), (8, 6, 0)]) + offset,
+    }
+    merged, bridges = GeometryOperator.merge_holes(outer, holes)
+    polygon = shapely.Polygon(outer[:, :2])
+
+    assert len(bridges) == 2
+    assert shapely.Polygon(merged[:, :2]).area == pytest.approx(92)
+    for bridge in bridges:
+        line = shapely.LineString(bridge[:, :2])
+        assert polygon.covers(line)
+        assert all(line.intersection(shapely.Polygon(hole[:, :2])).length == 0 for hole in holes.values())
 
 
 @pytest.mark.parametrize("axis_z,axis_x", [

@@ -9,6 +9,7 @@ from ....transform.geometry.triangulation import triangulate2dFace
 from ....transform.geometry.element import MoosasSpace, MoosasElement
 from ....transform.geometry.geos import ccwNormal, Vector, offset, trim, projectTo
 from ....utils import shapely, path
+from ....utils.constant import geom
 from .parser import ZoneTemplate
 
 def createThermalSurface(idf: IDF, element: MoosasElement, surfaceType='Floor',
@@ -138,10 +139,11 @@ def encodeFace(obj: MoosasSettings, polygon: shapely.Geometry, normal: Vector):
     obj.params['Number_of_Vertices'] = len(coordinates)
     if Vector.dot(ccwNormal(polygon), normal) < 0:
         coordinates = coordinates[::-1]
+    coordinates = np.round(coordinates / geom.POINT_PRECISION) * geom.POINT_PRECISION
     for i, point in enumerate(coordinates):
-        obj.params[f'Vertex_{i + 1}_Xcoordinate'] = np.round(point[0], 2)
-        obj.params[f'Vertex_{i + 1}_Ycoordinate'] = np.round(point[1], 2)
-        obj.params[f'Vertex_{i + 1}_Zcoordinate'] = np.round(point[2], 2)
+        obj.params[f'Vertex_{i + 1}_Xcoordinate'] = point[0]
+        obj.params[f'Vertex_{i + 1}_Ycoordinate'] = point[1]
+        obj.params[f'Vertex_{i + 1}_Zcoordinate'] = point[2]
 
 
 def createWindowSurface(idf: IDF, element: MoosasElement, parentElement: MoosasElement,

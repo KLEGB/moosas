@@ -165,8 +165,8 @@ def test_single_room_formats_round_trip(tmp_path, suffix):
     assert len(restored.spaceList) == 1
     assert len(restored.glazingList) == 1
     assert restored.spaceList[0].area == pytest.approx(16)
-    # IDF export already offsets window edges inward by 0.1 m.
-    expected_area = 0.64 if suffix == ".idf" else 1.0
+    # The 0.1 m inset and existing floor quantization leave a 0.799 m IDF window.
+    expected_area = 0.799 ** 2 if suffix == ".idf" else 1.0
     assert restored.glazingList[0].area == pytest.approx(expected_area)
 
 
@@ -263,6 +263,28 @@ def test_idf_face_encoding_removes_unused_vertex_fields():
     assert "Vertex_4_Xcoordinate" not in settings.params
     assert "Vertex_4_Ycoordinate" not in settings.params
     assert "Vertex_4_Zcoordinate" not in settings.params
+
+
+def test_idf_face_encoding_preserves_millimetre_coordinates():
+    configure_idd()
+    idf = IDF(StringIO("Version,26.1;"))
+    settings = MoosasSettings(FaceDefault)
+    points = np.array([
+        (0.003, -0.007, 3.123),
+        (1.003, -0.007, 3.123),
+        (0.003, 1.007, 3.123),
+    ])
+
+    encodeFace(settings, shapely.Polygon(points), Vector(0, 0, 1))
+    settings.applyToIDF(idf)
+    reloaded = IDF(StringIO(idf.idfstr()))
+    surface = reloaded.idfobjects["BUILDINGSURFACE:DETAILED"][0]
+    actual = np.array([
+        [float(surface[f"Vertex_{i}_{axis}coordinate"]) for axis in "XYZ"]
+        for i in range(1, 4)
+    ])
+
+    assert actual == pytest.approx(points, abs=1e-12)
 
 
 def _idf_vertex_normal(surface):

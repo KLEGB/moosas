@@ -110,7 +110,7 @@ def overlap(inputFile: str, outputFile: str):
                 return np.nan
 
         faceZ = np.array([_coerce_z(z) for z in faceZ], dtype=float)
-        faceZ = np.round(faceZ, 2)
+        faceZ = np.round(faceZ / geom.POINT_PRECISION) * geom.POINT_PRECISION
         valid_heights = np.unique(faceZ[~np.isnan(faceZ)])
         for h in valid_heights:
             subElements = elements[np.isclose(faceZ, h, equal_nan=False)]

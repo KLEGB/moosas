@@ -161,6 +161,23 @@ model = transform("massing.obj", options=options)
 Do not use model-file formats such as RDF, XML, JSON, or IDF as transformation
 inputs. Those formats enter through `MoosasModel.load()`.
 
+Convex partitioning uses robust XY orientation predicates from GEOS, without
+coordinate-dependent collinearity thresholds or geometric snapping. Segment
+intersection includes endpoint contact, collinear overlap, and zero-length
+segments. Partition diagonals must be strictly internal: polygon edges,
+boundary overlaps, and diagonals passing through another boundary vertex are
+not accepted. Concave-vertex detection uses the same orientation predicate.
+The shortest-valid-diagonal strategy is unchanged; correcting these predicates
+can change the resulting partition count.
+
+The default coordinate and recognition precision is **0.001 m (1 mm)**,
+controlled by `geom.POINT_PRECISION`. GEO import retains its existing
+coordinate-clustering and floor-quantization rules at this precision.
+Preprocessing height groups and IDF vertex output use the same precision;
+area and angular thresholds are unchanged. Rebuild models from their original
+geometry sources to benefit from the finer precision: loading an existing
+model or IDF cannot restore coordinates already discarded.
+
 ### Building Model
 
 `MoosasModel` stores geometry, spaces, topology, thermal settings, schedules,

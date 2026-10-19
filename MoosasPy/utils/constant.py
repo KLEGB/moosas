@@ -24,9 +24,8 @@ class geom:
     PATH_MAX_DEPTH = 50  # Deep search stack is deep, too deep will affect the speed, too shallow is easy to identify
     # failure
 
-    # Fuzzy recognition accuracy (meters), directly passed into shapely.set_precision() does not
-    # change the original geometry, and is only called in the force_2d() method used for recognition
-    POINT_PRECISION = 0.01
+    # Coordinate quantization and geometric recognition precision (meters).
+    POINT_PRECISION = 0.001
     AREA_PRECISION = 1.0
 
     INCH_METER_MULTIPLIER = 0.0254

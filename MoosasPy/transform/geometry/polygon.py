@@ -67,57 +67,44 @@ class GeometryValidator:
     """Geometry validation helpers."""
 
     @staticmethod
+    def _orientation(p1, p2, p3) -> int:
+        """Return the robust XY turn sign without a geometric snapping tolerance."""
+        ring = shapely.LinearRing([p1[:2], p2[:2], p3[:2]])
+        if shapely.is_ccw(ring):
+            return 1
+        if shapely.is_ccw(shapely.reverse(ring)):
+            return -1
+        return 0
+
+    @staticmethod
     def _is_left_on(p1, p2, p3):
-        p1_2d = p1[:2]
-        p2_2d = p2[:2]
-        p3_2d = p3[:2]
-        edge = p2_2d - p1_2d
-        offset = p3_2d - p2_2d
-        cross = edge[0] * offset[1] - edge[1] * offset[0]
-        if cross > 0 and np.abs(cross) < 1e-6 * np.linalg.norm(p2_2d - p1_2d) * np.linalg.norm(p3_2d - p2_2d):
-            return False
-        return cross > 0
+        return GeometryValidator._orientation(p1, p2, p3) >= 0
 
     @staticmethod
     def _is_collinear(p1, p2, p3):
-        edge = p2 - p1
-        offset = p3 - p2
-        area = edge[0] * offset[1] - edge[1] * offset[0]
-        dist = area / (np.dot(p1, p2 - p1) + 1e-6)
-        return np.abs(dist) < 1e-3
+        return GeometryValidator._orientation(p1, p2, p3) == 0
 
     @staticmethod
     def _is_between(p1, p2, p3):
-        p1_2d = p1[:2]
-        p2_2d = p2[:2]
-        p3_2d = p3[:2]
-        if p1_2d[0] != p2_2d[0]:
-            return (p1_2d[0] <= p3_2d[0] <= p2_2d[0]) or (p1_2d[0] >= p3_2d[0] >= p2_2d[0])
-        return (p1_2d[1] <= p3_2d[1] <= p2_2d[1]) or (p1_2d[1] >= p3_2d[1] >= p2_2d[1])
+        return GeometryValidator._is_collinear(p1, p2, p3) and all(
+            min(p1[axis], p2[axis]) <= p3[axis] <= max(p1[axis], p2[axis])
+            for axis in range(2)
+        )
 
     @staticmethod
     def _is_intersect(a, b, c, d):
-        a_2d = a[:2]
-        b_2d = b[:2]
-        c_2d = c[:2]
-        d_2d = d[:2]
-        if GeometryValidator._is_collinear(a_2d, b_2d, c_2d):
-            return GeometryValidator._is_between(a_2d, b_2d, c_2d)
-        if GeometryValidator._is_collinear(a_2d, b_2d, d_2d):
-            return GeometryValidator._is_between(a_2d, b_2d, d_2d)
-        if GeometryValidator._is_collinear(c_2d, d_2d, a_2d):
-            return GeometryValidator._is_between(c_2d, d_2d, a_2d)
-        if GeometryValidator._is_collinear(c_2d, d_2d, b_2d):
-            return GeometryValidator._is_between(c_2d, d_2d, b_2d)
-        cd_cross = np.logical_xor(
-            GeometryValidator._is_left_on(a_2d, b_2d, c_2d),
-            GeometryValidator._is_left_on(a_2d, b_2d, d_2d),
+        """Include endpoint contacts, collinear overlaps and point segments."""
+        abc = GeometryValidator._orientation(a, b, c)
+        abd = GeometryValidator._orientation(a, b, d)
+        cda = GeometryValidator._orientation(c, d, a)
+        cdb = GeometryValidator._orientation(c, d, b)
+        return (
+            (abc * abd < 0 and cda * cdb < 0)
+            or (abc == 0 and GeometryValidator._is_between(a, b, c))
+            or (abd == 0 and GeometryValidator._is_between(a, b, d))
+            or (cda == 0 and GeometryValidator._is_between(c, d, a))
+            or (cdb == 0 and GeometryValidator._is_between(c, d, b))
         )
-        ab_cross = np.logical_xor(
-            GeometryValidator._is_left_on(c_2d, d_2d, a_2d),
-            GeometryValidator._is_left_on(c_2d, d_2d, b_2d),
-        )
-        return ab_cross and cd_cross
 
     @staticmethod
     def _is_obtuse(v1, v2, v3):
@@ -165,6 +152,13 @@ class GeometryValidator:
 
     @staticmethod
     def _is_diagonal(verts: np.ndarray, indices: np.ndarray, ia: int, ib: int) -> bool:
+        """Test a strictly internal diagonal of a counterclockwise XY polygon."""
+        n = len(indices)
+        if ia == ib or (ia - ib) % n in (1, n - 1):
+            return False
+        if np.array_equal(verts[indices[ia]][:2], verts[indices[ib]][:2]):
+            return False
+
         def in_cone(local_verts: np.ndarray, local_indices: np.ndarray, idx_a: int, idx_b: int) -> bool:
             n = len(local_indices)
             ia_prev = idx_a - 1 if idx_a - 1 >= 0 else n - 1
@@ -174,8 +168,10 @@ class GeometryValidator:
             ia_prev, ia_next = local_indices[ia_prev], local_indices[ia_next]
 
             if GeometryValidator._is_left_on(local_verts[ia_prev], local_verts[idx_a], local_verts[ia_next]):
-                return GeometryValidator._is_left_on(local_verts[idx_a], local_verts[idx_b], local_verts[ia_prev]) and \
-                    GeometryValidator._is_left_on(local_verts[idx_b], local_verts[idx_a], local_verts[ia_next])
+                return (
+                    GeometryValidator._orientation(local_verts[idx_a], local_verts[idx_b], local_verts[ia_prev]) > 0
+                    and GeometryValidator._orientation(local_verts[idx_b], local_verts[idx_a], local_verts[ia_next]) > 0
+                )
             return not (
                 GeometryValidator._is_left_on(local_verts[idx_a], local_verts[idx_b], local_verts[ia_next]) and
                 GeometryValidator._is_left_on(local_verts[idx_b], local_verts[idx_a], local_verts[ia_prev])
@@ -380,8 +376,10 @@ class GeometryOperator:
 
         for ia in range(n):
             ia_prev, ia_next = (ia - 1) % n, (ia + 1) % n
-            angle = GeometryBasic.angle(verts[indices[ia_prev]], verts[indices[ia]], verts[indices[ia_next]])
-            if angle < 0:
+            orientation = GeometryValidator._orientation(
+                verts[indices[ia_prev]], verts[indices[ia]], verts[indices[ia_next]],
+            )
+            if orientation < 0:
                 i_concave = ia
                 break
 
