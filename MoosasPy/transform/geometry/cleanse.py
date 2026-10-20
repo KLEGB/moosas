@@ -7,6 +7,7 @@ import numpy as np
 import shapely
 
 from .element import *
+from ...utils import TopologyError
 from ...utils.tools import mixItemListToList, searchBy
 from ...utils.constant import geom
 from .geos import equals, overlapEdge, Vector
@@ -903,8 +904,8 @@ def solveIntersectionHorizontal(model: MoosasContainer) -> MoosasContainer:
             try:
                 for e in edges:
                     intersectArea = overlapArea(e.force_2d(), f.force_2d())
-                    if intersectArea > geom.AREA_PRECISION:
-                        if intersectArea < f.area - geom.AREA_PRECISION:
+                    if intersectArea > geom.POINT_PRECISION ** 2:
+                        if intersectArea < f.area - geom.POINT_PRECISION ** 2:
                             # it means the MoosasFace need to be split
                             splitF = splitFaces(f, e)
                             if splitF is not None:
@@ -960,6 +961,10 @@ def splitFaces(face: MoosasFace, edge: MoosasEdge) -> (MoosasFace, list[MoosasFa
         return [face,[]]
 
     f2d = makeValid(face.force_2d())[0]
+    if shapely.covers(
+        shapely.buffer(edge.force_2d(), geom.POINT_PRECISION), f2d,
+    ):
+        return None
     # print(shapely.is_valid_reason(f2d), edge.force_2d())
     """split opaque part"""
     innerFace = shapely.force_3d(shapely.intersection(f2d, edge.force_2d(),grid_size=geom.POINT_PRECISION), z=face.elevation)
@@ -967,14 +972,21 @@ def splitFaces(face: MoosasFace, edge: MoosasEdge) -> (MoosasFace, list[MoosasFa
 
     innerFace = makeValid(innerFace)[0]
     outerFace = [makeValid(outf)[0] for outf in shapely.get_parts(outerFace) if not shapely.is_empty(outf)]
+    # A snapped overlay must reduce every child, not reproduce its parent indefinitely.
+    area_tolerance = geom.POINT_PRECISION ** 2
+    if (
+        shapely.area(innerFace) >= f2d.area - area_tolerance
+        or any(shapely.area(part) >= f2d.area - area_tolerance for part in outerFace)
+    ):
+        return None
     # outerFace = [makeValid(f)[0] for ff in outerFace for f in ff]
-    if shapely.area(innerFace)>geom.AREA_PRECISION:
+    if shapely.area(innerFace) > geom.POINT_PRECISION ** 2:
         innerFace = MoosasFace(model=model,
                                faceId=model.includeGeo(innerFace, Vector([0, 0, 1]).geometry, face.category))
     else:
         return None
     for i, outf in enumerate(outerFace):
-        if shapely.area(outerFace[i]) > geom.AREA_PRECISION:
+        if shapely.area(outerFace[i]) > geom.POINT_PRECISION ** 2:
             outerFace[i] = MoosasFace(model=model,
                                       faceId=model.includeGeo(outf, Vector([0, 0, 1]).geometry, face.category))
         else:
@@ -991,13 +1003,13 @@ def splitFaces(face: MoosasFace, edge: MoosasEdge) -> (MoosasFace, list[MoosasFa
         g2d = makeValid(gls.force_2d())[0]
         overArea = overlapArea(g2d, edge.force_2d())
 
-        # aperture lay inside the edge
-        if overArea > gls.area - geom.AREA_PRECISION:
-            innerGlazings = np.append(innerGlazings, [gls])
-
         # aperture lay outside the edge
-        elif overArea == 0:
+        if overArea == 0:
             outerGlazings = np.append(outerGlazings, [gls])
+
+        # aperture lay inside the edge
+        elif overArea >= gls.area - area_tolerance:
+            innerGlazings = np.append(innerGlazings, [gls])
 
         # aperture need to be split
         else:
@@ -1022,8 +1034,12 @@ def splitFaces(face: MoosasFace, edge: MoosasEdge) -> (MoosasFace, list[MoosasFa
         innerFace.add_glazing(gls)
     for gls in outerGlazings:
         for outf in outerFace:
-            if shapely.contains(outf.force_2d(), gls.force_2d()):
+            if shapely.covers(
+                shapely.buffer(outf.force_2d(), geom.POINT_PRECISION), gls.force_2d(),
+            ):
                 outf.add_glazing(gls)
                 break
+        else:
+            raise TopologyError(splitFaces, "Split skylight has no covering parent face")
 
     return innerFace, outerFace

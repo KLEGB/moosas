@@ -519,36 +519,46 @@ def _documentBoundary(boundaries: Iterable[TopoBound], model: MoosasContainer) -
 
 
 def _merge_tiny_partitions(partitions):
-    """Merge sub-room slivers into the neighbor sharing their longest edge."""
+    """Absorb sub-minimum zones into edge neighbors, allowing local concavities."""
     partitions = list(partitions)
     while True:
-        tiny_index = next(
-            (index for index, part in enumerate(partitions) if shapely.area(part) < geom.ROOM_MIN_AREA),
-            None,
+        selected = None
+        tiny_indices = sorted(
+            (index for index, part in enumerate(partitions) if part.area < geom.ROOM_MIN_AREA),
+            key=lambda index: (partitions[index].area, index),
         )
-        if tiny_index is None:
+        for tiny_index in tiny_indices:
+            tiny = partitions[tiny_index]
+            best = None
+            for neighbor_index, neighbor in enumerate(partitions):
+                if neighbor_index == tiny_index:
+                    continue
+                shared = tiny.boundary.intersection(neighbor.boundary).length
+                if shared <= geom.POINT_PRECISION:
+                    continue
+                merged = tiny.union(neighbor)
+                if merged.geom_type != "Polygon" or merged.interiors or not merged.is_valid:
+                    continue
+                score = (-shared, -neighbor.area, neighbor_index)
+                if best is None or score < best[0]:
+                    best = (score, neighbor_index, merged)
+            if best is not None:
+                _, neighbor_index, merged = best
+                selected = (tiny_index, neighbor_index, merged)
+                break
+        if selected is None:
+            for index in tiny_indices:
+                print(
+                    "******Warning: small zone "
+                    f"({partitions[index].area:g} m2) has no eligible edge neighbor; "
+                    "preserving its geometry"
+                )
             return partitions
-
-        tiny = partitions[tiny_index]
-        neighbors = []
-        for index, part in enumerate(partitions):
-            if index == tiny_index:
-                continue
-            shared_length = shapely.length(
-                shapely.intersection(shapely.boundary(tiny), shapely.boundary(part))
-            )
-            if shared_length > geom.POINT_PRECISION:
-                neighbors.append((shared_length, index))
-        if not neighbors:
-            return partitions
-
-        neighbor_index = max(neighbors)[1]
-        merged = shapely.union(tiny, partitions[neighbor_index])
-        keep = [
+        tiny_index, neighbor_index, merged = selected
+        partitions = [
             part for index, part in enumerate(partitions)
             if index not in (tiny_index, neighbor_index)
-        ]
-        partitions = keep + [merged]
+        ] + [merged]
 
 
 def _is_core_boundary(edge):

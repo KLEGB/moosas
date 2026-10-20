@@ -161,12 +161,19 @@ def cap_floor_simple(boundary: shapely.Geometry, level, model: MoosasModel, base
     floor_faces: list[MoosasFace] = [] if base_faces is None else base_faces.face
     model.faceList = list(model.faceList)
     model.skylightList = list(model.skylightList)
+    covered = shapely.buffer(
+        shapely.union_all([face.force_2d() for face in floor_faces]),
+        geom.POINT_PRECISION,
+    )
     for face in floor_faces:
         face_geometry = shapely.multipolygons(mixItemListToList(face.face))
         boundary = shapely.difference(boundary, face_geometry)
 
     if not shapely.is_empty(boundary):
         for bound in shapely.get_parts(boundary):
+            # Independently snapped partition edges can leave sub-grid coverage seams.
+            if shapely.covers(covered, bound):
+                continue
             bound = shapely.force_3d(bound, z=level)
             geometry_id = model.includeGeo(bound, Vector([0, 0, 1]).geometry, cat=2)
             model.faceList.append(MoosasFace(model, geometry_id))
@@ -184,7 +191,7 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
         edge for edge in model.edgeList
         if shapely.area(shapely.intersection(
             edge.force_2d(), overhead[edge.level], grid_size=geom.POINT_PRECISION
-        )) > geom.AREA_PRECISION
+        )) > geom.POINT_PRECISION ** 2
     }
     print("\rPACKING: Match floors", end="")
     remaining_faces = set(model.faceList)
@@ -202,11 +209,11 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
                 matched_faces = []
                 for face_index in face_indices:
                     intersection_area = overlapArea(model.edgeList[edge_index].force_2d(), model.faceList[face_index].force_2d())
-                    if intersection_area > geom.AREA_PRECISION:
+                    if intersection_area > geom.POINT_PRECISION ** 2:
                         shadow_area += intersection_area
                         matched_faces.append(model.faceList[face_index])
                 floor = MoosasFloor(matched_faces)
-                if solve_overlap and shadow_area < model.edgeList[edge_index].area - geom.AREA_PRECISION:
+                if solve_overlap and shadow_area < model.edgeList[edge_index].area - geom.POINT_PRECISION ** 2:
                     floor = cap_floor_simple(model.edgeList[edge_index].force_2d(), level, model, floor)
                 topology[edge_index]["floor"] = floor
                 model.floorList.append(floor)
@@ -235,7 +242,7 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
                     edge_projection = model.edgeList[edge_index].force_2d()
                 for face_index in face_indices:
                     intersection_area = overlapArea(edge_projection, model.faceList[face_index].force_2d())
-                    if intersection_area > geom.AREA_PRECISION:
+                    if intersection_area > geom.POINT_PRECISION ** 2:
                         shadow_area += intersection_area
                         matched_faces.append(model.faceList[face_index])
                 if matched_faces:
@@ -285,7 +292,7 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
     for space in spaces:
         if shapely.area(shapely.intersection(
             space.force_2d(), overhead[space.level], grid_size=geom.POINT_PRECISION
-        )) <= geom.AREA_PRECISION:
+        )) <= geom.POINT_PRECISION ** 2:
             continue
         if space.is_void():
             model.voidList.append(space)

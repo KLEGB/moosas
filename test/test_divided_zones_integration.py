@@ -153,6 +153,44 @@ def test_courtyard_case_generates_two_sided_air_boundaries():
 
 
 @pytest.mark.parametrize("divided", [False, True])
+def test_narrow_physical_protrusion_is_not_lost_after_partitioning(tmp_path, divided):
+    footprint = [
+        (0, 0), (10, 0), (10, 10), (6, 10),
+        (6, 11), (5.5, 11), (5.5, 10), (0, 10),
+    ]
+    faces = []
+
+    def add_face(name, points, normal):
+        faces.append("\n".join(
+            [f"f,0,{name}", "fn," + ",".join(map(str, normal))]
+            + ["fv," + ",".join(map(str, point)) for point in points]
+            + [";"]
+        ))
+
+    for level in (0, 3):
+        add_face(f"slab_{level}", [(x, y, level) for x, y in footprint], (0, 0, 1))
+    for index, (start, end) in enumerate(zip(footprint, footprint[1:] + footprint[:1])):
+        dx, dy = end[0] - start[0], end[1] - start[1]
+        add_face(f"wall_{index}", [(*start, 0), (*end, 0), (*end, 3), (*start, 3)],
+                 (dy, -dx, 0))
+    source = tmp_path / "narrow_protrusion.geo"
+    source.write_text("\n".join(faces), encoding="utf-8")
+    model = transform(
+        str(source), stdout=StringIO(),
+        options=TransformOptions(divided_zones=divided),
+    )
+
+    assert sum(space.area for space in model.spaceList) == pytest.approx(100.5)
+    assert not model.voidList
+    assert all(not space.is_open() for space in model.spaceList)
+    assert all(space.floor.area >= space.area - geom.POINT_PRECISION ** 2
+               and space.ceiling.area >= space.area - geom.POINT_PRECISION ** 2
+               for space in model.spaceList)
+    if divided:
+        assert all(space.area >= geom.ROOM_MIN_AREA for space in model.spaceList)
+
+
+@pytest.mark.parametrize("divided", [False, True])
 @pytest.mark.parametrize("roof_category", [None, 0, 1, -1, 2])
 def test_courtyard_requires_a_physical_overhead_cover(tmp_path, divided, roof_category):
     outer = [(0, 0), (20, 0), (20, 20), (0, 20)]

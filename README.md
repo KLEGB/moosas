@@ -62,6 +62,19 @@ print(len(model.spaceList))
 model.save("building.ttl")
 ```
 
+With `TransformOptions(divided_zones=True)`, the existing convex decomposition
+is followed by a zone-only merge: parts below `geom.ROOM_MIN_AREA` (1 m2) are
+absorbed into the neighbor sharing the longest edge, even if the union is
+concave. The union must remain valid, connected, and hole-free; unmergeable
+parts are retained with a warning. Larger parts are not merged merely because
+their union is convex. The original `split_poly` and hole decomposition
+implementations are unchanged.
+
+Horizontal face splitting and floor/ceiling matching use the squared coordinate
+precision to retain small physical fragments. Skylights use the same area
+tolerance when determining whether they belong to a split face or cross its
+boundary; crossing skylights are split between their parent faces.
+
 Load a complete model without rerunning geometry transformation:
 
 ```python
