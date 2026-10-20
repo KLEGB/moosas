@@ -37,6 +37,8 @@ class geom:
     # validation of the room
     ROOM_MIN_AREA = 1.0
     ROOM_MIN_DIMENSION = 0.9
+    PARTITION_SLIVER_MAX_WIDTH = 0.1
+    PARTITION_SLIVER_MIN_ASPECT_RATIO = 20.0
 
     # angle threshold for space regulation
     REGULATION_ANGEL_THRESHOLD = 15

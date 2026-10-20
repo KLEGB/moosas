@@ -518,13 +518,26 @@ def _documentBoundary(boundaries: Iterable[TopoBound], model: MoosasContainer) -
     return model
 
 
+def _partition_needs_merge(partition):
+    """Identify small zones or thin strips independently of their orientation."""
+    if partition.area < geom.ROOM_MIN_AREA:
+        return True
+    rectangle = shapely.get_coordinates(shapely.minimum_rotated_rectangle(partition))
+    lengths = np.linalg.norm(np.diff(rectangle, axis=0), axis=1)
+    width = np.min(lengths)
+    return (
+        width < geom.PARTITION_SLIVER_MAX_WIDTH
+        and np.max(lengths) > geom.PARTITION_SLIVER_MIN_ASPECT_RATIO * width
+    )
+
+
 def _merge_tiny_partitions(partitions):
-    """Absorb sub-minimum zones into edge neighbors, allowing local concavities."""
+    """Absorb small or slender zones into edge neighbors, allowing concavities."""
     partitions = list(partitions)
     while True:
         selected = None
         tiny_indices = sorted(
-            (index for index, part in enumerate(partitions) if part.area < geom.ROOM_MIN_AREA),
+            (index for index, part in enumerate(partitions) if _partition_needs_merge(part)),
             key=lambda index: (partitions[index].area, index),
         )
         for tiny_index in tiny_indices:
@@ -549,7 +562,7 @@ def _merge_tiny_partitions(partitions):
         if selected is None:
             for index in tiny_indices:
                 print(
-                    "******Warning: small zone "
+                    "******Warning: small or slender zone "
                     f"({partitions[index].area:g} m2) has no eligible edge neighbor; "
                     "preserving its geometry"
                 )

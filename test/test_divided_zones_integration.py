@@ -190,9 +190,10 @@ def test_narrow_physical_protrusion_is_not_lost_after_partitioning(tmp_path, div
         assert all(space.area >= geom.ROOM_MIN_AREA for space in model.spaceList)
 
 
+@pytest.mark.parametrize("ground_hole", [False, True])
 @pytest.mark.parametrize("divided", [False, True])
 @pytest.mark.parametrize("roof_category", [None, 0, 1, -1, 2])
-def test_courtyard_requires_a_physical_overhead_cover(tmp_path, divided, roof_category):
+def test_courtyard_requires_a_physical_overhead_cover(tmp_path, divided, roof_category, ground_hole):
     outer = [(0, 0), (20, 0), (20, 20), (0, 20)]
     inner = [(5, 5), (15, 5), (15, 10), (10, 10), (10, 15), (5, 15)]
     courtyard = shapely.Polygon(inner)
@@ -207,7 +208,7 @@ def test_courtyard_requires_a_physical_overhead_cover(tmp_path, divided, roof_ca
     for z in (0, 3, 6):
         add_face(
             [(x, y, z) for x, y in outer], (0, 0, 1), f"slab_{z}",
-            hole=[(x, y, z) for x, y in inner] if z else (),
+            hole=[(x, y, z) for x, y in inner] if z or ground_hole else (),
         )
     if roof_category is not None:
         add_face([(x, y, 6) for x, y in inner], (0, 0, 1), "cover", roof_category)
@@ -240,6 +241,8 @@ def test_courtyard_requires_a_physical_overhead_cover(tmp_path, divided, roof_ca
         800.0 if covered else 650.0
     )
     if not covered:
+        assert all(not space.is_open() for space in model.spaceList)
+        assert not model.skylightList
         for wall in model.wallList:
             assert shapely.length(
                 shapely.intersection(wall.force_2d(), courtyard)

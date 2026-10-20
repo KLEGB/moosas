@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 import shapely
+from shapely.affinity import rotate, translate
 
 from MoosasPy.transform.geometry.contour import _merge_tiny_partitions
 from MoosasPy.transform.geometry.cleanse import splitFaces
@@ -12,6 +13,7 @@ from MoosasPy.transform.geometry.polygon import GeometryOperator
 from MoosasPy.model import MoosasModel
 from MoosasPy.transform.stages.assembly import cap_floor_simple
 from MoosasPy.utils import TopologyError
+from MoosasPy.utils.constant import geom
 
 
 NOTCHED_FOOTPRINT = [
@@ -114,6 +116,79 @@ def test_large_adjacent_convex_zones_are_not_merged():
     result = _merge_tiny_partitions(parts)
     assert len(result) == 2
     assert_partition(result, shapely.box(0, 0, 8, 3))
+
+
+@pytest.mark.parametrize("angle", [0, 37, 90])
+@pytest.mark.parametrize("triangular", [False, True])
+def test_slender_zone_above_minimum_area_is_absorbed(angle, triangular):
+    room = shapely.box(0, -2, 60, 0)
+    slender = (
+        shapely.Polygon([(0, 0), (60, 0), (30, 0.05)])
+        if triangular else shapely.box(0, 0, 60, 0.05)
+    )
+    parts = [
+        translate(rotate(part, angle, origin=(0, 0)), xoff=1940, yoff=52)
+        for part in [room, slender]
+    ]
+    expected = shapely.union_all(parts)
+
+    result = _merge_tiny_partitions(parts)
+
+    assert parts[1].area > geom.ROOM_MIN_AREA
+    assert len(result) == 1
+    assert result[0].is_valid
+    assert not result[0].interiors
+    assert result[0].equals(expected)
+    assert result[0].area == pytest.approx(sum(part.area for part in parts))
+
+
+@pytest.mark.parametrize("width,expected_count", [
+    (0.099, 1), (0.1, 2), (0.101, 2), (1.0, 2),
+])
+def test_slender_zone_width_threshold_preserves_wider_long_zones(width, expected_count):
+    parts = [shapely.box(0, -2, 30, 0), shapely.box(0, 0, 30, width)]
+
+    result = _merge_tiny_partitions(parts)
+
+    assert len(result) == expected_count
+    assert_partition(result, shapely.union_all(parts))
+
+
+@pytest.mark.parametrize("length,expected_count", [
+    (0.999, 2), (1.0, 2), (1.001, 1),
+])
+def test_slender_zone_aspect_ratio_threshold(monkeypatch, length, expected_count):
+    monkeypatch.setattr(geom, "ROOM_MIN_AREA", 0)
+    parts = [shapely.box(0, -2, length, 0), shapely.box(0, 0, length, 0.05)]
+
+    result = _merge_tiny_partitions(parts)
+
+    assert len(result) == expected_count
+    assert_partition(result, shapely.union_all(parts))
+
+
+def test_slender_zone_chooses_the_longest_shared_edge():
+    room = shapely.box(0, -2, 30, 0)
+    slender = shapely.box(0, 0, 30, 0.05)
+    other = shapely.box(30, 0, 32, 2)
+
+    result = _merge_tiny_partitions([room, slender, other])
+
+    assert len(result) == 2
+    assert any(part.equals(room.union(slender)) for part in result)
+    assert any(part.equals(other) for part in result)
+    assert_partition(result, shapely.union_all([room, slender, other]))
+
+
+def test_isolated_slender_zone_is_preserved_with_warning(capsys):
+    slender = shapely.box(0, 0, 30, 0.05)
+    room = shapely.box(0, 1, 30, 3)
+
+    result = _merge_tiny_partitions([slender, room])
+
+    assert len(result) == 2
+    assert any(part.equals(slender) for part in result)
+    assert "no eligible edge neighbor" in capsys.readouterr().out
 
 
 def test_subminimum_zone_chooses_the_longest_shared_edge():
@@ -261,3 +336,22 @@ def test_horizontal_split_rejects_a_snapped_copy_of_its_parent():
     assert splitFaces(face, edge) is None
     assert model.faceList == [face]
     assert len(model.geometryList) == before
+
+
+def test_courtyard_floor_cap_preserves_a_real_opening_inside_the_room():
+    courtyard = shapely.box(3, 3, 7, 7)
+    boundary = shapely.box(0, 0, 10, 10).difference(courtyard)
+    opening = shapely.box(1, 1, 2, 2)
+    model = MoosasModel()
+    face = MoosasFace(
+        model, model.includeGeo(shapely.force_3d(boundary.difference(opening)), cat=0),
+    )
+    model.faceList = [face]
+
+    capped = cap_floor_simple(boundary, 0, model, MoosasFloor([face]))
+
+    assert len(model.skylightList) == 1
+    aperture = model.skylightList[0]
+    assert aperture.force_2d().equals(opening)
+    assert aperture.force_2d().intersection(courtyard).area == 0
+    assert shapely.union_all([part.force_2d() for part in capped.face]).equals(boundary)

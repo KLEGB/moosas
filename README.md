@@ -63,17 +63,28 @@ model.save("building.ttl")
 ```
 
 With `TransformOptions(divided_zones=True)`, the existing convex decomposition
-is followed by a zone-only merge: parts below `geom.ROOM_MIN_AREA` (1 m2) are
-absorbed into the neighbor sharing the longest edge, even if the union is
-concave. The union must remain valid, connected, and hole-free; unmergeable
-parts are retained with a warning. Larger parts are not merged merely because
-their union is convex. The original `split_poly` and hole decomposition
-implementations are unchanged.
+is followed by a zone-only merge: parts below `geom.ROOM_MIN_AREA` (1 m2), or
+slender parts whose minimum rotated bounding rectangle has a short side below
+`geom.PARTITION_SLIVER_MAX_WIDTH` (0.1 m) and a long-to-short-side ratio above
+`geom.PARTITION_SLIVER_MIN_ASPECT_RATIO` (20), are absorbed into the neighbor
+sharing the longest edge, even if the union is concave. Width and aspect ratio
+thresholds are strict and independent of the part's orientation. The union must
+remain valid, connected, and hole-free; unmergeable parts are retained with a
+warning. Other parts are not merged merely because their union is convex.
+The original `split_poly` and hole decomposition implementations are unchanged.
+This rule applies only to thermal-zone partitions, not to physical face
+fragments created later by floor/ceiling intersections.
 
 Horizontal face splitting and floor/ceiling matching use the squared coordinate
 precision to retain small physical fragments. Skylights use the same area
 tolerance when determining whether they belong to a split face or cross its
 boundary; crossing skylights are split between their parent faces.
+
+When assembling spaces, immediately nested contours are excluded from the
+parent's floor/ceiling matching footprint before missing floor portions are
+capped. Courtyards are therefore not filled with air-boundary faces; real
+uncovered portions within the room footprint still receive air boundaries.
+This applies with or without `divided_zones`.
 
 Load a complete model without rerunning geometry transformation:
 

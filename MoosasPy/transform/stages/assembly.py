@@ -185,12 +185,33 @@ def cap_floor_simple(boundary: shapely.Geometry, level, model: MoosasModel, base
 
 def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
     """Match floors and ceilings to edges, then build spaces and voids."""
+    # Resolve nested contours before matching or capping physical floors.
+    footprints = {edge: edge.force_2d() for edge in model.edgeList}
+    parents = {}
+    children = {edge: [] for edge in model.edgeList}
+    for level in model.levelList:
+        edges = [edge for edge in model.edgeList if edge.level == level]
+        for child in edges:
+            enclosing = [
+                parent for parent in edges if parent is not child
+                and shapely.contains_properly(footprints[parent], footprints[child])
+            ]
+            if enclosing:
+                parent = min(enclosing, key=lambda edge: footprints[edge].area)
+                parents[child] = parent
+                children[parent].append(child)
+    footprints = {
+        edge: shapely.difference(
+            footprint, shapely.union_all([footprints[child] for child in children[edge]]),
+        )
+        for edge, footprint in footprints.items()
+    }
     # Snapshot real cover before missing floors are filled with air boundaries.
     overhead = {level: overhead_projection(model, level) for level in model.levelList}
     covered_edges = {
         edge for edge in model.edgeList
         if shapely.area(shapely.intersection(
-            edge.force_2d(), overhead[edge.level], grid_size=geom.POINT_PRECISION
+            footprints[edge], overhead[edge.level], grid_size=geom.POINT_PRECISION
         )) > geom.POINT_PRECISION ** 2
     }
     print("\rPACKING: Match floors", end="")
@@ -208,13 +229,17 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
                 shadow_area = 0
                 matched_faces = []
                 for face_index in face_indices:
-                    intersection_area = overlapArea(model.edgeList[edge_index].force_2d(), model.faceList[face_index].force_2d())
+                    intersection_area = shapely.area(shapely.intersection(
+                        footprints[model.edgeList[edge_index]],
+                        model.faceList[face_index].force_2d(),
+                        grid_size=geom.POINT_PRECISION,
+                    ))
                     if intersection_area > geom.POINT_PRECISION ** 2:
                         shadow_area += intersection_area
                         matched_faces.append(model.faceList[face_index])
                 floor = MoosasFloor(matched_faces)
-                if solve_overlap and shadow_area < model.edgeList[edge_index].area - geom.POINT_PRECISION ** 2:
-                    floor = cap_floor_simple(model.edgeList[edge_index].force_2d(), level, model, floor)
+                if solve_overlap and shadow_area < footprints[model.edgeList[edge_index]].area - geom.POINT_PRECISION ** 2:
+                    floor = cap_floor_simple(footprints[model.edgeList[edge_index]], level, model, floor)
                 topology[edge_index]["floor"] = floor
                 model.floorList.append(floor)
                 if shadow_area != 0 and floor.area < geom.ROOM_MIN_AREA:
@@ -239,9 +264,20 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
                 matched_faces = []
                 edge_projection = model.edgeList[edge_index].force_2d(top=True)
                 if not shapely.is_valid(edge_projection):
-                    edge_projection = model.edgeList[edge_index].force_2d()
+                    edge_projection = footprints[model.edgeList[edge_index]]
+                else:
+                    edge_projection = shapely.difference(
+                        edge_projection,
+                        shapely.union_all([
+                            child.force_2d(top=True)
+                            for child in children[model.edgeList[edge_index]]
+                        ]),
+                    )
                 for face_index in face_indices:
-                    intersection_area = overlapArea(edge_projection, model.faceList[face_index].force_2d())
+                    intersection_area = shapely.area(shapely.intersection(
+                        edge_projection, model.faceList[face_index].force_2d(),
+                        grid_size=geom.POINT_PRECISION,
+                    ))
                     if intersection_area > geom.POINT_PRECISION ** 2:
                         shadow_area += intersection_area
                         matched_faces.append(model.faceList[face_index])
@@ -274,20 +310,9 @@ def pack_model(model: MoosasModel, solve_overlap: bool) -> MoosasModel:
                 "zone_infiltration": 0.0,
             })
     print()
-    # A bounded face can enclose independent rings. Subtract each direct
-    # child's full footprint once, whether that child is a room or a void.
-    # Comparing immutable edge polygons avoids order-dependent containment.
-    for level in model.levelList:
-        level_spaces = [space for space in spaces if space.level == level]
-        footprints = {space: space.edge.force_2d() for space in level_spaces}
-        for child in level_spaces:
-            parents = [parent for parent in level_spaces if parent is not child
-                       and shapely.contains_properly(footprints[parent], footprints[child])]
-            if not parents:
-                continue
-            parent = min(parents, key=lambda item: shapely.area(footprints[item]))
-            hole = MoosasSpace(None, child.edge, None)
-            parent.add_void(hole)
+    spaces_by_edge = {space.edge: space for space in spaces}
+    for child, parent in parents.items():
+        spaces_by_edge[parent].add_void(MoosasSpace(None, child, None))
     print()
     for space in spaces:
         if shapely.area(shapely.intersection(
